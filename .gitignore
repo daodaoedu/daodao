@@ -1,0 +1,13 @@
+# 子專案（各自有獨立 git repo，submodule 在 projects/）
+daodao-f2e/
+daodao-server/
+daodao-ai-backend/
+daodao-storage/
+daodao-infra/
+daodao-worker/
+
+# OS
+.DS_Store
+
+# 暫存
+*.tmp
