@@ -28,6 +28,9 @@ flowchart TD
     P -- 否 --> R[Merge → CD 自動部署]
     R --> S["/openspec-verify-change 驗收"]
     S --> T["/openspec-archive-change 歸檔"]
+
+    Q -. 遇到錯誤 .-> U["/post skill 寫文章記錄<br/>quidproquo.cc"]
+    F -. 遇到錯誤 .-> U
 ```
 
 ---
@@ -320,6 +323,18 @@ Merge 到 main/dev 後自動觸發：
 
 ---
 
+## 錯誤記錄
+
+開發過程中遇到值得記錄的錯誤、踩坑經驗、或解決方案時，使用 `/post` skill 撰寫文章發佈到 [quidproquo.cc](https://quidproquo.cc/)。
+
+適合記錄的情境：
+- 難以 debug 的錯誤和最終解法
+- 框架/套件的坑和 workaround
+- CI/CD 配置踩雷
+- 跨專案整合問題
+
+---
+
 ## 工具總覽
 
 | 階段 | 工具 | 用途 |
@@ -340,3 +355,4 @@ Merge 到 main/dev 後自動觸發：
 | CI | GitHub Actions | 自動化品質檢查 |
 | CD | GitHub Actions + Docker | 自動部署 |
 | 同步 | sync-claude-config workflow | 共用設定同步到子專案 |
+| 記錄 | /post skill → quidproquo.cc | 錯誤踩坑經驗記錄與分享 |
