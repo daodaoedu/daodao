@@ -6,6 +6,7 @@ on:
     paths:
       - '.claude/hooks/**'
       - '.claude/settings.json'
+      - '.claude/skills/collect-pr-feedback/**'
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
   schedule:
@@ -49,6 +50,14 @@ jobs:
           else
             cp .claude/settings.json target/.claude/settings.json
           fi
+
+          # Shared skills
+          for skill in collect-pr-feedback; do
+            if [ -d ".claude/skills/$skill" ]; then
+              mkdir -p "target/.claude/skills/$skill"
+              cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
+            fi
+          done
 
           # Shared workflows
           mkdir -p target/.github/workflows
