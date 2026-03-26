@@ -1,0 +1,84 @@
+ESCO
+
+ESCO 是什麼?
+ESCO（European Skills, Competences, Qualifications and Occupations, 歐洲技能、能力、資格與職業分類系統）
+是一個多語言分類系統，用於識別和分類與歐盟勞動市場和教育相關的技能、能力、資格和職業。
+
+ESCO 是什麼? - cont.
+3,039 個職業涵蓋各行各業
+13,939 個技能/能力系統性分類
+ESCO 二大分類，職業(Occupation)與技能(Skill)
+
+
+為什麼需要 ESCO？
+標準化技能：對於用戶的技能和專業有標準化分類
+國際認可：讓我們的技能地圖具備國際認可度與可攜性 
+學習推薦：運用職業-技能對應關係提供學習建議，推薦的結構化工具
+豐富資料：存取完整的技能關係與階層結構
+技術可行性：可直接下載 dataset 或接 API
+
+ESCO 分類
+
+ESCO 資料層
+每筆資訊都有 URI(Uniform Resource Identifier)
+資料分層 Level 0 - Level 3
+Level 3 後多數接技能; 少數會再多一層
+
+
+ESCO 資料層
+knowledge 0 
+information and communication technologies (icts) 1 
+information and communication technologies (icts) 2 
+software and applications development and analysis 3 
+JavaScript
+
+knowledge 0 
+engineering, manufacturing and construction 1
+architecture and construction 2
+ architecture and town planning 3 
+architectural design  
+integrated design
+
+
+ESCO Dataset
+skills_en
+所有技能名稱, altLabels和述敍。altLabels 列出該技能的口語說明，例如 statistics 的altLabels 有use of data, statistical analysis, stats或data
+broaderRelationsSkillPillar_en
+顯示技能的上下各一階關係。例如marketing and advertising的下一層有customer segmentation、marketing mix等等；上一層是 business and administration**。**
+skillsHierarchy_en
+顯示 Level 0-Level 3 技能關係
+skillSkillRelations_en
+顯技能間的必要關係。例如 analyse big data 對 manage quantitative data 來說是必要技能
+
+
+
+ESCO Dataset
+occupationSkillRelations_en
+技能對於職業的必要關係。例如software developer 的必要能力之一是 web services
+occupations_en
+所有職業列表, altLabels和述敍。altLabels 列出該職業的不同稱呼，例如software developer，altLabels 有software engineer, software specialist, programmer, solutions developer 等等。
+
+
+AI/ML 強化機會
+技能萃取：NLP 從描述、標籤、學習資源和使用者覆盤中萃取 ESCO 技能
+技能推論：基於完成的專案和學習活動預測使用者能力等級
+職涯建議：根據使用者技能組合和學習興趣 ESCO 職業
+學習建議：AI 驅動的技能落差識別與個人化學習路徑生成
+
+
+整合要點
+成長地圖：使用 ESCO 分類自動或建議用戶的技能歸類。
+AI 建議：基於技能和職業需求的強化學習路徑。
+揪團(或 buddy)：依技能落差和目標職業配對學習者。建立以技能為核心的學習群組。
+標記用戶專業：用戶個人檔案設定
+
+MVP
+1. ESCO 技能搜尋
+ESCO 資料匯入或接 API 
+中文化
+2. ESCO 整合
+使用者可在新增技能時以關鍵字搜到相關 ESCO 技能, 仍保留自行新增
+使用者的 headline、自我介紹
+3. 基本推薦引擎
+根據使用者已標記的 ESCO 技能，推薦 2-3 可開始執行的主題實踐主題
+

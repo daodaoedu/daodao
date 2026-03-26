@@ -1,0 +1,365 @@
+conceptType,conceptUri,Level 3 Uri,Level 2 Uri,Level 1 Uri,Level 1 Label,skillType,reuseLevel,preferredLabel,中文 preferredLabel,altLabels,中文 altLabels,description,中文 description,modifiedDate
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/584c13e8-fd06-4ca3-a45b-cca5b2f147a7,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Portuguese,葡萄牙語,,#N/A,The Portuguese language. Portuguese is an official and working language of the EU.,葡萄牙語 葡萄牙語是歐盟的官方語言和工作語言之一,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/021c8a09-6b8d-4708-a5dd-17677e846640,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,understand spoken Luxembourgish,聽懂盧森堡語口語,"comprehend spoken Luxembourgish
+interpret spoken Luxembourgish
+make sense of spoken Luxembourgish
+understand Luxembourgish speech
+understand spoken Luxembourgish
+listen to Luxembourgish
+understanding spoken Luxembourgish","聽懂盧森堡語口語
+翻譯盧森堡語口語
+理解盧森堡語口語
+聽懂盧森堡語
+聽懂盧森堡語口語
+聽盧森堡語
+理解盧森堡語口語",Comprehend orally expressed Luxembourgish.,能聽懂口頭表達的盧森堡語,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/15f261e6-4379-437e-b137-b0c473ae3e74,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Macedonian,馬其頓,"ability to comprehend spoken and written Macedonian and to speak and write in Macedonian
+Macedonian
+competent in Macedonian","能夠理解馬其頓語的口語和書面語，並能用馬其頓語進行口頭和書面交流
+
+馬其頓語
+
+精通馬其頓語",The Macedonian language.,馬其頓語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/1fe42b38-cd42-4fc7-ae77-14e4c9e96295,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Chinese,中文,"Standard Chinese
+Chinese
+Cantonese
+ability to comprehend spoken and written Chinese and to speak and write in Chinese
+competent in Chinese","
+
+中文
+
+粵語
+
+能夠理解中文口語和書面語，並能用漢語進行口頭和書面交流
+
+漢語程度良好",The Chinese language.,中文,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/2080075c-0488-4fbf-a786-734dbbef31ce,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Marathi,馬拉地語,"Marathi
+competent in Marathi
+ability to comprehend spoken and written Marathi and to speak and write in Marathi","馬拉地語
+
+精通馬拉地語
+
+能夠理解馬拉地語的口語和書面語，並能用馬拉地語進行口頭和書面交流",The Marathi language.,馬拉地語,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/7d16f1e4-1003-4f1f-9595-5cafb25a67df,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Luxembourgish,盧森堡,"Luxembourgish
+competent in Luxembourgish
+ability to comprehend spoken and written Luxembourgish and to speak and write in Luxembourgish","盧森堡語
+
+精通盧森堡語
+
+能夠理解盧森堡語的口語和書面表達，並能用盧森堡語進行口頭和書面交流",The Luxembourgish language.,盧森堡語,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/8f4c0fe6-10c7-409e-92d6-245f46728209,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Irish,愛爾蘭,"competent in Irish
+ability to comprehend spoken and written Irish and to speak and write in Irish
+Irish
+Gaelic
+Irish Gaelic","精通愛爾蘭語
+
+能夠理解愛爾蘭語的口語和書面語，並能用愛爾蘭語進行口頭和書面交流
+
+愛爾蘭語
+
+蓋爾語
+
+愛爾蘭蓋爾語",The Irish language. Irish is an official and working language of the EU.,愛爾蘭語 愛爾蘭語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/b2c1f90a-72ce-4499-ab9a-a9a5c9355d5b,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Georgian,喬治亞,"competent in Georgian
+ability to comprehend spoken and written Georgian and to speak and write in Georgian","精通格魯吉亞語
+
+能夠理解格魯吉亞語的口語和書面表達，並能用格魯吉亞語進行口頭和書面交流 ",The Georgian language.,格魯吉亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/d93a7370-bf56-43f5-be54-e108f8ec3107,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Hindi,印地語,"ability to comprehend spoken and written Hindi and to speak and write in Hindi
+competent in Hindi","能夠理解口語和書面印地語，並能用印地語進行口頭和書面交流
+
+精通印地語",The Hindi language.,印地語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/39c675c4-af13-49db-bbed-cf762102f85e,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Japanese,日語,"ability to comprehend spoken and written Japanese and to speak and write in Japanese
+competent in Japanese","能夠理解日語口語和書面語，並能用日語進行口頭和書面交流
+
+日語程度熟練",The Japanese language.,日語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/7a86907d-1fd5-4e8f-b0f1-f366a14f6f6d,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Javanese,爪哇語,"basa jawa
+ability to comprehend spoken and written Javanese and to speak and write in Javanese
+cara jawa
+competent in Javanese","巴薩爪哇語
+
+能夠理解爪哇語的口語和書面表達，並能用爪哇語進行口頭和書面交流
+
+卡拉爪哇語
+
+精通爪哇語",The Javanese language.,爪哇語,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/8a45f04a-cd28-4ac1-8e8b-ecfd21be0b18,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Hebrew,希伯來文,"ability to comprehend spoken and written Hebrew and to speak and write in Hebrew
+competent in Hebrew","能夠理解希伯來語的口語和書面表達，並能用希伯來語進行口頭和書面交流
+
+精通希伯來語",The Hebrew language.,希伯來語,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/b3950b87-a980-4cd4-a795-be8a9b63661d,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Lithuanian,立陶宛語,"ability to comprehend spoken and written Lithuanian and to speak and write in Lithuanian
+competent in Lithuanian","能夠理解立陶宛語的口語和書面表達，並能用立陶宛語進行口頭和書面交流
+
+精通立陶宛語",The Lithuanian language. Lithuanian is an official and working language of the EU.,立陶宛語 立陶宛語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/e05b9e06-d298-4646-b762-acbd485a20e9,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Punjabi,旁遮普語,"Panjabi
+ability to comprehend spoken and written Punjabi and to speak and write in Punjabi
+competent in Punjabi","旁遮普語
+
+能夠理解旁遮普語的口語和書面表達，並能用旁遮普語進行口頭和書面交流
+
+精通旁遮普語",The Punjabi language.,旁遮普語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/246980fe-6222-4852-ade8-b372f7e0fd20,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Slovak,斯洛伐克,"competent in Slovak
+ability to comprehend spoken and written Slovak and to speak and write in Slovak","精通斯洛伐克語
+
+能夠理解斯洛伐克語的口語和書面表達，並能用斯洛伐克語進行口頭和書面溝通 ",The Slovak language. Slovak is an official and working language of the EU.,斯洛伐克語 斯洛伐克語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/354b948c-7eef-4ebc-bfd6-f60d7d5acb62,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Ukrainian,烏克蘭,"ability to comprehend spoken and written Ukrainian and to speak and write in Ukrainian
+competent in Ukrainian","能夠理解烏克蘭語口語和書面語，並能用烏克蘭語進行口頭和書面交流
+
+精通烏克蘭語",The Ukrainian language.,烏克蘭語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/8dbd15c6-ecf0-468c-8ae1-f6eb360743dd,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Welsh,威爾斯語,"competent in Welsh
+ability to comprehend spoken and written Welsh and to speak and write in Welsh","精通威爾斯語
+
+能夠理解威爾斯語的口語和書面語，並能用威爾斯語進行口頭和書面交流",The Welsh language.,威爾斯語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/f1a08ec9-32d2-4e52-ba4a-66e049019be8,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Albanian,阿爾巴尼亞語,"competent in Albanian
+ability to comprehend spoken and written Albanian and to speak and write in Albanian","精通阿爾巴尼亞語
+
+能夠理解阿爾巴尼亞語的口語和書面表達，並能用阿爾巴尼亞語進行口頭和書面交流",The Albanian language.,阿爾巴尼亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/1f90c205-f869-4dcf-a374-c4fdeded9cbc,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Malay,馬來語,"ability to comprehend spoken and written Malay and to speak and write in Malay
+Malaysian
+competent in Malay","能夠理解馬來語的口語和書面語，並能用馬來語進行口頭和書面交流
+
+馬來西亞人
+
+精通馬來語",The Malay language.,馬來語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/273a28d6-1bd3-4d13-a906-3d75c1cfdfc1,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Danish,丹麥語,"ability to comprehend spoken and written Danish and to speak and write in Danish
+competent in Danish","能夠理解丹麥語的口語和書面語，並能用丹麥語進行口頭和書面交流
+
+精通丹麥語",The Danish language. Danish is an official and working language of the EU.,丹麥語 丹麥語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/6f55e44d-4494-4079-9b8d-01ac6912529e,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Belarusian,白俄羅斯,"ability to comprehend spoken and written Belarusian and to speak and write in Belarusian
+competent in Belarusian","能夠理解白俄羅斯語的口語和書面表達，並能用白俄羅斯語進行口頭和書面交流
+
+精通白俄語",The Belarusian language.,白俄羅斯語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/a18e3090-6afb-4afb-a055-1f83bbe498e3,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Icelandic,冰島語,"ability to comprehend spoken and written Icelandic and to speak and write in Icelandic
+competent in Icelandic","能夠理解冰島語的口語和書面表達，並能用冰島語進行口頭和書面交流
+
+精通冰島語",The Icelandic language.,冰島語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/c5cb0cc1-c40b-4544-a21c-8472f0b5c14a,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Serbian,塞爾維亞,"competent in Serbian
+ability to comprehend spoken and written Serbian and to speak and write in Serbian","精通塞爾維亞語
+
+能夠理解塞爾維亞語的口語和書面表達，並能用塞爾維亞語進行口頭和書面交流",The Serbian language.,塞爾維亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/d54d7c00-87c4-4f78-af8d-e84577372974,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Walloon,華隆,"ability to comprehend spoken and written Walloon and to speak and write in Walloon
+competent in Walloon","能夠理解瓦隆語的口語和書面語，並能用瓦隆語進行口頭和書面交流
+
+精通瓦隆語",The Walloon language.,瓦隆語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/d59ef10f-ad20-4791-957d-b315196ecdc2,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Yiddish,意第緒語,"ability to comprehend spoken and written Yiddish and to speak and write in Yiddish
+competent in Yiddish","能夠理解口語和書面意第緒語，並能用意第緒語進行口頭和書面交流
+
+精通意第緒語",The Yiddish language.,意第緒語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/d5fd4958-4ca6-4d06-845f-713e2c459612,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Bulgarian,保加利亞語,"competent in Bulgarian
+ability to comprehend spoken and written Bulgarian and to speak and write in Bulgarian","精通保加利亞語
+
+能夠理解保加利亞語的口語和書面表達，並能用保加利亞語進行口頭和書面交流 ",The Bulgarian language. Bulgarian is an official and working language of the EU.,保加利亞語 保加利亞語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/ea4ebfa1-e17a-4416-ac54-955f33e6ade7,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Greek,希臘文,"ability to comprehend spoken and written Greek and to speak and write in Greek
+competent in Greek","能夠理解希臘語口語和書面語，並能用希臘語進行口頭和書面交流
+
+精通希臘語",The Greek language. Greek is an official and working language of the EU.,希臘文 希臘語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/f9bc2890-d1f2-4a83-bd7b-b150a7679c79,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Korean,韓國人,"competent in Korean
+ability to comprehend spoken and written Korean and to speak and write in Korean","韓語能力強
+
+能夠理解韓語口語和書面語，並能用韓語進行口頭和書面溝通 ",The Korean language.,韓語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/1627c1b9-31e1-4742-bf5c-cfec2ce33cfc,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Sardinian,撒丁島語,"competent in Sardinian
+Sardu
+Sard
+ability to comprehend spoken and written Sardinian and to speak and write in Sardinian","精通撒丁島語
+
+撒丁島語
+
+能夠理解撒丁島語的口語和書面語，並能用撒丁島語進行口頭和書面交流",The Sardinian language.,撒丁島語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/1b7e6f56-bc73-4bcc-81ae-09252175d418,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Estonian,愛沙尼亞語,"ability to comprehend spoken and written Estonian and to speak and write in Estonian
+competent in Estonian","能夠理解愛沙尼亞語的口語和書面表達，並能用愛沙尼亞語進行口頭和書面交流
+
+精通愛沙尼亞語",The Estonian language. Estonian is an official and working language of the EU.,愛沙尼亞語 愛沙尼亞語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/6d3edede-8951-4621-a835-e04323300fa0,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,English,英語,"competent in English
+ability to comprehend spoken and written English and to speak and write in English","英語能力良好
+
+能夠理解英語口語和書面表達，並能用英語進行口頭和書面交流",The English language. English is an official and working language of the EU.,英語 英語是歐盟的官方語言和工作語言之一,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/8ee2b6f2-7017-4b9a-9de2-4dedf0711394,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Catalan,加泰隆尼亞語,"competent in Catalan
+ability to comprehend spoken and written Catalan and to speak and write in Catalan","精通加泰隆尼亞語
+
+能夠理解加泰隆尼亞語的口語和書面表達，並能用加泰羅尼亞語進行口頭和書面交流",The Catalan language.,加泰羅尼亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/aa66a033-8522-40e9-a5c0-ff2593e2669c,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Turkish,土耳其語,"ability to comprehend spoken and written Turkish and to speak and write in Turkish
+competent in Turkish","能夠理解土耳其語口語和書面語，並能用土耳其語進行口頭和書面交流
+
+精通土耳其語",The Turkish language.,土耳其語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/ddd3596a-43f3-402e-960a-5f79362a8609,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Hungarian,匈牙利語,"competent in Hungarian
+ability to comprehend spoken and written Hungarian and to speak and write in Hungarian","精通匈牙利語
+
+能夠理解匈牙利語的口語和書面語，並能用匈牙利語進行口頭和書面交流",The Hungarian language. Hungarian is an official working language of the EU.,匈牙利語 匈牙利語是歐盟的官方工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/f37dbb3c-dafc-4835-86d1-de9615626f9b,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Kazakh,哈薩克語,"competent in Kazakh
+ability to comprehend spoken and written Kazakh and to speak and write in Kazakh","精通哈薩克語
+
+能夠理解哈薩克語的口語和書面表達，並能用哈薩克語進行口頭和書面交流 ",The ​Kazakh language.,哈薩克語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/14ee9f76-3524-43d5-8a1a-5ba8283f8bd7,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Spanish,西班牙語,Castilian,卡斯提爾語,The Spanish language. Spanish is an official and working language of the EU.,西班牙語 西班牙語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/15ea7b6b-1b93-4ed8-b58a-5c54777e0832,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Bihari,比哈爾邦,"ability to comprehend spoken and written Bihari and to speak and write in Bihari
+competent in Bihari","能夠理解口語和書面比哈爾語，並能用比哈爾語進行口頭和書面交流
+
+精通比哈爾語",The Bihari language.,比哈爾語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/a9fdd2c9-4295-4407-ba3c-1547cbce40a2,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Bosnian,波士尼亞,"competent in Bosnian
+ability to comprehend spoken and written Bosnian and to speak and write in Bosnian","精通波斯尼亞語
+
+能夠理解波斯尼亞語的口語和書面表達，並能用波斯尼亞語進行口頭和書面交流",The ​Bosnian language.,波斯尼亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/4b9f1ae5-0ee6-4738-8999-9b8191fba808,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Romanian,羅馬尼亞語,"ability to comprehend spoken and written Romanian and to speak and write in Romanian
+competent in Romanian","能夠理解羅馬尼亞語的口語和書面表達，並能用羅馬尼亞語進行口頭和書面交流
+
+精通羅馬尼亞語",The Romanian language. Romanian is an official and working language of the EU.,羅馬尼亞語 羅馬尼亞語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/64fe09ac-f419-4c04-8997-d1dde2e31bfc,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Telugu,泰盧固語,"ability to comprehend spoken and written Telugu and to speak and write in Telugu
+competent in Telugu","能夠理解泰盧固語的口語和書面表達，並能用泰盧固語進行口頭和書面交流
+
+精通泰盧固語",The Telugu language.,泰盧固語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/66212ff2-34b9-4812-be58-f53a0b751863,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Galician,加利西亞語,"ability to comprehend spoken and written Galician and to speak and write in Galician
+competent in Galician","能夠理解加利西亞語的口語和書面表達，並能用加利西亞語進行口頭和書面交流
+
+精通加利西亞語",The ​Galician language.,加利西亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/6891bbce-20bf-4afc-bd5e-75bdf54c0165,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Russian,俄文,"ability to comprehend spoken and written Russian and to speak and write in Russian
+competent in Russian","能夠理解俄語口語和書面語，並能用俄語進行口頭和書面交流
+
+精通俄語",The Russian language.,俄語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/bc546a09-1103-4184-b757-3508ef5f8490,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Urdu,烏爾都語,"competent in Urdu
+ability to comprehend spoken and written Urdu and to speak and write in Urdu","精通烏爾都語
+
+能夠理解烏爾都語的口語和書面表達，並能用烏爾都語進行口頭和書面交流",The Urdu language.,烏爾都語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/cb50f9cd-3638-409b-8f93-befaf17d313e,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Maltese,馬爾他語,"competent in Maltese
+ability to comprehend spoken and written Maltese and to speak and write in Maltese","精通馬耳他語
+
+能夠理解馬耳他語的口語和書面表達，並能用馬耳他語進行口頭和書面交流",The Maltese language. Maltese is an official and working language of the EU.,馬耳他語 馬耳他語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/0e3493f4-0cad-4fbc-8e02-025f169b8114,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Finnish,芬蘭,"ability to comprehend spoken and written Finnish and to speak and write in Finnish
+competent in Finnish","能夠理解芬蘭語口語和書面語，並能用芬蘭語進行口頭和書面交流
+
+精通芬蘭語",The Finnish language. Finnish is an official and working language of the EU.,芬蘭語 芬蘭語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/6bc58e91-1827-4dc7-a9cf-2311edcba0ec,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Croatian,克羅埃西亞語,"ability to comprehend spoken and written Croatian and to speak and write in Croatian
+competent in Croatian","能夠理解克羅埃西亞語的口語和書面表達，並能用克羅埃西亞語進行口頭和書面交流
+
+克羅埃西亞語流利",The Croatian language. Croatian is an official and working language of the EU.,克羅埃西亞語 克羅埃西亞語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/8ef3eccc-a847-430e-b828-cf178803b8c1,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Romani,羅姆語,"Romany
+competent in Romani
+ability to comprehend spoken and written Romani and to speak and write in Romani","羅姆人
+
+精通羅姆語
+
+能夠理解羅姆語的口語和書面表達，並能用羅姆語進行口頭和書面交流",The language family of Romani languages.,羅姆語系 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/9ace3aae-aeae-4ed6-b625-26bc58345554,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Slovenian,斯洛維尼亞語,"Slovene
+ability to comprehend spoken and written Slovenian and to speak and write in Slovenian
+competent in Slovenian","斯洛維尼亞語
+
+能夠理解斯洛維尼亞語的口語和書面表達，並能用斯洛維尼亞語進行口頭和書面交流
+
+精通斯洛維尼亞語",The Slovenian language. Slovenian is an official and working language of the EU.,斯洛維尼亞語 斯洛維尼亞語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/bf60009d-8afb-4306-9b0d-cfe2f66ab08f,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Vietnamese,越南語,"ability to comprehend spoken and written Vietnamese and to speak and write in Vietnamese
+competent in Vietnamese","能夠理解越南語口語和書面語，並能用越南語進行口頭和書面交流
+
+精通越南語",The Vietnamese language.,越南語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/ede98e07-f07d-41bc-99b0-f88bf0dad438,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Bengali,孟加拉語,"ability to comprehend spoken and written Bengali and to speak and write in Bengali
+competent in Bengali
+Bangla","能夠理解孟加拉語的口語和書面表達，並能用孟加拉語進行口頭和書面交流
+
+精通孟加拉語
+
+孟加拉語",The Bengali language.,孟加拉語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/2358a146-6e8f-43cb-872f-a12ac9c57d60,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Montenegrin,黑山語,"ability to comprehend spoken and written Montenegrin and to speak and write in Montenegrin
+competent in Montenegrin","能夠理解黑山語的口語和書面表達，並能用黑山語進行口頭和書面交流
+
+精通黑山語",The Montenegrin language.,黑山語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/2874065e-6ca3-430c-912a-467da3c23704,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Kurdish,庫德語,"ability to comprehend spoken and written Kurdish and to speak and write in Kurdish
+competent in Kurdish","能夠理解庫德語的口語和書面表達，並能用庫德語進行口頭和書面交流
+
+精通庫德語",The ​Kurdish language.,庫德語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/829f6eb5-0b26-4152-8eb3-82dd32b2b6f2,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Norwegian,挪威語,"competent in Norwegian
+ability to comprehend spoken and written Norwegian and to speak and write in Norwegian","精通挪威語
+
+能夠理解挪威語口語和書面語，並能用挪威語進行口頭和書面交流",The Norwegian language.,挪威語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/4812a4ea-dc55-4dc6-b9b0-4a59bba2c647,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,German,德文,"ability to comprehend spoken and written German and to speak and write in German
+competent in German","能夠理解德語口語和書面語，並能用德語進行口頭和書面交流
+
+德語程度熟練",The German language.,德語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/57cc6587-7efe-4ba5-982f-ac15ce1617ac,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Occitan,奧克語,"Languedoc
+competent in Occitan
+Provençal
+ability to comprehend spoken and written Occitan and to speak and write in Occitan","朗格多克
+
+精通奧克語
+
+普羅旺斯語
+
+能夠理解奧克語的口語和書面語，並能用奧克語進行口頭和書面交流",The ​Occitan language.,奧克語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/58cabf75-2520-4358-a210-2cbc628f4aa2,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Persian,波斯語,"competent in Persian
+ability to comprehend spoken and written Persian and to speak and write in Persian
+Farsi","精通波斯語
+
+能夠理解波斯語口語和書面語，並能用波斯語進行口頭和書面交流
+
+波斯語",The Persian language.,波斯語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/5de39924-769c-4301-82a5-525358dffe50,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Latvian,拉脫維亞語,"ability to comprehend spoken and written Latvian and to speak and write in Latvian
+competent in Latvian","能夠理解拉脫維亞語的口語和書面表達，並能用拉脫維亞語進行口頭和書面交流
+
+精通拉脫維亞語",The Latvian language. Latvian is an official and working language of the EU.,拉脫維亞語 拉脫維亞語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/7ee51257-8947-4b69-9bdf-322baf0a6398,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Swedish,瑞典,"competent in Swedish
+ability to comprehend spoken and written Swedish and to speak and write in Swedish","精通瑞典語
+
+能夠理解瑞典語的口語和書面表達，並能用瑞典語進行口頭和書面溝通 ",The Swedish language. Swedish is an official and working language of the EU.,瑞典語 瑞典語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/9b0baaa7-fed3-41b7-b74e-9d459f11acfe,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Gujarati,古吉拉特語,"ability to comprehend spoken and written Gujarati and to speak and write in Gujarati
+competent in Gujarati","能夠理解古吉拉特語的口語和書面表達，並能用古吉拉特語進行口頭和書面交流
+
+精通古吉拉特語",The Gujarati language.,古吉拉特語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/a28fa5f1-be5b-4608-8376-acea8c2f8cb1,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Basque,巴斯克,"ability to comprehend spoken and written Basque and to speak and write in Basque
+competent in Basque","能夠理解巴斯克語的口語和書面表達，並能用巴斯克語進行口頭和書面交流
+
+精通巴斯克語",The Basque language.,巴斯克語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/cad4f44b-28a8-4448-86e5-7389e5ebf3eb,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Dutch,荷蘭語,"from Holland
+from the Netherlands","來自荷蘭
+
+來自荷蘭",The Dutch language. Dutch is an official and working language of the EU.,荷蘭語 荷蘭語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/f3e9b964-0c2d-46c4-a895-8b3583054d69,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Polish,波蘭語,"ability to comprehend spoken and written Polish and to speak and write in Polish
+competent in Polish","能夠理解波蘭語口語和書面語，並能用波蘭語進行口頭和書面交流
+
+精通波蘭語",The Polish language. Polish is an official and working language of the EU.,波蘭語 波蘭語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/fcbcdf4c-d079-4010-ab4b-8356fbfa5096,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Armenian,亞美尼亞,"ability to comprehend spoken and written Armenian and to speak and write in Armenian
+competent in Armenian","能夠理解亞美尼亞語的口語和書面表達，並能用亞美尼亞語進行口頭和書面交流
+
+精通亞美尼亞語",The Armenian language.,亞美尼亞語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/33859d93-987c-4caa-a0a9-6159ea7bbc2a,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Arabic,阿拉伯語,"competent in Arabic
+ability to comprehend spoken and written Arabic and to speak and write in Arabic","精通阿拉伯語
+
+能夠理解阿拉伯語的口語和書面表達，並能用阿拉伯語進行口頭和書面交流 ",The Arabic language.,阿拉伯語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/5bfce8e7-6f22-4e67-9018-0e4161620f3a,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Azerbaijani,"亞塞拜然語
+","Azeri
+competent in Azerbaijani
+Azeri Turkish
+ability to comprehend spoken and written Azerbaijani and to speak and write in Azerbaijani
+Azerbaijani Turkish","亞塞拜然語
+
+精通亞塞拜然語
+
+亞塞拜然土耳其語
+
+能夠理解阿塞拜疆語的口語和書面表達，並能用阿塞拜疆語進行口頭和書面交流
+
+亞塞拜然土耳其語",The Azerbaijani language.,阿塞拜疆語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/6f34bd05-1297-4913-92ff-85a604242b2f,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Berber,柏柏爾語,"ability to comprehend spoken and written Berber and to speak and write in Berber
+Tamazight
+competent in Berber","能夠理解柏柏爾語的口語和書面語，並能用柏柏爾語進行口頭和書面交流
+
+塔馬齊格特語
+
+精通柏柏爾語",The language family of Berber languages.,柏柏爾語系 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/87219dfe-a21c-4160-8cc8-1eabf9b16b44,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Italian,義大利語,"competent in Italian
+ability to comprehend spoken and written Italian and to speak and write in Italian","精通義大利語
+
+能夠理解義大利語的口語和書面表達，並能用義大利語進行口頭和書面溝通 ",The Italian language. Italian is an official language of the EU.,義大利語 義大利語是歐盟的官方語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/cf5b3ca0-a844-42b9-b9cd-bd15465b9cac,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Limburgish,林堡語,"competent in Limburgish
+ability to comprehend spoken and written Limburgish and to speak and write in Limburgish Limburgian
+Limburgic","精通林堡語
+
+能夠理解林堡語的口語和書面表達，並能用林堡語進行口頭和書面交流
+
+林堡語",The Limburgish language.,林堡語 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/da0795a7-6866-4afc-81ed-5e3aa398f058,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Czech,捷克語,"competent in Czech
+ability to comprehend spoken and written Czech and to speak and write in Czech","精通捷克語
+
+能夠理解捷克語的口語和書面表達，並能用捷克語進行口頭和書面溝通 ",The Czech language.Czech is an official and working language of the EU.,捷克語 捷克語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/e747e77e-0ea1-4001-8b07-1d11946b5f1b,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,French,法語,"ability to comprehend spoken and written French and to speak and write in French
+competent in French","能夠理解法語口語和書面語，並能用法語進行口頭和書面交流
+
+法文程度熟練",The French language. French is an official and working language of the EU.,法語 法語是歐盟的官方語言和工作語言之一 ,#REF!
+KnowledgeSkillCompetence,http://data.europa.eu/esco/skill/e9e9b625-f59f-4bda-952d-1f9831e6dfda,#N/A,#N/A,http://data.europa.eu/esco/skill/43f425aa-f45d-4bb4-a200-6f82fa211b66,languages,knowledge,transversal,Tamil,泰米爾語,"competent in Tamil
+ability to comprehend spoken and written Tamil and to speak and write in Tamil","精通泰米爾語
+
+能夠理解泰米爾語的口語和書面表達，並能用泰米爾語進行口頭和書面交流 ",The Tamil language.,泰米爾語 ,#REF!

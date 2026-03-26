@@ -1,0 +1,18 @@
+[submodule "projects/daodao-f2e"]
+	path = projects/daodao-f2e
+	url = https://github.com/daodaoedu/daodao-f2e.git
+[submodule "projects/daodao-server"]
+	path = projects/daodao-server
+	url = https://github.com/daodaoedu/daodao-server.git
+[submodule "projects/daodao-ai-backend"]
+	path = projects/daodao-ai-backend
+	url = https://github.com/daodaoedu/daodao-ai-backend.git
+[submodule "projects/daodao-storage"]
+	path = projects/daodao-storage
+	url = https://github.com/daodaoedu/daodao-storage.git
+[submodule "projects/daodao-infra"]
+	path = projects/daodao-infra
+	url = https://github.com/daodaoedu/daodao-infra.git
+[submodule "projects/daodao-worker"]
+	path = projects/daodao-worker
+	url = https://github.com/daodaoedu/daodao-worker.git

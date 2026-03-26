@@ -1,0 +1,24 @@
+中文,英文,備註,api
+個人資訊,Personal Information,,
+生日,Date of Birth,,
+名稱,Name,,
+希望大家怎麼稱呼你,What would you like to be called?,Placeholder,
+使用者帳號,Username,,
+設定你的專屬帳號,Create your username,Placeholder,
+個人標語,Headline,,
+用一句話介紹自己,Create your personal headline,Placeholder,
+專業與興趣領域,Professional & Interests,,
+你的專業或正在學習的領域,Your profession or current field of study,,
+你有興趣探索的領域 *,Areas you'd like to explore,,
+你如何得知島島阿學？,How did you hear about DaoDao,,
+幫助我們了解如何讓更多人發現島島阿學 *,Help us understand how to reach more learners like you,,
+Instagram,,,"instagram',            // Instagram"
+Facebook,,,"facebook',             // Facebook"
+Discord,,,"discord',              // Discord"
+LinkedIn,,,"linkedin',             // LinkedIn"
+朋友介紹,Referred by a friend,,"friend_referral',      // 朋友介紹"
+其他,Other,,"others',               // 其他"
+歡迎加入島島阿學！,Welcome to DaoDao,,
+前往完成偏好設定獲得個人化推薦,Complete your profile to get personalized recommendations,,
+稍後設定,Skip for now,,
+記得到信箱收我們的歡迎信哦!,Don't forget to check your inbox for our welcome email!,,

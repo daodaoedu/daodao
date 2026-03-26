@@ -1,0 +1,3 @@
+我想把島島的前後端都移轉到GCP並使用kubernetes + argocd，幫我規劃
+目前前端部署在cloudflare worker
+後端跟db部署在linode vps

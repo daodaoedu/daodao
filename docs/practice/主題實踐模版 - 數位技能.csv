@@ -1,0 +1,33 @@
+名稱,把重複工作交給 AI,練習 AI 提示詞,Gemini 在 Google sheet 應用,SQL/數據查詢微練習,NotebookLM 知識內化實驗
+實踐行動,挑選工作中的重複任務（如：回覆客戶郵件、整理會議記錄、撰寫活動文案），嘗試用 AI 產出 3 個版本,每天挑選一個工作或生活任務，撰寫指令，並針對 AI 的第一次回饋進行至少 1 次的「追問優化」，將優化前後的差異記錄在 Ideas,練習如何在 Google sheet 使用 Gemini,在線上練習平台上，每天寫出一個正確的 Query 語法，成功抓取指定的數據,文章網站或 PDF 上傳至筆記本，生成語音　
+開始日期,Default 設定使用者點選當日,Default 設定使用者點選當日,Default 設定使用者點選當日,Default 設定使用者點選當日,Default 設定使用者點選當日
+想持續多久,,,,,
+7 天,V,,,,
+14 天,,V,V,Ｖ,Ｖ
+21 天,,,,,
+30 天,,,,,
+,,,,,
+結束於,,,,,
+,,,,,
+頻率,,,,,
+2-4 天,,V,,Ｖ,
+3-5 天,V,,V,,Ｖ
+4-7 天,,,,,
+,,,,,
+每次執行時間,,,,,
+15 分鐘,,,,,
+30 分鐘,V,V,,,Ｖ
+45 分鐘,,,V,,
+60 分鐘,,,,Ｖ,
+,,,,,
+執行時段,,,,,
+早餐前,,,,,
+通勤時,,,,,
+午休時,,,,Ｖ,Ｖ
+晚餐後,,V,V,,
+睡前, ,,,V,Ｖ
+其他時段,工作時,,,,
+,,,,,
+使用的資源,3個步驟就能打造你的AI工作流,5 分鐘學會 ChatGPT Prompt 提示詞優化術, Example of using Gemini in Google Sheets,SQL Zoo,NotebookLM新版全面實測：AI語音摘要、心智圖、影片簡報一次掌握
+,https://www.bnext.com.tw/article/89719/ai-workflow-system-master-prompt,https://aiworks.tw/blog-chatgpt-prompt/,https://www.youtube.com/watch?v=-OdfAX2TnlY,https://sqlzoo.net/wiki/SQL_Tutorial,https://www.youtube.com/watch?v=_0ZDh5C8z0U
+類別,數位技能,數位技能,數位技能,數位技能,數位技能
