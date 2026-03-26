@@ -23,6 +23,22 @@ daodao 是一個 monorepo，各子專案職責如下：
 - **部署 / 環境問題**：到 `daodao-infra` 查看設定
 - **Worker / Cloudflare 服務問題**：到 `daodao-worker` 查看 worker 邏輯（含 AI worker）
 
+## 測試規範
+
+- **新功能必須附測試**：每個新增的純邏輯函式（utility、validation、service logic）都要有對應的測試
+- **修 bug 必須附 regression test**：先寫一個會失敗的測試重現 bug，再修復讓測試通過
+- **不需要測 UI 元件**：React 元件、頁面 layout、CSS 樣式不需要寫測試
+- **測試放在 `__tests__/` 目錄**：跟被測檔案同層或在 `src/__tests__/`
+
+### 各子專案測試指令
+
+| 子專案 | 測試框架 | 指令 |
+|--------|---------|------|
+| daodao-f2e | Vitest | `pnpm test` |
+| daodao-server | Jest | `pnpm test` |
+| daodao-ai-backend | pytest | `make test` |
+| daodao-worker | Vitest | `pnpm test` |
+
 ## Commit 流程
 
 commit 時必須依序執行：

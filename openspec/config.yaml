@@ -1,20 +1,36 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  # daodao 島島阿學
+  學習資源與實踐社群平台，幫助使用者探索學習資源、記錄實踐歷程、建立學習社群。
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  ## 技術棧
+  - 前端 (daodao-f2e): Next.js 15 + React 19 + Tailwind CSS 4 + Turborepo + Tamagui (跨平台)
+    - 3 個 app: website (官網), product (產品), mobile (React Native + Expo)
+    - 共用 packages: ui, api, auth, shared, config, i18n, analytics, features/*
+  - 後端 (daodao-server): Express 4 + TypeScript + Prisma (PostgreSQL) + Redis + BullMQ
+  - AI 服務 (daodao-ai-backend): FastAPI + Python 3.12 + Qdrant (向量搜尋) + Celery
+  - Worker (daodao-worker): Hono + Cloudflare Workers + Vitest
+  - DB (daodao-storage): PostgreSQL 14 + SQL migrations
+  - Infra (daodao-infra): Docker Compose + Nginx + Linode
+
+  ## 開發慣例
+  - 繁體中文互動，commit message 用繁體中文
+  - Conventional commits: type(scope): 描述
+  - 前端禁止 any，用 Zod 驗證，用 @daodao/* packages
+  - 後端禁止 class，用 factory pattern + const object
+  - 每個新功能必須附測試，修 bug 必須附 regression test
+
+rules:
+  proposal:
+    - 使用繁體中文撰寫
+    - 明確標註影響哪些子專案（f2e / server / ai-backend / storage / worker）
+    - 包含「Non-goals」段落
+  design:
+    - 跨專案功能需分別描述各子專案的實作方式
+    - API 設計遵循 RESTful + Zod validation + OpenAPI
+    - 資料庫變更需包含 migration SQL
+  tasks:
+    - 每個 task 控制在 2-4 小時
+    - 標註該 task 屬於哪個子專案
+    - 包含驗收條件（acceptance criteria）
