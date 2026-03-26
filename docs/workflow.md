@@ -16,10 +16,12 @@ PM 寫 PRD/FRD（docs/）
                     ├── Auto PR Description（GPT-4o-mini）
                     ├── AI Code Review（GPT-4o-mini）
                     ├── Gemini Code Assist（Google）
-                    ├── CI（lint + typecheck + test）
-                    └── CD（Docker build + deploy）
-                      → /openspec-verify-change 驗收
-                        → /openspec-archive-change 歸檔
+                    └── CI（lint + typecheck + test）
+                      → collect-pr-feedback skill 收集回饋
+                        → 修正 → commit → push
+                          → Merge → CD 自動部署
+                            → /openspec-verify-change 驗收
+                              → /openspec-archive-change 歸檔
 ```
 
 ---
@@ -86,7 +88,7 @@ openspec/changes/<change-name>/
 
 ### 2.3 審查要點
 
-在 `/opsx:apply` 前，確認：
+在 `/openspec-apply-change` 前，確認：
 
 - [ ] proposal 的範圍是否正確？
 - [ ] design 的技術方案是否合理？
@@ -101,7 +103,7 @@ openspec/changes/<change-name>/
 
 ```bash
 # 從 OpenSpec tasks 開始實作
-/opsx:apply <change-name>
+/openspec-apply-change <change-name>
 
 # 或手動開發
 cd daodao-f2e   # 到對應的子專案
@@ -120,7 +122,7 @@ cd daodao-f2e   # 到對應的子專案
 
 | 子專案 | lint | typecheck | test | 自動修復 |
 |--------|------|-----------|------|---------|
-| daodao-f2e | `pnpm run lint` | `pnpm run typecheck` | — | `pnpm run check:fix` |
+| daodao-f2e | `pnpm run lint` | `pnpm run typecheck` | `pnpm test` | `pnpm run check:fix` |
 | daodao-server | `pnpm run lint` | `pnpm run typecheck` | `pnpm test` | `pnpm run lint:fix` |
 | daodao-ai-backend | `make lint` | — | `make test` | `make format` |
 | daodao-worker | — | `pnpm run typecheck` | `pnpm test` | — |
@@ -228,11 +230,29 @@ PR opened
 
 | 子專案 | CI 內容 | Workflow |
 |--------|---------|----------|
-| daodao-f2e | lint + typecheck + build | `linode-ci.yml` |
+| daodao-f2e | lint + typecheck + test + build | `linode-ci.yml` |
 | daodao-server | lint + typecheck + test + build | `continuous-integration.yml` |
 | daodao-ai-backend | format check + lint | `ci.yml` |
 | daodao-storage | schema validation | `ci-postgres.yml` |
 | daodao-worker | typecheck + test | `ci.yml`（待建立） |
+
+### 6.6 收集 PR Feedback
+
+CI 和 AI review 跑完後，使用 `collect-pr-feedback` skill 收集所有回饋：
+
+```
+使用者說「收集 feedback」或「看 PR review」
+  → collect-pr-feedback skill
+    1. 讀 CI 狀態（gh pr checks）
+    2. 收集所有 review comments（AI Code Review + Gemini + 人類）
+    3. 分類整理：
+       - 必須修 — CI 失敗、High 嚴重度、人類明確要求
+       - 建議修 — Medium 嚴重度、Gemini 建議
+       - 可忽略 — Low 嚴重度、風格偏好、false positive
+    4. 詢問使用者要修正哪些
+    5. 修正 → commit → push
+    6. 可選：在 PR 上回覆 reviewer
+```
 
 ---
 
@@ -290,6 +310,7 @@ Merge 到 main/dev 後自動觸發：
 | PR | Auto PR Description | 自動產生 PR 標題和描述 |
 | PR | AI Code Review (GPT-4o-mini) | 自動審查 diff |
 | PR | Gemini Code Assist | Google AI 額外審查 |
+| PR | collect-pr-feedback skill | 收集所有 review，分類並詢問修正 |
 | CI | GitHub Actions | 自動化品質檢查 |
 | CD | GitHub Actions + Docker | 自動部署 |
 | 同步 | sync-claude-config workflow | 共用設定同步到子專案 |
