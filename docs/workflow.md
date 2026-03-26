@@ -4,7 +4,10 @@
 
 ```mermaid
 flowchart TD
-    A[PM 寫 PRD / FRD] --> B["/openspec-explore 探索需求"]
+    A1[PM 寫 PRD / FRD] --> A4[放到 docs/]
+    A2[設計師出 Figma 設計稿] --> A4
+    A3[在分支開發 Prototype] --> A4
+    A4 --> B["/openspec-explore 探索需求"]
     B --> C["/openspec-new-change 建立 change"]
     C --> D["產生 artifacts<br/>/openspec-continue-change<br/>或 /openspec-ff-change"]
     D --> E["人類審查<br/>proposal → design → specs → tasks"]
@@ -29,9 +32,11 @@ flowchart TD
 
 ---
 
-## Phase 1：需求規劃（PM）
+## Phase 1：需求輸入
 
-### 1.1 撰寫 PRD / FRD
+需求可以從三個來源進入，最終都放到 `docs/` 作為 OpenSpec 的輸入。
+
+### 1.1 PM 撰寫 PRD / FRD
 
 PM 在 `docs/product/` 目錄撰寫需求文件，按功能分子目錄：
 
@@ -40,18 +45,31 @@ PM 在 `docs/product/` 目錄撰寫需求文件，按功能分子目錄：
 | **PRD**（Product Requirements Document） | 產品目標、用戶故事、成功指標 |
 | **FRD**（Functional Requirements Document） | 功能細節、介面規格、邏輯流程 |
 
-### 1.2 放置位置
+### 1.2 設計師出 Figma 設計稿
+
+- 設計師在 Figma 完成 UI 設計
+- 截圖放到 `docs/product/<功能>/` 目錄，或提供 Figma URL
+- 開發時可用 Figma MCP 直接讀取設計稿（`get_design_context`、`get_screenshot`）
+
+### 1.3 在分支開發 Prototype
+
+- 直接在 feature branch 上做 prototype
+- 快速驗證互動和可行性
+- 確認後截圖或文件放到 `docs/`
+
+### 1.4 放置位置
+
+所有需求素材統一放在 `docs/product/`：
 
 ```
 docs/product/
-├── island/           ← 我的小島相關
+├── island/           ← 我的小島相關（PRD + FRD）
 ├── notification/     ← 通知系統
 ├── challenge/        ← 共同挑戰
 ├── social/           ← 社交功能
 ├── practice/         ← 練習相關
 ├── search/           ← 搜尋
 ├── onboarding/       ← 新手引導
-├── prd/              ← 通用 PRD
 └── ...
 ```
 
