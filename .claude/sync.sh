@@ -34,6 +34,14 @@ if [ "${1:-}" != "" ]; then
       cp "$SOURCE_SETTINGS" "$target/.claude/settings.json"
     fi
 
+    # 同步共用 skills
+    for skill in collect-pr-feedback; do
+      if [ -d "$SCRIPT_DIR/skills/$skill" ]; then
+        mkdir -p "$target/.claude/skills/$skill"
+        cp "$SCRIPT_DIR/skills/$skill/SKILL.md" "$target/.claude/skills/$skill/SKILL.md"
+      fi
+    done
+
     # 同步共用 workflows
     mkdir -p "$target/.github/workflows"
     for wf in "${SHARED_WORKFLOWS[@]}"; do
