@@ -44,3 +44,18 @@ git submodule update --remote
 | daodao-storage | 資料庫與儲存 | [daodaoedu/daodao-storage](https://github.com/daodaoedu/daodao-storage) |
 | daodao-infra | 基礎設施 | [daodaoedu/daodao-infra](https://github.com/daodaoedu/daodao-infra) |
 | daodao-worker | 背景任務 | [daodaoedu/daodao-worker](https://github.com/daodaoedu/daodao-worker) |
+
+## 開發工具（Claude Code Skills）
+
+| Skill | 用途 |
+|-------|------|
+| `/openspec-*` | 需求 → 規格 → 任務的完整工作流 |
+| `/format-commit` | 結構化 commit message（Why / How） |
+| `/pre-commit-check` | Commit 前自動品質檢查與修復 |
+| `/code-review` | Push 前本地 code review |
+| `/collect-pr-feedback` | 收集 PR 上所有 review 回饋 |
+| `/file-bug-issue` | 無法立即修復的 bug 開成 GitHub issue |
+| `/publish-tasks` | 發布 OpenSpec tasks 為 GitHub issues 供 Remote Agent 自動實作 |
+| `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
+
+詳細開發流程見 [docs/workflow.md](docs/workflow.md)。
