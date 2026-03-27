@@ -62,6 +62,14 @@ commit 時必須依序執行：
 - Yes → 執行 `.claude/skills/code-review/SKILL.md` skill，review 完再 push
 - No → 直接 push
 
+## Bug Issue 流程
+
+開發或 CI 過程中遇到無法立即修復的錯誤時：
+1. 執行 `.claude/skills/file-bug-issue/SKILL.md` skill
+2. 從對話上下文自動收集錯誤資訊（錯誤訊息、重現步驟、已嘗試的修復、相關檔案、環境）
+3. 詢問目標 repo
+4. 預覽 issue 內容，確認後建立帶 `bug` label 的 GitHub issue
+
 ## PR Feedback 流程
 
 Push 並開 PR 後，使用者說「收集 feedback」或「看 PR review」時：
