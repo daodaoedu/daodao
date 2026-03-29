@@ -1,0 +1,104 @@
+name: Sync Shared Config
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/hooks/**'
+      - '.claude/settings.json'
+      - '.claude/skills/collect-pr-feedback/**'
+      # 加入你需要同步的 workflows
+      # - '.github/workflows/auto-pr-description.yml'
+      # - '.github/workflows/code-review.yml'
+  schedule:
+    # 每週一 UTC 01:00
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo:
+          # 在這裡列出要同步的子專案
+          # - my-app-frontend
+          # - my-app-backend
+          []
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.repo }}
+          token: ${{ secrets.REPO_SYNC_TOKEN }}
+          path: target
+
+      - name: Sync hooks, settings, and workflows
+        run: |
+          # Claude hooks + settings
+          mkdir -p target/.claude/hooks
+          cp .claude/hooks/*.sh target/.claude/hooks/
+          chmod +x target/.claude/hooks/*.sh
+
+          if [ -f target/.claude/settings.json ]; then
+            jq -s '.[0] * .[1]' target/.claude/settings.json .claude/settings.json > target/.claude/settings.json.tmp
+            mv target/.claude/settings.json.tmp target/.claude/settings.json
+          else
+            cp .claude/settings.json target/.claude/settings.json
+          fi
+
+          # Shared skills
+          for skill in collect-pr-feedback; do
+            if [ -d ".claude/skills/$skill" ]; then
+              mkdir -p "target/.claude/skills/$skill"
+              cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
+            fi
+          done
+
+          # Shared workflows (取消註解並加入你需要的 workflows)
+          # mkdir -p target/.github/workflows
+          # for wf in auto-pr-description.yml code-review.yml; do
+          #   if [ -f ".github/workflows/$wf" ]; then
+          #     cp ".github/workflows/$wf" "target/.github/workflows/$wf"
+          #   fi
+          # done
+
+      - name: Check for changes
+        id: diff
+        working-directory: target
+        run: |
+          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Get default branch
+        if: steps.diff.outputs.changed == 'true'
+        id: default-branch
+        working-directory: target
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
+        run: |
+          DEFAULT=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name')
+          echo "branch=$DEFAULT" >> $GITHUB_OUTPUT
+
+      - name: Create PR and merge
+        if: steps.diff.outputs.changed == 'true'
+        working-directory: target
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
+          DEFAULT_BRANCH: ${{ steps.default-branch.outputs.branch }}
+        run: |
+          BRANCH="chore/sync-claude-config-$(date +%Y%m%d%H%M)"
+          git checkout -b "$BRANCH"
+          git add .claude/ .github/workflows/
+          git commit -m "chore: sync shared config
+
+          Auto-synced hooks, settings, and workflows from central repo."
+          git push origin "$BRANCH"
+          PR_URL=$(gh pr create \
+            --title "chore: sync shared config" \
+            --body "Auto-synced from central repo. Updates hooks, settings, and workflows." \
+            --base "$DEFAULT_BRANCH")
+          gh pr merge "$PR_URL" --squash --auto
+          echo "✅ PR created and auto-merge enabled: $PR_URL"
