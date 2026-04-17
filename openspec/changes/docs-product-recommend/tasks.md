@@ -12,9 +12,9 @@
 
 ## 3. 前端 Hook 與首頁整合
 
-- [ ] 3.1 [daodao-f2e] 在 `packages/api` 新增首頁推薦 hook 與 feedback mutation，沿用 `showcase-hooks.ts` 的 AI backend 取數模式與型別輸出。（驗收：前端可用單一 recommendation hook 取得卡片列表；支援帶入 `limit`、`exclude_ids`；feedback mutation 可更新卡片狀態）
-- [ ] 3.2 [daodao-f2e] 在產品首頁加入「探索相關主題」區塊與推薦卡片元件，顯示卡片資訊、推薦理由、AI 推薦聲明與查看更多入口。（驗收：首頁在主題實踐區塊下方顯示最多 3 張推薦卡片；原固定「已完成」區塊不再佔用相同版位；卡片內容符合 spec 欄位）
-- [ ] 3.3 [daodao-f2e] 實作推薦區塊的非同步載入、空狀態、👍/👎 互動與補卡流程。（驗收：首頁主內容可先渲染、推薦區塊後載入；👎 後會顯示確認並移除卡片；若仍有候選則補上一張，否則顯示空狀態；空狀態 CTA 可導向既有靈感分頁）
+- [x] 3.1 [daodao-f2e] 在 `packages/api` 新增首頁推薦 hook 與 feedback mutation，沿用 `showcase-hooks.ts` 的 AI backend 取數模式與型別輸出。（驗收：前端可用單一 recommendation hook 取得卡片列表；支援帶入 `limit`、`exclude_ids`；feedback mutation 可更新卡片狀態）
+- [x] 3.2 [daodao-f2e] 在產品首頁加入「探索相關主題」區塊與推薦卡片元件，顯示卡片資訊、推薦理由、AI 推薦聲明與查看更多入口。（驗收：首頁在主題實踐區塊下方顯示最多 3 張推薦卡片；原固定「已完成」區塊不再佔用相同版位；卡片內容符合 spec 欄位）
+- [x] 3.3 [daodao-f2e] 實作推薦區塊的非同步載入、空狀態、👍/👎 互動與補卡流程。（驗收：首頁主內容可先渲染、推薦區塊後載入；👎 後會顯示確認並移除卡片；若仍有候選則補上一張，否則顯示空狀態；空狀態 CTA 可導向既有靈感分頁）
 
 ## 4. 追蹤與驗證
 
