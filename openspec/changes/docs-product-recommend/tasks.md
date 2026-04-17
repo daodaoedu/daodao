@@ -1,14 +1,14 @@
 ## 1. AI Backend API 與推薦資料契約
 
-- [ ] 1.1 [daodao-ai-backend] 設計並新增首頁推薦卡片的 request / response schema 與 router，定義 `GET /api/v1/recommendation/topic_cards`、`POST /api/v1/recommendation/topic_cards/{recommendationId}/feedback` 的欄位與驗證規則。（驗收：AI backend 有明確 schema 與 router；卡片回傳至少包含 `recommendationId`、`targetType`、`targetId`、`title`、`description`、`creator`、`tags`、`matchReasonCode`、`matchReasonText`、`feedbackState`、`isAiGenerated`；非法 feedback payload 會回傳錯誤）
-- [ ] 1.2 [daodao-ai-backend] 建立 dashboard recommendation service 的候選召回流程，整合現有 practice / recommendation 排序基礎，支援 `limit` 與 `exclude_ids` 參數。（驗收：service 能回傳固定數量的推薦卡片；補卡請求不會回傳 `exclude_ids` 內的目標；可被 router 呼叫）
-- [ ] 1.3 [daodao-ai-backend] 實作推薦理由映射與卡片欄位組裝，將專業領域、想探索領域、相似用戶、進行中主題與瀏覽訊號轉為可解釋的 `matchReasonCode` / `matchReasonText`。（驗收：每張卡片都有對應理由；理由來源可追溯到明確特徵；缺少完整歷史資料時仍能回傳 cold-start 推薦）
+- [x] 1.1 [daodao-ai-backend] 設計並新增首頁推薦卡片的 request / response schema 與 router，定義 `GET /api/v1/recommendation/topic_cards`、`POST /api/v1/recommendation/topic_cards/{recommendationId}/feedback` 的欄位與驗證規則。（驗收：AI backend 有明確 schema 與 router；卡片回傳至少包含 `recommendationId`、`targetType`、`targetId`、`title`、`description`、`creator`、`tags`、`matchReasonCode`、`matchReasonText`、`feedbackState`、`isAiGenerated`；非法 feedback payload 會回傳錯誤）
+- [x] 1.2 [daodao-ai-backend] 建立 dashboard recommendation service 的候選召回流程，整合現有 practice / recommendation 排序基礎，支援 `limit` 與 `exclude_ids` 參數。（驗收：service 能回傳固定數量的推薦卡片；補卡請求不會回傳 `exclude_ids` 內的目標；可被 router 呼叫）
+- [x] 1.3 [daodao-ai-backend] 實作推薦理由映射與卡片欄位組裝，將專業領域、想探索領域、相似用戶、進行中主題與瀏覽訊號轉為可解釋的 `matchReasonCode` / `matchReasonText`。（驗收：每張卡片都有對應理由；理由來源可追溯到明確特徵；缺少完整歷史資料時仍能回傳 cold-start 推薦）
 
 ## 2. Feedback 訊號與持久化
 
-- [ ] 2.1 [daodao-storage] 新增推薦 feedback / hidden 狀態所需的資料表與 migration SQL，至少支援 `user_id`、`target_type`、`target_id`、`feedback_type`、`is_hidden`、`source`、時間戳與必要索引。（驗收：migration 可建立資料表；有支援 user + target 查詢與 hidden 過濾的索引；欄位可表達 like / dislike / hidden 狀態）
-- [ ] 2.2 [daodao-ai-backend] 串接推薦 feedback 寫入與讀取邏輯，讓 `POST /feedback` 能新增、取消或更新 like / dislike / hidden 狀態。（驗收：like 可切換為 neutral；dislike 會標記 hidden；API 回傳最新 `feedbackState`；資料會寫入持久化層）
-- [ ] 2.3 [daodao-ai-backend] 在推薦查詢時先排除使用者已 hidden 或已明確 dislike 的目標，並將正負向 feedback 納入排序權重調整。（驗收：同一使用者刷新後不會再次看到已 hidden 目標；補卡不會回傳當前已顯示或已隱藏項目；正負向 feedback 會影響後續候選排序）
+- [x] 2.1 [daodao-storage] 新增推薦 feedback / hidden 狀態所需的資料表與 migration SQL，至少支援 `user_id`、`target_type`、`target_id`、`feedback_type`、`is_hidden`、`source`、時間戳與必要索引。（驗收：migration 可建立資料表；有支援 user + target 查詢與 hidden 過濾的索引；欄位可表達 like / dislike / hidden 狀態）
+- [x] 2.2 [daodao-ai-backend] 串接推薦 feedback 寫入與讀取邏輯，讓 `POST /feedback` 能新增、取消或更新 like / dislike / hidden 狀態。（驗收：like 可切換為 neutral；dislike 會標記 hidden；API 回傳最新 `feedbackState`；資料會寫入持久化層）
+- [x] 2.3 [daodao-ai-backend] 在推薦查詢時先排除使用者已 hidden 或已明確 dislike 的目標，並將正負向 feedback 納入排序權重調整。（驗收：同一使用者刷新後不會再次看到已 hidden 目標；補卡不會回傳當前已顯示或已隱藏項目；正負向 feedback 會影響後續候選排序）
 
 ## 3. 前端 Hook 與首頁整合
 
