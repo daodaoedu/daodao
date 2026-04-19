@@ -18,6 +18,6 @@
 
 ## 4. 追蹤與驗證
 
-- [ ] 4.1 [daodao-f2e] 新增推薦區塊曝光、點擊、like、dislike 與加入主題轉換的 tracking 事件。（驗收：推薦卡片與區塊的核心互動都有對應事件；事件可區分 `matchReasonCode`、目標 id 與互動類型）
-- [ ] 4.2 [daodao-ai-backend] 補齊推薦 service 與 feedback regression tests，覆蓋 cold-start、理由映射、hidden 排除、feedback 權重調整與非法 payload 情境。（驗收：新增測試可重現並驗證上述情境；`make test` 可涵蓋新增邏輯）
-- [ ] 4.3 [daodao-f2e] 完成首頁推薦整合的手動驗證清單與必要前端測試更新，確認載入、空狀態、補卡、重新整理後 hidden 不回來與 CTA 導流行為。（驗收：有可執行的驗證步驟；前端改動不破壞既有首頁 tab 行為；推薦區塊在桌機與行動版都能正常顯示）
+- [x] 4.1 [daodao-f2e] 新增推薦區塊曝光、點擊、like、dislike 與加入主題轉換的 tracking 事件。（驗收：推薦卡片與區塊的核心互動都有對應事件；事件可區分 `matchReasonCode`、目標 id 與互動類型）
+- [x] 4.2 [daodao-ai-backend] 補齊推薦 service 與 feedback regression tests，覆蓋 cold-start、理由映射、hidden 排除、feedback 權重調整與非法 payload 情境。（驗收：新增測試可重現並驗證上述情境；`make test` 可涵蓋新增邏輯）
+- [x] 4.3 [daodao-f2e] 完成首頁推薦整合的手動驗證清單與必要前端測試更新，確認載入、空狀態、補卡、重新整理後 hidden 不回來與 CTA 導流行為。（驗收：有可執行的驗證步驟；前端改動不破壞既有首頁 tab 行為；推薦區塊在桌機與行動版都能正常顯示）

@@ -201,3 +201,33 @@ Rollback 策略：
 - `recommendationId` 是否需要對單次曝光做 event 級追蹤，或以 `targetType + targetId + source` 即可滿足需求？
 - 使用者瀏覽內容的資料來源是否已在 AI backend 有穩定事件表，若沒有需先定義最小可用的瀏覽訊號來源。
 - 「查看更多推薦內容」要導向現有頁面、同頁展開，還是需要新的推薦列表 API。
+
+---
+
+## 手動驗證清單
+
+### 載入行為
+- [ ] 進入首頁，主內容先渲染，推薦區塊後出現（skeleton → cards）
+- [ ] 無網路時推薦區塊靜默 fail，不影響主要內容顯示
+
+### 空狀態
+- [ ] 沒有推薦時顯示空狀態訊息
+- [ ] 空狀態「前往靈感頁」按鈕可點擊，且切換到 inspire tab
+
+### 卡片互動
+- [ ] 點擊卡片主體區域可導向對應 practice 頁面
+- [ ] 點擊 👍 後，卡片 thumbs-up 圖示變綠（liked 狀態）
+- [ ] 再次點擊 👍 → 圖示恢復灰色（toggle 回 neutral）
+- [ ] 點擊 👎 → 卡片立即消失（optimistic remove）
+- [ ] 若仍有候選，👎 後自動補上一張新卡片
+- [ ] 沒有候選時 👎 後顯示空狀態
+
+### 重整後 hidden 不回來
+- [ ] 對某張卡片 👎 後重整頁面，該卡片不再出現
+
+### 版面
+- [ ] 桌機（md+）：3 欄 grid 顯示
+- [ ] 行動版：horizontal scroll carousel
+- [ ] 推薦區塊位於 in-progress 區塊下方
+- [ ] 推薦區塊不影響首頁其他 tab（inspire、completed）的行為
+
