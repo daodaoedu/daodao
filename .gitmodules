@@ -18,4 +18,4 @@
 	url = https://github.com/daodaoedu/daodao-worker.git
 [submodule "projects/daodao-admin-ui"]
 	path = projects/daodao-admin-ui
-	url = https://github.com/daodaoedu/daodao-admin-ui
+	url = https://github.com/daodaoedu/daodao-admin-ui.git
