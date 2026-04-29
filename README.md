@@ -18,7 +18,8 @@ daodao/
     ├── daodao-ai-backend/# AI 後端
     ├── daodao-storage/   # 資料庫與儲存
     ├── daodao-infra/     # 基礎設施
-    └── daodao-worker/    # Cloudflare Worker API
+    ├── daodao-worker/    # Cloudflare Worker API
+    └── daodao-admin-ui/  # 管理後台 UI
 ```
 
 ## 開始使用
@@ -44,6 +45,7 @@ git submodule update --remote
 | daodao-storage | 資料庫與儲存 | [daodaoedu/daodao-storage](https://github.com/daodaoedu/daodao-storage) |
 | daodao-infra | 基礎設施 | [daodaoedu/daodao-infra](https://github.com/daodaoedu/daodao-infra) |
 | daodao-worker | Cloudflare Worker API | [daodaoedu/daodao-worker](https://github.com/daodaoedu/daodao-worker) |
+| daodao-admin-ui | 管理後台 UI | [daodaoedu/daodao-admin-ui](https://github.com/daodaoedu/daodao-admin-ui) |
 
 ## 開發工具（Claude Code Skills）
 

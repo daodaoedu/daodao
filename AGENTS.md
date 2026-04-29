@@ -12,6 +12,7 @@ daodao 是一個 monorepo，各子專案職責如下：
 | `daodao-storage` | DB 管理 | Schema 定義、migrations、資料庫結構變更 |
 | `daodao-infra` | 基礎建設 | 部署、CI/CD、雲端資源、環境設定 |
 | `daodao-worker` | Cloudflare Workers | AI 相關 worker 與其他免費服務（Cloudflare 平台） |
+| `daodao-admin-ui` | 管理後台 UI | 讀取/修改管理介面、後台頁面、admin 元件 |
 
 ### 功能規劃與 Debug 指引
 
@@ -38,6 +39,7 @@ daodao 是一個 monorepo，各子專案職責如下：
 | daodao-server | Jest | `pnpm test` |
 | daodao-ai-backend | pytest | `make test` |
 | daodao-worker | Vitest | `pnpm test` |
+| daodao-admin-ui | — | — |
 
 ## Commit 流程
 
@@ -55,6 +57,7 @@ commit 時必須依序執行：
 | daodao-server | `pnpm run lint` | `pnpm run typecheck` | `pnpm run lint:fix` |
 | daodao-ai-backend | `make lint` | — | `make format` |
 | daodao-worker | — | `pnpm run typecheck` | — |
+| daodao-admin-ui | `npm run lint` | `npx tsc --noEmit` | `npm run lint -- --fix` |
 
 ## Push 流程
 
