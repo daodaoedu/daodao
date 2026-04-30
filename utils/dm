@@ -1,0 +1,218 @@
+#!/bin/bash
+# dm — DaoDao Container Manager (Optimized)
+
+# ── Colors & Icons ──────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+ICON_RUNNING="●"
+ICON_STOPPED="○"
+ICON_HEALTHY="✔"
+ICON_UNHEALTHY="✘"
+
+# ── Header ───────────────────────────────────────────────
+print_header() {
+    clear
+    echo -e "${CYAN}${BOLD}"
+    echo "  ╔══════════════════════════════════════════╗"
+    echo "  ║         DaoDao Container Manager         ║"
+    echo "  ╚══════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
+# ── Status Styling ───────────────────────────────────────
+get_status_style() {
+    local status="$1"
+    if [[ "$status" == *"healthy"* ]]; then
+        echo -e "${GREEN}${ICON_HEALTHY} Healthy${NC}"
+    elif [[ "$status" == *"unhealthy"* ]]; then
+        echo -e "${RED}${ICON_UNHEALTHY} Unhealthy${NC}"
+    elif [[ "$status" == *"Up"* ]]; then
+        echo -e "${GREEN}${ICON_RUNNING} Up${NC}"
+    elif [[ "$status" == *"Exited"* ]]; then
+        echo -e "${YELLOW}${ICON_STOPPED} Stopped${NC}"
+    else
+        echo -e "${DIM}${status}${NC}"
+    fi
+}
+
+# ── Stats (Optimized) ────────────────────────────────────
+print_stats() {
+    local stats
+    stats=$(docker ps -a --format "{{.Status}}" 2>/dev/null)
+    
+    local total running healthy unhealthy stopped
+    total=$(echo "$stats" | grep -c . || echo 0)
+    running=$(echo "$stats" | grep -c "Up" || echo 0)
+    healthy=$(echo "$stats" | grep -c "(healthy)" || echo 0)
+    unhealthy=$(echo "$stats" | grep -c "(unhealthy)" || echo 0)
+    stopped=$(echo "$stats" | grep -c "Exited" || echo 0)
+
+    echo -e "  ${DIM}Total: ${BOLD}${total}${NC}${DIM}  Running: ${GREEN}${running}${NC}${DIM}  Healthy: ${GREEN}${healthy}${NC}${DIM}  Unhealthy: ${RED}${unhealthy}${NC}${DIM}  Stopped: ${YELLOW}${stopped}${NC}"
+    echo ""
+}
+
+# ── List containers & pick one ───────────────────────────
+pick_container() {
+    local filter="$1"
+    local title="$2"
+
+    while true; do
+        print_header
+        echo -e "  ${BOLD}${title}${NC}\n"
+
+        local fmt='{{.Names}}\t{{.Status}}\t{{.Image}}'
+        local rows
+        if [ -z "$filter" ]; then
+            mapfile -t rows < <(docker ps -a --format "$fmt")
+        else
+            mapfile -t rows < <(docker ps -a --format "$fmt" | grep -Ei "$filter")
+        fi
+
+        if [ ${#rows[@]} -eq 0 ]; then
+            echo -e "  ${DIM}No matching containers found.${NC}\n"
+            echo -n "  Press Enter to go back..."; read -r; return
+        fi
+
+        printf "  ${BOLD}%-4s %-45s %-18s %-30s${NC}\n" "#" "NAME" "STATUS" "IMAGE"
+        echo "  $(printf '─%.0s' {1..100})"
+
+        local names=()
+        local i=1
+        for row in "${rows[@]}"; do
+            local name status image
+            name=$(echo "$row" | cut -f1)
+            status=$(echo "$row" | cut -f2)
+            image=$(echo "$row" | cut -f3)
+            names+=("$name")
+            
+            local status_styled; status_styled=$(get_status_style "$status")
+            printf "  ${BOLD}[%-2d]${NC} %-45s %-28b %-30s\n" \
+                   "$i" "$name" "$status_styled" "${image:0:30}"
+            ((i++))
+        done
+
+        echo ""
+        echo -e "  ${DIM}[r] Refresh  [0] Back${NC}"
+        echo ""
+        echo -n "  Select #: "
+        read -r choice
+
+        case "${choice,,}" in
+            0|"") return ;;
+            r) continue ;;
+            *)
+                if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#names[@]} )); then
+                    container_menu "${names[$((choice-1))]}"
+                else
+                    echo -e "\n  ${RED}Invalid selection.${NC}"; sleep 1
+                fi
+                ;;
+        esac
+    done
+}
+
+# ── Actions for a single container ───────────────────────
+container_menu() {
+    local name="$1"
+
+    while true; do
+        print_header
+        # Get detailed info in one inspect call
+        local inspect_data; inspect_data=$(docker inspect "$name" --format '{{.State.Status}}\t{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}\t{{.Config.Image}}\t{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null)
+        local c_status; c_status=$(echo "$inspect_data" | cut -f1)
+        local h_status; h_status=$(echo "$inspect_data" | cut -f2)
+        local image; image=$(echo "$inspect_data" | cut -f3)
+        local ip; ip=$(echo "$inspect_data" | cut -f4)
+        
+        local full_status="Up"
+        [[ "$c_status" == "exited" ]] && full_status="Exited"
+        [[ "$h_status" != "none" ]] && full_status+=" ($h_status)"
+        
+        local status_styled; status_styled=$(get_status_style "$full_status")
+
+        echo -e "  ${BOLD}Container:${NC} ${CYAN}${name}${NC}"
+        echo -e "  ${BOLD}Status   :${NC} ${status_styled}"
+        echo -e "  ${BOLD}Image    :${NC} ${DIM}${image}${NC}"
+        echo -e "  ${BOLD}IP Addr  :${NC} ${DIM}${ip:-N/A}${NC}"
+        echo ""
+        echo "  $(printf '─%.0s' {1..44})"
+        echo -e "  ${BOLD}[l]${NC} Logs — Live Tail        ${BOLD}[e]${NC} Exec — /bin/sh"
+        echo -e "  ${BOLD}[n]${NC} Logs — 200 lines        ${BOLD}[i]${NC} Inspect details"
+        echo ""
+        echo -e "  ${BOLD}[r]${NC} Restart                  ${BOLD}[s]${NC} Stop"
+        echo -e "  ${BOLD}[t]${NC} Start                    ${BOLD}[0]${NC} Back"
+        echo ""
+        echo -n "  Action: "
+        read -r action
+
+        case "${action,,}" in
+            l) echo -e "\n  ${DIM}Streaming logs — Ctrl+C to stop${NC}\n"; docker logs "$name" --tail=50 -f ;;
+            n) docker logs "$name" --tail=200 2>&1 | less -R ;;
+            e) echo -e "\n  ${DIM}Entering container... (type 'exit' to return)${NC}\n"
+               docker exec -it "$name" /bin/sh || docker exec -it "$name" /bin/bash || docker exec -it "$name" sh ;;
+            r) echo -n "  Restarting..."; docker restart "$name" > /dev/null && echo -e " ${GREEN}Done${NC}" || echo -e " ${RED}Failed${NC}"; sleep 1 ;;
+            s) echo -n "  Stopping..."; docker stop "$name" > /dev/null && echo -e " ${GREEN}Done${NC}" || echo -e " ${RED}Failed${NC}"; sleep 1 ;;
+            t) echo -n "  Starting..."; docker start "$name" > /dev/null && echo -e " ${GREEN}Done${NC}" || echo -e " ${RED}Failed${NC}"; sleep 1 ;;
+            i)
+                echo -e "\n  ${BOLD}── Ports ─────────────────────────────────${NC}"
+                docker inspect "$name" --format '{{range $p,$v := .NetworkSettings.Ports}}  {{$p}} -> {{range $v}}{{.HostPort}}{{end}}{{"\n"}}{{end}}' 2>/dev/null
+                echo -e "  ${BOLD}── Mounts ────────────────────────────────${NC}"
+                docker inspect "$name" --format '{{range .Mounts}}  {{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' 2>/dev/null
+                echo -e "  ${BOLD}── Networks ──────────────────────────────${NC}"
+                docker inspect "$name" --format '{{range $k,$v := .NetworkSettings.Networks}}  {{$k}} ({{.IPAddress}}){{"\n"}}{{end}}' 2>/dev/null
+                echo ""; echo -n "  Press Enter to continue..."; read -r ;;
+            0|"") break ;;
+            *) echo -e "  ${RED}Unknown action.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+# ── Main Menu ────────────────────────────────────────────
+main_menu() {
+    while true; do
+        print_header
+        print_stats
+
+        echo -e "  ${BOLD}── By Environment ────────────────────────${NC}"
+        echo -e "  [1]  Dev 環境          [2]  Prod 環境         [3]  Feat 環境"
+        echo ""
+        echo -e "  ${BOLD}── By Project ────────────────────────────${NC}"
+        echo -e "  [10] AI Backend (ai)   [11] Server (server)   [12] Frontend (f2e)"
+        echo -e "  [13] Admin UI (admin)  [20] 全部 (All)"
+        echo ""
+        echo -e "  ${BOLD}── By Type ───────────────────────────────${NC}"
+        echo -e "  [30] Database (pg)     [31] Cache (redis)     [32] Vector (qdrant)"
+        echo -e "  [33] Infra (nginx)"
+        echo ""
+        echo -e "  ${DIM}[0]  離開 (Exit)${NC}"
+        echo ""
+        echo -n "  選擇: "
+        read -r choice
+
+        case "$choice" in
+            1)  pick_container "dev"            "Dev 環境" ;;
+            2)  pick_container "prod|production" "Prod 環境" ;;
+            3)  pick_container "feat"           "Feat 環境" ;;
+            10) pick_container "daodao-ai"      "AI Backend" ;;
+            11) pick_container "daodao-server"   "Server" ;;
+            12) pick_container "daodao-f2e"     "Frontend (f2e)" ;;
+            13) pick_container "admin-ui"       "Admin UI" ;;
+            30) pick_container "pg"             "Database (PostgreSQL)" ;;
+            31) pick_container "redis"          "Cache (Redis)" ;;
+            32) pick_container "qdrant"         "Vector DB (Qdrant)" ;;
+            33) pick_container "nginx"          "Infra (Nginx)" ;;
+            20) pick_container ""               "All Containers" ;;
+            0)  echo -e "\n  ${DIM}Bye!${NC}\n"; exit 0 ;;
+            *)  echo -e "  ${RED}Invalid choice.${NC}"; sleep 1 ;;
+        esac
+    done
+}
+
+main_menu
