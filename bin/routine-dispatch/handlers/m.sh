@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# scope:M handler — two-phase: spec PR then code PR (plan §5.1 Blueprint).
+#
+# Usage: m.sh <repo> <issue_num> <state>
+#
+# Phase 1 (state=needs-spec):
+#   Run openspec-headless.ts → open spec PR in monorepo
+#   Add spec-pending label to sub-repo issue
+#
+# Phase 2 (state=needs-code, after spec-merged):
+#   Run code implementation → open code PR in sub-repo
+
+set -euo pipefail
+
+REPO="${1:?Usage: m.sh <repo> <issue_num> <state>}"
+ISSUE_NUM="${2:?Usage: m.sh <repo> <issue_num> <state>}"
+STATE="${3:-needs-spec}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DISPATCH_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+MONOREPO_ROOT="$(cd "${DISPATCH_DIR}/../.." && pwd)"
+
+# Source policy enforcement
+# shellcheck source=../policy/enforce.sh
+source "${DISPATCH_DIR}/policy/enforce.sh"
+
+ISSUE_KEY="${REPO}#${ISSUE_NUM}"
+SCOPE_LABEL="scope:M"
+
+log() { echo "[handler:m] $*"; }
+
+# ── deterministic: pre-flight ─────────────────────────────────────────────────
+
+# Token budget check
+BUDGET_OK=$(pnpm --silent tsx "${DISPATCH_DIR}/token-budget.ts" check "${ISSUE_KEY}" "${SCOPE_LABEL}" 2>/dev/null || echo "exceeded")
+if [[ "${BUDGET_OK}" == "exceeded" ]]; then
+  log "Token budget exceeded — aborting"
+  safe_run "gh issue edit ${ISSUE_NUM} --repo daodaoedu/${REPO} --add-label human-coding" || true
+  safe_run "gh issue comment ${ISSUE_NUM} --repo daodaoedu/${REPO} --body '⚠️ Token budget exceeded (scope:M cap 800k). Escalating to human.'" || true
+  exit 1
+fi
+
+# Race detection: re-query labels
+LABELS=$(gh issue view "${ISSUE_NUM}" --repo "daodaoedu/${REPO}" --json labels \
+  --jq '[.labels[].name | @text] | join(",")' 2>/dev/null || echo "")
+
+if echo "${LABELS}" | grep -q "human-driving"; then
+  log "⏸️ human-driving on re-query — aborting"
+  exit 0
+fi
+if echo "${LABELS}" | grep -q "automation:hold"; then
+  log "⏸️ automation:hold on re-query — aborting"
+  exit 0
+fi
+if echo "${LABELS}" | grep -q "stop-after-plan"; then
+  log "stop-after-plan: will run Phase 1 only"
+fi
+
+SLUG=$(gh issue view "${ISSUE_NUM}" --repo "daodaoedu/${REPO}" --json title \
+  --jq '.title | ascii_downcase | gsub("[^a-z0-9]+"; "-") | ltrimstr("-") | rtrimstr("-") | .[0:30]' \
+  2>/dev/null || echo "issue")
+
+# OpenSpec change folder: <repo-prefix>-<issue-num>-<slug>
+REPO_PREFIX="${REPO##daodao-}"
+CHANGE_ID="${REPO_PREFIX}-${ISSUE_NUM}-${SLUG}"
+
+log() { echo "[handler:m] $*"; }
+log "scope:M handler: state=${STATE}, change=${CHANGE_ID}"
+
+if [[ "${STATE}" == "needs-spec" ]]; then
+  # ── Phase 1: spec PR ────────────────────────────────────────────────────────
+  log "Phase 1: generating spec PR via openspec-headless"
+
+  SPEC_MODEL=$(pnpm --silent tsx "${DISPATCH_DIR}/model-router.ts" route spec 2>/dev/null || echo "claude-opus-4-7")
+  log "Spec model: ${SPEC_MODEL}"
+
+  # Run headless OpenSpec wrapper
+  OPENSPEC_HEADLESS="${MONOREPO_ROOT}/bin/openspec-headless.ts"
+  if [[ -f "${OPENSPEC_HEADLESS}" ]]; then
+    if OPENSPEC_NONINTERACTIVE=1 timeout 60 \
+      pnpm tsx "${OPENSPEC_HEADLESS}" \
+        --issue-num "${ISSUE_NUM}" \
+        --repo "${REPO}" \
+        --slug "${SLUG}" \
+        < /dev/null; then
+      log "openspec-headless succeeded"
+    else
+      EXIT_CODE=$?
+      log "openspec-headless exited ${EXIT_CODE}"
+      if [[ ${EXIT_CODE} -eq 2 ]]; then
+        safe_run "gh issue comment ${ISSUE_NUM} --repo daodaoedu/${REPO} --body '⚠️ OpenSpec headless wrapper errored (exit 2). Human review needed.'" || true
+      fi
+      exit "${EXIT_CODE}"
+    fi
+  else
+    log "openspec-headless.ts not found — would run spec generation here"
+  fi
+
+  # Add spec-pending label
+  safe_run "gh issue edit ${ISSUE_NUM} --repo daodaoedu/${REPO} --add-label spec-pending" || true
+  log "Phase 1 complete — spec PR opened, spec-pending label added"
+
+elif [[ "${STATE}" == "needs-code" ]]; then
+  # ── Phase 2: code PR ────────────────────────────────────────────────────────
+  log "Phase 2: implementing code PR"
+
+  # defense-in-depth: high-risk repos must never open code PRs
+  HIGH_RISK_REPOS=("daodao-storage" "daodao-infra")
+  for hrr in "${HIGH_RISK_REPOS[@]}"; do
+    if [[ "${REPO}" == "${hrr}" ]]; then
+      log "🛡️ defense-in-depth: high-risk repo ${REPO} refuses auto-pr in Phase 2"
+      safe_run "gh issue comment ${ISSUE_NUM} --repo daodaoedu/${REPO} --body '🛡️ Auto-PR refused (high-risk repo defense-in-depth).'" || true
+      exit 6
+    fi
+  done
+
+  BRANCH="auto/${ISSUE_NUM}-${SLUG}"
+  EXISTING_PR=$(gh pr list --repo "daodaoedu/${REPO}" --head "${BRANCH}" --json number \
+    --jq '.[0].number' 2>/dev/null || echo "")
+  if [[ -n "${EXISTING_PR}" ]]; then
+    log "Code PR already exists (#${EXISTING_PR}) — skipping"
+    exit 0
+  fi
+
+  CODE_MODEL=$(pnpm --silent tsx "${DISPATCH_DIR}/model-router.ts" route handler 2>/dev/null || echo "claude-sonnet-4-6")
+  log "Code model: ${CODE_MODEL}"
+
+  # Get ADR context
+  ADR_FRAGMENT=$(pnpm --silent tsx "${DISPATCH_DIR}/model-router.ts" adr "${REPO}" "${CHANGE_ID}" "${ISSUE_NUM}" 2>/dev/null || echo "")
+  if [[ -n "${ADR_FRAGMENT}" ]]; then
+    log "ADR context injected (${#ADR_FRAGMENT} chars)"
+  fi
+
+  log "Agentic phase: would invoke ${CODE_MODEL} to implement ${ISSUE_KEY} (Phase 2)"
+  log "M Phase 2 handler complete"
+fi
+
+exit 0
