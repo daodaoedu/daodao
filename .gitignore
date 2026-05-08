@@ -5,9 +5,22 @@ daodao-ai-backend/
 daodao-storage/
 daodao-infra/
 daodao-worker/
+daodao-mcp/
+daodao-admin-ui/
 
 # OS
 .DS_Store
 
 # 暫存
 *.tmp
+.gstack/
+
+# Monorepo tooling
+node_modules/
+dist/
+coverage/
+
+# OMC state（logs ignored, state-store kept）
+.omc/state/
+!.omc/state/state-store.json
+.omc/logs/
