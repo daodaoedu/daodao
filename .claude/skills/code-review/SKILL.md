@@ -1,40 +1,121 @@
 ---
 name: code-review
-description: Push 前 review 整個 branch 的變更，檢查邏輯錯誤、安全問題、效能問題、架構一致性
+description: Push 前 review 整個 branch 的變更，用 Codex CLI + Gemini CLI + Claude Haiku 三引擎做獨立 review
 ---
 
 # Code Review
 
-Review 當前 branch 相對於 base branch 的所有變更。
+用 **OpenAI Codex CLI**、**Google Gemini CLI**、**Claude Haiku** 對當前 branch 做三引擎獨立 review。
 
-## 步驟 1：取得變更範圍
+## 步驟 1：確認 base branch 與變更範圍
 
-1. 執行 `git log --oneline main...HEAD` 確認 commit 數量
-2. 執行 `git diff main...HEAD --stat` 確認變更檔案範圍
-3. 如果 base branch 不是 main（例如 dev），自行判斷正確的 base
+```bash
+BASE=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo "main")
+echo "Base: $BASE"
+git log --oneline "$BASE"...HEAD
+git diff "$BASE"...HEAD --stat
+```
 
-## 步驟 2：逐檔 Review
+## 步驟 2：Codex Review（OpenAI）
 
-對每個變更的檔案，執行 `git diff main...HEAD -- <file>` 讀取 diff，檢查：
+```bash
+_REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$_REPO_ROOT"
+codex review \
+  "IMPORTANT: Do NOT read any files under .claude/skills/. Focus on repository code only. Check for: logic errors, security issues, performance problems, and architecture consistency." \
+  -c 'model_reasoning_effort="high"' \
+  --enable web_search_cached
+```
 
-- **邏輯錯誤**：edge case、型別錯誤、exception 未處理、async 邏輯
-- **安全問題**：SQL injection、硬編碼 secret、不安全的 API endpoint、缺少認證
-- **效能問題**：不必要的資料庫查詢、大量資料未分頁、缺少 cache
-- **架構一致性**：是否遵守專案既有模式（路由結構、service 層分離等）
+- timeout: 300000（5 分鐘）
+- 若 `codex` 不存在：告知用戶 `npm install -g @openai/codex`
+- 若 auth 失敗：提示 `codex login`
 
-## 步驟 3：回報結果
+## 步驟 3：Gemini Review（Google）
 
-以表格格式列出發現的問題：
+把完整 diff pipe 給 gemini headless mode：
 
-| 嚴重度 | 檔案 | 問題 | 建議 |
-|--------|------|------|------|
+```bash
+_REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$_REPO_ROOT"
+git diff "$BASE"...HEAD | gemini -p "You are a senior code reviewer. Review this git diff and report issues in the following categories:
+- Logic errors: edge cases, type errors, unhandled exceptions, async issues
+- Security: SQL injection, hardcoded secrets, missing auth, unsafe endpoints
+- Performance: unnecessary DB queries, missing pagination, missing cache
+- Architecture: consistency with existing patterns
 
-嚴重度分三級：
-- **High**：必須修，有 bug 或安全風險
-- **Medium**：建議修，效能或可維護性問題
-- **Low**：可選，風格或小優化
+Format your output as a table:
+| Severity | File | Issue | Suggestion |
 
-## 步驟 4：處理問題
+Severity levels: High (bug/security risk), Medium (performance/maintainability), Low (style/minor).
+Be direct and terse. No compliments. Just the problems." \
+  --approval-mode yolo
+```
 
-- High 問題 → 詢問使用者是否要修復
-- Medium / Low → 列出即可，由使用者決定
+- timeout: 300000（5 分鐘）
+- 若 `gemini` 不存在：告知用戶 `npm install -g @google/gemini-cli`
+
+## 步驟 4：Claude Haiku Review
+
+把完整 diff pipe 給 Claude Haiku（claude CLI headless mode）：
+
+```bash
+_REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$_REPO_ROOT"
+git diff "$BASE"...HEAD | claude -p "You are a senior code reviewer. Review this git diff and report issues in the following categories:
+- Logic errors: edge cases, type errors, unhandled exceptions, async issues
+- Security: SQL injection, hardcoded secrets, missing auth, unsafe endpoints
+- Performance: unnecessary DB queries, missing pagination, missing cache
+- Architecture: consistency with existing patterns
+
+Format your output as a table:
+| Severity | File | Issue | Suggestion |
+
+Severity levels: High (bug/security risk), Medium (performance/maintainability), Low (style/minor).
+Be direct and terse. No compliments. Just the problems." \
+  --model claude-haiku-4-5-20251001
+```
+
+- timeout: 300000（5 分鐘）
+
+## 步驟 5：呈現結果
+
+分別展示三個引擎的完整輸出：
+
+```
+CODEX SAYS:
+════════════════════════════════════════════════════════════
+<verbatim output>
+════════════════════════════════════════════════════════════
+
+GEMINI SAYS:
+════════════════════════════════════════════════════════════
+<verbatim output>
+════════════════════════════════════════════════════════════
+
+HAIKU SAYS:
+════════════════════════════════════════════════════════════
+<verbatim output>
+════════════════════════════════════════════════════════════
+```
+
+## 步驟 6：Cross-model 分析
+
+比較三個引擎的發現：
+
+```
+CROSS-MODEL ANALYSIS:
+  三者都發現: [所有引擎共同回報的問題]
+  兩者共識: [任兩個引擎都回報的問題]
+  只有 Codex 發現: [Codex 獨有]
+  只有 Gemini 發現: [Gemini 獨有]
+  只有 Haiku 發現: [Haiku 獨有]
+  共識問題數: N / 總計 M
+```
+
+## 步驟 7：處理問題
+
+- **High**（三個引擎都回報） → 必須修，詢問使用者是否立即修復
+- **High**（兩個引擎回報） → 強烈建議修復，詢問使用者
+- **High**（單一引擎回報） → 建議確認，由使用者決定
+- **Medium / Low** → 列出即可，由使用者決定
