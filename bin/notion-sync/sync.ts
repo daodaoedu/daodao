@@ -18,6 +18,7 @@ import {
   queryDatabase,
   updatePageProperty,
   extractProperty,
+  fetchPageContent,
 } from "./notion-client.js";
 import {
   validateDatabaseSchema,
@@ -138,7 +139,7 @@ function parsePage(page: any): ParseResult {
   return { row: parsed.data, warnings };
 }
 
-function buildIssueBody(row: NotionRow, fallbackWarnings: string[]): string {
+function buildIssueBody(row: NotionRow, fallbackWarnings: string[], pageBody?: string): string {
   const notionUrl = `https://www.notion.so/daodaolearn/${row.pageId.replace(/-/g, "")}`;
   const warningBlock =
     fallbackWarnings.length > 0
@@ -147,6 +148,7 @@ function buildIssueBody(row: NotionRow, fallbackWarnings: string[]): string {
   const highRiskNote = HIGH_RISK_REPOS.includes(row.targetRepo as TargetRepo)
     ? "\n> ⚠️ high-risk repo，自動執行限制為 plan-only\n"
     : "";
+  const bodyBlock = pageBody ? `\n${pageBody}\n` : "";
   const acBlock = row.acceptanceCriteria
     ? `\n## Acceptance Criteria\n\n${row.acceptanceCriteria}\n`
     : "";
@@ -156,7 +158,7 @@ ${warningBlock}${highRiskNote}
 ## Description
 
 ${row.title}
-${acBlock}
+${bodyBlock}${acBlock}
 ## Notion
 
 ${notionUrl}
@@ -195,7 +197,8 @@ function buildLabels(row: NotionRow, fallbackWarnings: string[]): string[] {
 async function createOrUpdateIssue(
   row: NotionRow,
   fallbackWarnings: string[],
-  dryRun: boolean
+  dryRun: boolean,
+  pageBody?: string
 ): Promise<{ created: boolean; issueUrl: string | null }> {
   const existing = findExistingIssue(row.targetRepo, row.shortId);
 
@@ -204,7 +207,7 @@ async function createOrUpdateIssue(
     return { created: false, issueUrl: null };
   }
 
-  const body = buildIssueBody(row, fallbackWarnings);
+  const body = buildIssueBody(row, fallbackWarnings, pageBody);
   const labels = buildLabels(row, fallbackWarnings);
   const labelArgs = labels.map((l) => `--label "${l}"`).join(" ");
 
@@ -327,10 +330,19 @@ async function main(): Promise<void> {
       log(`page ${row.shortId} is manual mode — syncing issue without auto label`);
     }
 
+    let pageBody: string | undefined;
+    try {
+      const content = await fetchPageContent(client, row.pageId);
+      if (content) pageBody = content;
+    } catch (err) {
+      warn(`failed to fetch page body for ${row.shortId}: ${err}`);
+    }
+
     const { created, issueUrl } = await createOrUpdateIssue(
       row,
       fallbackWarnings,
-      DRY_RUN
+      DRY_RUN,
+      pageBody
     );
 
     if (created && issueUrl) {
