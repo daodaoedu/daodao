@@ -218,6 +218,14 @@ async function createOrUpdateIssue(
     return { created: false, issueUrl: null };
   }
 
+  // Ensure dynamic notion:* label exists (ignore failure)
+  try {
+    execSync(
+      `gh label create "notion:${row.shortId}" --repo daodaoedu/${row.targetRepo} --color "e4e669" --description "Notion page ${row.shortId}" --force`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+  } catch { /* label already exists or creation failed — continue */ }
+
   try {
     const output = execSync(
       `gh issue create --repo daodaoedu/${row.targetRepo} --title "${row.title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, "\\n")}" ${labelArgs} --json url`,
