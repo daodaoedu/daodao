@@ -294,7 +294,7 @@ async function main(): Promise<void> {
       and: [
         {
           property: "Status",
-          select: { equals: "Ready for Dev" },
+          status: { equals: "Ready for Dev" },
         },
         {
           property: "Sync to GitHub",
