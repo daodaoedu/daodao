@@ -72,7 +72,7 @@ function parsePage(page: any): ParseResult {
   const id = page.id as string;
   const sid = shortId(id);
 
-  const title = (extractProperty(page, "Title") as string) ?? "";
+  const title = (extractProperty(page, "Task name") as string) ?? "";
   const status = (extractProperty(page, "Status") as string) ?? "";
   const syncToGitHub = extractProperty(page, "Sync to GitHub") as boolean | null;
   let autoMode = extractProperty(page, "Auto Mode") as string | null;
