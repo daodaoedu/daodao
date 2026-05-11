@@ -35,7 +35,7 @@ export const NotionRowSchema = z.object({
   syncToGitHub: z.boolean(),
   autoMode: AutoModeSchema,
   scope: ScopeSchema,
-  targetRepo: TargetRepoSchema,
+  targetRepos: z.array(TargetRepoSchema).min(1),
   acceptanceCriteria: z.string().optional(),
   githubIssueUrl: z.string().url().optional().nullable(),
   labels: z.array(z.string()).default([]),
@@ -46,5 +46,5 @@ export type NotionRow = z.infer<typeof NotionRowSchema>;
 export const RELAXED_FALLBACKS = {
   autoMode: "plan-only" as AutoMode,
   scope: "M" as Scope,
-  targetRepo: "daodao-f2e" as TargetRepo,
+  targetRepos: ["daodao-f2e"] as TargetRepo[],
 };

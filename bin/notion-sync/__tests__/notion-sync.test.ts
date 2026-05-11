@@ -81,8 +81,8 @@ describe("RELAXED_FALLBACKS", () => {
     expect(RELAXED_FALLBACKS.scope).toBe("M");
   });
 
-  it("default targetRepo is daodao-f2e", () => {
-    expect(RELAXED_FALLBACKS.targetRepo).toBe("daodao-f2e");
+  it("default targetRepos is [daodao-f2e]", () => {
+    expect(RELAXED_FALLBACKS.targetRepos).toEqual(["daodao-f2e"]);
   });
 });
 
