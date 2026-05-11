@@ -1,0 +1,49 @@
+name: Routine C — PR Merge → Notion Status Done
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # every 2 hours UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no actual changes)'
+        type: boolean
+        default: false
+      hours:
+        description: 'Lookback window in hours (default: 48)'
+        type: string
+        default: '48'
+
+jobs:
+  sync-done:
+    name: Mark merged-PR Notion tasks as Done
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Routine C
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+          GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ -n "${{ inputs.hours }}" ]; then ARGS="$ARGS --hours ${{ inputs.hours }}"; fi
+          pnpm tsx bin/routine-c/sync-done.ts $ARGS
