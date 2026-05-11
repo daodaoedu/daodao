@@ -12,7 +12,7 @@ export function findExistingIssue(
   const label = `notion:${shortId}`;
   try {
     const output = execSync(
-      `gh issue list --repo daodaoedu/${targetRepo} --label "${label}" --state all --json number,labels`,
+      `gh issue list --repo daodaoedu/${targetRepo} --label "${label}" --state open --json number,labels`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
     const issues: ExistingIssue[] = JSON.parse(output.trim() || "[]");
