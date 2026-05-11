@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 
 const REQUIRED_PROPERTIES = [
-  "Title",
+  "Task name",
   "Status",
   "Sync to GitHub",
   "Auto Mode",
