@@ -237,10 +237,10 @@ async function createOrUpdateIssue(
   try {
     writeFileSync(tmpFile, body, "utf-8");
     const output = execSync(
-      `gh issue create --repo daodaoedu/${row.targetRepo} --title "${row.title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${labelArgs} --json url`,
+      `gh issue create --repo daodaoedu/${row.targetRepo} --title "${row.title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${labelArgs}`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const { url } = JSON.parse(output.trim());
+    const url = output.trim();
     log(`created issue: ${url}`);
     return { created: true, issueUrl: url as string };
   } catch (err: unknown) {
