@@ -78,10 +78,18 @@ function parsePage(page: any): ParseResult {
   const syncToGitHub = extractProperty(page, "Sync to GitHub") as boolean | null;
   let autoMode = extractProperty(page, "Auto Mode") as string | null;
   let scope = extractProperty(page, "Scope") as string | null;
-  let targetRepo = extractProperty(page, "Target Repo") as string | null;
+  const targetRepoRaw = extractProperty(page, "Target Repo") as string[] | string | null;
   const acceptanceCriteria = extractProperty(page, "Acceptance Criteria") as string | null;
   const githubIssueUrl = extractProperty(page, "GitHub Issue") as string | null;
   const labelsProp = extractProperty(page, "Labels") as string[] | null;
+
+  // Normalise Target Repo: accept both legacy single string and new multi_select array
+  const targetRepoArr: string[] = Array.isArray(targetRepoRaw)
+    ? targetRepoRaw
+    : targetRepoRaw
+    ? [targetRepoRaw]
+    : [];
+  let targetRepos = targetRepoArr.filter((r) => TARGET_REPOS.includes(r as TargetRepo));
 
   // Validate required fields, apply relaxed fallbacks if needed
   if (!autoMode) {
@@ -106,12 +114,10 @@ function parsePage(page: any): ParseResult {
     }
   }
 
-  if (!targetRepo || !TARGET_REPOS.includes(targetRepo as TargetRepo)) {
+  if (targetRepos.length === 0) {
     if (IS_RELAXED) {
-      targetRepo = RELAXED_FALLBACKS.targetRepo;
-      warnings.push(
-        `Target Repo missing/invalid — using fallback: ${targetRepo}`
-      );
+      targetRepos = RELAXED_FALLBACKS.targetRepos as string[];
+      warnings.push(`Target Repo missing/invalid — using fallback: ${targetRepos.join(", ")}`);
     } else {
       process.stderr.write(
         `[notion-sync] FAIL: page ${id} missing/invalid "Target Repo"\n`
@@ -128,7 +134,7 @@ function parsePage(page: any): ParseResult {
     syncToGitHub: syncToGitHub ?? false,
     autoMode,
     scope,
-    targetRepo,
+    targetRepos,
     acceptanceCriteria: acceptanceCriteria ?? undefined,
     githubIssueUrl: githubIssueUrl ?? undefined,
     labels: labelsProp ?? [],
@@ -142,13 +148,13 @@ function parsePage(page: any): ParseResult {
   return { row: parsed.data, warnings };
 }
 
-function buildIssueBody(row: NotionRow, fallbackWarnings: string[], pageBody?: string): string {
+function buildIssueBody(row: NotionRow, targetRepo: string, fallbackWarnings: string[], pageBody?: string): string {
   const notionUrl = `https://www.notion.so/daodaolearn/${row.pageId.replace(/-/g, "")}`;
   const warningBlock =
     fallbackWarnings.length > 0
       ? `\n> ⚠️ 此 issue 由 fallback 預設值產生（relaxed mode）：${fallbackWarnings.join("；")}\n`
       : "";
-  const highRiskNote = HIGH_RISK_REPOS.includes(row.targetRepo as TargetRepo)
+  const highRiskNote = HIGH_RISK_REPOS.includes(targetRepo as TargetRepo)
     ? "\n> ⚠️ high-risk repo，自動執行限制為 plan-only\n"
     : "";
   const bodyBlock = pageBody ? `\n${pageBody}\n` : "";
@@ -171,21 +177,51 @@ ${notionUrl}
 `;
 }
 
-function buildLabels(row: NotionRow, fallbackWarnings: string[]): string[] {
+function buildUmbrellaBody(row: NotionRow, subIssues: Array<{ repo: string; url: string }>, fallbackWarnings: string[], pageBody?: string): string {
+  const notionUrl = `https://www.notion.so/daodaolearn/${row.pageId.replace(/-/g, "")}`;
+  const warningBlock =
+    fallbackWarnings.length > 0
+      ? `\n> ⚠️ 此 issue 由 fallback 預設值產生（relaxed mode）：${fallbackWarnings.join("；")}\n`
+      : "";
+  const subIssueList = subIssues.map((i) => `- [ ] ${i.url}`).join("\n");
+  const bodyBlock = pageBody ? `\n${pageBody}\n` : "";
+  const acBlock = row.acceptanceCriteria
+    ? `\n## Acceptance Criteria\n\n${row.acceptanceCriteria}\n`
+    : "";
+
+  return `<!-- managed by Routine A (umbrella) -->
+${warningBlock}
+## Description
+
+${row.title}
+${bodyBlock}
+## Sub-issues
+
+${subIssueList}
+${acBlock}
+## Notion
+
+${notionUrl}
+
+---
+*Auto-created by notion-sync. Notion page ID: \`${row.pageId}\`*
+`;
+}
+
+function buildLabels(row: NotionRow, targetRepo: string, fallbackWarnings: string[]): string[] {
   const labels: string[] = [
     buildNotionLabel(row.shortId),
     "auto",
     row.autoMode === "manual" ? "manual" : `auto:${row.autoMode}`,
     `scope:${row.scope}`,
-    `target-repo:${row.targetRepo}`,
+    `target-repo:${targetRepo}`,
   ];
 
   // High-risk repos: force plan-only regardless of Auto Mode
   if (
-    HIGH_RISK_REPOS.includes(row.targetRepo as TargetRepo) &&
+    HIGH_RISK_REPOS.includes(targetRepo as TargetRepo) &&
     row.autoMode !== "manual"
   ) {
-    // Replace auto:auto-pr with auto:plan-only if present
     const idx = labels.indexOf("auto:auto-pr");
     if (idx !== -1) labels[idx] = "auto:plan-only";
   }
@@ -197,63 +233,103 @@ function buildLabels(row: NotionRow, fallbackWarnings: string[]): string[] {
   return [...new Set(labels)];
 }
 
-async function createOrUpdateIssue(
-  row: NotionRow,
-  fallbackWarnings: string[],
-  dryRun: boolean,
-  pageBody?: string
-): Promise<{ created: boolean; issueUrl: string | null }> {
-  const existing = findExistingIssue(row.targetRepo, row.shortId);
-
-  if (existing) {
-    log(`issue already exists for ${row.shortId} (#${existing.number}) — skip`);
-    return { created: false, issueUrl: null };
-  }
-
-  const body = buildIssueBody(row, fallbackWarnings, pageBody);
-  const labels = buildLabels(row, fallbackWarnings);
+function ghCreateIssue(repo: string, title: string, body: string, labels: string[]): string | null {
   const labelArgs = labels.map((l) => `--label "${l}"`).join(" ");
-
-  if (dryRun) {
-    log(`[dry-run] would create issue in daodaoedu/${row.targetRepo}: "${row.title}" labels=${labels.join(",")}`);
-    return { created: false, issueUrl: null };
-  }
 
   // Ensure dynamic labels exist (ignore failures)
   for (const [lname, ldesc] of [
-    [`notion:${row.shortId}`, `Notion page ${row.shortId}`],
-    [`target-repo:${row.targetRepo}`, `Target repo ${row.targetRepo}`],
+    [`notion:${labels.find(l => l.startsWith("notion:")) ?? ""}`, `Notion page`],
+    ...labels.filter(l => l.startsWith("target-repo:")).map(l => [l, `Target repo`]),
   ] as [string, string][]) {
+    if (!lname) continue;
     try {
       execSync(
-        `gh label create "${lname}" --repo daodaoedu/${row.targetRepo} --color "e4e669" --description "${ldesc}" --force`,
+        `gh label create "${lname}" --repo daodaoedu/${repo} --color "e4e669" --description "${ldesc}" --force`,
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
       );
     } catch { /* already exists or no permission — continue */ }
   }
 
-  // Write body to temp file to avoid shell-escaping issues
-  const tmpFile = join(tmpdir(), `notion-sync-${row.shortId}.md`);
+  const tmpFile = join(tmpdir(), `notion-sync-${Date.now()}.md`);
   try {
     writeFileSync(tmpFile, body, "utf-8");
     const output = execSync(
-      `gh issue create --repo daodaoedu/${row.targetRepo} --title "${row.title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${labelArgs}`,
+      `gh issue create --repo daodaoedu/${repo} --title "${title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${labelArgs}`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const url = output.trim();
-    log(`created issue: ${url}`);
-    return { created: true, issueUrl: url as string };
+    return output.trim();
   } catch (err: unknown) {
-    const spawnErr = err as { stderr?: Buffer; stdout?: Buffer };
+    const spawnErr = err as { stderr?: Buffer };
     const stderr = spawnErr?.stderr?.toString?.() ?? "";
-    const stdout = spawnErr?.stdout?.toString?.() ?? "";
-    warn(`failed to create issue for ${row.shortId}: ${err}`);
-    if (stderr) warn(`gh stderr: ${stderr}`);
-    if (stdout) warn(`gh stdout: ${stdout}`);
-    return { created: false, issueUrl: null };
+    warn(`gh issue create failed in ${repo}: ${stderr || err}`);
+    return null;
   } finally {
     try { unlinkSync(tmpFile); } catch { /* ignore */ }
   }
+}
+
+async function createIssuesForRow(
+  row: NotionRow,
+  fallbackWarnings: string[],
+  dryRun: boolean,
+  pageBody?: string
+): Promise<{ created: boolean; notionUrl: string | null }> {
+  const isMulti = row.targetRepos.length > 1;
+
+  if (dryRun) {
+    for (const repo of row.targetRepos) {
+      const labels = buildLabels(row, repo, fallbackWarnings);
+      log(`[dry-run] would create issue in daodaoedu/${repo}: "${row.title}" labels=${labels.join(",")}`);
+    }
+    if (isMulti) log(`[dry-run] would create umbrella issue in daodaoedu/daodao`);
+    return { created: false, notionUrl: null };
+  }
+
+  const subIssues: Array<{ repo: string; url: string }> = [];
+
+  for (const repo of row.targetRepos) {
+    const existing = findExistingIssue(repo, row.shortId);
+    if (existing) {
+      log(`⏭️ issue already exists in ${repo} (#${existing.number}) — skip`);
+      // Still track URL for umbrella
+      subIssues.push({ repo, url: `https://github.com/daodaoedu/${repo}/issues/${existing.number}` });
+      continue;
+    }
+
+    const body = buildIssueBody(row, repo, fallbackWarnings, pageBody);
+    const labels = buildLabels(row, repo, fallbackWarnings);
+    const url = ghCreateIssue(repo, row.title, body, labels);
+    if (url) {
+      log(`✅ ${repo} → ${url}`);
+      subIssues.push({ repo, url });
+    } else {
+      warn(`❌ failed to create issue in ${repo}`);
+    }
+  }
+
+  if (subIssues.length === 0) return { created: false, notionUrl: null };
+
+  // Single repo: write sub-issue URL directly to Notion
+  if (!isMulti) {
+    return { created: true, notionUrl: subIssues[0]!.url };
+  }
+
+  // Multi-repo: create umbrella issue in daodao monorepo
+  const umbrellaBody = buildUmbrellaBody(row, subIssues, fallbackWarnings, pageBody);
+  const umbrellaLabels = [
+    buildNotionLabel(row.shortId),
+    "auto",
+    row.autoMode === "manual" ? "manual" : `auto:${row.autoMode}`,
+    `scope:${row.scope}`,
+  ];
+  const umbrellaUrl = ghCreateIssue("daodao", row.title, umbrellaBody, umbrellaLabels);
+  if (umbrellaUrl) {
+    log(`✅ umbrella → ${umbrellaUrl}`);
+    return { created: true, notionUrl: umbrellaUrl };
+  }
+
+  // Fallback: write first sub-issue URL if umbrella failed
+  return { created: true, notionUrl: subIssues[0]!.url };
 }
 
 async function writeBackNotionUrl(
@@ -359,16 +435,16 @@ async function main(): Promise<void> {
       warn(`failed to fetch page body for ${row.shortId}: ${err}`);
     }
 
-    const { created, issueUrl } = await createOrUpdateIssue(
+    const { created, notionUrl } = await createIssuesForRow(
       row,
       fallbackWarnings,
       DRY_RUN,
       pageBody
     );
 
-    if (created && issueUrl) {
+    if (created && notionUrl) {
       newCount++;
-      await writeBackNotionUrl(client, row.pageId, issueUrl, DRY_RUN);
+      await writeBackNotionUrl(client, row.pageId, notionUrl, DRY_RUN);
     }
   }
 
