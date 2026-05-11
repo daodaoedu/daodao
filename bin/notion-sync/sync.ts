@@ -243,8 +243,13 @@ async function createOrUpdateIssue(
     const { url } = JSON.parse(output.trim());
     log(`created issue: ${url}`);
     return { created: true, issueUrl: url as string };
-  } catch (err) {
+  } catch (err: unknown) {
+    const spawnErr = err as { stderr?: Buffer; stdout?: Buffer };
+    const stderr = spawnErr?.stderr?.toString?.() ?? "";
+    const stdout = spawnErr?.stdout?.toString?.() ?? "";
     warn(`failed to create issue for ${row.shortId}: ${err}`);
+    if (stderr) warn(`gh stderr: ${stderr}`);
+    if (stdout) warn(`gh stdout: ${stdout}`);
     return { created: false, issueUrl: null };
   } finally {
     try { unlinkSync(tmpFile); } catch { /* ignore */ }
