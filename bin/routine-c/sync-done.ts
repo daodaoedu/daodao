@@ -18,6 +18,8 @@
  */
 
 import { execSync } from "child_process";
+import { existsSync } from "fs";
+import { join } from "path";
 import { createNotionClient, updatePageProperty } from "../notion-sync/notion-client.js";
 
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -118,11 +120,10 @@ async function markNotion(
 async function main(): Promise<void> {
   if (DRY_RUN) log("dry-run mode enabled");
 
-  try {
-    execSync("test -f /Users/xiaoxu/Projects/daodao/.automation-paused", { stdio: "ignore" });
+  if (existsSync(join(process.cwd(), ".automation-paused"))) {
     log("⏸️ .automation-paused present — exiting");
     process.exit(0);
-  } catch { /* not paused */ }
+  }
 
   if (!NOTION_API_KEY) {
     warn("NOTION_API_KEY not set — exiting");

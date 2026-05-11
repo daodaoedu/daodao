@@ -13,6 +13,8 @@
  */
 
 import { execSync } from "child_process";
+import { existsSync } from "fs";
+import { join } from "path";
 import {
   createNotionClient,
   queryDatabase,
@@ -248,15 +250,10 @@ async function writeBackNotionUrl(
 async function main(): Promise<void> {
   if (DRY_RUN) log("dry-run mode enabled");
 
-  // Check for pause file
-  try {
-    execSync("test -f /Users/xiaoxu/Projects/daodao/.automation-paused", {
-      stdio: "ignore",
-    });
+  // Check for pause file (repo root, works both locally and in CI)
+  if (existsSync(join(process.cwd(), ".automation-paused"))) {
     log("⏸️ .automation-paused present — exiting");
     process.exit(0);
-  } catch {
-    // not paused, continue
   }
 
   // Check secrets without exposing them
