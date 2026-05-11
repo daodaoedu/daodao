@@ -13,8 +13,9 @@
  */
 
 import { execSync } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
+import { tmpdir } from "os";
 import {
   createNotionClient,
   queryDatabase,
@@ -218,17 +219,25 @@ async function createOrUpdateIssue(
     return { created: false, issueUrl: null };
   }
 
-  // Ensure dynamic notion:* label exists (ignore failure)
-  try {
-    execSync(
-      `gh label create "notion:${row.shortId}" --repo daodaoedu/${row.targetRepo} --color "e4e669" --description "Notion page ${row.shortId}" --force`,
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    );
-  } catch { /* label already exists or creation failed — continue */ }
+  // Ensure dynamic labels exist (ignore failures)
+  for (const [lname, ldesc] of [
+    [`notion:${row.shortId}`, `Notion page ${row.shortId}`],
+    [`target-repo:${row.targetRepo}`, `Target repo ${row.targetRepo}`],
+  ] as [string, string][]) {
+    try {
+      execSync(
+        `gh label create "${lname}" --repo daodaoedu/${row.targetRepo} --color "e4e669" --description "${ldesc}" --force`,
+        { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+      );
+    } catch { /* already exists or no permission — continue */ }
+  }
 
+  // Write body to temp file to avoid shell-escaping issues
+  const tmpFile = join(tmpdir(), `notion-sync-${row.shortId}.md`);
   try {
+    writeFileSync(tmpFile, body, "utf-8");
     const output = execSync(
-      `gh issue create --repo daodaoedu/${row.targetRepo} --title "${row.title.replace(/"/g, '\\"')}" --body "${body.replace(/"/g, '\\"').replace(/\n/g, "\\n")}" ${labelArgs} --json url`,
+      `gh issue create --repo daodaoedu/${row.targetRepo} --title "${row.title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${labelArgs} --json url`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
     const { url } = JSON.parse(output.trim());
@@ -237,6 +246,8 @@ async function createOrUpdateIssue(
   } catch (err) {
     warn(`failed to create issue for ${row.shortId}: ${err}`);
     return { created: false, issueUrl: null };
+  } finally {
+    try { unlinkSync(tmpFile); } catch { /* ignore */ }
   }
 }
 
