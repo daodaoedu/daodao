@@ -16,6 +16,13 @@
         "DAODAO_MCP_SKIP_ROLE_CHECK": "1",
         "SSH_TUNNEL": "daodao:5424:localhost:5423"
       }
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\": \"Bearer $NOTION_TOKEN\", \"Notion-Version\": \"2022-06-28\"}"
+      }
     }
   }
 }
