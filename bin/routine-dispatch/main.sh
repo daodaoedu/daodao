@@ -55,8 +55,14 @@ fi
 
 log "Deriving state for ${REPO}#${ISSUE_NUM}"
 
+# Pre-fetch labels in bash where gh auth is reliable, then pass to state.ts
+# (gh inside TypeScript execSync may not inherit cloud auth correctly)
+_LABELS=$(gh issue view "${ISSUE_NUM}" --repo "daodaoedu/${REPO}" \
+  --json labels --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+log "Labels: ${_LABELS}"
+
 # Derive dispatch state
-STATE=$(pnpm --silent tsx "${SCRIPT_DIR}/state.ts" "${REPO}" "${ISSUE_NUM}" 2>/dev/null)
+STATE=$(ISSUE_LABELS="${_LABELS}" pnpm --silent tsx "${SCRIPT_DIR}/state.ts" "${REPO}" "${ISSUE_NUM}" 2>/dev/null)
 log "State: ${STATE}"
 
 case "${STATE}" in

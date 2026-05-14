@@ -260,7 +260,7 @@ describe("run()", () => {
     };
 
     await run(gh);
-    const searchArg = capturedArgs.find((a) => a.startsWith("openspec/changes/"));
-    expect(searchArg).toContain(sevenDaysAgo);
+    const searchArg = capturedArgs.find((a) => a.startsWith("merged:>"));
+    expect(searchArg).toContain(sevenDaysAgo.split("T")[0]);
   });
 });

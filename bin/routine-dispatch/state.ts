@@ -31,6 +31,11 @@ interface IssueLabels {
 }
 
 function getLabels(repo: string, issueNum: string): string[] {
+  // Prefer pre-fetched labels from main.sh (bash gh auth is more reliable in CCR cloud)
+  const envLabels = process.env["ISSUE_LABELS"];
+  if (envLabels !== undefined) {
+    return envLabels ? envLabels.split(",").filter(Boolean) : [];
+  }
   try {
     const out = execSync(
       `gh issue view ${issueNum} --repo daodaoedu/${repo} --json labels`,
