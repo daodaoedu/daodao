@@ -21,7 +21,9 @@ dist/
 coverage/
 
 # OMC state（logs ignored, state-store kept）
-.omc/state/
-!.omc/state/state-store.json
+.omc/sessions
+.omc/state
 .omc/logs/
 .env
+
+LOGO

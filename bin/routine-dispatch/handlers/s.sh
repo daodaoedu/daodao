@@ -82,9 +82,21 @@ log "Branch: ${BRANCH}, Model: ${MODEL}"
 log "scope:S handler: test-first plan+code PR for ${REPO}#${ISSUE_NUM}"
 
 # ── deterministic: setup sub-repo branch ──────────────────────────────────────
+# Locate sub-repo: try monorepo subdir first (local), then sibling (CCR cloud layout)
 REPO_DIR="${MONOREPO_ROOT}/${REPO}"
 if [[ ! -d "${REPO_DIR}/.git" ]]; then
-  log "ERROR: sub-repo not found at ${REPO_DIR}"
+  REPO_DIR="${MONOREPO_ROOT}/../${REPO}"
+fi
+if [[ ! -d "${REPO_DIR}/.git" ]]; then
+  REPO_DIR=$(find "$(dirname "${MONOREPO_ROOT}")" /root /home /workspaces /tmp -maxdepth 4 -name ".git" -type d 2>/dev/null \
+    | xargs -I{} dirname {} \
+    | while read -r d; do
+        url=$(git -C "$d" config --get remote.origin.url 2>/dev/null || true)
+        if [[ "$url" == *"daodaoedu/${REPO}"* ]]; then echo "$d"; fi
+      done | head -1)
+fi
+if [[ -z "${REPO_DIR}" || ! -d "${REPO_DIR}/.git" ]]; then
+  log "ERROR: sub-repo ${REPO} not found (tried monorepo subdir, sibling, and find)"
   exit 1
 fi
 

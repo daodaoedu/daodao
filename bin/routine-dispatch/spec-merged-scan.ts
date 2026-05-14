@@ -120,15 +120,15 @@ export function fetchMergedSpecPRs(
   since: string,
   gh: GhRunner
 ): MergedPR[] | null {
+  // GitHub search merged: filter only accepts YYYY-MM-DD, not full ISO timestamp
+  const sinceDate = since.split("T")[0];
   const result = gh([
     "pr",
     "list",
     "--repo",
     MONOREPO,
-    "--state",
-    "merged",
     "--search",
-    `openspec/changes/ merged:>${since}`,
+    `merged:>${sinceDate} openspec/changes/`,
     "--json",
     "number,body,mergedAt,headRefName,title",
     "--limit",
