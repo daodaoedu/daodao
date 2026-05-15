@@ -262,7 +262,10 @@ function ghCreateIssue(repo: string, title: string, body: string, labels: string
         `gh label create "${lname}" --repo daodaoedu/${repo} --color "e4e669" --description "${ldesc}" --force`,
         { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
       );
-    } catch { /* already exists or no permission — continue */ }
+    } catch (e: unknown) {
+      const msg = (e as { stderr?: Buffer })?.stderr?.toString?.() ?? String(e);
+      warn(`gh label create "${lname}" in ${repo} failed: ${msg}`);
+    }
   }
 
   const tmpFile = join(tmpdir(), `notion-sync-${Date.now()}.md`);
