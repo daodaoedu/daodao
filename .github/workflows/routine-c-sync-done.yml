@@ -2,7 +2,7 @@ name: Routine C — PR Merge → Notion Status Done
 
 on:
   schedule:
-    - cron: '0 */2 * * *'  # every 2 hours UTC
+    - cron: '0 * * * *'  # every hour UTC
   workflow_dispatch:
     inputs:
       dry_run:
