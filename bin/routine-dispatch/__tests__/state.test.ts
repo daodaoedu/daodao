@@ -51,6 +51,11 @@ describe("deriveState — §6 label precedence", () => {
     expect(state).toBe("human-driving");
   });
 
+  it("human-coding → human-coding (verification failed, skip re-dispatch)", () => {
+    const state = deriveState("daodao-f2e", "99", labels("auto", "human-coding", "auto:auto-pr", "scope:XS"));
+    expect(state).toBe("human-coding");
+  });
+
   it("manual → manual-mode", () => {
     const state = deriveState("daodao-f2e", "3", labels("manual", "scope:M"));
     expect(state).toBe("manual-mode");
@@ -127,5 +132,19 @@ describe("deriveState — precedence ordering", () => {
       "auto", "human-driving", "manual", "scope:XS"
     ));
     expect(state).toBe("human-driving");
+  });
+
+  it("human-driving takes precedence over human-coding", () => {
+    const state = deriveState("daodao-f2e", "22", labels(
+      "auto", "human-driving", "human-coding", "scope:XS"
+    ));
+    expect(state).toBe("human-driving");
+  });
+
+  it("human-coding takes precedence over manual", () => {
+    const state = deriveState("daodao-f2e", "23", labels(
+      "auto", "human-coding", "manual", "scope:XS"
+    ));
+    expect(state).toBe("human-coding");
   });
 });

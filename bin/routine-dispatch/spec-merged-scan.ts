@@ -234,6 +234,7 @@ export async function run(gh: GhRunner = defaultGhRunner()): Promise<number> {
 }
 
 // Entry point when run directly
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/"))) {
+const __filename = new URL(import.meta.url).pathname;
+if (process.argv[1] && __filename === path.resolve(process.argv[1])) {
   run().then((code) => process.exit(code));
 }
