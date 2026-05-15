@@ -304,12 +304,12 @@ async function createIssuesForRow(
   }
 
   const subIssues: Array<{ repo: string; url: string }> = [];
+  let anyNew = false;
 
   for (const repo of row.targetRepos) {
     const existing = findExistingIssue(repo, row.shortId);
     if (existing) {
       log(`⏭️ issue already exists in ${repo} (#${existing.number}) — skip`);
-      // Still track URL for umbrella
       subIssues.push({ repo, url: `https://github.com/daodaoedu/${repo}/issues/${existing.number}` });
       continue;
     }
@@ -320,6 +320,7 @@ async function createIssuesForRow(
     if (url) {
       log(`✅ ${repo} → ${url}`);
       subIssues.push({ repo, url });
+      anyNew = true;
     } else {
       warn(`❌ failed to create issue in ${repo}`);
     }
@@ -329,7 +330,7 @@ async function createIssuesForRow(
 
   // Single repo: write sub-issue URL directly to Notion
   if (!isMulti) {
-    return { created: true, notionUrl: subIssues[0]!.url };
+    return { created: anyNew, notionUrl: subIssues[0]!.url };
   }
 
   // Multi-repo: create umbrella issue in daodao monorepo
@@ -343,11 +344,11 @@ async function createIssuesForRow(
   const umbrellaUrl = ghCreateIssue("daodao", row.title, umbrellaBody, umbrellaLabels);
   if (umbrellaUrl) {
     log(`✅ umbrella → ${umbrellaUrl}`);
-    return { created: true, notionUrl: umbrellaUrl };
+    return { created: anyNew, notionUrl: umbrellaUrl };
   }
 
   // Fallback: write first sub-issue URL if umbrella failed
-  return { created: true, notionUrl: subIssues[0]!.url };
+  return { created: anyNew, notionUrl: subIssues[0]!.url };
 }
 
 async function writeBackNotionUrl(
