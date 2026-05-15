@@ -363,7 +363,7 @@ async function createIssuesForRow(
   const umbrellaUrl = ghCreateIssue("daodao", row.title, umbrellaBody, umbrellaLabels);
   if (umbrellaUrl) {
     log(`✅ umbrella → ${umbrellaUrl}`);
-    return { created: anyNew, notionUrl: umbrellaUrl };
+    return { created: true, notionUrl: umbrellaUrl };
   }
 
   // Fallback: write first sub-issue URL if umbrella failed
