@@ -326,7 +326,7 @@ async function createIssuesForRow(
   let anyNew = false;
 
   for (const repo of row.targetRepos) {
-    const existing = findExistingIssue(repo, row.shortId);
+    const existing = findExistingIssue(repo, row.shortId, row.pageId);
     if (existing) {
       log(`⏭️ issue already exists in ${repo} (#${existing.number}) — skip`);
       subIssues.push({ repo, url: `https://github.com/daodaoedu/${repo}/issues/${existing.number}` });
@@ -353,7 +353,7 @@ async function createIssuesForRow(
   }
 
   // Multi-repo: create umbrella issue in daodao monorepo (skip if already exists)
-  const existingUmbrella = findExistingIssue("daodao", row.shortId);
+  const existingUmbrella = findExistingIssue("daodao", row.shortId, row.pageId);
   if (existingUmbrella) {
     log(`⏭️ umbrella already exists in daodao (#${existingUmbrella.number}) — skip`);
     return { created: anyNew, notionUrl: `https://github.com/daodaoedu/daodao/issues/${existingUmbrella.number}` };
