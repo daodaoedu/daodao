@@ -279,7 +279,26 @@ function ghCreateIssue(repo: string, title: string, body: string, labels: string
   } catch (err: unknown) {
     const spawnErr = err as { stderr?: Buffer };
     const stderr = spawnErr?.stderr?.toString?.() ?? "";
-    warn(`gh issue create failed in ${repo}: ${stderr || err}`);
+    // Retry without notion: label if label not found (label creation may have failed silently)
+    if (stderr.includes("could not add label")) {
+      const fallbackArgs = labels
+        .filter((l) => !l.startsWith("notion:"))
+        .map((l) => `--label "${l}"`)
+        .join(" ");
+      warn(`gh issue create failed in ${repo} (label not found) — retrying without notion label`);
+      try {
+        const retryOutput = execSync(
+          `gh issue create --repo daodaoedu/${repo} --title "${title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${fallbackArgs}`,
+          { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+        );
+        return retryOutput.trim();
+      } catch (retryErr: unknown) {
+        const retryStderr = (retryErr as { stderr?: Buffer })?.stderr?.toString?.() ?? "";
+        warn(`gh issue create retry also failed in ${repo}: ${retryStderr || retryErr}`);
+      }
+    } else {
+      warn(`gh issue create failed in ${repo}: ${stderr || err}`);
+    }
     return null;
   } finally {
     try { unlinkSync(tmpFile); } catch { /* ignore */ }
