@@ -96,7 +96,7 @@ jobs:
           git config user.name "github-actions[bot]"
           BRANCH="chore/sync-claude-config-$(date +%Y%m%d%H%M)"
           git checkout -b "$BRANCH"
-          git add .claude/ .github/workflows/
+          git add -f .claude/ .github/workflows/
           git commit -m "chore: sync shared config from daodao
 
           Auto-synced hooks, settings, and workflows from daodao/.claude"
