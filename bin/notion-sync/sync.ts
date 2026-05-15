@@ -98,9 +98,9 @@ function parsePage(page: any): ParseResult {
       warnings.push(`Auto Mode missing — using fallback: ${autoMode}`);
     } else {
       process.stderr.write(
-        `[notion-sync] FAIL: page ${id} missing "Auto Mode"\n`
+        `[notion-sync] WARN: page ${id} missing "Auto Mode" — skipping\n`
       );
-      process.exit(1);
+      return { row: null, warnings };
     }
   }
 
@@ -109,8 +109,8 @@ function parsePage(page: any): ParseResult {
       scope = RELAXED_FALLBACKS.scope;
       warnings.push(`Scope missing — using fallback: ${scope}`);
     } else {
-      process.stderr.write(`[notion-sync] FAIL: page ${id} missing "Scope"\n`);
-      process.exit(1);
+      process.stderr.write(`[notion-sync] WARN: page ${id} missing "Scope" — skipping\n`);
+      return { row: null, warnings };
     }
   }
 
@@ -120,9 +120,9 @@ function parsePage(page: any): ParseResult {
       warnings.push(`Target Repo missing/invalid — using fallback: ${targetRepos.join(", ")}`);
     } else {
       process.stderr.write(
-        `[notion-sync] FAIL: page ${id} missing/invalid "Target Repo"\n`
+        `[notion-sync] WARN: page ${id} missing/invalid "Target Repo" — skipping\n`
       );
-      process.exit(1);
+      return { row: null, warnings };
     }
   }
 
