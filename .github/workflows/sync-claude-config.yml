@@ -105,5 +105,8 @@ jobs:
             --title "chore: sync shared config" \
             --body "Auto-synced from daodao/.claude. Updates hooks, settings, and workflows." \
             --base "$DEFAULT_BRANCH")
-          gh pr merge "$PR_URL" --squash --auto
-          echo "✅ PR created and auto-merge enabled: $PR_URL"
+          if gh pr merge "$PR_URL" --squash --admin 2>/dev/null; then
+            echo "✅ PR merged: $PR_URL"
+          else
+            echo "✅ PR created (manual merge required): $PR_URL"
+          fi
