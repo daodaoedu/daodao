@@ -50,6 +50,35 @@ if [ "$estimated" -gt "$threshold" ]; then
   exit 4
 fi
 
+# Visual mode: skip pnpm test for issues that require human visual verification
+ISSUE_LABEL_STR=$(gh issue view "${ISSUE_NUM}" --repo "daodaoedu/${REPO}" --json labels \
+  --jq '[.labels[].name] | join(",")' 2>/dev/null || echo "")
+if echo "${ISSUE_LABEL_STR}" | grep -qw "visual"; then
+  echo "verification-loop: visual mode detected — skipping pnpm test"
+  export VISUAL_MODE=true
+fi
+
+if [[ "${VISUAL_MODE:-false}" == "true" ]]; then
+  if "${HANDLER_CMD[@]}"; then
+    if cd "$VERIFY_DIR" && pnpm lint 2>&1; then
+      echo "verification-loop: visual mode passed (lint only)"
+      exit 0
+    else
+      echo "verification-loop: lint failed in visual mode — escalating"
+      gh issue edit "$ISSUE_NUM" --repo "daodaoedu/$REPO" --add-label "human-coding" 2>/dev/null || true
+      gh issue comment "$ISSUE_NUM" --repo "daodaoedu/$REPO" \
+        --body "🚨 Lint failed (visual mode). Escalating to human." 2>/dev/null || true
+      exit 5
+    fi
+  else
+    echo "verification-loop: handler failed in visual mode — escalating"
+    gh issue edit "$ISSUE_NUM" --repo "daodaoedu/$REPO" --add-label "human-coding" 2>/dev/null || true
+    gh issue comment "$ISSUE_NUM" --repo "daodaoedu/$REPO" \
+      --body "🚨 Agentic phase failed (visual mode). Escalating to human." 2>/dev/null || true
+    exit 5
+  fi
+fi
+
 attempt=0
 last_error=""
 

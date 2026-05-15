@@ -208,6 +208,17 @@ ${notionUrl}
 `;
 }
 
+const VISUAL_KEYWORDS_ZH = ["排版", "間距", "樣式", "畫面", "手機", "響應式", "字型", "顏色", "圖示"];
+const VISUAL_KEYWORDS_EN = ["layout", "spacing", "style", "css", "margin", "padding", "font", "color", "colour", "template", "mobile", "responsive", "email", "rwd", "icon", " ui "];
+
+function isVisualTask(row: NotionRow): boolean {
+  const haystack = `${row.title} ${row.acceptanceCriteria ?? ""}`.toLowerCase();
+  return (
+    VISUAL_KEYWORDS_ZH.some((k) => haystack.includes(k)) ||
+    VISUAL_KEYWORDS_EN.some((k) => haystack.includes(k))
+  );
+}
+
 function buildLabels(row: NotionRow, targetRepo: string, fallbackWarnings: string[]): string[] {
   const labels: string[] = [
     buildNotionLabel(row.shortId),
@@ -228,6 +239,10 @@ function buildLabels(row: NotionRow, targetRepo: string, fallbackWarnings: strin
 
   if (fallbackWarnings.length > 0) {
     // Already noted in body; no extra label needed
+  }
+
+  if (isVisualTask(row)) {
+    labels.push("visual");
   }
 
   return [...new Set(labels)];
