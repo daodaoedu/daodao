@@ -18,6 +18,25 @@ HANDLER_CMD=("$@")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MONOREPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Locate sub-repo directory for lint/test (same logic as handlers)
+locate_repo_dir() {
+  local repo="$1"
+  local candidate="${MONOREPO_ROOT}/${repo}"
+  if [[ -d "${candidate}/.git" ]]; then echo "${candidate}"; return; fi
+  candidate="${MONOREPO_ROOT}/../${repo}"
+  if [[ -d "${candidate}/.git" ]]; then echo "${candidate}"; return; fi
+  candidate=$(find "$(dirname "${MONOREPO_ROOT}")" /root /home /workspaces /tmp -maxdepth 4 -name ".git" -type d 2>/dev/null \
+    | xargs -I{} dirname {} \
+    | while read -r d; do
+        url=$(git -C "$d" config --get remote.origin.url 2>/dev/null || true)
+        if [[ "$url" == *"daodaoedu/${repo}"* ]]; then echo "$d"; fi
+      done | head -1)
+  if [[ -n "${candidate}" ]]; then echo "${candidate}"; return; fi
+  echo "${MONOREPO_ROOT}"
+}
+
+VERIFY_DIR="$(locate_repo_dir "${REPO}")"
+
 # Context overflow guard (plan §5.3)
 CONTEXT_WINDOW=200000
 estimated=$(pnpm --silent tsx "$SCRIPT_DIR/estimate-context.ts" "$REPO" "$ISSUE_NUM" 2>/dev/null || echo 0)
@@ -39,8 +58,8 @@ while [ $attempt -lt 2 ]; do
   echo "verification-loop: attempt $attempt/2"
 
   if "${HANDLER_CMD[@]}"; then
-    # Handler succeeded — run lint + test
-    if cd "$MONOREPO_ROOT" && pnpm lint 2>&1 && pnpm test 2>&1; then
+    # Handler succeeded — run lint + test in sub-repo directory
+    if cd "$VERIFY_DIR" && pnpm lint 2>&1 && pnpm test 2>&1; then
       echo "verification-loop: attempt $attempt passed"
       exit 0
     else

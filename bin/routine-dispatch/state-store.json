@@ -2,8 +2,6 @@
   "last_scan_at": "",
   "last_dispatch_run_at": "",
   "pause_reason": "",
-  "token_usage_by_issue": {
-    "daodao-f2e#20": 800001
-  },
+  "token_usage_by_issue": {},
   "ports_in_use": []
 }

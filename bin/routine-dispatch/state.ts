@@ -24,6 +24,7 @@ export type DispatchState =
   | "human-blocked"    // automation:hold
   | "manual-mode"      // manual label (no auto)
   | "human-driving"    // human took over permanently
+  | "human-coding"     // verification failed, escalated to human
   | "stop-after-plan-done"; // stop-after-plan already executed
 
 interface IssueLabels {
@@ -74,6 +75,9 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
 
   // 2. human-driving → permanent handoff
   if (hasLabel(lbls, "human-driving")) return "human-driving";
+
+  // 2b. human-coding → verification failed, escalated to human
+  if (hasLabel(lbls, "human-coding")) return "human-coding";
 
   // 3. manual mode → no auto dispatch
   if (hasLabel(lbls, "manual")) return "manual-mode";

@@ -75,6 +75,10 @@ case "${STATE}" in
     bash "${SCRIPT_DIR}/handoff.sh" "${REPO}" "${ISSUE_NUM}"
     exit 0
     ;;
+  human-coding)
+    log "human-coding detected — verification previously failed, skipping"
+    exit 0
+    ;;
   manual-mode)
     log "Manual mode — skipping"
     exit 0
