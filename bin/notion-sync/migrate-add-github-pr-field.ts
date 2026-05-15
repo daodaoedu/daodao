@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * One-time migration: add "GitHub PR" URL property and "In Review" status option to Notion DB.
+ * One-time migration: add "PR Open" status option to Notion DB Status field.
+ * (GitHub PR URL field was already added via MCP on 2026-05-16)
  *
  * Usage:
  *   NOTION_API_KEY=<key> pnpm tsx bin/notion-sync/migrate-add-github-pr-field.ts [--dry-run]
@@ -29,75 +30,66 @@ async function main(): Promise<void> {
 
   const client = createNotionClient(NOTION_API_KEY);
   const db = await retrieveDatabase(client, NOTION_DB_ID);
-  const props = (db as { properties: Record<string, { type: string }> }).properties;
+  const props = (db as { properties: Record<string, unknown> }).properties;
 
-  // ── 1. Add "GitHub PR" URL property ──────────────────────────────────────
+  // GitHub PR field — already added via MCP, just verify
   if ("GitHub PR" in props) {
-    log("✅ GitHub PR property already exists — skipping");
+    log("✅ GitHub PR property already exists");
   } else {
-    log("Adding GitHub PR URL property...");
-    if (!DRY_RUN) {
-      await updateDatabase(client, NOTION_DB_ID, {
-        "GitHub PR": { url: {} },
-      });
-      log("✅ GitHub PR URL property added");
-    } else {
-      log("[dry-run] would add GitHub PR URL property");
-    }
+    log("⚠️ GitHub PR property missing — was it added via MCP?");
   }
 
-  // ── 2. Add "In Review" status option ────────────────────────────────────
+  // Add "PR Open" to Status options (in_progress group)
   const statusProp = props["Status"] as {
     type: string;
     status?: {
-      options: Array<{ id: string; name: string; color: string }>;
-      groups: Array<{ id: string; name: string; option_ids: string[] }>;
+      options: Array<{ id?: string; name: string; color: string }>;
+      groups: Array<{ id?: string; name: string; option_ids: string[] }>;
     };
   } | undefined;
 
   if (!statusProp || statusProp.type !== "status" || !statusProp.status) {
-    log("⚠️ Status property not found or not a status type — skipping");
-  } else {
-    const existing = statusProp.status.options.map((o) => o.name);
-    if (existing.includes("In Review")) {
-      log("✅ In Review status option already exists — skipping");
-    } else {
-      log(`Current status options: ${existing.join(", ")}`);
-      log("Adding In Review status option to In progress group...");
+    log("⚠️ Status property not found or not status type — skipping");
+    return;
+  }
 
-      const inProgressGroup = statusProp.status.groups.find(
-        (g) => g.name === "In progress"
-      );
+  const existing = statusProp.status.options.map((o) => o.name);
+  if (existing.includes("PR Open")) {
+    log("✅ PR Open status option already exists — nothing to do");
+    return;
+  }
 
-      if (!inProgressGroup) {
-        log("⚠️ In progress group not found — please add In Review manually in Notion");
-      } else if (!DRY_RUN) {
-        const newOption = { name: "In Review", color: "blue" };
-        const updatedOptions = [...statusProp.status.options, newOption];
-        const updatedGroups = statusProp.status.groups.map((g) =>
-          g.name === "In progress"
-            ? { ...g, option_ids: [...g.option_ids, "in-review-placeholder"] }
-            : g
-        );
+  log(`Current status options: ${existing.join(", ")}`);
+  log('Adding "PR Open" to in_progress group...');
 
-        try {
-          await updateDatabase(client, NOTION_DB_ID, {
-            Status: {
-              status: {
-                options: updatedOptions,
-                groups: updatedGroups,
-              },
-            },
-          });
-          log("✅ In Review status option added");
-        } catch (err) {
-          log(`⚠️ Could not add status option via API: ${err}`);
-          log("   Please add In Review manually in Notion under the In progress group");
-        }
-      } else {
-        log("[dry-run] would add In Review status option");
-      }
-    }
+  if (DRY_RUN) {
+    log('[dry-run] would add "PR Open" option');
+    return;
+  }
+
+  const newOption = { name: "PR Open", color: "orange" };
+  const updatedOptions = [...statusProp.status.options, newOption];
+
+  // Add to in_progress group (use a temp id — Notion assigns a real one)
+  const updatedGroups = statusProp.status.groups.map((g) =>
+    g.name === "In progress"
+      ? { ...g, option_ids: [...g.option_ids, "__pr_open__"] }
+      : g
+  );
+
+  try {
+    await updateDatabase(client, NOTION_DB_ID, {
+      Status: {
+        status: {
+          options: updatedOptions,
+          groups: updatedGroups,
+        },
+      },
+    });
+    log('✅ "PR Open" status option added');
+  } catch (err) {
+    log(`⚠️ API failed: ${err}`);
+    log('   Please add "PR Open" manually in Notion (Status field → In progress group)');
   }
 
   log("Migration complete.");

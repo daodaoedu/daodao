@@ -11,7 +11,7 @@
  *   GITHUB_TOKEN    — consumed by gh CLI
  *
  * Flow (runs hourly):
- *   1. Open auto PRs  → Notion Status = "In Review" + write GitHub PR URL
+ *   1. Open auto PRs  → Notion Status = "Review" + write GitHub PR URL
  *   2. Merged auto PRs (last N hours) → Notion Status = "Done" + write GitHub PR URL
  */
 
@@ -117,7 +117,7 @@ function extractNotionPageId(issueBody: string): string | null {
 async function syncPRs(
   client: ReturnType<typeof createNotionClient>,
   prs: PR[],
-  status: "In Review" | "Done"
+  status: "PR Open" | "Done"
 ): Promise<number> {
   let updated = 0;
 
@@ -178,13 +178,13 @@ async function main(): Promise<void> {
 
   let totalUpdated = 0;
 
-  // Phase 1: open PRs → In Review
-  log("── Phase 1: open auto PRs → In Review ──");
+  // Phase 1: open PRs → PR Open
+  log("── Phase 1: open auto PRs → PR Open ──");
   for (const repo of SUB_REPOS) {
     const openPRs = getOpenAutoPRs(repo);
     if (openPRs.length === 0) continue;
     log(`${repo}: ${openPRs.length} open PR(s)`);
-    totalUpdated += await syncPRs(client, openPRs, "In Review");
+    totalUpdated += await syncPRs(client, openPRs, "PR Open");
   }
 
   // Phase 2: merged PRs → Done
