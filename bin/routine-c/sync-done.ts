@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Routine C: PR merge → Notion Status = Done
+ * Routine C: PR state → Notion Status sync
  *
  * Usage:
  *   pnpm tsx bin/routine-c/sync-done.ts [--dry-run] [--hours <n>]
@@ -10,11 +10,9 @@
  *   NOTION_DB_ID    — Notion database ID
  *   GITHUB_TOKEN    — consumed by gh CLI
  *
- * Flow:
- *   1. For each sub-repo, list PRs merged in the last N hours with `auto` label
- *   2. Find the linked issue (via PR body "Closes #<num>" or PR --json closingIssuesReferences)
- *   3. Extract Notion page ID from issue body (pattern: Notion page ID: `<id>`)
- *   4. Update Notion page Status → "Done"
+ * Flow (runs hourly):
+ *   1. Open auto PRs  → Notion Status = "In Review" + write GitHub PR URL
+ *   2. Merged auto PRs (last N hours) → Notion Status = "Done" + write GitHub PR URL
  */
 
 import { execSync } from "child_process";
@@ -50,23 +48,37 @@ function warn(msg: string): void {
   process.stderr.write(`[routine-c] WARN: ${msg}\n`);
 }
 
-interface MergedPR {
+interface PR {
   repo: string;
   prNumber: number;
   title: string;
-  mergedAt: string;
+  url: string;
 }
 
-function getMergedPRs(repo: string, sinceIso: string): MergedPR[] {
+function getOpenAutoPRs(repo: string): PR[] {
+  try {
+    const output = execSync(
+      `gh pr list --repo daodaoedu/${repo} --state open --label auto \
+        --json number,title,url`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; url: string }>;
+    return prs.map((pr) => ({ repo, prNumber: pr.number, title: pr.title, url: pr.url }));
+  } catch {
+    return [];
+  }
+}
+
+function getMergedAutoPRs(repo: string, sinceIso: string): PR[] {
   try {
     const output = execSync(
       `gh pr list --repo daodaoedu/${repo} --state merged --label auto \
-        --json number,title,mergedAt \
+        --json number,title,mergedAt,url \
         --jq '[.[] | select(.mergedAt >= "${sinceIso}")]'`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; mergedAt: string }>;
-    return prs.map((pr) => ({ repo, prNumber: pr.number, title: pr.title, mergedAt: pr.mergedAt }));
+    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; mergedAt: string; url: string }>;
+    return prs.map((pr) => ({ repo, prNumber: pr.number, title: pr.title, url: pr.url }));
   } catch {
     return [];
   }
@@ -102,19 +114,49 @@ function extractNotionPageId(issueBody: string): string | null {
   return match?.[1] ?? null;
 }
 
-async function markNotion(
+async function syncPRs(
   client: ReturnType<typeof createNotionClient>,
-  pageId: string,
-  context: string
-): Promise<void> {
-  if (DRY_RUN) {
-    log(`[dry-run] would set Status=Done on Notion page ${pageId} (${context})`);
-    return;
+  prs: PR[],
+  status: "In Review" | "Done"
+): Promise<number> {
+  let updated = 0;
+
+  for (const pr of prs) {
+    const issueNums = getLinkedIssueNumbers(pr.repo, pr.prNumber);
+    if (issueNums.length === 0) {
+      log(`  PR #${pr.prNumber} has no linked issues — skipping`);
+      continue;
+    }
+
+    for (const issueNum of issueNums) {
+      const body = getIssueBody(pr.repo, issueNum);
+      const pageId = extractNotionPageId(body);
+      if (!pageId) {
+        log(`  issue #${issueNum} has no Notion page ID in body — skipping`);
+        continue;
+      }
+
+      const context = `${pr.repo}#${issueNum} via PR #${pr.prNumber}`;
+      if (DRY_RUN) {
+        log(`[dry-run] would set Status=${status} + GitHub PR=${pr.url} on ${pageId} (${context})`);
+        updated++;
+        continue;
+      }
+
+      try {
+        await updatePageProperty(client, pageId, {
+          Status: { status: { name: status } },
+          "GitHub PR": { url: pr.url },
+        });
+        log(`✅ Status=${status} + GitHub PR written (${context})`);
+        updated++;
+      } catch (err) {
+        warn(`failed to update Notion page ${pageId}: ${err}`);
+      }
+    }
   }
-  await updatePageProperty(client, pageId, {
-    Status: { select: { name: "Done" } },
-  });
-  log(`✅ Status=Done on ${pageId} (${context})`);
+
+  return updated;
 }
 
 async function main(): Promise<void> {
@@ -131,44 +173,30 @@ async function main(): Promise<void> {
   }
 
   const client = createNotionClient(NOTION_API_KEY);
-
   const sinceDate = new Date(Date.now() - LOOKBACK_HOURS * 3600 * 1000);
   const sinceIso = sinceDate.toISOString();
-  log(`scanning PRs merged since ${sinceIso} (last ${LOOKBACK_HOURS}h)`);
 
   let totalUpdated = 0;
 
+  // Phase 1: open PRs → In Review
+  log("── Phase 1: open auto PRs → In Review ──");
   for (const repo of SUB_REPOS) {
-    const mergedPRs = getMergedPRs(repo, sinceIso);
-    if (mergedPRs.length === 0) continue;
-    log(`${repo}: ${mergedPRs.length} merged PR(s) found`);
-
-    for (const pr of mergedPRs) {
-      const issueNums = getLinkedIssueNumbers(repo, pr.prNumber);
-      if (issueNums.length === 0) {
-        log(`  PR #${pr.prNumber} has no linked issues — skipping`);
-        continue;
-      }
-
-      for (const issueNum of issueNums) {
-        const body = getIssueBody(repo, issueNum);
-        const pageId = extractNotionPageId(body);
-        if (!pageId) {
-          log(`  issue #${issueNum} has no Notion page ID in body — skipping`);
-          continue;
-        }
-
-        try {
-          await markNotion(client, pageId, `${repo}#${issueNum} via PR #${pr.prNumber}`);
-          totalUpdated++;
-        } catch (err) {
-          warn(`failed to update Notion page ${pageId}: ${err}`);
-        }
-      }
-    }
+    const openPRs = getOpenAutoPRs(repo);
+    if (openPRs.length === 0) continue;
+    log(`${repo}: ${openPRs.length} open PR(s)`);
+    totalUpdated += await syncPRs(client, openPRs, "In Review");
   }
 
-  log(`done — updated ${totalUpdated} Notion page(s) to Done`);
+  // Phase 2: merged PRs → Done
+  log(`── Phase 2: merged auto PRs (last ${LOOKBACK_HOURS}h) → Done ──`);
+  for (const repo of SUB_REPOS) {
+    const mergedPRs = getMergedAutoPRs(repo, sinceIso);
+    if (mergedPRs.length === 0) continue;
+    log(`${repo}: ${mergedPRs.length} merged PR(s)`);
+    totalUpdated += await syncPRs(client, mergedPRs, "Done");
+  }
+
+  log(`done — updated ${totalUpdated} Notion page(s)`);
 }
 
 main().catch((err) => {

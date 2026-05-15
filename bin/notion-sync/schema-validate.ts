@@ -8,6 +8,7 @@ const REQUIRED_PROPERTIES = [
   "Scope",
   "Target Repo",
   "GitHub Issue",
+  "GitHub PR",
   "Acceptance Criteria",
 ];
 
