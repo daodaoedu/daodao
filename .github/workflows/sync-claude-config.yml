@@ -26,6 +26,8 @@ jobs:
           - daodao-storage
           - daodao-worker
           - daodao-infra
+          - daodao-admin-ui
+          - daodao-mcp
     steps:
       - name: Checkout infra
         uses: actions/checkout@v4
