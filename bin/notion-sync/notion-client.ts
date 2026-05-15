@@ -50,6 +50,25 @@ export async function updatePageProperty(
   });
 }
 
+export async function updateDatabase(
+  client: Client,
+  databaseId: string,
+  properties: Record<string, unknown>
+): Promise<void> {
+  await client.databases.update({
+    database_id: databaseId,
+    properties: properties as Parameters<typeof client.databases.update>[0]["properties"],
+  });
+}
+
+export async function retrieveDatabase(
+  client: Client,
+  databaseId: string
+): Promise<Record<string, unknown>> {
+  const db = await client.databases.retrieve({ database_id: databaseId });
+  return db as Record<string, unknown>;
+}
+
 function blockToMarkdown(block: BlockObjectResponse): string {
   switch (block.type) {
     case "paragraph":
