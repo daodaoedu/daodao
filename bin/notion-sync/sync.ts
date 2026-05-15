@@ -352,7 +352,13 @@ async function createIssuesForRow(
     return { created: anyNew, notionUrl: subIssues[0]!.url };
   }
 
-  // Multi-repo: create umbrella issue in daodao monorepo
+  // Multi-repo: create umbrella issue in daodao monorepo (skip if already exists)
+  const existingUmbrella = findExistingIssue("daodao", row.shortId);
+  if (existingUmbrella) {
+    log(`⏭️ umbrella already exists in daodao (#${existingUmbrella.number}) — skip`);
+    return { created: anyNew, notionUrl: `https://github.com/daodaoedu/daodao/issues/${existingUmbrella.number}` };
+  }
+
   const umbrellaBody = buildUmbrellaBody(row, subIssues, fallbackWarnings, pageBody);
   const umbrellaLabels = [
     buildNotionLabel(row.shortId),
