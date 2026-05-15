@@ -1,6 +1,6 @@
 # Pipeline Status
 
-> Generated at 2026-05-07T18:03:36.562Z
+> Generated at 2026-05-14T23:09:22.195Z
 > Last scan: _unknown_
 > Last dispatch: _unknown_
 
@@ -34,17 +34,11 @@ _none_
 ## daodao-f2e
 
 ### Synced issues (auto label)
-| Issue | Title |
-|---|---|
-| [#557](https://github.com/daodaoedu/daodao-f2e/issues/557) | 靈感頁：前端測試（12.9-12.10） |
-| [#556](https://github.com/daodaoedu/daodao-f2e/issues/556) | 靈感頁：Mobile 版實作（11.1-11.5） |
+_none_
 
 
 ### Pending plan
-| Issue | Title |
-|---|---|
-| [#557](https://github.com/daodaoedu/daodao-f2e/issues/557) | 靈感頁：前端測試（12.9-12.10） |
-| [#556](https://github.com/daodaoedu/daodao-f2e/issues/556) | 靈感頁：Mobile 版實作（11.1-11.5） |
+_none_
 
 
 ### Spec in review (spec-pending)
@@ -62,15 +56,11 @@ _none_
 ## daodao-ai-backend
 
 ### Synced issues (auto label)
-| Issue | Title |
-|---|---|
-| [#42](https://github.com/daodaoedu/daodao-ai-backend/issues/42) | 靈感頁：後端測試（12.1-12.8） |
+_none_
 
 
 ### Pending plan
-| Issue | Title |
-|---|---|
-| [#42](https://github.com/daodaoedu/daodao-ai-backend/issues/42) | 靈感頁：後端測試（12.1-12.8） |
+_none_
 
 
 ### Spec in review (spec-pending)
@@ -197,4 +187,6 @@ _none_
 
 ## Recent routine failures
 
-_No token usage recorded._
+| Issue | Tokens used |
+|---|---|
+| daodao-f2e#20 | 800,001 |
