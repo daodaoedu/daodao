@@ -397,12 +397,12 @@ async function writeBackNotionUrl(
   dryRun: boolean
 ): Promise<void> {
   if (dryRun) {
-    log(`[dry-run] would write back GitHub Issue URL + Status=In Progress to Notion page ${pageId}`);
+    log(`[dry-run] would write back GitHub Issue URL + Status=In progress to Notion page ${pageId}`);
     return;
   }
   await updatePageProperty(client, pageId, {
     "GitHub Issue": { url },
-    Status: { status: { name: "In Progress" } },
+    Status: { status: { name: "In progress" } },
   });
 }
 
