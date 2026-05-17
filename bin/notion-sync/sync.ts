@@ -291,7 +291,21 @@ function ghCreateIssue(repo: string, title: string, body: string, labels: string
           `gh issue create --repo daodaoedu/${repo} --title "${title.replace(/"/g, '\\"')}" --body-file "${tmpFile}" ${fallbackArgs}`,
           { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
         );
-        return retryOutput.trim();
+        const issueUrl = retryOutput.trim();
+        // Backfill the notion: label that was skipped in retry
+        const notionLabel = labels.find((l) => l.startsWith("notion:"));
+        if (notionLabel && issueUrl) {
+          const issueNum = issueUrl.split("/").pop();
+          try {
+            execSync(
+              `gh issue edit ${issueNum} --repo daodaoedu/${repo} --add-label "${notionLabel}"`,
+              { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+            );
+          } catch {
+            warn(`failed to backfill notion label on issue ${issueNum} in ${repo}`);
+          }
+        }
+        return issueUrl;
       } catch (retryErr: unknown) {
         const retryStderr = (retryErr as { stderr?: Buffer })?.stderr?.toString?.() ?? "";
         warn(`gh issue create retry also failed in ${repo}: ${retryStderr || retryErr}`);

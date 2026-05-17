@@ -70,6 +70,9 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
 
   // §6 Label precedence (checked in order)
 
+  // 1a. auto-pr-open → code PR already created, skip
+  if (hasLabel(lbls, "auto-pr-open")) return "done";
+
   // 1. automation:hold → temporary pause
   if (hasLabel(lbls, "automation:hold")) return "human-blocked";
 
