@@ -127,11 +127,19 @@
     3. 確保 auto 和 spec-pending label 存在：
        gh label create "auto" --repo daodaoedu/<repo> --color "0075ca" --description "Routine B dispatch trigger" --force
        gh label create "spec-pending" --repo daodaoedu/<repo> --color "e4e669" --description "Spec PR under review" --force
-    4. gh pr create --title "[spec] <title>" --label "auto" --label "spec-pending"
+    4. gh pr create --title "[spec] #<issue-num> <issue-title>" --label "auto" --label "spec-pending"
     5. gh issue edit <num> --repo daodaoedu/<repo> --add-label spec-pending
     6. 驗證 PR label 有套用，若無則補：
        gh pr edit <pr-num> --repo daodaoedu/<repo> --add-label auto --add-label spec-pending
-    7. 結束此 issue（等 spec merge 後下輪再處理 code）
+    7. 回寫 Notion 狀態為 "Spec Review"：
+       從 issue body 解析 Notion page ID（格式：Notion page ID: `<id>`）
+       NOTION_PAGE_ID=$(gh issue view <num> --repo daodaoedu/<repo> --json body -q '.body' \
+         | grep -o 'Notion page ID: `[^`]*`' | sed 's/Notion page ID: `//;s/`//')
+       若 NOTION_PAGE_ID 非空：
+         cd <monorepo root>
+         pnpm tsx bin/notion-sync/update-status.ts "$NOTION_PAGE_ID" "Spec Review"
+         cd /tmp/<repo>
+    8. 結束此 issue（等 spec merge 後下輪再處理 code）
   state=needs-code:
     1. 同 scope:S 的 TDD 流程
 
@@ -159,9 +167,11 @@
   若成功：
     git push -u origin $BRANCH
 
-    # 確保 auto label 存在（必須在 gh pr create 之前執行）
+    # 確保 auto 和 tracked label 存在（必須在 gh pr create 之前執行）
     gh label create "auto" --repo daodaoedu/<repo> \
       --color "0075ca" --description "Routine B dispatch trigger" --force
+    gh label create "tracked" --repo daodaoedu/<repo> \
+      --color "0e8a16" --description "PR tracked for Notion status sync" --force
 
     # PR body 必須嚴格使用以下格式，不可自由發揮或加入實作細節
     PR_BODY="## Summary
@@ -177,15 +187,19 @@ Closes #<num>"
 
     gh pr create \
       --repo daodaoedu/<repo> \
-      --title "[auto] <issue-title>" \
+      --title "[auto] #<num> <issue-title>" \
       --body "$PR_BODY" \
       --head $BRANCH --base <default-branch> \
-      --label auto
+      --label auto \
+      --label tracked
 
     # 驗證 label 有成功套用
     PR_LABELS=$(gh pr view <pr-num> --repo daodaoedu/<repo> --json labels --jq '[.labels[].name]')
     if ! echo "$PR_LABELS" | grep -q "auto"; then
       gh pr edit <pr-num> --repo daodaoedu/<repo> --add-label auto
+    fi
+    if ! echo "$PR_LABELS" | grep -q "tracked"; then
+      gh pr edit <pr-num> --repo daodaoedu/<repo> --add-label tracked
     fi
 
     # 標記 issue 為「PR 已建立」，防止 Routine B 重複處理
@@ -202,6 +216,7 @@ Closes #<num>"
 
   對每個 PR：
     - 有 human-driving label → 跳過
+    - 有 spec-pending label → 跳過（spec PR 由人類 review，不介入）
     - 有 requested changes 或 failing CI：
       讀 review feedback（gh pr view --comments / gh api checks）
       根據 feedback 修改程式碼並 push
@@ -242,3 +257,14 @@ Closes #<num>"
 | 驗證 | verification-loop.sh 在 monorepo 跑 | 在 sub-repo 內跑 |
 | 失敗處理 | human-coding label（但 state.ts 不認） | human-coding label + state.ts 已修復 |
 | Handler | 4 個 bash script | prompt 內建 scope 定義 |
+
+## v2 → v2.1 變更摘要（Notion 完整進度管理）
+
+| 項目 | v2 | v2.1 |
+|---|---|---|
+| Spec PR 標題 | `[spec] <title>`（不含 issue number）| `[spec] #<num> <title>` |
+| Spec PR labels | `auto` + `spec-pending`（有時缺 auto）| 強制 `auto` + `spec-pending` |
+| Code PR 標題 | `[auto] <title>` 或 commit message | 一律 `[auto] #<num> <title>` |
+| Code PR labels | `auto` only | `auto` + `tracked` |
+| Notion 回寫 | 無（spec 階段 Notion 無感知）| spec PR 建立後回寫 `Spec Review` |
+| Stage 3 spec PR | 會巡邏並修改 spec PR | 有 `spec-pending` label → 跳過 |
