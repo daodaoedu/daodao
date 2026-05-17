@@ -223,3 +223,31 @@ gh issue view <num> --repo daodaoedu/<repo> --comments
 ```
 
 Routine B 開始處理時會在 issue 上留 comment 說明狀態。
+
+---
+
+## 人工開 PR（Path A）
+
+如果你想自己寫 code、開 PR，但仍希望 Notion 任務進度自動更新，需要：
+
+**前提**：Notion 任務已經過 Routine A 同步，GitHub Issue 已存在。
+
+**開 PR 時的規範：**
+
+1. PR body 加入 closing reference：
+   ```
+   Closes daodaoedu/<repo>#<issue-num>
+   ```
+
+2. PR 加上 `tracked` label：
+   ```bash
+   # 建立 PR 時直接加
+   gh pr create --label tracked ...
+
+   # 或事後補加
+   gh pr edit <pr-num> --repo daodaoedu/<repo> --add-label tracked
+   ```
+
+這樣 Routine C 每小時會掃到這個 PR，自動將 Notion 狀態更新為 `PR Open`，merge 後更新為 `Done`。
+
+**不需要追蹤 Notion 的 ad-hoc 小修 PR**，不加 `tracked` label 即可，Notion 不會被影響。

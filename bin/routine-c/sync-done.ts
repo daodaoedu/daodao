@@ -11,8 +11,9 @@
  *   GITHUB_TOKEN    — consumed by gh CLI
  *
  * Flow (runs hourly):
- *   1. Open auto PRs  → Notion Status = "Review" + write GitHub PR URL
- *   2. Merged auto PRs (last N hours) → Notion Status = "Done" + write GitHub PR URL
+ *   1. Open tracked PRs  → Notion Status = "PR Open" + write GitHub PR URL
+ *   2. Merged tracked PRs (last N hours) → Notion Status = "Done" + write GitHub PR URL
+ *   (PRs with spec-pending label are always skipped)
  */
 
 import { execSync } from "child_process";
@@ -53,32 +54,45 @@ interface PR {
   prNumber: number;
   title: string;
   url: string;
+  labels: string[];
 }
 
-function getOpenAutoPRs(repo: string): PR[] {
+function getOpenTrackedPRs(repo: string): PR[] {
   try {
     const output = execSync(
-      `gh pr list --repo daodaoedu/${repo} --state open --label auto \
-        --json number,title,url`,
+      `gh pr list --repo daodaoedu/${repo} --state open --label tracked \
+        --json number,title,url,labels`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; url: string }>;
-    return prs.map((pr) => ({ repo, prNumber: pr.number, title: pr.title, url: pr.url }));
+    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; url: string; labels: Array<{ name: string }> }>;
+    return prs.map((pr) => ({
+      repo,
+      prNumber: pr.number,
+      title: pr.title,
+      url: pr.url,
+      labels: pr.labels.map((l) => l.name),
+    }));
   } catch {
     return [];
   }
 }
 
-function getMergedAutoPRs(repo: string, sinceIso: string): PR[] {
+function getMergedTrackedPRs(repo: string, sinceIso: string): PR[] {
   try {
     const output = execSync(
-      `gh pr list --repo daodaoedu/${repo} --state merged --label auto \
-        --json number,title,mergedAt,url \
+      `gh pr list --repo daodaoedu/${repo} --state merged --label tracked \
+        --json number,title,mergedAt,url,labels \
         --jq '[.[] | select(.mergedAt >= "${sinceIso}")]'`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; mergedAt: string; url: string }>;
-    return prs.map((pr) => ({ repo, prNumber: pr.number, title: pr.title, url: pr.url }));
+    const prs = JSON.parse(output.trim()) as Array<{ number: number; title: string; mergedAt: string; url: string; labels: Array<{ name: string }> }>;
+    return prs.map((pr) => ({
+      repo,
+      prNumber: pr.number,
+      title: pr.title,
+      url: pr.url,
+      labels: pr.labels.map((l) => l.name),
+    }));
   } catch {
     return [];
   }
@@ -122,6 +136,10 @@ async function syncPRs(
   let updated = 0;
 
   for (const pr of prs) {
+    if (pr.labels.includes("spec-pending")) {
+      log(`  PR #${pr.prNumber} has spec-pending — skipping`);
+      continue;
+    }
     const issueNums = getLinkedIssueNumbers(pr.repo, pr.prNumber);
     if (issueNums.length === 0) {
       log(`  PR #${pr.prNumber} has no linked issues — skipping`);
@@ -178,19 +196,19 @@ async function main(): Promise<void> {
 
   let totalUpdated = 0;
 
-  // Phase 1: open PRs → PR Open
-  log("── Phase 1: open auto PRs → PR Open ──");
+  // Phase 1: open tracked PRs → PR Open
+  log("── Phase 1: open tracked PRs → PR Open ──");
   for (const repo of SUB_REPOS) {
-    const openPRs = getOpenAutoPRs(repo);
+    const openPRs = getOpenTrackedPRs(repo);
     if (openPRs.length === 0) continue;
     log(`${repo}: ${openPRs.length} open PR(s)`);
     totalUpdated += await syncPRs(client, openPRs, "PR Open");
   }
 
-  // Phase 2: merged PRs → Done
-  log(`── Phase 2: merged auto PRs (last ${LOOKBACK_HOURS}h) → Done ──`);
+  // Phase 2: merged tracked PRs → Done
+  log(`── Phase 2: merged tracked PRs (last ${LOOKBACK_HOURS}h) → Done ──`);
   for (const repo of SUB_REPOS) {
-    const mergedPRs = getMergedAutoPRs(repo, sinceIso);
+    const mergedPRs = getMergedTrackedPRs(repo, sinceIso);
     if (mergedPRs.length === 0) continue;
     log(`${repo}: ${mergedPRs.length} merged PR(s)`);
     totalUpdated += await syncPRs(client, mergedPRs, "Done");
