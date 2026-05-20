@@ -31,7 +31,10 @@ In progress
                      PR Open  ← Routine C（code PR open）
                          │
                          ▼
-                      Done  ← Routine C（code PR merged）
+                     Review  ← Routine C（code PR merged）
+                         │ 人工確認產出
+                         ▼
+                      Done  ← 人工手動
 ```
 
 | Notion Status | 由誰寫 | 觸發條件 |
@@ -40,7 +43,8 @@ In progress
 | `In progress` | Routine A | GitHub issue 建立後 |
 | `Spec Review` | Routine B | Spec PR 建立後 |
 | `PR Open` | Routine C | Code PR open（`tracked` label）|
-| `Done` | Routine C | Code PR merged（`tracked` label）|
+| `Review` | Routine C | Code PR merged（`tracked` label）|
+| `Done` | 人工 | 確認 merged 產出符合需求後手動標記 |
 
 ## PR Naming Convention
 
@@ -121,7 +125,8 @@ In progress
    │ Routine C：PR State → Notion Status                    │
    │  • cron 每小時                                          │
    │  • 掃 tracked label 的 open PR → Status="PR Open"      │
-   │  • 掃 tracked label 的 merged PR → Status="Done"       │
+   │  • 掃 tracked label 的 merged PR → Status="Review"     │
+   │    （人工確認產出後手動改 Done）                       │
    │  • 跳過有 spec-pending label 的 PR                     │
    │  • 同時寫回 Notion「GitHub PR」欄位                     │
    └────────────────────────────────────────────────────────┘
@@ -162,7 +167,7 @@ In progress
 | `sync-done.ts` | 掃 `tracked` label 的 PR，回寫 Notion Status + GitHub PR URL |
 
 - **Open PR** → `PR Open`
-- **Merged PR** → `Done`
+- **Merged PR** → `Review`（人工確認產出後手動改 `Done`）
 - **跳過** 有 `spec-pending` label 的 PR（spec 狀態由 Routine B 直接寫）
 
 ### Label 一覽

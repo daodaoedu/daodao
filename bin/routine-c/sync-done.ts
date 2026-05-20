@@ -12,8 +12,11 @@
  *
  * Flow (runs hourly):
  *   1. Open tracked PRs  → Notion Status = "PR Open" + write GitHub PR URL
- *   2. Merged tracked PRs (last N hours) → Notion Status = "Done" + write GitHub PR URL
+ *   2. Merged tracked PRs (last N hours) → Notion Status = "Review" + write GitHub PR URL
  *   (PRs with spec-pending label are always skipped)
+ *
+ * Note: merge sets "Review", not "Done" — a human verifies the shipped
+ * outcome and flips the card to "Done" manually.
  */
 
 import { execSync } from "child_process";
@@ -131,7 +134,7 @@ function extractNotionPageId(issueBody: string): string | null {
 async function syncPRs(
   client: ReturnType<typeof createNotionClient>,
   prs: PR[],
-  status: "PR Open" | "Done"
+  status: "PR Open" | "Review"
 ): Promise<number> {
   let updated = 0;
 
@@ -205,13 +208,13 @@ async function main(): Promise<void> {
     totalUpdated += await syncPRs(client, openPRs, "PR Open");
   }
 
-  // Phase 2: merged tracked PRs → Done
-  log(`── Phase 2: merged tracked PRs (last ${LOOKBACK_HOURS}h) → Done ──`);
+  // Phase 2: merged tracked PRs → Review (human flips to Done after verifying)
+  log(`── Phase 2: merged tracked PRs (last ${LOOKBACK_HOURS}h) → Review ──`);
   for (const repo of SUB_REPOS) {
     const mergedPRs = getMergedTrackedPRs(repo, sinceIso);
     if (mergedPRs.length === 0) continue;
     log(`${repo}: ${mergedPRs.length} merged PR(s)`);
-    totalUpdated += await syncPRs(client, mergedPRs, "Done");
+    totalUpdated += await syncPRs(client, mergedPRs, "Review");
   }
 
   log(`done — updated ${totalUpdated} Notion page(s)`);
