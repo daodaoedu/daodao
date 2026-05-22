@@ -9,25 +9,77 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 ## Goals / Non-Goals
 
 **Goals:**
-- Admin 可建立 Node / Edge 組成的 Workflow，支援七種 Node 類型（含 `skill-call`）
+
+- Admin 可建立 Node / Edge 組成的 Workflow，支援八種 Node 類型（含 `skill-call` 與 `approval-gate`）
+- Admin 可透過對話描述自動化需求，系統產生可審核的 Workflow draft，確認後建立正式 Workflow
+- 規劃 Workflow 的應用場景分類：營運自動化、個人學習旅程體驗、學習生態圈
+- 規劃階段式 / 漏斗式 Journey Workflow，Phase 1 以 scheduled scan + condition 模擬，Phase 2 預留 journey state tracking
 - Admin 可設定 Trigger（Phase 1 實作 `manual`，其餘預留）
 - Admin 可對 Workflow 執行 dry-run A/B 對比測試
 - Admin 可透過 UI 編輯器或 Agent 對話兩種方式建立與管理 Skill
 - 執行紀錄保存每個 Node 的輸入 / 輸出
 - Admin 可查看每個 run 的 cost（total_cost_usd）與 latency（total_latency_ms），以及各 node 的細項
 - Admin 可對 run 結果標記評分（好 / 壞）並附備註，累積評估資料集
-- 不可逆的 output 操作（如寫回 DB）需要 approval gate，admin 核准後才實際執行
+- 流程中可加入人工關卡（`approval-gate`），不可逆的 output 操作（如寫回 DB / 寄信）也可加最後 approval gate，admin 核准後才實際執行
 - **[Phase 1]** `llm-call` 節點支援 Output Guards：可選設 `output_schema`，LLM 輸出不符格式時自動拒絕
 - **[Phase 1]** `skill-call` 偵測死迴圈（連續相同 tool hash）+ Circuit Breaker（連續失敗 3 次觸發冷卻）
 - **[Phase 1]** `skill-call` ReAct loop 支援 Context Compression：超過 token 閾值時自動壓縮歷史
 
 **Non-Goals（Phase 1）:**
+
 - 不實作 `scheduled` / `webhook` / `event` trigger 的實際觸發（schema 預留）
 - 不做視覺化 graph editor（UI 維持卡片列表，資料模型支援 DAG）
 - 不支援 Node 間迴圈執行
 - 不整合現有產品端 AI 功能的自動切換
+- 對話式 Workflow 生成只建立 draft 並要求 admin 確認，不允許 AI 直接啟用 workflow 或直接執行不可逆 output
 
 ## Decisions
+
+### 0. 產品規劃模型：Workflow 負責 orchestration，Skill 負責 domain intelligence
+
+**決定**：Workflow 與 Skill 的邊界必須在 Builder、Generator、API schema 與文件中一致呈現。
+
+| 問題 | Workflow | Skill |
+|---|---|---|
+| 什麼時候觸發？ | 是 | 否 |
+| 要抓哪些 daodao 資料？ | 是 | 通常否 |
+| 節點順序 / 分支 / 人工關卡？ | 是 | 否 |
+| 是否寄信 / 寫 DB / 發通知？ | 是 | 否 |
+| 特定領域如何判斷？ | 否 | 是 |
+| daodao 語氣、教學策略、社群規範 | 否 | 是 |
+| 可重用範例、references、templates | 否 | 是 |
+| 可執行 scripts | 否 | 是 |
+
+**PM 規劃模板**：
+
+```
+當 [觸發條件 / 使用者階段]，
+系統要抓取 [資料欄位]，
+用 [規則 / LLM / Skill 名稱與版本] 判斷或生成 [內容]，
+如果 [風險條件] 則進入 [人工關卡]，
+最後執行 [寄信 / 站內通知 / 寫回 DB / 建草稿 / 發 badge / dry-run]。
+```
+
+**llm-call vs skill-call 判斷**：
+
+- 一次性生成或判斷：使用 `llm-call`。
+- 同一套判斷會被多個 Workflow 重用，或需要穩定語氣、範例、範本、參考資料、scripts：抽成 `skill-call`。
+- Production workflow 使用 `skill-call` 時應固定 `skill_version`；Skill 新版本發布不自動影響既有 workflow。
+
+**最後行動目錄**：
+
+| 最後行動 | 範例 | 審核規則 |
+|---|---|---|
+| email | onboarding email、鼓勵信、週報、召回信 | 對外文案建議 `approval-gate` 或抽樣審核 |
+| 站內通知 / push | 任務提醒、互動提醒、挑戰提醒 | 批量或 LLM 文案建議審核 |
+| DB 寫回 | 推薦、狀態、標籤、AI 摘要 | 影響核心資料時要審核 |
+| 建立草稿 | 公告、email、週報、匯出草稿 | 草稿本身可作為審核輸入 |
+| badge | early user、挑戰達標、人物誌完成 | 規則明確可免審 |
+| 任務 / 實踐 / 推薦卡 | onboarding task、個人化實踐草稿、Buddy 推薦 | 直接進入用戶工作區時建議審核 |
+| 外部 API | CRM、Email service、Slack、文件生成 | 對外或不可逆操作要審核 |
+| dry-run | A/B 測試、prompt 比較 | 不寫回，不需審核 |
+
+---
 
 ### 1. 核心模型：Node / Edge / Trigger 取代線性 Step
 
@@ -42,14 +94,16 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 **決定**：`daodao-server` 接收執行請求，依拓撲順序逐一執行 Node，並將每個 Node 的輸入/輸出寫入 `workflow_node_runs`。
 
 **各 Node 的執行者**：
+
 | Node 類型 | 執行者 |
 |---|---|
 | `llm-call` | daodao-ai-backend（維持 LLM 職責分離） |
-| `skill-call` | daodao-ai-backend（載入 Skill + 工具迴圈） |
+| `skill-call` | daodao-ai-backend（載入指定 Skill version，materialize bundle，執行 sandbox 工具迴圈） |
 | `data-fetch` | daodao-server（有 Prisma DB 存取權） |
 | `data-transform` | daodao-server（純資料操作） |
 | `tool-call` | daodao-server（HTTP 呼叫外部 API） |
 | `condition` | daodao-server（表達式求值） |
+| `approval-gate` | daodao-server（暫停 run，等待 admin 人工審核） |
 | `output` | daodao-server（寫回 DB / 發通知） |
 
 ---
@@ -57,6 +111,7 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 ### 3. Node 類型與 Config Schema
 
 **`llm-call`**：
+
 ```json
 {
   "provider": "groq",
@@ -73,9 +128,11 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
   }
 }
 ```
+
 `output_schema`（可選）：JSON Schema 格式。若設定，ai-backend 在 LLM 回傳後以此 schema 驗證輸出格式；不符合時 node_run 標記 `failed`，error 記錄驗證失敗細節（哪個欄位不符合）。未設定時跳過驗證。
 
 **`data-fetch`**：
+
 ```json
 {
   "source": "users",
@@ -86,6 +143,7 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 ```
 
 **`data-transform`**：
+
 ```json
 {
   "operations": [
@@ -96,6 +154,7 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 ```
 
 **`tool-call`**：
+
 ```json
 {
   "method": "POST",
@@ -106,9 +165,11 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 ```
 
 **`skill-call`**：
+
 ```json
 {
   "skill_id": "uuid-of-skill",
+  "skill_version": 3,
   "provider": "anthropic",
   "model_override": null,
   "input_template": "請根據以下資料協助用戶：{{nodes.fetch-1.output}}",
@@ -117,34 +178,64 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
   "tool_tags": ["search", "data"]
 }
 ```
+
 `max_iterations`：ReAct agent loop 的最大步數，預設 10；超出時中止執行並將 node_run 標記 `failed`。
 `context_compress_threshold`：ReAct loop 累積 context 超過此 token 數（預設 8000）時，ai-backend 自動呼叫 LLM 對舊步驟歷史做摘要壓縮，保留最新 3 步 + 壓縮後摘要，繼續 loop。
 `tool_tags`（可選）：指定此次執行只載入 Tool Registry 中 tags 有交集的工具，避免超過 20 個工具導致 LLM 選擇錯誤。未設定時預設載入全部工具。
-`skill-call` Node 執行時，daodao-ai-backend 載入指定 Skill 的 SKILL.md（system prompt）+ scripts/ 工具定義，以三層漸進揭露執行，LLM 按需呼叫 scripts/ 工具（mini ReAct agent loop）。
+`skill_version`：指定 workflow 綁定的 Skill 版本。Draft / 測試流程可暫時省略並以 `workflow_skills.current_version` 預覽；production workflow 啟用前必須固定版本，避免 Skill 更新影響既有流程。
+`skill-call` Node 執行時，daodao-ai-backend 從 Skill Registry 讀取指定版本，materialize 成標準 Skill 資料夾，並在 sandbox runtime 中以三層漸進揭露執行：啟動時只載入 metadata，觸發後讀取 SKILL.md，references/templates/scripts 只在需要時讀取或執行。
 
 **`condition`**：
+
 ```json
 {
   "expression": "{{nodes.llm-1.output.score}} > 0.8"
 }
 ```
+
 `condition` Node 的出邊（Edge）帶 label `true` / `false`，執行時根據表達式結果選擇對應 Edge。
 
-**`output`**：
+**`approval-gate`**：
+
 ```json
 {
-  "target": "db" | "notification" | "webhook",
+  "title": "審核信件內容",
+  "description": "請確認 subject/body 是否適合寄出",
+  "preview_template": {
+    "recipient": "{{nodes.fetch_context.output.user.email}}",
+    "subject": "{{nodes.generate_email.output.subject}}",
+    "body": "{{nodes.generate_email.output.body}}"
+  },
+  "actions": ["approve", "reject", "request_changes"],
+  "on_reject": "fail",
+  "editable_fields": ["subject", "body"]
+}
+```
+
+`approval-gate` 是獨立人工流程關卡，可放在任意 Node 後。執行到此 node 時，server 解析 `preview_template`，建立 `workflow_approval_requests`，將 run status 改為 `pending_approval`，等待 admin 操作。核准後 gate node 標記 `completed` 並將核准後 payload 寫入 node output，後續 node 可用 `{{nodes.<gateNodeId>.output}}` 引用；拒絕後預設 run `failed`；若 action 為 `request_changes`，run 維持 `pending_approval` 並記錄 admin 備註供下一輪修改。
+
+**`output`**：
+
+```json
+{
+  "target": "email" | "notification" | "push" | "db" | "draft" | "badge" | "task" | "recommendation_card" | "webhook" | "dry_run",
   "require_approval": false,
   "mapping": {
-    "table": "user_ai_suggestions",
-    "fields": {
-      "user_id": "{{input.user_id}}",
-      "content": "{{nodes.llm-2.output}}"
-    }
+    "channel": "email",
+    "to": "{{nodes.fetch_context.output.user.email}}",
+    "subject": "{{nodes.generate_email.output.subject}}",
+    "body": "{{nodes.generate_email.output.body}}"
   }
 }
 ```
+
 `require_approval`：設為 `true` 時，執行引擎到達此 node 時暫停 run（status 改為 `pending_approval`），建立 `workflow_approval_requests` 記錄，等待 admin 核准後繼續；拒絕後 run 標記 `failed`。
+
+**使用建議**：
+
+- `approval-gate`：用於流程中段審核，例如「LLM 產生 email 草稿後，先給營運確認，再寄出」。
+- `output.require_approval`：用於不可逆 output 前的最後防線，例如「真的要寄信 / push / 寫 DB / 發 webhook 前再確認一次」。
+- 兩者可同時存在；若流程已有 `approval-gate` 且 output mapping 完全使用 gate output，UI 可提示 admin 是否仍需要 output 層 approval。
 
 ---
 
@@ -186,6 +277,7 @@ daodao 現有 AI 功能（推薦、摘要）由 `daodao-ai-backend` 硬編碼執
 ### 8. Provider 管理：daodao-ai-backend 為 Single Source of Truth
 
 **讀取鏈路**：
+
 ```
 daodao-admin-ui
   → GET /api/admin/ai-providers（daodao-server）
@@ -197,45 +289,220 @@ daodao-admin-ui
 
 ### 9. Skill 管理：UI 編輯器 + Agent 對話兩種模式
 
-**決定**：`workflow-skill-manager` 支援兩種操作模式，資料統一存入 `workflow_skills` / `workflow_skill_files` / `workflow_skill_conversations` tables。
+**決定**：`workflow-skill-manager` 支援兩種操作模式，資料庫作為 Skill Registry，資料統一存入 `workflow_skills` / `workflow_skill_versions` / `workflow_skill_files` / `workflow_skill_conversations` tables；執行時再 materialize 成符合 Claude Agent Skills 的檔案系統 bundle。
 
 **模式一：UI 直接編輯**
-- Admin 透過 textarea 直接編輯 SKILL.md（YAML frontmatter + Markdown 說明）
-- 上傳 scripts/、references/、assets/ 各子目錄的檔案
+
+- Admin 透過 textarea 直接編輯 SKILL.md（必須包含 YAML frontmatter：`name`、`description`）
+- 上傳 scripts/、references/、assets/、templates/ 各子目錄的檔案
 - PATCH `/api/admin/workflow-skills/:id` 存入 DB
 
 **模式二：Agent 對話**
+
 - Admin 在聊天面板與 AI Agent 對話，描述想要的 Skill 功能
-- daodao-server 轉發對話到 daodao-ai-backend，ai-backend 以 LLM 生成或修改 Skill 內容並回傳差異
-- 對話記錄存入 `workflow_skill_conversations`；確認後寫回 `workflow_skills`
+- daodao-server 轉發對話到 daodao-ai-backend，ai-backend 以 LLM 生成或修改 Skill bundle diff（SKILL.md + files）並回傳差異
+- 對話記錄存入 `workflow_skill_conversations`；確認後建立新 `workflow_skill_versions`，並寫回 `workflow_skills.current_version`
 
 **Skill 結構**（對應 Claude Skills 三層揭露）：
+
 ```
 skill/
-  SKILL.md              ← system prompt + metadata（YAML frontmatter）
+  SKILL.md              ← 必備入口，含 metadata（YAML frontmatter）與操作指引
   scripts/              ← LLM 可呼叫的工具（shell / Python / JS）
   references/           ← 參考文件（Markdown）
   assets/               ← 靜態資源（圖片、JSON 等）
+  templates/            ← 輸出模板、JSON schema、範本檔
 ```
 
+**Claude Skills 對齊規則**：
+
+- `SKILL.md` 必備，frontmatter 至少含 `name` 與 `description`。
+- `name` 必須可作為穩定識別：小寫、數字、連字號，不使用保留字。
+- `description` 必須描述「做什麼」與「何時使用」，因為它是 Skill 觸發條件。
+- DB 是 registry，不是 runtime；runtime 必須 materialize 成檔案系統資料夾，讓 agent 按需讀取。
+- 不得把 references/assets/templates 全量塞進 prompt；只在 SKILL.md 指示或 agent 需要時讀取。
+- scripts 必須經過安全審核，在 sandbox/container 中執行，不直接在 daodao-server process 執行。
+
 **`skill-call` 執行鏈路**：
+
 ```
 daodao-server
   → POST /internal/execute/skill-call（daodao-ai-backend）
-    body: { skill_id, provider, model_override, input }
-    → ai-backend 從 DB 讀取 Skill 檔案
-    → 組裝 system prompt（SKILL.md）
-        + Tool Registry 內建工具（#12：query_user_stats、search_practices 等）
-        + Skill 自定義工具（scripts/，可選）
-    → 以 ReAct agent loop 執行，LLM 按需呼叫任意已註冊工具
+    body: { skill_id, skill_version?, provider, model_override, input }
+    → ai-backend 從 Skill Registry 讀取 metadata + 指定版本檔案
+    → materialize 至 /tmp/skill-runtime/<run_id>/<skill_name>/
+    → 啟動 sandbox runtime，預載 Skill metadata
+    → 觸發後讀取 SKILL.md；references/templates/scripts 按需讀取或執行
+    → 以 ReAct agent loop 執行，LLM 按需呼叫 Tool Registry 與 Skill scripts
     → 回傳最終 output
 ```
 
-**依賴**：`skill-call` 需要 #12 LLM Tool System 完成後才能發揮完整效益；#12 未完成前，skill-call 仍可執行但只有 SKILL.md system prompt，無 tool calling 能力。
+**依賴**：`skill-call` 需要 #12 LLM Tool System 完成後才能發揮完整效益；#12 未完成前，skill-call 仍可執行，但退化為只讀 SKILL.md 的 LLM 執行，無 scripts/tool calling 能力。
 
 ---
 
-### 10. DB Schema
+### 10. 對話式 Workflow 生成：自然語言需求 → 可審核 draft
+
+**決定**：新增 `ai-workflow-nlp-generator` 能力，admin 可在 Workflow 建立頁用對話描述想要的自動化流程。系統不直接建立並啟用 workflow，而是先產生 `WorkflowDraft`，包含 workflow 基本資料、trigger、nodes、edges、需要 admin 確認的欄位與風險提示。Admin 預覽、修改、dry-run 後才可套用成正式 Workflow。
+
+**典型需求**：
+> 只要用戶完成實踐，就寄信給他。信裡的內容和欄位，一部分透過 LLM 根據我選定的資料生成。
+
+**生成結果範例**：
+
+```mermaid
+flowchart LR
+  Trigger[事件觸發: practice.completed]
+  Fetch[data-fetch: user + practice fields]
+  Generate[llm-call: 產生 email subject/body]
+  Review[approval-gate: 人工審核信件]
+  Send[output: notification/email]
+
+  Trigger --> Fetch --> Generate --> Review --> Send
+```
+
+**WorkflowDraft 結構**：
+
+```json
+{
+  "workflow": {
+    "name": "完成實踐後寄送鼓勵信",
+    "description": "用戶完成實踐後，根據用戶資料與實踐內容產生個人化信件"
+  },
+  "triggers": [
+    {
+      "trigger_type": "event",
+      "config": { "event_name": "practice.completed" },
+      "phase_status": "reserved"
+    }
+  ],
+  "nodes": [
+    {
+      "client_id": "fetch_context",
+      "node_type": "data-fetch",
+      "label": "抓取用戶與實踐資料",
+      "config": {
+        "source": "users",
+        "scope": "single_user",
+        "fields": ["user.name", "user.email", "user.learning_goals", "practice.title", "practice.completed_at"]
+      }
+    },
+    {
+      "client_id": "generate_email",
+      "node_type": "llm-call",
+      "label": "產生信件內容",
+      "config": {
+        "provider": "anthropic",
+        "model_override": null,
+        "system_prompt": "你是 daodao 的學習陪伴信件撰寫助手。",
+        "prompt_template": "根據以下資料產生一封鼓勵信：{{nodes.fetch_context.output}}",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "subject": { "type": "string" },
+            "body": { "type": "string" }
+          },
+          "required": ["subject", "body"]
+        }
+      }
+    },
+    {
+      "client_id": "review_email",
+      "node_type": "approval-gate",
+      "label": "人工審核信件",
+      "config": {
+        "title": "審核完成實踐後寄出的信件",
+        "description": "請確認收件人、主旨與內容是否適合寄出",
+        "preview_template": {
+          "to": "{{nodes.fetch_context.output.user.email}}",
+          "subject": "{{nodes.generate_email.output.subject}}",
+          "body": "{{nodes.generate_email.output.body}}"
+        },
+        "actions": ["approve", "reject", "request_changes"],
+        "editable_fields": ["subject", "body"],
+        "on_reject": "fail"
+      }
+    },
+    {
+      "client_id": "send_email",
+      "node_type": "output",
+      "label": "寄送 email",
+      "config": {
+        "target": "notification",
+        "require_approval": false,
+        "mapping": {
+          "channel": "email",
+          "to": "{{nodes.review_email.output.to}}",
+          "subject": "{{nodes.review_email.output.subject}}",
+          "body": "{{nodes.review_email.output.body}}"
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "source_client_id": "fetch_context", "target_client_id": "generate_email" },
+    { "source_client_id": "generate_email", "target_client_id": "review_email" },
+    { "source_client_id": "review_email", "target_client_id": "send_email" }
+  ],
+  "warnings": [
+    "event trigger 為 Phase 2 預留；Phase 1 可先建立 manual trigger 測試",
+    "已加入 approval-gate，信件需由 admin 審核後才會寄出"
+  ]
+}
+```
+
+**安全邊界**：
+
+- Generator 只能回傳 draft，不直接建立 active workflow。
+- Generator 只能選擇 `workflow_data_source_config.allowed_fields` 中已啟用欄位；若需求提到未啟用欄位，draft 必須放入 `missing_fields` 並提示 admin 先到資料來源設定啟用。
+- Phase 1 對 `scheduled` / `webhook` / `event` trigger 只可產生 `phase_status: "reserved"` 的 draft；套用時可選擇改成 `manual` 供測試，不能建立實際 event listener。
+- 所有 `output` node 若 target 為 email / notification / db，應預設 `require_approval: true`；若 generator 已插入 `approval-gate` 且 output mapping 全部引用該 gate 的 output，可將 `require_approval` 設為 false 並在 warnings 中說明。
+- Draft 套用前，daodao-server 需用既有 Zod schema 與靜態分析驗證 nodes / edges / template references。
+
+**API 設計**：
+
+```
+POST /api/admin/workflow-generator/chat
+  body: { conversation_id?, message, context?: { selected_fields?, preferred_provider? } }
+  response: { conversation_id, reply, draft?: WorkflowDraft, questions?: string[], warnings?: string[] }
+
+POST /api/admin/workflow-generator/apply
+  body: { draft: WorkflowDraft, apply_options?: { replace_reserved_triggers_with_manual?: boolean } }
+  response: { workflow_id }
+```
+
+`daodao-server` 轉發生成請求到 `daodao-ai-backend`：
+
+```
+POST /internal/workflow-generator/chat
+  body: {
+    conversation,
+    allowed_fields,
+    provider_catalog,
+    node_type_schemas,
+    phase_capabilities
+  }
+```
+
+**何時追問 admin**：
+
+- 需求缺少觸發時機，例如「寄信給他」但沒有說何時寄。
+- 需求需要資料欄位，但白名單沒有啟用或找不到對應欄位。
+- 需求包含不可逆 output，但沒有指定收件人、channel 或內容欄位。
+- 需求可用 `llm-call` 或 `skill-call` 達成，但是否要復用既有 Skill 與指定版本不明確。
+- 需求看起來會重複使用，但尚未存在合適 Skill；generator 應回傳建議建立 Skill，而不是把大量領域規則塞進單一 workflow prompt。
+
+**資料庫記錄方式**：
+
+- 每段對話建立一筆 `workflow_generator_conversations`。
+- 每次 user / assistant 訊息寫入 `workflow_generator_messages`。
+- 每次 AI 產生或修改 WorkflowDraft，就以遞增 `version` 寫入 `workflow_generator_drafts.draft`，保留完整 JSON 快照、warnings、missing_fields、validation_errors。
+- Admin 套用 draft 後，server 依 draft 建立 `workflows`、`workflow_nodes`、`workflow_edges`、`workflow_triggers`，並將 `workflow_generator_conversations.applied_workflow_id` 與 `workflow_generator_drafts.applied_workflow_id` 指向正式 workflow。
+- 套用後若 admin 在 Builder 手動修改，正式定義以 `workflows` / `workflow_nodes` 為準；原 draft 保留為生成歷史，不再被覆寫。
+
+---
+
+### 11. DB Schema
 
 ```sql
 -- Migration: add_workflow_engine_tables
@@ -253,7 +520,7 @@ CREATE TABLE workflows (
 CREATE TABLE workflow_nodes (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
-  node_type   TEXT NOT NULL,  -- llm-call, data-fetch, data-transform, tool-call, condition, output
+  node_type   TEXT NOT NULL,  -- llm-call, data-fetch, data-transform, tool-call, skill-call, condition, approval-gate, output
   label       TEXT,
   config      JSONB NOT NULL DEFAULT '{}',
   position_x  INTEGER,  -- 預留給未來 graph editor
@@ -321,8 +588,10 @@ CREATE TABLE workflow_approval_requests (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   run_id       UUID NOT NULL REFERENCES workflow_runs(id) ON DELETE CASCADE,
   node_run_id  UUID NOT NULL REFERENCES workflow_node_runs(id) ON DELETE CASCADE,
-  status       TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
-  preview      JSONB,           -- output node 擬寫入的資料快照，供 admin 審閱
+  status       TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected', 'changes_requested')) DEFAULT 'pending',
+  preview      JSONB,           -- approval-gate / output node 擬處理的資料快照，供 admin 審閱
+  decision_payload JSONB,       -- admin 核准或修改後的 payload；後續 node 可引用 gate output
+  decision_notes TEXT,          -- admin 拒絕或要求修改時的備註
   decided_at   TIMESTAMPTZ,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -343,23 +612,43 @@ CREATE TABLE workflow_data_source_config (
 );
 
 CREATE TABLE workflow_skills (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        TEXT NOT NULL,
-  description TEXT,
-  skill_md    TEXT NOT NULL DEFAULT '',  -- SKILL.md 全文
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            TEXT NOT NULL,           -- 對應 SKILL.md frontmatter name
+  description     TEXT NOT NULL DEFAULT '', -- 對應 SKILL.md frontmatter description，也是觸發條件
+  skill_md        TEXT NOT NULL DEFAULT '', -- current_version 的 SKILL.md 快照
+  status          TEXT NOT NULL CHECK (status IN ('draft', 'active', 'archived')) DEFAULT 'draft',
+  current_version INTEGER NOT NULL DEFAULT 1,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (name)
+);
+
+CREATE TABLE workflow_skill_versions (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  skill_id             UUID NOT NULL REFERENCES workflow_skills(id) ON DELETE CASCADE,
+  version              INTEGER NOT NULL,
+  skill_md             TEXT NOT NULL DEFAULT '', -- 該版本的 SKILL.md 快照
+  changelog            TEXT,
+  validation_status    TEXT NOT NULL CHECK (validation_status IN ('pending', 'valid', 'invalid')) DEFAULT 'pending',
+  validation_errors    JSONB NOT NULL DEFAULT '[]',
+  safety_review_status TEXT NOT NULL CHECK (safety_review_status IN ('pending', 'approved', 'rejected')) DEFAULT 'pending',
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (skill_id, version)
 );
 
 CREATE TABLE workflow_skill_files (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   skill_id   UUID NOT NULL REFERENCES workflow_skills(id) ON DELETE CASCADE,
-  category   TEXT NOT NULL CHECK (category IN ('scripts', 'references', 'assets')),
-  filename   TEXT NOT NULL,
-  content    TEXT,      -- 文字型檔案（scripts / references）
+  version    INTEGER NOT NULL,
+  category   TEXT NOT NULL CHECK (category IN ('scripts', 'references', 'assets', 'templates')),
+  path       TEXT NOT NULL, -- scripts/foo.py, references/tone.md, templates/email.json
+  content    TEXT,      -- 文字型檔案（scripts / references / templates）
   bytes      BYTEA,     -- 二進位型檔案（assets）
+  checksum   TEXT NOT NULL,
+  executable BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (skill_id, category, filename)
+  UNIQUE (skill_id, version, path),
+  FOREIGN KEY (skill_id, version) REFERENCES workflow_skill_versions(skill_id, version) ON DELETE CASCADE
 );
 
 CREATE TABLE workflow_skill_conversations (
@@ -368,6 +657,37 @@ CREATE TABLE workflow_skill_conversations (
   role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content    TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE workflow_generator_conversations (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  status              TEXT NOT NULL CHECK (status IN ('drafting', 'applied', 'discarded')) DEFAULT 'drafting',
+  applied_workflow_id  UUID REFERENCES workflows(id),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE workflow_generator_messages (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES workflow_generator_conversations(id) ON DELETE CASCADE,
+  role            TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content         TEXT NOT NULL,
+  metadata        JSONB NOT NULL DEFAULT '{}',  -- selected_fields, preferred_provider, warnings 等
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE workflow_generator_drafts (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id   UUID NOT NULL REFERENCES workflow_generator_conversations(id) ON DELETE CASCADE,
+  version           INTEGER NOT NULL,
+  draft             JSONB NOT NULL,             -- WorkflowDraft 完整快照
+  warnings          JSONB NOT NULL DEFAULT '[]',
+  missing_fields    JSONB NOT NULL DEFAULT '[]',
+  validation_errors JSONB NOT NULL DEFAULT '[]',
+  status            TEXT NOT NULL CHECK (status IN ('draft', 'applied', 'discarded')) DEFAULT 'draft',
+  applied_workflow_id UUID REFERENCES workflows(id),
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (conversation_id, version)
 );
 
 CREATE TABLE workflow_skill_memories (
@@ -382,7 +702,7 @@ CREATE TABLE workflow_skill_memories (
 
 ---
 
-### 11. API 設計
+### 12. API 設計
 
 ```
 # Workflows
@@ -447,25 +767,32 @@ GET    /api/admin/workflow-skills/:skillId/files
 POST   /api/admin/workflow-skills/:skillId/files          # 上傳檔案
 DELETE /api/admin/workflow-skills/:skillId/files/:fileId
 
+# Skill Versions
+GET    /api/admin/workflow-skills/:skillId/versions
+POST   /api/admin/workflow-skills/:skillId/versions/:version/publish
+
 # Skill Agent Conversation
 GET    /api/admin/workflow-skills/:skillId/conversations
 POST   /api/admin/workflow-skills/:skillId/chat           # 送出訊息，ai-backend 回傳 reply + skill diff
-POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skill_md / files
+POST   /api/admin/workflow-skills/:skillId/apply          # 確認 bundle diff，建立新 skill version
 ```
 
-### 12. Observability：四層方案
+### 13. Observability：四層方案
 
 #### Phase 1：LLM Tracing + Product Analytics + 自建成本追蹤
 
 **LLM Tracing（Langfuse）**：
+
 - ai-backend 在每次 llm-call / skill-call 執行前建立 Langfuse trace（`trace_id = node_run_id`），執行完成後結束 span 並附上 token / cost metadata
 - Langfuse api_key 未設定時靜默跳過，不影響執行
 
 **Cost 追蹤**：
+
 - ai-backend 依 provider pricing table 估算 `cost_usd`（token_count × price_per_token）；無定價資料時回傳 null
 - daodao-server 寫入 `workflow_node_runs`；run 完成時彙總至 `workflow_runs.total_cost_usd` / `total_latency_ms`
 
 **Product Analytics（PostHog）**：
+
 - ai-backend 執行後發送 `$ai_generation` 事件（provider、token 數、latency_ms）
 - PostHog api_key 未設定時靜默跳過
 
@@ -476,10 +803,12 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 **決定**：daodao-server 與 daodao-ai-backend 加入 OpenTelemetry SDK，匯出 trace / metrics 到 OTLP Collector，再接 Grafana 視覺化。
 
 **daodao-server（Node.js）**：
+
 - 使用 `@opentelemetry/sdk-node` 自動 instrument Express routes
 - 追蹤指標：API latency（P50/P95/P99）、error rate、active workflow runs 數量、node execution latency by node_type
 
 **daodao-ai-backend（FastAPI/Python）**：
+
 - 使用 `opentelemetry-instrumentation-fastapi` 自動 instrument
 - 追蹤指標：LLM call latency by provider、ReAct loop 步數分佈、guardrail 觸發率
 
@@ -487,7 +816,7 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 13. Evals：Admin 標記 + 評估資料集
+### 14. Evals：Admin 標記 + 評估資料集
 
 #### Phase 1：自建輕量標記
 
@@ -505,9 +834,10 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 14. Approval Gates：Output Node 暫停機制
+### 15. Approval Gates：Output Node 暫停機制
 
 **決定**：`output` node config 加 `require_approval: boolean`（預設 `false`）。執行引擎到達此 node 時：
+
 1. 將擬寫入資料快照存入 `workflow_approval_requests.preview`
 2. `workflow_runs.status` 改為 `pending_approval`，執行暫停
 3. Admin 在 UI 看到「等待核准」狀態，可預覽 preview 內容後核准或拒絕
@@ -520,16 +850,18 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 15. Budget / Iteration Limits：兩層限制
+### 16. Budget / Iteration Limits：兩層限制
 
 **決定**：
 
 **Node 層（skill-call max_iterations）**：
+
 - `skill-call` config 加 `max_iterations`（integer，預設 10）
 - ai-backend 執行 ReAct loop 超過此步數時中止並回傳錯誤
 - daodao-server 將 node_run 標記 `failed`，run 標記 `failed`，error 記錄「超過 max_iterations 限制」
 
 **Workflow 層（max_cost_usd）**：
+
 - `workflows` table 加 `max_cost_usd NUMERIC(10,4)`（NULL 表示無限制）
 - 執行引擎每個 node 完成後，累加 `cost_usd`；若累計值超過 `max_cost_usd`，立即中止後續 node，run 標記 `failed`，error 記錄「超過 max_cost_usd 限制（已花費 X USD）」
 
@@ -537,7 +869,7 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 16. Context Engineering：Write / Select / Compress / Isolate
+### 17. Context Engineering：Write / Select / Compress / Isolate
 
 **決定**：`skill-call` ReAct loop 採用四項 context 管理策略，統稱 Context Engineering：
 
@@ -550,11 +882,12 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 17. Checkpoint-Resume
+### 18. Checkpoint-Resume
 
 **決定**：每個 node 執行完成後，將已完成 node 的 output 快照存入 `workflow_runs.checkpoint_state`（JSONB，格式為 `{ [nodeId]: output }`）。
 
 **Resume 流程**：
+
 1. Admin 呼叫 `POST /api/admin/workflow-runs/:runId/resume`
 2. Server 讀取 `checkpoint_state`，跳過其中已記錄的 node（標記為 `skipped`）
 3. 從第一個未完成的 node 繼續執行
@@ -568,11 +901,12 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 18. Output Guards
+### 19. Output Guards
 
 **決定**：`llm-call` node config 加 `output_schema?: JSONSchema`（可選）。
 
 **執行流程**：
+
 1. ai-backend 執行 LLM call 並取得輸出
 2. 若 `output_schema` 已設定，以 JSON Schema 驗證輸出
 3. 驗證通過 → 正常回傳
@@ -580,6 +914,7 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 5. daodao-server 接收後將 node_run 標記 `failed`，error 記錄驗證失敗細節
 
 **Schema 範例**：
+
 ```json
 {
   "type": "object",
@@ -597,14 +932,16 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 19. Dead Loop Detection + Circuit Breaker
+### 20. Dead Loop Detection + Circuit Breaker
 
 **Dead Loop 偵測**：
+
 - skill-call ReAct loop 中，對每步 `tool_name + JSON.stringify(tool_input)` 計算 hash
 - 若連續 3 步的 hash 相同，視為死迴圈，ai-backend 立即中止並回傳 `{ error: "dead_loop_detected", step: N }` (500)
 - daodao-server 接收後 node_run 標記 `failed`，error 記錄「偵測到死迴圈（第 N 步重複）」
 
 **Circuit Breaker**：
+
 - daodao-server 記錄每個 node（by `node_id`）的失敗時間戳，存入 Redis（或 in-memory 快取）
 - 30 分鐘內同一 node 連續失敗 3 次時，Circuit Breaker 啟動：
   - run 標記 `circuit_open`（新增此 status）
@@ -618,9 +955,10 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 20. Tool Registry 動態過濾
+### 21. Tool Registry 動態過濾
 
 **決定**：
+
 - Tool Registry 的 `ToolDefinition` 加 `tags: string[]` 欄位（例如 `["search", "data", "notification"]`）
 - `skill-call` node config 加 `tool_tags?: string[]`
 - ai-backend 執行 skill-call 時，若 `tool_tags` 已設定，只載入 tags 有至少一個交集的工具
@@ -634,11 +972,12 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 21. Memory Extractor
+### 22. Memory Extractor
 
 **決定**：run 完成後（status = `completed`），若有 skill-call node，非同步提取並儲存記憶。
 
 **流程**：
+
 1. daodao-server 偵測到 run status 變為 `completed` 且有 skill-call node_run
 2. 非同步呼叫 ai-backend `POST /internal/workflow-skills/:skillId/extract-memory`，傳入 trajectory
 3. ai-backend 以 LLM 分析 trajectory，提取有長期價值的資訊（成功工具路徑、有用中間輸出、避免的錯誤路徑）
@@ -646,6 +985,7 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 5. daodao-server 將結果寫入 `workflow_skill_memories`（skill_id、run_id、memory_type、content）
 
 **注入時機**：下次同一 skill 執行 skill-call 前，ai-backend 從 `workflow_skill_memories` 拉取最近 10 筆 episodic memory，以 XML block 注入 system prompt：
+
 ```xml
 <past_learnings>
   <memory type="episodic">上次執行 search_practices 時，使用關鍵字「學習目標」效果最佳</memory>
@@ -657,11 +997,12 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 22. Phase 3 — Generator-Evaluator 即時迴圈
+### 23. Phase 3 — Generator-Evaluator 即時迴圈
 
 **決定（Phase 3 規劃）**：skill-call 執行中可選配 Evaluator Agent：每 N 步後，以獨立 LLM 呼叫評審目前輸出品質；若評分低於 `min_score` 閾值，Generator 繼續迭代而非輸出。
 
 **config 草案**：
+
 ```json
 {
   "evaluator": {
@@ -676,7 +1017,7 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 
 ---
 
-### 23. Phase 3 — Context Durability 監測
+### 24. Phase 3 — Context Durability 監測
 
 **決定（Phase 3 規劃）**：skill-call 執行過程中，定期採樣模型輸出與初始指令的 embedding cosine similarity；若相似度低於閾值，自動注入 reminder prompt 重申初始目標。每步的 `drift_score` 記錄到 trajectory。
 
@@ -692,7 +1033,7 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 |---|---|---|
 | **#8 [B1] 抽象化各 provider system prompt 傳遞方式** | `llm-call` 節點依賴 ai-backend 正確傳遞 system prompt；Anthropic 目前有 prepend bug | **前置依賴**：此 issue 需在 `llm-call` 節點上線前完成 |
 | **#10 [A5] 實作 fallback model chain** | `llm-call` 節點 provider 失敗時整個 run 失敗 | `llm-call` node config 加 `fallback_provider?: string` 欄位，或依賴 ai-backend 統一處理 |
-| **#12 [A3] 實作 LLM Tool System（function calling）** | `skill-call` 節點的 Tool Registry 內建工具（query_user_stats 等）依賴此 issue | `skill-call` 未完成前退化為純 SKILL.md system prompt 執行，tool calling 能力待 #12 完成後啟用 |
+| **#12 [A3] 實作 LLM Tool System（function calling）** | `skill-call` 節點的 Tool Registry 內建工具（query_user_stats 等）依賴此 issue | `skill-call` 未完成前退化為只讀 SKILL.md 的 LLM 執行；bundle registry、version pinning、materialization 仍需先完成 |
 | **#7 [C5] 實作通用 GuardrailLayer** | admin 可自由填 prompt，有 prompt injection 風險 | `llm-call` / `skill-call` 節點執行前，ai-backend 須通過 guardrail 掃描 |
 | **#17 Langfuse / #18 PostHog LLM 事件** | `workflow_node_runs` 記錄執行資料，應同步送 observability 事件 | **已納入本 change**（Decision #12）：`llm-call` / `skill-call` 執行完畢後，ai-backend 發送 Langfuse trace + PostHog `$ai_generation` 事件；token_count / cost_usd 回傳並寫入 node_run |
 
@@ -703,6 +1044,8 @@ POST   /api/admin/workflow-skills/:skillId/apply          # 確認並寫回 skil
 - **[Risk] A/B 測試用真實用戶資料涉及隱私** → dry-run 結果只存 admin DB，不對外暴露
 - **[Risk] 執行時間過長（llm-call / tool-call）** → polling 查詢 run 狀態；Phase 2 可加 webhook 回調
 - **[Risk] admin 自填 prompt 的 prompt injection** → 依賴 #7 GuardrailLayer，上線前須確認已實作
+- **[Risk] Skill scripts 可執行且有安全風險** → 只有通過 safety review 的 Skill version 可發布；scripts 在 sandbox/container 執行並以 checksum 追蹤
+- **[Risk] Skill 更新造成 production workflow 行為漂移** → workflow pin `skill_version`；升版需 dry-run 與 admin 確認
 - **[Risk] provider system prompt 傳遞不一致** → 依賴 #8 修復，Anthropic bug 未修前 llm-call 跨 provider 行為可能不一致
 - **[Trade-off] Phase 1 UI 不支援 condition 節點** → 資料模型已支援，UI 演進不需改 schema
 

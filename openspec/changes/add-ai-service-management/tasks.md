@@ -8,7 +8,7 @@
 
 ## 1. DB Migration（daodao-storage）
 
-- [ ] 1.1 [daodao-storage] 新增 workflow engine migration SQL，建立 14 張 table：`workflows`（含 `max_cost_usd`）、`workflow_nodes`、`workflow_edges`、`workflow_triggers`、`workflow_runs`（含 `total_cost_usd`、`total_latency_ms`、`pending_approval` / `circuit_open` status、`checkpoint_state` JSONB）、`workflow_node_runs`（含 `token_count`、`latency_ms`、`cost_usd`）、`workflow_ab_tests`、`workflow_approval_requests`、`workflow_run_evals`、`workflow_data_source_config`、`workflow_skills`、`workflow_skill_files`、`workflow_skill_conversations`、`workflow_skill_memories`
+- [ ] 1.1 [daodao-storage] 新增 workflow engine migration SQL，建立 18 張 table：`workflows`（含 `max_cost_usd`）、`workflow_nodes`、`workflow_edges`、`workflow_triggers`、`workflow_runs`（含 `total_cost_usd`、`total_latency_ms`、`pending_approval` / `circuit_open` status、`checkpoint_state` JSONB）、`workflow_node_runs`（含 `token_count`、`latency_ms`、`cost_usd`）、`workflow_ab_tests`、`workflow_approval_requests`（含 `decision_payload`、`decision_notes`）、`workflow_run_evals`、`workflow_data_source_config`、`workflow_skills`、`workflow_skill_versions`、`workflow_skill_files`、`workflow_skill_conversations`、`workflow_generator_conversations`、`workflow_generator_messages`、`workflow_generator_drafts`、`workflow_skill_memories`
   - AC：migration 可正向執行，rollback 可刪除全部新 table 且不影響既有資料
 
 ## 2. daodao-ai-backend — Internal Endpoints
@@ -22,11 +22,11 @@
 - [ ] 2.3 [daodao-ai-backend] 在 2.2 基礎上支援 `fallback_provider`（對應 #10）：primary 失敗時自動切換 fallback provider 重試一次
   - AC：primary 失敗時 log warning 並以 fallback 重試，兩者皆失敗才回傳 500
 
-- [ ] 2.4 [daodao-ai-backend] 新增 `POST /internal/execute/skill-call`，接收 skill_id、provider、model_override、input；從 DB 讀取 Skill 的 skill_md（system prompt），組合 Tool Registry 內建工具（依賴 #12）與 scripts/ 自定義工具，以 ReAct agent loop 執行後回傳 output
-  - AC：Skill 不存在時回傳 404；LLM 工具呼叫迴圈超過 10 步時中止並回傳 500；#12 未完成時退化為純 system prompt 執行（不帶 tools）
+- [ ] 2.4 [daodao-ai-backend] 新增 `POST /internal/execute/skill-call`，接收 skill_id、skill_version、provider、model_override、input；從 Skill Registry 讀取指定版本，materialize 成標準 Skill folder（SKILL.md、scripts/、references/、assets/、templates/），在 sandbox runtime 中以 progressive disclosure + ReAct agent loop 執行後回傳 output
+  - AC：Skill 或 version 不存在時回傳 404；LLM 工具呼叫迴圈超過 10 步時中止並回傳 500；#12 未完成時退化為只讀 SKILL.md 的 LLM 執行；references/templates 不預先塞入 prompt，只在需要時讀取
 
-- [ ] 2.5 [daodao-ai-backend] 新增 `POST /internal/workflow-skills/:skillId/chat`，接收對話歷史 + 新訊息 + provider；以 LLM 生成 Skill 修改建議，回傳 `{ reply: string, skill_md_diff?: string, file_diffs?: FileDiff[] }`
-  - AC：回傳結構符合 schema；LLM 建議無法解析時回傳 reply 但不帶 diff
+- [ ] 2.5 [daodao-ai-backend] 新增 `POST /internal/workflow-skills/:skillId/chat`，接收對話歷史 + 新訊息 + provider；以 LLM 生成 Skill bundle 修改建議，回傳 `{ reply: string, skill_md_diff?: string, file_diffs?: FileDiff[], validation_warnings?: string[] }`
+  - AC：回傳結構符合 schema；diff 可包含 SKILL.md、scripts、references、assets、templates；LLM 建議無法解析時回傳 reply 但不帶 diff
 
 - [ ] 2.6 [daodao-ai-backend] 在 `/internal/execute/llm-call` 加入 guardrail 掃描（對應 #7）：偵測 prompt injection 並拒絕執行
   - AC：含明顯 injection pattern 的 prompt 回傳 400，正常 prompt 正常執行
@@ -42,8 +42,8 @@
 
 ## 3. daodao-server — Zod Schemas
 
-- [ ] 3.1 [daodao-server] 定義各 node_type 的 config Zod schema：`llmCallConfigSchema`、`skillCallConfigSchema`、`dataFetchConfigSchema`、`dataTransformConfigSchema`、`toolCallConfigSchema`、`outputConfigSchema`
-  - AC：合法 config 通過驗證；缺少必填欄位或 node_type 不合法時回傳 422
+- [ ] 3.1 [daodao-server] 定義各 node_type 的 config Zod schema：`llmCallConfigSchema`、`skillCallConfigSchema`、`dataFetchConfigSchema`、`dataTransformConfigSchema`、`toolCallConfigSchema`、`approvalGateConfigSchema`、`outputConfigSchema`
+  - AC：合法 config 通過驗證；缺少必填欄位或 node_type 不合法時回傳 422；`outputConfigSchema.target` 支援 email / notification / push / db / draft / badge / task / recommendation_card / webhook / dry_run
 
 - [ ] 3.2 [daodao-server] 定義 `{{nodes.<id>.output}}` 變數解析工具函式：給定 node_runs map 與 template 字串，回傳代入後的字串
   - AC：單元測試涵蓋：正常代入、引用不存在 nodeId（回傳空字串 + warning）、巢狀 template
@@ -76,34 +76,37 @@
 - [ ] 5.4 [daodao-server] 實作 `llm-call` node 執行：代入 `{{nodes.<id>.output}}` 變數後，呼叫 `POST /internal/execute/llm-call`（daodao-ai-backend）
   - AC：變數代入正確；ai-backend 回傳 4xx/5xx 時將 node_run 標記 failed
 
-- [ ] 5.5 [daodao-server] 實作 `skill-call` node 執行：代入 input_template 變數後，呼叫 `POST /internal/execute/skill-call`（daodao-ai-backend）
+- [ ] 5.5 [daodao-server] 實作 `skill-call` node 執行：代入 input_template 變數後，帶上 `skill_id` 與 pinned `skill_version` 呼叫 `POST /internal/execute/skill-call`（daodao-ai-backend）
   - AC：Skill 不存在時將 node_run 標記 failed；ai-backend 回傳 4xx/5xx 時同樣標記 failed
 
 - [ ] 5.6 [daodao-server] 實作 `tool-call` node 執行：代入 body_template 變數後，發送 HTTP 請求
   - AC：HTTP 4xx/5xx 將 node_run 標記 failed；timeout 設定 30 秒
 
 - [ ] 5.7 [daodao-server] 實作 `output` node 執行：寫回 DB（Prisma）或發通知；dry-run 時跳過寫回
-  - AC：dry-run 模式下 output node status 為 `skipped`，不寫入任何業務資料
+  - AC：支援 email、站內通知、push、DB 寫回、建立草稿、badge、任務 / 實踐、推薦卡、webhook、dry-run 的 target/mapping；dry-run 模式下 output node status 為 `skipped`，不寫入任何業務資料
 
-- [ ] 5.8 [daodao-server] 實作主執行流程：建立 `workflow_runs`，依拓撲順序逐一執行 nodes，每個 node 前後建立 `workflow_node_runs` 記錄，整個 run 完成後更新 status
+- [ ] 5.8 [daodao-server] 實作 `approval-gate` node 執行：解析 preview_template，建立 `workflow_approval_requests`，將 run status 改為 `pending_approval` 並暫停；核准後將 payload 寫入 gate node output 並繼續
+  - AC：run status 正確變為 `pending_approval`；核准後後續 node 可透過 `{{nodes.<gateNodeId>.output}}` 引用 gate output；拒絕後 run 標記 `failed` 且後續 node 標記 `skipped`
+
+- [ ] 5.9 [daodao-server] 實作主執行流程：建立 `workflow_runs`，依拓撲順序逐一執行 nodes，每個 node 前後建立 `workflow_node_runs` 記錄，整個 run 完成後更新 status
   - AC：某 node 失敗時後續 nodes 標記 `skipped`，run 標記 `failed`
 
-- [ ] 5.9 [daodao-server] 實作 `POST /api/admin/workflows/:id/runs`（手動觸發）與 `GET /api/admin/workflow-runs/:runId`（含所有 node_runs）
+- [ ] 5.10 [daodao-server] 實作 `POST /api/admin/workflows/:id/runs`（手動觸發）與 `GET /api/admin/workflow-runs/:runId`（含所有 node_runs）
   - AC：執行觸發回傳 run id；GET 回傳每個 node_run 的狀態、輸入、輸出、token_count、latency_ms、cost_usd
 
-- [ ] 5.10 [daodao-server] 每個 node 執行完成後，將 ai-backend 回傳的 `token_count`、`latency_ms`、`cost_usd` 寫入 `workflow_node_runs`
+- [ ] 5.11 [daodao-server] 每個 node 執行完成後，將 ai-backend 回傳的 `token_count`、`latency_ms`、`cost_usd` 寫入 `workflow_node_runs`
   - AC：llm-call / skill-call node_run 有完整三個欄位；data-fetch / data-transform / tool-call / output 等非 LLM node 的 latency_ms 仍記錄（token_count / cost_usd 為 null）
 
-- [ ] 5.11 [daodao-server] skill-call node 執行時，將 `max_iterations` 傳給 ai-backend；ai-backend 回傳「超過迴圈限制」錯誤時，node_run 標記 `failed` 並記錄原因，run 整體標記 `failed`
+- [ ] 5.12 [daodao-server] skill-call node 執行時，將 `max_iterations` 傳給 ai-backend；ai-backend 回傳「超過迴圈限制」錯誤時，node_run 標記 `failed` 並記錄原因，run 整體標記 `failed`
   - AC：`max_iterations` 預設值 10；超出時 error 欄位記錄「超過 max_iterations 限制（{n} 步）」
 
-- [ ] 5.12 [daodao-server] 執行引擎每個 node 完成後，累加 `cost_usd`；若累計值超過 `workflow.max_cost_usd`（非 null），立即中止後續 node，run 標記 `failed`
+- [ ] 5.13 [daodao-server] 執行引擎每個 node 完成後，累加 `cost_usd`；若累計值超過 `workflow.max_cost_usd`（非 null），立即中止後續 node，run 標記 `failed`
   - AC：error 記錄「超過 max_cost_usd 限制（已花費 X USD，上限 Y USD）」；max_cost_usd 為 null 時跳過此檢查
 
-- [ ] 5.13 [daodao-server] output node 遇到 `require_approval: true` 時，建立 `workflow_approval_requests`（preview 存擬寫入資料快照），將 run status 改為 `pending_approval`，暫停執行（不繼續後續 node）
+- [ ] 5.14 [daodao-server] output node 遇到 `require_approval: true` 時，建立 `workflow_approval_requests`（preview 存擬寫入資料快照），將 run status 改為 `pending_approval`，暫停執行（不繼續後續 node）
   - AC：run status 正確變為 `pending_approval`；approval_request 記錄含正確的 run_id、node_run_id、preview
 
-- [ ] 5.14 [daodao-server] run 完成（status 變為 `completed` 或 `failed`）時，彙總所有 node_run 的 `cost_usd` 與 `latency_ms`，更新 `workflow_runs.total_cost_usd` 與 `total_latency_ms`
+- [ ] 5.15 [daodao-server] run 完成（status 變為 `completed` 或 `failed`）時，彙總所有 node_run 的 `cost_usd` 與 `latency_ms`，更新 `workflow_runs.total_cost_usd` 與 `total_latency_ms`
   - AC：部分 node cost_usd 為 null 時，彙總只計算非 null 的值；total_latency_ms 為所有 node latency_ms 之和
 
 ## 6. daodao-server — Providers、Data Sources、A/B Tests
@@ -125,6 +128,38 @@
 
 - [ ] 6.6 [daodao-server] 實作 `POST /api/admin/workflow-runs/:runId/reject`：將 `workflow_approval_requests` 的 status 改為 `rejected`，run status 改為 `failed`，node_run 標記 `failed` 並記錄「Admin 拒絕核准」
   - AC：只有 status 為 `pending_approval` 的 run 可拒絕；拒絕後 run 不再繼續執行
+
+## 6A. 對話式 Workflow 生成器（ai-workflow-nlp-generator）
+
+- [ ] 6A.1 [daodao-ai-backend] 新增 `POST /internal/workflow-generator/chat`，接收 conversation、allowed_fields、provider_catalog、node_type_schemas、phase_capabilities，回傳 `{ reply, draft?, questions?, warnings? }`
+  - AC：能將「完成實踐後寄信」需求轉成含 event trigger、data-fetch、llm-call 或 skill-call、approval-gate/output、edges 的 WorkflowDraft；資訊不足時回傳 questions 而非亂產生 draft；回傳 JSON 無法解析時回傳 reply + warnings
+
+- [ ] 6A.2 [daodao-server] 新增 `POST /api/admin/workflow-generator/chat`，讀取最新 allowed_fields 與 provider 清單，轉發到 ai-backend，並回傳 draft / questions / warnings
+  - AC：allowed_fields 為空時仍可對話，但 draft 中不得產生 data-fetch 欄位；ai-backend 不可用時回傳 503；不啟用正式 workflow；每則訊息寫入 `workflow_generator_messages`
+
+- [ ] 6A.3 [daodao-server] 定義 `workflowDraftSchema`，涵蓋 workflow、triggers、nodes、edges、warnings、missing_fields；套用前用既有 node config Zod schema 與靜態分析驗證 draft
+  - AC：draft 中 node_type / config 不合法時拒絕套用；edge 引用不存在 client_id 時拒絕；template 引用不存在 node 時拒絕；production `skill-call` draft 缺少 `skill_version` 時拒絕套用
+
+- [ ] 6A.4 [daodao-server] 新增 `POST /api/admin/workflow-generator/apply`，將通過驗證的 draft 建立為 workflow / nodes / edges / triggers
+  - AC：成功後回傳 workflow_id；draft 包含 Phase 2 `event` trigger 時，若 `replace_reserved_triggers_with_manual=true` 則建立 manual trigger 並將原始 event 意圖寫入 workflow description 或 metadata；若未選擇替換則拒絕套用並提示 Phase 2 開放；套用後更新 `workflow_generator_drafts.applied_workflow_id`
+
+- [ ] 6A.4a [daodao-server] 保存 WorkflowDraft 版本：每次 generator 回傳 draft 時，寫入 `workflow_generator_drafts`，version 依 conversation 遞增，保存完整 draft、warnings、missing_fields、validation_errors
+  - AC：同一 conversation 可查到所有 draft 版本；draft 套用後原始 JSON 不被覆寫；validation_errors 可供 UI 顯示
+
+- [ ] 6A.5 [daodao-ai-backend] Generator 產生 output node 時，對 email / notification / db output 預設 `require_approval: true`；若後續 output 需要 LLM 欄位，llm-call draft 必須包含 `output_schema`
+  - AC：「寄信」類需求產生 subject/body JSON schema；output mapping 使用 `{{nodes.<id>.output.subject}}` 與 `{{nodes.<id>.output.body}}`；approval 預設開啟
+
+- [ ] 6A.5a [daodao-ai-backend] Generator 實作 `llm-call` vs `skill-call` 規劃判斷：一次性生成用 `llm-call`；重用領域能力或 admin 明確指定既有 Skill 時用 `skill-call` 並固定 `skill_version`
+  - AC：當需求符合既有 active Skill 時，draft 產生 `skill-call` 並帶 `skill_id` / `skill_version`；當需求適合 Skill 但沒有可用 Skill 時，回傳 warning/question 建議先建立 Skill，不把大量可重用規則塞入單一 prompt
+
+- [ ] 6A.6 [daodao-admin-ui] 在 Workflow 建立入口新增「用對話建立」模式：聊天面板 + draft 預覽 + questions/warnings 顯示
+  - AC：admin 可輸入需求；回傳 questions 時顯示追問；回傳 draft 時顯示 trigger、nodes、edges、欄位、prompt、output mapping
+
+- [ ] 6A.7 [daodao-admin-ui] 實作 draft 套用流程：admin 可修改 draft 關鍵欄位，並點擊「套用成 Workflow」
+  - AC：套用成功導向 `/workflows/:id`；Phase 2 event trigger draft 顯示「改成 manual trigger 供測試」選項；API 驗證錯誤時顯示具體錯誤且保留 draft
+
+- [ ] 6A.8 [daodao-admin-ui] 對話式建立支援多輪修改：admin 可要求調整 prompt、欄位、provider、output mapping，UI 顯示新版 draft diff 或摘要
+  - AC：多輪對話不遺失上一版 draft；admin 明確要求使用既有 Skill 時，可將 llm-call draft 改為 skill-call draft
 
 ## 7. daodao-admin-ui — Workflow 列表與建立
 
@@ -151,8 +186,11 @@
 - [ ] 8.5 [daodao-admin-ui] 實作 `{{nodes.<id>.output}}` 引用提示：在 prompt template 輸入框旁顯示可用前驅節點清單（含 node label 與 id）
   - AC：第一個 node 不顯示 `{{nodes...}}` 提示；引用不存在 node 時顯示警告
 
-- [ ] 8.6 [daodao-admin-ui] 實作 `skill-call` Node 設定表單：Skill 下拉清單（呼叫 GET /api/admin/workflow-skills）、provider/model 選擇、input template 輸入
-  - AC：無 Skill 時顯示「請先建立 Skill」提示並附跳轉連結；選擇 Skill 後卡片顯示 Skill 名稱
+- [ ] 8.6 [daodao-admin-ui] 實作 `skill-call` Node 設定表單：Skill 下拉清單（呼叫 GET /api/admin/workflow-skills）、version 選擇、provider/model 選擇、input template 輸入
+  - AC：無 Skill 時顯示「請先建立 Skill」提示並附跳轉連結；選擇 Skill 後卡片顯示 Skill 名稱與 pinned version
+
+- [ ] 8.6a [daodao-admin-ui] Workflow 啟用前檢查所有 `skill-call` Node 是否已 pin `skill_version`
+  - AC：缺少 `skill_version` 時禁止啟用並提示選擇版本；Skill 發布新版本後既有 Workflow 不自動升版
 
 ## 9. daodao-admin-ui — Trigger 設定
 
@@ -187,7 +225,7 @@
   - AC：POST 名稱為空時回傳 422；DELETE 聯級刪除 skill_files 與 skill_conversations
 
 - [ ] 12.2 [daodao-server] 實作 `GET/POST /api/admin/workflow-skills/:skillId/files` 與 `DELETE /api/admin/workflow-skills/:skillId/files/:fileId`
-  - AC：category 不屬於 scripts / references / assets 時回傳 422；同一 skill 同 category 同 filename 時覆寫
+  - AC：category 不屬於 scripts / references / assets / templates 時回傳 422；path 必須落在對應 category 目錄下；同一 skill 同 version 同 path 時覆寫；寫入時保存 checksum 與 executable flag
 
 - [ ] 12.3 [daodao-server] 實作 `GET /api/admin/workflow-skills/:skillId/conversations`，回傳依時間正序的對話記錄
   - AC：Skill 不存在時回傳 404
@@ -196,7 +234,16 @@
   - AC：ai-backend 不可用時回傳 503；對話記錄正確儲存雙方訊息
 
 - [ ] 12.5 [daodao-server] 實作 `POST /api/admin/workflow-skills/:skillId/apply`：接收 `{ skill_md?, file_diffs? }`，寫回 skill_md 與相關檔案
-  - AC：只更新有差異的欄位；寫入後回傳更新後的 Skill 完整資料
+  - AC：只更新有差異的欄位；套用後建立新的 `workflow_skill_versions` 版本並更新 `workflow_skills.current_version`；寫入後回傳更新後的 Skill 完整資料
+
+- [ ] 12.6 [daodao-server] 驗證 SKILL.md frontmatter：必須包含 `name` 與 `description`，name 僅允許小寫字母、數字、連字號且不可使用保留字，description 不可為空且必須描述使用時機
+  - AC：不合法 SKILL.md 儲存或套用時回傳 422；錯誤訊息指出缺少欄位或格式問題；合法 frontmatter 同步寫入 `workflow_skills.name` / `description`
+
+- [ ] 12.7 [daodao-server] 實作 Skill version 查詢與發布：`GET /api/admin/workflow-skills/:skillId/versions`、`POST /api/admin/workflow-skills/:skillId/versions/:version/publish`
+  - AC：workflow 可選擇固定 skill_version；發布前 validation_status 必須為 valid 且 safety_review_status 必須為 approved；既有 workflow 不因新版本發布自動改版
+
+- [ ] 12.8 [daodao-server] 實作 Skill bundle safety metadata：scripts/references/templates/files 寫入 checksum，scripts 寫入 executable flag，version 保存 safety_review_status
+  - AC：未通過 safety review 的 Skill version 不可被 production workflow pin；測試 workflow 可使用但 UI 顯示 warning
 
 ## 13. daodao-admin-ui — Skill 管理
 
@@ -206,14 +253,17 @@
 - [ ] 13.2 [daodao-admin-ui] 實作「新增 Skill」Dialog：填入名稱與描述後建立，成功後導向 `/workflow-skills/:skillId`
   - AC：名稱為空時驗證錯誤
 
-- [ ] 13.3 [daodao-admin-ui] 實作 Skill 詳情頁分頁結構：「SKILL.md」、「Scripts」、「References」、「Assets」、「Agent 協助」五個分頁
+- [ ] 13.3 [daodao-admin-ui] 實作 Skill 詳情頁分頁結構：「SKILL.md」、「Scripts」、「References」、「Assets」、「Templates」、「Versions」、「Agent 協助」七個分頁
   - AC：分頁切換正確；URL 帶 tab query param 以便直接連結
 
 - [ ] 13.4 [daodao-admin-ui] 實作「SKILL.md」分頁：textarea 編輯器 + 「儲存」按鈕，儲存後顯示 toast
   - AC：內容為空時允許儲存（清空）；API 失敗時顯示錯誤訊息
 
-- [ ] 13.5 [daodao-admin-ui] 實作「Scripts / References / Assets」分頁：檔案列表 + 上傳按鈕 + 刪除確認
+- [ ] 13.5 [daodao-admin-ui] 實作「Scripts / References / Assets / Templates」分頁：檔案列表 + 上傳按鈕 + 刪除確認
   - AC：上傳成功後檔案立即出現在清單；文字檔（scripts / references）可展開預覽內容
+
+- [ ] 13.5a [daodao-admin-ui] 實作「Versions」分頁：顯示每個 Skill 版本、validation 狀態、safety review 狀態、changelog，並可將 workflow pin 到指定版本
+  - AC：版本列表依 version 倒序；未通過 validation 或 safety review 的版本不可發布；workflow 目前使用版本清楚顯示
 
 - [ ] 13.6 [daodao-admin-ui] 實作「Agent 協助」分頁：對話氣泡列表 + 輸入框 + 送出按鈕；送出中禁用輸入
   - AC：Agent 回覆含 diff 時在氣泡下方顯示差異預覽（現有 vs 建議）與「套用」「忽略」按鈕
