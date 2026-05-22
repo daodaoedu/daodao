@@ -28,6 +28,8 @@ flowchart LR
 2. **個人學習旅程體驗**：根據使用者階段，推進 onboarding、實踐、打卡、反思、回歸。
 3. **學習生態圈**：促進回應、留言、關注、連結、挑戰、複製與社群擴散。
 
+除了 Workflow 之外，後台另有 **[Feature Ideation Studio](./feature-ideation-studio.md)**：讓 PM / 設計師用自然語言描述功能構想，由 AI 以真實專案程式碼為基礎做改動、產生可互動的 UI 原型預覽，並能 publish 成唯讀分享網址。Workflow 預覽的是「流程結構」，Studio 預覽的是「可互動的真實產品 UI」，兩者互補。
+
 ## 建議閱讀順序
 
 ### PM / 產品 / 營運
@@ -48,6 +50,7 @@ flowchart LR
 
 | 文件 | 內容 |
 |---|---|
+| [feature-ideation-studio.md](./feature-ideation-studio.md) | PM / 設計師後台功能發想工坊：以真實 codebase 為基礎產生可互動 UI 原型預覽與唯讀分享網址 |
 | [application-scenarios.md](./application-scenarios.md) | 50 個可應用場景、學習旅程、Funnel 分析模型、學習生態圈 Workflow、最後行動目錄、優先級 |
 | [scenario-taxonomy.md](./scenario-taxonomy.md) | 三大場景分類：營運、個人旅程、生態圈 |
 | [skill-alignment.md](./skill-alignment.md) | 對齊 Claude Agent Skills：Skill bundle、SKILL.md、版本、sandbox runtime |
