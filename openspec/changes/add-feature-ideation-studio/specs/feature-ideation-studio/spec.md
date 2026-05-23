@@ -84,3 +84,28 @@
 #### Scenario: 回到先前版本繼續迭代
 - **WHEN** 使用者選擇從某一較早版本繼續發想
 - **THEN** 系統以該版本為基礎進行後續改動，不破壞中間版本的歷史紀錄
+
+---
+
+### Requirement: 採用版本可交棒為 AI 開發任務
+系統 SHALL 允許使用者將任一建置成功的版本「交棒工程」，把原型改動打包成可供 AI coding agent 接手正式開發的任務。交棒為人工觸發，原型分支僅作唯讀參考，不自動合併、不針對原型分支開 PR。
+
+#### Scenario: 從採用版本產生 AI 開發任務
+- **WHEN** 使用者對某建置成功的版本點擊「交棒工程」
+- **THEN** 系統 SHALL 建立一筆 handoff 記錄，並產生一個 GitHub issue 並掛上 `auto` label
+- **AND** issue 內容 SHALL 包含：構想原文（對話脈絡）、該版本相對 base 的 code diff、原型分支 ref 與 `base_commit`、preview 連結、邊界註記（mock 資料範圍與待補項，如真實 API 接線 / 測試 / edge case）
+
+#### Scenario: 原型分支作為唯讀參考、AI 另起乾淨分支
+- **WHEN** 交棒建立 AI 開發任務
+- **THEN** 系統 SHALL 將原型工作區分支以具命名空間的 ref（如 `feature-idea/<project>/<version>`）push 為唯讀參考
+- **AND** SHALL NOT 針對該原型分支開啟 PR，也不自動合併至 main
+- **AND** 接手的 AI agent SHALL 以原型為參考、另起乾淨分支進行正式實作並開啟自己的 PR
+
+#### Scenario: 僅建置成功的版本可交棒
+- **WHEN** 使用者嘗試對建置失敗的版本交棒
+- **THEN** 系統拒絕，並提示僅能交棒建置成功的版本
+
+#### Scenario: 交棒可追溯
+- **WHEN** handoff 建立後
+- **THEN** 系統 SHALL 在該版本記錄對應的 issue URL 與（若後續產生）PR URL
+- **AND** 後台可由原型版本追溯到其衍生的開發任務與 PR

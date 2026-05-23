@@ -1,6 +1,6 @@
 ## 1. DB Migration（daodao-storage）
 
-- [ ] 1.1 [daodao-storage] 新增 feature ideation migration SQL，建立 8 張 table：`feature_idea_projects`（`owner_id`、`title`、`description`、`base_repo`、`base_branch`、`status`）、`feature_idea_workspaces`（`project_id`、`branch_ref`、`base_commit`、`workspace_location`、`status`）、`feature_idea_conversations`（`project_id`）、`feature_idea_messages`（`conversation_id`、`role`、`content`）、`feature_idea_versions`（`project_id`、`version_no`、`diff`、`build_status`、`build_log`、`cost_usd`、`latency_ms`）、`feature_idea_preview_builds`（`version_id`、`preview_url`、`status`、`expires_at`）、`feature_idea_share_links`（`version_id`、`token` unique、`visibility`、`expires_at`、`revoked_at`）、`feature_idea_share_link_views`（`share_link_id`、`viewed_at`、`viewer_hint`）
+- [ ] 1.1 [daodao-storage] 新增 feature ideation migration SQL，建立 9 張 table：`feature_idea_projects`（`owner_id`、`title`、`description`、`base_repo`、`base_branch`、`status`）、`feature_idea_workspaces`（`project_id`、`branch_ref`、`base_commit`、`workspace_location`、`status`）、`feature_idea_conversations`（`project_id`）、`feature_idea_messages`（`conversation_id`、`role`、`content`）、`feature_idea_versions`（`project_id`、`version_no`、`diff`、`build_status`、`build_log`、`cost_usd`、`latency_ms`）、`feature_idea_preview_builds`（`version_id`、`preview_url`、`status`、`expires_at`）、`feature_idea_share_links`（`version_id`、`token` unique、`visibility`、`expires_at`、`revoked_at`）、`feature_idea_share_link_views`（`share_link_id`、`viewed_at`、`viewer_hint`）、`feature_idea_handoffs`（`version_id`、`created_by`、`reference_branch_ref`、`issue_url`、`issue_number`、`pr_url` nullable、`status`）
   - AC：migration 可正向執行，rollback 可刪除全部新 table 且不影響既有資料；`share_links.token` 有唯一索引
 
 ## 2. 架構脈絡 grounding 來源（daodao-f2e / daodao-server）
@@ -50,6 +50,10 @@
   - AC：public 唯讀可達；team 未授權被拒；過期 / 撤銷回傳對應狀態；每次有效存取寫入 view
 - [ ] 5.7 [daodao-server] 分享連結瀏覽統計：`GET` 連結回傳 view 次數
   - AC：擁有者可取得每條連結瀏覽次數
+- [ ] 5.8 [daodao-server] 實作 `POST /api/admin/feature-ideas/:id/versions/:vid/handoff` 交棒端點：拒絕建置失敗版本；將原型分支以 `feature-idea/<project>/<version>` ref push 為唯讀參考；建立 GitHub issue（內含構想原文 / diff / 分支 ref + base_commit / preview 連結 / 邊界註記）並掛 `auto` label；寫入 `feature_idea_handoffs`（issue_url / issue_number）
+  - AC：成功版本可交棒並回傳 issue URL；失敗版本被拒；不針對原型分支開 PR、不合併 main；handoff 記錄可由版本追溯
+- [ ] 5.9 [daodao-server] handoff 追溯：`GET` 版本回傳關聯 handoff（issue_url / pr_url / status）
+  - AC：後台可由原型版本查到衍生的 issue 與（若有）PR
 
 ## 6. daodao-admin-ui — Feature Ideation Studio
 
@@ -63,6 +67,8 @@
   - AC：可檢視 diff / log；可選版本繼續發想
 - [ ] 6.5 [daodao-admin-ui] 分享連結管理：產生連結（選 public / team、設到期）、複製 URL、檢視瀏覽次數、撤銷
   - AC：可產生 / 複製 / 撤銷連結；顯示瀏覽次數；失敗版本無法產生連結
+- [ ] 6.6 [daodao-admin-ui] 版本「交棒工程」動作：對成功版本觸發交棒、顯示產生的 issue 連結與 handoff 狀態（含後續 PR 連結）
+  - AC：成功版本可交棒並看到 issue 連結；失敗版本無交棒入口；可追溯到衍生 issue / PR
 
 ## 7. 安全與驗收
 
@@ -72,3 +78,5 @@
   - AC：安全檢查通過；無生產資料外洩路徑
 - [ ] 7.3 [daodao-server] 分享連結 token 不可猜測且唯一；過期 / 撤銷 / team 權限邊界測試
   - AC：token 具足夠熵；邊界情境皆有測試覆蓋
+- [ ] 7.4 [daodao-server] 驗證交棒只開 issue + push 唯讀參考分支，不針對原型分支開 PR、不自動合併 main；建置失敗版本不可交棒
+  - AC：交棒行為測試確認無 PR / 無合併；失敗版本被拒；issue 掛 `auto` label 且含必要脈絡欄位

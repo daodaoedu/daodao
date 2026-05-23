@@ -4,8 +4,8 @@
 
 本設計把「對話 → 預覽」延伸到**真實 daodao app**：PM / 設計師描述功能構想，AI coding agent **以 daodao-f2e 既有程式碼為基礎**做改動，建置出**可互動的 preview 環境**，並能 publish 成唯讀分享網址。本質上是把「Claude Code on the web 在隔離分支改 code → 跑 preview」的能力，產品化成 PM / 設計師可用的後台工具。
 
-**Phase 1 範圍**：手動觸發、單一 base branch（預設 f2e `main`）、純前端改動為主、preview 用 mock 資料、公開唯讀分享連結。
-**Phase 2 預留**：把採用版本升級成正式 PR / OpenSpec proposal、交棒給 Workflow generator、團隊協作留言、跨 server 改動。
+**Phase 1 範圍**：手動觸發、單一 base branch（預設 f2e `main`）、純前端改動為主、preview 用 mock 資料、公開唯讀分享連結、**人工觸發的「交棒工程」把採用版本打包成 AI 開發 issue（參考重做模式）**。
+**Phase 2 預留**：交棒給 Workflow generator、把採用 diff 升級成 OpenSpec proposal 草稿、團隊協作留言、跨 server 改動、以最新 base 重建工作區。
 
 ## Goals / Non-Goals
 
@@ -17,10 +17,12 @@
 - 可多輪迭代，並保存每一版的 diff、建置結果與可分享預覽
 - 可 publish **唯讀分享網址**，預設公開、可選團隊限定，連結釘選特定版本
 - 預覽在**安全沙箱**中執行，使用 mock / 唯讀資料，不接觸生產 API 與後台 session
+- 可把採用版本**交棒成 AI 開發任務**：產生帶完整脈絡的 GitHub issue（掛 `auto`），原型分支作唯讀參考，由 AI 另起乾淨分支正式實作
 
 **Non-Goals（Phase 1）:**
 
-- 不自動把原型 diff 合併進 main 或開正式 PR（需 Phase 2 人工觸發）
+- 不自動把原型 diff 合併進 main；交棒只開 issue + push 原型分支當參考，不針對原型分支開 PR、不自動合併
+- 不把原型 diff 自動升級成 OpenSpec proposal 草稿（Phase 2）
 - 不支援同時改動多個 repo / 後端商業邏輯（Phase 1 聚焦 f2e 前端改動）
 - 不做即時多人協作編輯（分享連結為唯讀預覽，留言為 Phase 2）
 - preview 不連接生產資料庫；不保證原型程式碼品質達到可直接上線標準
@@ -87,6 +89,19 @@
 - 分享連結不附帶任何後台或使用者 session
 - 每個想法版本的 agent 執行記錄 cost / latency / iteration，受 budget 限制（復用既有 guard）
 
+### 8. 工程接手：原型 → AI 開發任務（參考重做）
+
+**決定**：採用版本透過**人工觸發的「交棒工程」**動作交給工程實作。交棒**不**把原型分支當成要 merge 的 PR，而是：
+
+1. 把原型工作區分支以具命名空間 ref（`feature-idea/<project>/<version>`）push 為**唯讀參考**
+2. 產生一個 **GitHub issue 並掛 `auto` label**，內容包含：構想原文（對話脈絡）、版本 diff、原型分支 ref 與 `base_commit`、preview 連結、邊界註記（mock 範圍與待補項）
+3. issue 流入既有 remote agent pipeline，AI **以原型為參考、另起乾淨分支**正式實作並開自己的 PR
+4. 在 `feature_idea_handoffs` 記錄 issue / PR URL，供後台由原型版本追溯到開發任務
+
+**理由**：原型分支含 mock 資料與未必達上線品質的程式碼，不適合直接 merge；「參考重做」讓 AI 拿到具體 diff 與構想脈絡作起點，卻仍走正規 issue→Plan→PR 與人工驗收關卡，產出可上線品質。GitHub issue + `auto` label 直接對齊 daodao 既有自動化 pipeline，不另造交棒機制。
+
+**取捨**：部分前端工作會被重做（相對「續用原型分支」較不省），但換得乾淨歷史、可控品質與既有 review gate；交棒維持人工觸發，守住「原型 ≠ 自動出貨」的邊界。
+
 ## Data Model
 
 ```mermaid
@@ -97,6 +112,7 @@ erDiagram
   feature_idea_conversations ||--o{ feature_idea_messages : contains
   feature_idea_versions ||--o{ feature_idea_preview_builds : built_as
   feature_idea_versions ||--o{ feature_idea_share_links : shared_as
+  feature_idea_versions ||--o{ feature_idea_handoffs : handed_off_as
   feature_idea_share_links ||--o{ feature_idea_share_link_views : tracks
 ```
 
@@ -110,6 +126,7 @@ erDiagram
 | `feature_idea_preview_builds` | 暫時性 preview 環境 | `version_id`、`preview_url`、`status`、`expires_at` |
 | `feature_idea_share_links` | 唯讀分享連結 | `version_id`、`token`、`visibility`(public/team)、`expires_at`、`revoked_at` |
 | `feature_idea_share_link_views` | 瀏覽記錄 | `share_link_id`、`viewed_at`、`viewer_hint` |
+| `feature_idea_handoffs` | 交棒工程記錄 | `version_id`、`created_by`、`reference_branch_ref`、`issue_url`、`issue_number`、`pr_url`(nullable)、`status` |
 
 ## Flows
 
@@ -164,6 +181,27 @@ sequenceDiagram
   Note over Server: 訪客開啟 /api/share/:token → 轉發到釘選版本 preview (唯讀)
 ```
 
+### 交棒工程（原型 → AI 開發任務）
+
+```mermaid
+sequenceDiagram
+  actor PM as PM / 設計師
+  participant UI as daodao-admin-ui
+  participant Server as daodao-server
+  participant Infra as daodao-infra
+  participant GH as GitHub
+  participant Agent as Remote AI agent
+
+  PM->>UI: 對成功版本按「交棒工程」
+  UI->>Server: POST /api/admin/feature-ideas/:id/versions/:vid/handoff
+  Server->>Infra: push 原型分支為唯讀參考 ref (feature-idea/<project>/<version>)
+  Server->>GH: 建立 issue (構想原文 + diff + 分支 ref + preview + 邊界註記) 掛 auto label
+  Server->>Server: INSERT feature_idea_handoffs (issue_url)
+  Server-->>UI: 回傳 issue URL（後台可追溯）
+  Note over GH,Agent: auto label issue → 既有 pipeline → AI 另起乾淨分支實作 → 開自己的 PR（人工驗收）
+  Agent-->>Server: (Phase 2) 回填 pr_url 到 handoff 記錄
+```
+
 ## Risks / Trade-offs
 
 | 風險 | 說明 | 緩解 |
@@ -173,7 +211,8 @@ sequenceDiagram
 | 沙箱外洩風險 | 預覽執行 agent 生成程式碼 | 嚴格 iframe sandbox + CSP、mock 資料、無生產連線、分享連結不帶 session |
 | 公開分享連結外流 | 敏感原型被未授權者看到 | 不可猜測 token、可設到期 / 撤銷、團隊限定模式、釘選版本避免內容被替換 |
 | 與 main 漂移 | base branch 演進使工作區過時 | 記錄 `base_commit`；提供「以最新 base 重建工作區」選項（Phase 2） |
-| 範圍蔓延成正式開發工具 | 易被誤用為實際出貨管道 | 明確定位為原型 / 驗證；不自動合併；升級正式 PR 須人工觸發（Phase 2） |
+| 範圍蔓延成正式開發工具 | 易被誤用為實際出貨管道 | 明確定位為原型 / 驗證；不自動合併；交棒只開 issue + 唯讀參考分支，由 AI 參考重做、走既有 review gate |
+| 原型品質被當成上線程式碼 | 直接 merge 含 mock / 未達標的原型 diff | 採「參考重做」：原型分支唯讀，AI 另起乾淨分支實作；issue 標註 mock 範圍與待補項 |
 
 ## Migration / Rollout
 
