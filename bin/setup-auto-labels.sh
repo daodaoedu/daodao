@@ -28,6 +28,7 @@ LABELS=(
   "stop-after-plan|f9d0c4|Routine stops after plan stage for any scope"
   "automation:hold|bfd4f2|Soft pause: routine skips this round, resumable"
   "visual|e4e669|Visual/UI task — requires human design review"
+  "tracked|0075ca|Tracked by Routine C for Notion status sync"
 )
 
 ALL_REPOS=(
