@@ -27,6 +27,7 @@ LABELS=(
   "human-driving|1d76db|Human has taken over; routine exits permanently"
   "stop-after-plan|f9d0c4|Routine stops after plan stage for any scope"
   "automation:hold|bfd4f2|Soft pause: routine skips this round, resumable"
+  "visual|e4e669|Visual/UI task — requires human design review"
 )
 
 ALL_REPOS=(
