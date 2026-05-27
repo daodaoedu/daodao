@@ -22,7 +22,9 @@
 import { execSync } from "child_process";
 import { existsSync } from "fs";
 import { join } from "path";
-import { createNotionClient, updatePageProperty } from "../notion-sync/notion-client.js";
+import { createNotionClient, updatePageProperty, extractProperty } from "../notion-sync/notion-client.js";
+import type { Client } from "@notionhq/client";
+import type { PageObjectResponse } from "../notion-sync/notion-client.js";
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const HOURS_IDX = process.argv.indexOf("--hours");
@@ -131,6 +133,25 @@ function extractNotionPageId(issueBody: string): string | null {
   return match?.[1] ?? null;
 }
 
+const STATUS_ORDER = ["Ready for Dev", "In progress", "Spec Review", "PR Open", "Review", "Done"];
+
+async function getCurrentStatus(client: Client, pageId: string): Promise<string | null> {
+  try {
+    const page = await client.pages.retrieve({ page_id: pageId }) as PageObjectResponse;
+    return extractProperty(page, "Status") as string | null;
+  } catch {
+    return null;
+  }
+}
+
+function shouldSkipUpdate(currentStatus: string | null, targetStatus: string): boolean {
+  if (!currentStatus) return false;
+  const currentIdx = STATUS_ORDER.indexOf(currentStatus);
+  const targetIdx = STATUS_ORDER.indexOf(targetStatus);
+  if (currentIdx === -1 || targetIdx === -1) return false;
+  return currentIdx >= targetIdx;
+}
+
 async function syncPRs(
   client: ReturnType<typeof createNotionClient>,
   prs: PR[],
@@ -158,6 +179,13 @@ async function syncPRs(
       }
 
       const context = `${pr.repo}#${issueNum} via PR #${pr.prNumber}`;
+
+      const currentStatus = await getCurrentStatus(client, pageId);
+      if (shouldSkipUpdate(currentStatus, status)) {
+        log(`  ${context} already at "${currentStatus}" — skipping (would be "${status}")`);
+        continue;
+      }
+
       if (DRY_RUN) {
         log(`[dry-run] would set Status=${status} + GitHub PR=${pr.url} on ${pageId} (${context})`);
         updated++;

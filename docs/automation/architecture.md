@@ -169,6 +169,7 @@ In progress
 - **Open PR** → `PR Open`
 - **Merged PR** → `Review`（人工確認產出後手動改 `Done`）
 - **跳過** 有 `spec-pending` label 的 PR（spec 狀態由 Routine B 直接寫）
+- **單向推進**：寫入前先讀 Notion 現有 Status，若已在目標狀態或更後面（如 `Done`）則跳過，避免倒退覆寫
 
 ### Label 一覽
 
