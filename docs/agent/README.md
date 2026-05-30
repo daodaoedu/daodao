@@ -200,11 +200,11 @@ skill_registry = merge(static_skills, dynamic_skills)
          │                │                 │
          ▼                ▼                 ▼
   ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐
-  │  資料查詢層  │  │  AI 生成層   │  │   外部整合層    │
+  │  資料查詢層  │  │ 通訊 & 整合層 │  │   通用工具層    │
   │             │  │              │  │                 │
-  │ MCP pg      │  │ LLMClient    │  │ Email API       │
-  │ REST API    │  │ daodao-worker│  │ Notion          │
-  │             │  │              │  │ Notification    │
+  │ MCP pg      │  │ Email API    │  │ web_search      │
+  │ REST API    │  │ Notification │  │ stealth_fetch   │
+  │             │  │ Notion       │  │ bash / cron     │
   └─────────────┘  └──────────────┘  └─────────────────┘
            │                │                 │
            └────────────────┼─────────────────┘
@@ -277,14 +277,7 @@ email_logs         — 信件記錄 (user_id, email_type, status, sent_at)
 notifications      — 通知 (user_id, type, read_at, created_at)
 ```
 
-### 4.2 AI 生成（AI Layer）
-
-| 工具               | 來源          | 用途                   |
-| ------------------ | ------------- | ---------------------- |
-| `POST /generate` | daodao-worker | 行動建議生成（3 難度） |
-| `POST /refine`   | daodao-worker | 實踐描述精修           |
-
-### 4.3 通訊（Communication Layer）
+### 4.2 通訊（Communication Layer）
 
 | 工具                        | 來源          | 用途                       |
 | --------------------------- | ------------- | -------------------------- |
@@ -294,13 +287,13 @@ notifications      — 通知 (user_id, type, read_at, created_at)
 
 **可用 Email 模板：** `welcome` / `onboarding` / `practice` / `notification-digest` / `marathon` / `wish-linked`
 
-### 4.4 外部整合（Integration Layer）
+### 4.3 外部整合（Integration Layer）
 
 | 工具       | 來源             | 用途                           |
 | ---------- | ---------------- | ------------------------------ |
 | Notion MCP | claude.ai Notion | 建立 / 更新 / 搜尋 Notion 頁面 |
 
-### 4.5 通用工具（Utility Layer）
+### 4.4 通用工具（Utility Layer）
 
 不限業務情境，隨時可用：
 
