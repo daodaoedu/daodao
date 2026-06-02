@@ -1,10 +1,4 @@
-## Purpose
-
-定義應用程式環境設定（env config）的一致性規範，涵蓋子設定類別的 env 檔案載入行為、環境變數鍵名與型別、LLM backend 設定格式，以及無效設定鍵的排除原則。
-
----
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: 子設定類別必須能讀取環境特定 env 檔案
 `RedisSettings`、`PostgreSQLSettings`、`ClickHouseSettings`、`InsightSettings` 的 `model_config.env_file` SHALL 包含 `_ENV_FILE`（即 `.env.dev` 或 `.env.prod`），使其能讀取環境覆蓋值。
