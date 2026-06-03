@@ -11,7 +11,7 @@
  * Output: state string on stdout
  */
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 // Rule 0: hard-coded high-risk repos — modifying this list requires PR review
 const HIGH_RISK_REPOS: readonly string[] = ["daodao-storage", "daodao-infra"];
@@ -38,11 +38,14 @@ function getLabels(repo: string, issueNum: string): string[] {
     return envLabels ? envLabels.split(",").filter(Boolean) : [];
   }
   try {
-    const out = execSync(
-      `gh issue view ${issueNum} --repo daodaoedu/${repo} --json labels`,
-      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
-    );
-    const parsed = JSON.parse(out) as IssueLabels;
+    if (!/^\d+$/.test(issueNum)) throw new Error(`Invalid issueNum: ${issueNum}`);
+    const result = spawnSync("gh", [
+      "issue", "view", issueNum,
+      "--repo", `daodaoedu/${repo}`,
+      "--json", "labels",
+    ], { encoding: "utf8" });
+    if (result.status !== 0) throw new Error(result.stderr);
+    const parsed = JSON.parse(result.stdout) as IssueLabels;
     return parsed.labels.map((l) => l.name);
   } catch {
     return [];
