@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { spawnSync } from "child_process";
 
 export interface ExistingIssue {
   number: number;
@@ -11,12 +11,18 @@ export function findExistingIssue(
   fullPageId?: string
 ): ExistingIssue | null {
   const label = `notion:${shortId}`;
+  const result = spawnSync("gh", [
+    "issue", "list",
+    "--repo", `daodaoedu/${targetRepo}`,
+    "--label", label,
+    "--state", "open",
+    "--json", "number,labels,body",
+  ], { encoding: "utf-8" });
+
+  if (result.status !== 0) return null;
+
   try {
-    const output = execSync(
-      `gh issue list --repo daodaoedu/${targetRepo} --label "${label}" --state open --json number,labels,body`,
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    );
-    const issues: (ExistingIssue & { body?: string })[] = JSON.parse(output.trim() || "[]");
+    const issues: (ExistingIssue & { body?: string })[] = JSON.parse(result.stdout.trim() || "[]");
     if (issues.length === 0) return null;
 
     // Verify against full page ID to avoid false positives from shortId collisions
