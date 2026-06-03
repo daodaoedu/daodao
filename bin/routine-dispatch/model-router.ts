@@ -6,7 +6,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 export type Stage =
   | "dispatch"  // label-based routing in state.ts → Haiku (fast, cheap)
@@ -74,11 +74,14 @@ export function buildAdrFragment(options: {
   // 2. Related domain spec — infer area from issue body if available
   if (issueNum) {
     try {
-      const issueJson = execSync(
-        `gh issue view ${issueNum} --repo daodaoedu/${repo} --json body`,
-        { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
-      );
-      const body = (JSON.parse(issueJson) as { body: string }).body ?? "";
+      if (!/^\d+$/.test(issueNum)) throw new Error(`Invalid issueNum: ${issueNum}`);
+      const result = spawnSync("gh", [
+        "issue", "view", issueNum,
+        "--repo", `daodaoedu/${repo}`,
+        "--json", "body",
+      ], { encoding: "utf8" });
+      if (result.status !== 0) throw new Error(result.stderr);
+      const body = (JSON.parse(result.stdout) as { body: string }).body ?? "";
       // Look for <!-- area: <name> --> annotation or "area:" prefix in body
       const areaMatch = body.match(/(?:<!--\s*area:\s*|area:\s*)(\S+)/i);
       if (areaMatch) {
