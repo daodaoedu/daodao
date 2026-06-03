@@ -119,6 +119,28 @@ describe("deriveState — standard dispatch", () => {
   });
 });
 
+describe("deriveState — no scope label (defaults to M behaviour)", () => {
+  it("no scope + auto:auto-pr → needs-spec (M default, no spec labels)", () => {
+    const state = deriveState("daodao-f2e", "30", labels("auto", "auto:auto-pr"));
+    expect(state).toBe("needs-spec");
+  });
+
+  it("no scope + auto:auto-pr + spec-merged → needs-code (M default, spec ready)", () => {
+    const state = deriveState("daodao-f2e", "31", labels("auto", "auto:auto-pr", "spec-merged"));
+    expect(state).toBe("needs-code");
+  });
+
+  it("no scope + auto:plan-only + spec-merged → stop-after-plan-done (M default, plan-only)", () => {
+    const state = deriveState("daodao-f2e", "32", labels("auto", "auto:plan-only", "spec-merged"));
+    expect(state).toBe("stop-after-plan-done");
+  });
+
+  it("no scope + auto:auto-pr + spec-pending → spec-in-review (M default)", () => {
+    const state = deriveState("daodao-f2e", "33", labels("auto", "auto:auto-pr", "spec-pending"));
+    expect(state).toBe("spec-in-review");
+  });
+});
+
 describe("deriveState — precedence ordering", () => {
   it("automation:hold takes precedence over human-driving", () => {
     const state = deriveState("daodao-f2e", "20", labels(

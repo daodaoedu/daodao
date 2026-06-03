@@ -104,12 +104,10 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
   // auto:plan-only or high-risk repo → plan-only path
   const isPlanOnly = autoMode === "plan-only" || isHighRisk;
 
-  if (!scope) {
-    // Default to M if no scope label
-    return isPlanOnly ? "needs-spec" : "needs-spec";
-  }
+  // No scope label defaults to M behaviour
+  const effectiveScope = scope ?? "M";
 
-  if (scope === "XS" || scope === "S") {
+  if (effectiveScope === "XS" || effectiveScope === "S") {
     // XS/S: single PR path
     // High-risk repos must never reach needs-code (defense-in-depth at state layer)
     if (isHighRisk) return "stop-after-plan-done";
@@ -117,7 +115,7 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
     return "needs-spec";
   }
 
-  if (scope === "M") {
+  if (effectiveScope === "M") {
     // M: two-phase
     if (hasLabel(lbls, "spec-merged")) {
       if (isPlanOnly) return "stop-after-plan-done";
@@ -129,7 +127,7 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
     return "needs-spec";
   }
 
-  if (scope === "L") {
+  if (effectiveScope === "L") {
     // L: spec only, human does code
     if (hasLabel(lbls, "spec-pending") || hasLabel(lbls, "spec-merged")) {
       return "stop-after-plan-done";
