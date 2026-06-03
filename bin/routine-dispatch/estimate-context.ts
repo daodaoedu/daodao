@@ -6,7 +6,7 @@
 // Usage: pnpm tsx estimate-context.ts <repo> <issue_num>
 // Output: token estimate (stdout, integer)
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { statSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -21,11 +21,14 @@ export function estimateIssueTokens(repo: string, issueNum: string): number {
 
   // Fetch issue body
   try {
-    const issueJson = execSync(
-      `gh issue view ${issueNum} --repo daodaoedu/${repo} --json body,title,comments`,
-      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
-    );
-    const issue = JSON.parse(issueJson) as {
+    if (!/^\d+$/.test(issueNum)) throw new Error(`Invalid issueNum: ${issueNum}`);
+    const result = spawnSync("gh", [
+      "issue", "view", issueNum,
+      "--repo", `daodaoedu/${repo}`,
+      "--json", "body,title,comments",
+    ], { encoding: "utf8" });
+    if (result.status !== 0) throw new Error(result.stderr);
+    const issue = JSON.parse(result.stdout) as {
       title: string;
       body: string;
       comments: Array<{ body: string }>;
