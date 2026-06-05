@@ -1,5 +1,9 @@
 # AI Assistant 規格
 
+> **⚠️ 稽核狀態（2026-06-04，spec vs dev）：未實作（屬進行中的 `admin-panel-overhaul` change）**
+> dev 查無後台 AI 助理 / 知識庫 / RAG / 共享收件匣 / 接手 / 指標的任何實作（僅 Qdrant 連線與泛用 LLM client）。
+> 此能力隸屬尚在進行的 `openspec/changes/admin-panel-overhaul`，故保留於 specs/ 但標記為「未交付」。明細見 `.omc/openspec-audit/specs/ai-assistant.md`。
+
 ## ADDED Requirements
 
 ### Requirement: 上傳知識庫文件

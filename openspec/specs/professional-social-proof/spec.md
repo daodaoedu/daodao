@@ -1,3 +1,7 @@
+> **⚠️ 稽核狀態（2026-06-04，spec vs dev）：僅資料層（partial）**
+> `practice-social-proof.service.ts`（toggle/status/counts）已存在，但**未接任何 route/controller**；`GET /practices/:id/export` 與 socialProof 回傳、PDF/Markdown 導出全缺，對外 API 0% 達成。
+> 對應 change `practice-journey-export` 已反 archive 回 `changes/`（待完成）。明細見 `.omc/openspec-audit/specs/professional-social-proof.md`。
+
 ## ADDED Requirements
 
 ### Requirement: 三項專業見證指標定義
