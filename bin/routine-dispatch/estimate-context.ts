@@ -21,13 +21,14 @@ export function estimateIssueTokens(repo: string, issueNum: string): number {
 
   // Fetch issue body
   try {
-    if (!/^\d+$/.test(issueNum)) throw new Error(`Invalid issueNum: ${issueNum}`);
-    const result = spawnSync("gh", [
-      "issue", "view", issueNum,
-      "--repo", `daodaoedu/${repo}`,
-      "--json", "body,title,comments",
-    ], { encoding: "utf8" });
-    if (result.status !== 0) throw new Error(result.stderr);
+    const result = spawnSync(
+      "gh",
+      ["issue", "view", issueNum, "--repo", `daodaoedu/${repo}`, "--json", "body,title,comments"],
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    if (result.status !== 0 || result.error) {
+      throw result.error ?? new Error(`gh exited ${result.status}`);
+    }
     const issue = JSON.parse(result.stdout) as {
       title: string;
       body: string;
@@ -80,6 +81,10 @@ if (process.argv[1]?.endsWith("estimate-context.ts") || process.argv[1]?.endsWit
   const issueNum = process.argv[3];
   if (!repo || !issueNum) {
     console.error("Usage: estimate-context.ts <repo> <issue_num>");
+    process.exit(1);
+  }
+  if (!/^\d+$/.test(issueNum)) {
+    console.error("estimate-context: issue_num must be a positive integer");
     process.exit(1);
   }
   const tokens = estimateIssueTokens(repo, issueNum);
