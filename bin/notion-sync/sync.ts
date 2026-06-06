@@ -248,84 +248,74 @@ function buildLabels(row: NotionRow, targetRepo: string, fallbackWarnings: strin
   return [...new Set(labels)];
 }
 
-function runGh(args: string[]): { stdout: string; stderr: string; status: number } {
-  const result = spawnSync("gh", args, { encoding: "utf-8" });
-  return {
-    stdout: (result.stdout ?? "").trim(),
-    stderr: (result.stderr ?? "").trim(),
-    status: result.status ?? 1,
-  };
-}
-
 function ghCreateIssue(repo: string, title: string, body: string, labels: string[]): string | null {
   // Ensure dynamic labels exist (ignore failures)
   for (const [lname, ldesc] of [
-    [labels.find(l => l.startsWith("notion:")) ?? "", "Notion page"],
-    ...labels.filter(l => l.startsWith("target-repo:")).map(l => [l, "Target repo"]),
+    [`notion:${labels.find(l => l.startsWith("notion:")) ?? ""}`, `Notion page`],
+    ...labels.filter(l => l.startsWith("target-repo:")).map(l => [l, `Target repo`]),
   ] as [string, string][]) {
     if (!lname) continue;
-    const r = runGh([
-      "label", "create", lname,
-      "--repo", `daodaoedu/${repo}`,
-      "--color", "e4e669",
-      "--description", ldesc,
-      "--force",
-    ]);
-    if (r.status !== 0) {
-      warn(`gh label create "${lname}" in ${repo} failed: ${r.stderr}`);
+    const labelResult = spawnSync(
+      "gh",
+      ["label", "create", lname, "--repo", `daodaoedu/${repo}`, "--color", "e4e669", "--description", ldesc, "--force"],
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    if (labelResult.status !== 0) {
+      warn(`gh label create "${lname}" in ${repo} failed: ${labelResult.stderr ?? String(labelResult.error ?? "")}`);
     }
   }
 
   const tmpFile = join(tmpdir(), `notion-sync-${Date.now()}.md`);
   try {
     writeFileSync(tmpFile, body, "utf-8");
+    const labelArgArray = labels.flatMap((l) => ["--label", l]);
+    const result = spawnSync(
+      "gh",
+      ["issue", "create", "--repo", `daodaoedu/${repo}`, "--title", title, "--body-file", tmpFile, ...labelArgArray],
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
 
-    const createArgs = [
-      "issue", "create",
-      "--repo", `daodaoedu/${repo}`,
-      "--title", title,
-      "--body-file", tmpFile,
-      ...labels.flatMap(l => ["--label", l]),
-    ];
-    const result = runGh(createArgs);
-    if (result.status === 0) return result.stdout;
+    if (result.status === 0 && !result.error) {
+      return result.stdout.trim();
+    }
 
-    // Retry without notion: label if label not found
-    if (result.stderr.includes("could not add label")) {
+    const stderr = result.stderr ?? "";
+    // Retry without notion: label if label not found (label creation may have failed silently)
+    if (stderr.includes("could not add label")) {
+      const fallbackLabelArray = labels
+        .filter((l) => !l.startsWith("notion:"))
+        .flatMap((l) => ["--label", l]);
       warn(`gh issue create failed in ${repo} (label not found) — retrying without notion label`);
-      const filteredLabels = labels.filter(l => !l.startsWith("notion:"));
-      const retryArgs = [
-        "issue", "create",
-        "--repo", `daodaoedu/${repo}`,
-        "--title", title,
-        "--body-file", tmpFile,
-        ...filteredLabels.flatMap(l => ["--label", l]),
-      ];
-      const retryResult = runGh(retryArgs);
-      if (retryResult.status === 0) {
-        const issueUrl = retryResult.stdout;
-        // Backfill the notion: label that was skipped in retry
-        const notionLabel = labels.find(l => l.startsWith("notion:"));
-        if (notionLabel && issueUrl) {
-          const issueNum = issueUrl.split("/").pop();
-          if (issueNum) {
-            const editResult = runGh([
-              "issue", "edit", issueNum,
-              "--repo", `daodaoedu/${repo}`,
-              "--add-label", notionLabel,
-            ]);
-            if (editResult.status !== 0) {
-              warn(`failed to backfill notion label on issue ${issueNum} in ${repo}`);
-            }
+      const retryResult = spawnSync(
+        "gh",
+        ["issue", "create", "--repo", `daodaoedu/${repo}`, "--title", title, "--body-file", tmpFile, ...fallbackLabelArray],
+        { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+      );
+      if (retryResult.status !== 0 || retryResult.error) {
+        warn(`gh issue create retry also failed in ${repo}: ${retryResult.stderr ?? retryResult.error}`);
+        return null;
+      }
+      const issueUrl = retryResult.stdout.trim();
+      // Backfill the notion: label that was skipped in retry
+      const notionLabel = labels.find((l) => l.startsWith("notion:"));
+      if (notionLabel && issueUrl) {
+        const issueNum = issueUrl.split("/").pop();
+        if (issueNum) {
+          const editResult = spawnSync(
+            "gh",
+            ["issue", "edit", issueNum, "--repo", `daodaoedu/${repo}`, "--add-label", notionLabel],
+            { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+          );
+          if (editResult.status !== 0) {
+            warn(`failed to backfill notion label on issue ${issueNum} in ${repo}`);
           }
         }
-        return issueUrl;
       }
-      warn(`gh issue create retry also failed in ${repo}: ${retryResult.stderr}`);
+      return issueUrl;
     } else {
-      warn(`gh issue create failed in ${repo}: ${result.stderr}`);
+      warn(`gh issue create failed in ${repo}: ${stderr || result.error}`);
+      return null;
     }
-    return null;
   } finally {
     try { unlinkSync(tmpFile); } catch { /* ignore */ }
   }
