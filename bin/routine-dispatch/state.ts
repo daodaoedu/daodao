@@ -38,13 +38,14 @@ function getLabels(repo: string, issueNum: string): string[] {
     return envLabels ? envLabels.split(",").filter(Boolean) : [];
   }
   try {
-    if (!/^\d+$/.test(issueNum)) throw new Error(`Invalid issueNum: ${issueNum}`);
-    const result = spawnSync("gh", [
-      "issue", "view", issueNum,
-      "--repo", `daodaoedu/${repo}`,
-      "--json", "labels",
-    ], { encoding: "utf8" });
-    if (result.status !== 0) throw new Error(result.stderr);
+    const result = spawnSync(
+      "gh",
+      ["issue", "view", issueNum, "--repo", `daodaoedu/${repo}`, "--json", "labels"],
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    if (result.status !== 0 || result.error) {
+      throw result.error ?? new Error(`gh exited ${result.status}`);
+    }
     const parsed = JSON.parse(result.stdout) as IssueLabels;
     return parsed.labels.map((l) => l.name);
   } catch {
@@ -107,10 +108,12 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
   // auto:plan-only or high-risk repo → plan-only path
   const isPlanOnly = autoMode === "plan-only" || isHighRisk;
 
-  // No scope label defaults to M behaviour
-  const effectiveScope = scope ?? "M";
+  if (!scope) {
+    // Default to M if no scope label
+    return isPlanOnly ? "needs-spec" : "needs-spec";
+  }
 
-  if (effectiveScope === "XS" || effectiveScope === "S") {
+  if (scope === "XS" || scope === "S") {
     // XS/S: single PR path
     // High-risk repos must never reach needs-code (defense-in-depth at state layer)
     if (isHighRisk) return "stop-after-plan-done";
@@ -118,7 +121,7 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
     return "needs-spec";
   }
 
-  if (effectiveScope === "M") {
+  if (scope === "M") {
     // M: two-phase
     if (hasLabel(lbls, "spec-merged")) {
       if (isPlanOnly) return "stop-after-plan-done";
@@ -130,7 +133,7 @@ export function deriveState(repo: string, issueNum: string, labels?: string[]): 
     return "needs-spec";
   }
 
-  if (effectiveScope === "L") {
+  if (scope === "L") {
     // L: spec only, human does code
     if (hasLabel(lbls, "spec-pending") || hasLabel(lbls, "spec-merged")) {
       return "stop-after-plan-done";
@@ -150,6 +153,10 @@ if (isMain) {
   const [, , repo, issueNum] = process.argv;
   if (!repo || !issueNum) {
     process.stderr.write("Usage: state.ts <repo> <issue_num>\n");
+    process.exit(1);
+  }
+  if (!/^\d+$/.test(issueNum)) {
+    process.stderr.write("state.ts: issue_num must be a positive integer\n");
     process.exit(1);
   }
   const state = deriveState(repo, issueNum);
