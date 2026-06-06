@@ -11,17 +11,15 @@ export function findExistingIssue(
   fullPageId?: string
 ): ExistingIssue | null {
   const label = `notion:${shortId}`;
-  const result = spawnSync("gh", [
-    "issue", "list",
-    "--repo", `daodaoedu/${targetRepo}`,
-    "--label", label,
-    "--state", "open",
-    "--json", "number,labels,body",
-  ], { encoding: "utf-8" });
-
-  if (result.status !== 0) return null;
-
   try {
+    const result = spawnSync(
+      "gh",
+      ["issue", "list", "--repo", `daodaoedu/${targetRepo}`, "--label", label, "--state", "open", "--json", "number,labels,body"],
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
+    );
+    if (result.status !== 0 || result.error) {
+      throw result.error ?? new Error(`gh exited ${result.status}: ${result.stderr ?? ""}`);
+    }
     const issues: (ExistingIssue & { body?: string })[] = JSON.parse(result.stdout.trim() || "[]");
     if (issues.length === 0) return null;
 
