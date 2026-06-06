@@ -74,13 +74,14 @@ export function buildAdrFragment(options: {
   // 2. Related domain spec — infer area from issue body if available
   if (issueNum) {
     try {
-      if (!/^\d+$/.test(issueNum)) throw new Error(`Invalid issueNum: ${issueNum}`);
-      const result = spawnSync("gh", [
-        "issue", "view", issueNum,
-        "--repo", `daodaoedu/${repo}`,
-        "--json", "body",
-      ], { encoding: "utf8" });
-      if (result.status !== 0) throw new Error(result.stderr);
+      const result = spawnSync(
+        "gh",
+        ["issue", "view", issueNum, "--repo", `daodaoedu/${repo}`, "--json", "body"],
+        { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
+      );
+      if (result.status !== 0 || result.error) {
+        throw result.error ?? new Error(`gh exited ${result.status}`);
+      }
       const body = (JSON.parse(result.stdout) as { body: string }).body ?? "";
       // Look for <!-- area: <name> --> annotation or "area:" prefix in body
       const areaMatch = body.match(/(?:<!--\s*area:\s*|area:\s*)(\S+)/i);
@@ -135,6 +136,10 @@ if (isMain) {
     console.log(routeModel(stage));
   } else if (cmd === "adr") {
     const [repo, changeId, issueNum] = args;
+    if (issueNum !== undefined && !/^\d+$/.test(issueNum)) {
+      console.error("model-router: issueNum must be a positive integer");
+      process.exit(1);
+    }
     console.log(buildAdrFragment({ repo: repo!, changeId, issueNum }));
   } else {
     console.error(
