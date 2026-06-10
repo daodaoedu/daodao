@@ -14,6 +14,7 @@ daodao-admin-ui/
 # 暫存
 *.tmp
 .gstack/
+.refact/
 
 # Monorepo tooling
 node_modules/
