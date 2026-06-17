@@ -11,7 +11,7 @@
  * Output: state string on stdout
  */
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 // Rule 0: hard-coded high-risk repos — modifying this list requires PR review
 const HIGH_RISK_REPOS: readonly string[] = ["daodao-storage", "daodao-infra"];
@@ -38,11 +38,15 @@ function getLabels(repo: string, issueNum: string): string[] {
     return envLabels ? envLabels.split(",").filter(Boolean) : [];
   }
   try {
-    const out = execSync(
-      `gh issue view ${issueNum} --repo daodaoedu/${repo} --json labels`,
+    const result = spawnSync(
+      "gh",
+      ["issue", "view", issueNum, "--repo", `daodaoedu/${repo}`, "--json", "labels"],
       { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const parsed = JSON.parse(out) as IssueLabels;
+    if (result.status !== 0 || result.error) {
+      throw result.error ?? new Error(`gh exited ${result.status}`);
+    }
+    const parsed = JSON.parse(result.stdout) as IssueLabels;
     return parsed.labels.map((l) => l.name);
   } catch {
     return [];
@@ -149,6 +153,10 @@ if (isMain) {
   const [, , repo, issueNum] = process.argv;
   if (!repo || !issueNum) {
     process.stderr.write("Usage: state.ts <repo> <issue_num>\n");
+    process.exit(1);
+  }
+  if (!/^\d+$/.test(issueNum)) {
+    process.stderr.write("state.ts: issue_num must be a positive integer\n");
     process.exit(1);
   }
   const state = deriveState(repo, issueNum);
