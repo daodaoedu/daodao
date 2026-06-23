@@ -5,7 +5,7 @@
       "args": ["/Users/xiaoxu/Projects/daodao/daodao-mcp/packages/pg/dist/server.js"],
       "env": {
         "DATABASE_URL": "postgresql://daodao_readonly:h1rzivtz9oLC4q+nwZh9W5oAmBn3wVYl+pBryPTN7zw=@localhost:5433/daodao",
-        "SSH_TUNNEL": "daodao:5433:172.21.0.6:5432"
+        "SSH_TUNNEL": "daodao:5433:127.0.0.1:15432"
       }
     },
     "daodao-pg-dev": {
