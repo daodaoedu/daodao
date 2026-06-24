@@ -251,12 +251,14 @@ PRBODY
     --head "${BRANCH}" \
     --base "${DEFAULT_BRANCH}" \
     --label "auto" \
+    --label "tracked" \
     2>/dev/null || echo "")
 
   rm -f "${PR_BODY_FILE}"
 
   if [[ -n "${PR_URL}" ]]; then
     log "Phase 2 PR created: ${PR_URL}"
+    safe_run "gh issue edit ${ISSUE_NUM} --repo daodaoedu/${REPO} --add-label auto-pr-open" || true
     safe_run "gh issue comment ${ISSUE_NUM} --repo daodaoedu/${REPO} \
       --body '🔗 Code PR opened: ${PR_URL}'" || true
   else
