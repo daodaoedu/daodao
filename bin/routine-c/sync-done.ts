@@ -112,12 +112,14 @@ function getLinkedIssueNumbers(repo: string, prNumber: number): number[] {
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
     const body = output.trim();
+    log(`  [debug] PR #${prNumber} body snippet: ${JSON.stringify(body.slice(-100))}`);
     const CLOSING_RE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/gi;
     const nums = new Set<number>();
     let m: RegExpExecArray | null;
     while ((m = CLOSING_RE.exec(body)) !== null) {
       nums.add(parseInt(m[1], 10));
     }
+    log(`  [debug] PR #${prNumber} linked issues: ${JSON.stringify(Array.from(nums))}`);
     return Array.from(nums);
   } catch {
     return [];
