@@ -105,13 +105,20 @@ function getMergedTrackedPRs(repo: string, sinceIso: string): PR[] {
 
 function getLinkedIssueNumbers(repo: string, prNumber: number): number[] {
   try {
+    // closingIssuesReferences only works when PR targets the default branch.
+    // Parse the PR body directly for closing keywords as a reliable fallback.
     const output = execSync(
-      `gh pr view ${prNumber} --repo daodaoedu/${repo} \
-        --json closingIssuesReferences \
-        --jq '[.closingIssuesReferences[].number]'`,
+      `gh pr view ${prNumber} --repo daodaoedu/${repo} --json body --jq '.body'`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    return JSON.parse(output.trim()) as number[];
+    const body = output.trim();
+    const CLOSING_RE = /(?:closes?|fixes?|resolves?)\s+#(\d+)/gi;
+    const nums: number[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = CLOSING_RE.exec(body)) !== null) {
+      nums.push(parseInt(m[1], 10));
+    }
+    return nums;
   } catch {
     return [];
   }
