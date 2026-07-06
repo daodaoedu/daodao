@@ -46,6 +46,16 @@ description: 規劃或實作任何 product 功能前，先用程式碼驗證 doc
 2. **快照會腐爛，別信舊的**：功能上線狀態的最新一次全面盤點在 `docs/product/prd/learning-ecosystem.md`（八層生態＋通電度，校準日 2026-07-06）。超過數週的任何快照都要重跑上面的驗證法，不要照抄。
 3. **跨 repo 別漏**：一個 product 功能通常橫跨 storage→server→ai-backend→f2e。判斷「上線」要看整條鏈，任一段缺就是半成品。跨 repo 連鎖見 `.claude/skills/system-map`（各子 repo 內）。
 
+## 自動化背援（不用全靠你手動）
+
+這份「每次動工前手動查」的 skill 是止血；根治的機制已建好：
+
+- `scripts/product_status_manifest.yml`——功能 → 宣稱狀態 → 程式碼 signal 的對照清單，也是**目前最可靠的狀態索引**。要快速知道某功能真實狀態，先查這裡。
+- `scripts/check_product_status.py`——比對 manifest 與各 repo 程式碼，漂移就報（`--ci` 有漂移時 exit 1）。本地跑：`python3 scripts/check_product_status.py --verbose --projects-dir <各 repo 的上層目錄>`。
+- `.github/workflows/product-status-drift.yml`——每週一自動跑，漂移發 Discord。
+
+你動 product 功能時的義務：**新功能就往 manifest 補一筆**（declared 照 PRD 當下狀態填、signal 填真實存在的路徑）。這樣 CI 才能在它上線後自動抓到 declared 過期，而不是等下一個 AI 再踩一次。
+
 ## 邊界
 
 - 這份 skill 只解決「狀態是否為真」。功能**該怎麼設計**仍讀 PRD/FRD 的內文——內文的需求描述與設計決策通常是有效的，失真的只有「狀態」。
