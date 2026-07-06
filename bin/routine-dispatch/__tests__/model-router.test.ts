@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { routeModel, buildAdrFragment, MODEL_MAP, type Stage } from "../model-router.js";
+import { routeModel, buildAdrFragment, type Stage } from "../model-router.js";
+import { loadConfig } from "../config.js";
 
 vi.mock("node:child_process", () => ({
   execSync: vi.fn(),
@@ -19,38 +20,23 @@ import { execSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 describe("routeModel", () => {
-  const cases: [Stage, string][] = [
-    ["dispatch", "claude-haiku-4-5-20251001"],
-    ["handler",  "claude-sonnet-4-6"],
-    ["spec",     "claude-opus-4-7"],
-    ["reviewer", "claude-sonnet-4-6"],
-    ["judge",    "claude-haiku-4-5-20251001"],
-  ];
+  // v3: model ID 來自 bin/pipeline.config.json（SSOT），測試驗證一致性而非硬編碼值
+  const stages: Stage[] = ["dispatch", "reviewer", "judge"];
 
-  for (const [stage, expectedModel] of cases) {
-    it(`routes ${stage} → ${expectedModel}`, () => {
-      expect(routeModel(stage)).toBe(expectedModel);
+  for (const stage of stages) {
+    it(`routes ${stage} → config.models.${stage}`, () => {
+      expect(routeModel(stage)).toBe(loadConfig().models[stage]);
+      expect(routeModel(stage)).toMatch(/^claude-/);
     });
   }
 
   it("throws for unknown stage", () => {
     expect(() => routeModel("unknown" as Stage)).toThrow();
   });
-});
 
-describe("MODEL_MAP", () => {
-  it("dispatch and judge use Haiku", () => {
-    expect(MODEL_MAP.dispatch).toContain("haiku");
-    expect(MODEL_MAP.judge).toContain("haiku");
-  });
-
-  it("handler and reviewer use Sonnet", () => {
-    expect(MODEL_MAP.handler).toContain("sonnet");
-    expect(MODEL_MAP.reviewer).toContain("sonnet");
-  });
-
-  it("spec uses Opus", () => {
-    expect(MODEL_MAP.spec).toContain("opus");
+  it("v1 nested-claude stages (handler/spec) no longer exist", () => {
+    expect(() => routeModel("handler" as Stage)).toThrow();
+    expect(() => routeModel("spec" as Stage)).toThrow();
   });
 });
 
@@ -87,7 +73,7 @@ describe("buildAdrFragment", () => {
 
   it("includes ADR files that mention the repo", () => {
     vi.mocked(existsSync).mockReturnValue(true);
-    vi.mocked(readdirSync).mockReturnValue(["001-auth.md", "002-storage.md"] as ReturnType<typeof readdirSync>);
+    vi.mocked(readdirSync).mockReturnValue(["001-auth.md", "002-storage.md"] as unknown as ReturnType<typeof readdirSync>);
     vi.mocked(readFileSync as ReturnType<typeof vi.fn>).mockImplementation(
       (path: string) => {
         if (String(path).includes("001-auth.md")) return "# Auth ADR\ndaodao-f2e auth decisions";

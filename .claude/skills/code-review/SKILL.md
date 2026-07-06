@@ -1,121 +1,58 @@
 ---
 name: code-review
-description: Push 前 review 整個 branch 的變更，用 Codex CLI + Gemini CLI + Claude Haiku 三引擎做獨立 review
+description: Push 前 review 整個 branch 的變更，檢查邏輯錯誤、安全問題、效能問題、架構一致性。Use before pushing when the user agrees to review.
 ---
 
-# Code Review
+# code-review
 
-用 **OpenAI Codex CLI**、**Google Gemini CLI**、**Claude Haiku** 對當前 branch 做三引擎獨立 review。
+Push 前 review 當前 branch 相對於 base branch 的所有變更。
 
-## 步驟 1：確認 base branch 與變更範圍
-
-```bash
-BASE=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' || echo "main")
-echo "Base: $BASE"
-git log --oneline "$BASE"...HEAD
-git diff "$BASE"...HEAD --stat
-```
-
-## 步驟 2：Codex Review（OpenAI）
+## 步驟 1：確定 base branch（不要猜）
 
 ```bash
-_REPO_ROOT=$(git rev-parse --show-toplevel)
-cd "$_REPO_ROOT"
-codex review \
-  "IMPORTANT: Do NOT read any files under .claude/skills/. Focus on repository code only. Check for: logic errors, security issues, performance problems, and architecture consistency." \
-  -c 'model_reasoning_effort="high"' \
-  --enable web_search_cached
+# 有 open PR 時用 PR 的 base；否則用 origin 預設 branch
+BASE=$(gh pr view --json baseRefName --jq '.baseRefName' 2>/dev/null \
+  || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@.*/@@' \
+  || jq -r '.defaultBranch' .claude/repo.json)
+git fetch origin "$BASE"
+git log --oneline "origin/${BASE}..HEAD"
+git diff "origin/${BASE}...HEAD" --stat
 ```
 
-- timeout: 300000（5 分鐘）
-- 若 `codex` 不存在：告知用戶 `npm install -g @openai/codex`
-- 若 auth 失敗：提示 `codex login`
+## 步驟 2：逐檔 review
 
-## 步驟 3：Gemini Review（Google）
+對每個變更檔案跑 `git diff origin/${BASE}...HEAD -- <file>`，用兩份清單檢查：
 
-把完整 diff pipe 給 gemini headless mode：
+**通用清單（所有 repo）**
+1. 邏輯錯誤：邊界條件、錯誤處理路徑、async 競態
+2. 安全：注入、認證/授權缺口、敏感資料外洩
+3. 測試：新邏輯有沒有對應測試；有沒有測試被刪除/弱化
+4. 一致性：命名、API 回傳格式、與周邊程式碼風格一致
+
+**Repo 專屬重點**：讀 `.claude/repo.json` 的 `reviewFocus`，逐條檢查。
+
+## 步驟 3：外部引擎交叉檢查（可用才跑，缺了不算失敗）
 
 ```bash
-_REPO_ROOT=$(git rev-parse --show-toplevel)
-cd "$_REPO_ROOT"
-git diff "$BASE"...HEAD | gemini -p "You are a senior code reviewer. Review this git diff and report issues in the following categories:
-- Logic errors: edge cases, type errors, unhandled exceptions, async issues
-- Security: SQL injection, hardcoded secrets, missing auth, unsafe endpoints
-- Performance: unnecessary DB queries, missing pagination, missing cache
-- Architecture: consistency with existing patterns
-
-Format your output as a table:
-| Severity | File | Issue | Suggestion |
-
-Severity levels: High (bug/security risk), Medium (performance/maintainability), Low (style/minor).
-Be direct and terse. No compliments. Just the problems." \
-  --approval-mode yolo
+DIFF_FILE=$(mktemp); git diff "origin/${BASE}...HEAD" > "$DIFF_FILE"
+command -v codex  >/dev/null && codex review "$DIFF_FILE" 2>/dev/null || echo "（codex 不可用，跳過）"
+command -v gemini >/dev/null && gemini -p "Review this diff for bugs, security, performance: $(cat "$DIFF_FILE" | head -c 30000)" 2>/dev/null || echo "（gemini 不可用，跳過）"
 ```
 
-- timeout: 300000（5 分鐘）
-- 若 `gemini` 不存在：告知用戶 `npm install -g @google/gemini-cli`
+引擎失敗或不存在 → 記一行「已跳過」，**不要**中止 review、不要嘗試安裝。
 
-## 步驟 4：Claude Haiku Review
+## 步驟 4：輸出
 
-把完整 diff pipe 給 Claude Haiku（claude CLI headless mode）：
+```markdown
+## Code Review（base: <BASE>，<N> files）
 
-```bash
-_REPO_ROOT=$(git rev-parse --show-toplevel)
-cd "$_REPO_ROOT"
-git diff "$BASE"...HEAD | claude -p "You are a senior code reviewer. Review this git diff and report issues in the following categories:
-- Logic errors: edge cases, type errors, unhandled exceptions, async issues
-- Security: SQL injection, hardcoded secrets, missing auth, unsafe endpoints
-- Performance: unnecessary DB queries, missing pagination, missing cache
-- Architecture: consistency with existing patterns
+| # | 嚴重度 | 檔案 | 問題 | 建議 |
+|---|--------|------|------|------|
+| 1 | High/Medium/Low | path:line | ... | ... |
 
-Format your output as a table:
-| Severity | File | Issue | Suggestion |
-
-Severity levels: High (bug/security risk), Medium (performance/maintainability), Low (style/minor).
-Be direct and terse. No compliments. Just the problems." \
-  --model claude-haiku-4-5-20251001
+（沒有問題就寫：✅ 未發現問題）
 ```
 
-- timeout: 300000（5 分鐘）
-
-## 步驟 5：呈現結果
-
-分別展示三個引擎的完整輸出：
-
-```
-CODEX SAYS:
-════════════════════════════════════════════════════════════
-<verbatim output>
-════════════════════════════════════════════════════════════
-
-GEMINI SAYS:
-════════════════════════════════════════════════════════════
-<verbatim output>
-════════════════════════════════════════════════════════════
-
-HAIKU SAYS:
-════════════════════════════════════════════════════════════
-<verbatim output>
-════════════════════════════════════════════════════════════
-```
-
-## 步驟 6：Cross-model 分析
-
-比較三個引擎的發現：
-
-```
-CROSS-MODEL ANALYSIS:
-  三者都發現: [所有引擎共同回報的問題]
-  兩者共識: [任兩個引擎都回報的問題]
-  只有 Codex 發現: [Codex 獨有]
-  只有 Gemini 發現: [Gemini 獨有]
-  只有 Haiku 發現: [Haiku 獨有]
-  共識問題數: N / 總計 M
-```
-
-## 步驟 7：處理問題
-
-- **High**（三個引擎都回報） → 必須修，詢問使用者是否立即修復
-- **High**（兩個引擎回報） → 強烈建議修復，詢問使用者
-- **High**（單一引擎回報） → 建議確認，由使用者決定
-- **Medium / Low** → 列出即可，由使用者決定
+- 有 **High** → 詢問使用者「修正後再 push，還是接受風險直接 push？」
+- headless 模式：有 High 一律先修正，修不了 → abort 並回報，不 push
+- Medium/Low → 列出，由使用者（或 headless 時的後續 PR review）決定

@@ -33,16 +33,9 @@ const LOOKBACK_HOURS = HOURS_IDX !== -1 ? parseInt(process.argv[HOURS_IDX + 1] ?
 const NOTION_API_KEY = process.env["NOTION_API_KEY"] ?? "";
 const NOTION_DB_ID = process.env["NOTION_DB_ID"] ?? "3549cc8126978036803af61048468bde";
 
-const SUB_REPOS = [
-  "daodao-server",
-  "daodao-f2e",
-  "daodao-ai-backend",
-  "daodao-admin-ui",
-  "daodao-mcp",
-  "daodao-worker",
-  "daodao-storage",
-  "daodao-infra",
-];
+// SSOT: bin/pipeline.config.json
+import { repoNames } from "../routine-dispatch/config.js";
+const SUB_REPOS = repoNames();
 
 const PAGE_ID_RE = /Notion page ID: `([0-9a-f-]{36})`/i;
 

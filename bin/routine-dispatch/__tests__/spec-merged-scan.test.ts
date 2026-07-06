@@ -51,6 +51,11 @@ function mockGh(responses: Array<{ stdout: string; status: number }>): GhRunner 
 // ---------------------------------------------------------------------------
 
 describe("parseIssueRefs", () => {
+  it("parses the v3 Spec-For ref (does not trigger GitHub auto-close)", () => {
+    const body = "Spec-For: daodaoedu/daodao-server#7";
+    expect(parseIssueRefs(body)).toEqual([{ repo: "daodao-server", issueNum: 7 }]);
+  });
+
   it("parses a single Closes ref", () => {
     const body = "Closes daodaoedu/daodao-f2e#42";
     expect(parseIssueRefs(body)).toEqual([{ repo: "daodao-f2e", issueNum: 42 }]);

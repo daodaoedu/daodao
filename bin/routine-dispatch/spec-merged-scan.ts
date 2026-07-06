@@ -13,8 +13,9 @@
 import { execSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { loadConfig } from "./config.js";
 
-const MONOREPO = "daodaoedu/daodao";
+const MONOREPO = `${loadConfig().org}/${loadConfig().monorepo}`;
 const STATE_STORE_PATH = path.resolve(
   import.meta.dirname,
   "state-store.json"
@@ -106,9 +107,10 @@ export function sinceTimestamp(lastScanAt: string): string {
 
 export function parseIssueRefs(prBody: string): IssueRef[] {
   const refs: IssueRef[] = [];
-  // Matches: Closes daodaoedu/<repo>#<num>  (case-insensitive, various forms)
+  // Matches: Spec-For: daodaoedu/<repo>#<num>（v3 標準格式，不會觸發 GitHub 自動關閉 issue）
+  // 也向後相容 Closes/Fixes/Resolves daodaoedu/<repo>#<num>
   const pattern =
-    /(?:closes|fixes|resolves)\s+daodaoedu\/([a-zA-Z0-9_-]+)#(\d+)/gi;
+    /(?:spec-for:?|closes|fixes|resolves)\s+daodaoedu\/([a-zA-Z0-9_-]+)#(\d+)/gi;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(prBody)) !== null) {
     refs.push({ repo: match[1], issueNum: parseInt(match[2], 10) });

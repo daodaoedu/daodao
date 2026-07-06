@@ -33,17 +33,10 @@ const STATE_STORE_PATH = path.join(
   "bin/routine-dispatch/state-store.json"
 );
 
-const ORG = "daodaoedu";
-const ALL_REPOS = [
-  "daodao-server",
-  "daodao-f2e",
-  "daodao-ai-backend",
-  "daodao-storage",
-  "daodao-admin-ui",
-  "daodao-infra",
-  "daodao-mcp",
-  "daodao-worker",
-] as const;
+// SSOT: bin/pipeline.config.json
+import { loadConfig, repoNames } from "./routine-dispatch/config.js";
+const ORG = loadConfig().org;
+const ALL_REPOS = repoNames();
 
 // ---------------------------------------------------------------------------
 // Types

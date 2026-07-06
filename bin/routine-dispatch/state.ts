@@ -5,16 +5,18 @@
  * Given (repo, issue_num), derives the unique dispatch state.
  * Rule 0 (high-risk repo) is checked FIRST before label precedence.
  *
- * High-risk repo list is hard-coded here — changing requires PR review.
+ * High-risk repo list lives in bin/pipeline.config.json (SSOT).
  *
  * Usage: pnpm tsx bin/routine-dispatch/state.ts <repo> <issue_num>
  * Output: state string on stdout
  */
 
 import { execSync } from "node:child_process";
+import { highRiskRepos } from "./config.js";
 
-// Rule 0: hard-coded high-risk repos — modifying this list requires PR review
-const HIGH_RISK_REPOS: readonly string[] = ["daodao-storage", "daodao-infra"];
+// Rule 0: high-risk repos come from bin/pipeline.config.json (SSOT) —
+// modifying that file requires PR review
+const HIGH_RISK_REPOS: readonly string[] = highRiskRepos();
 
 export type DispatchState =
   | "needs-spec"        // M scope, no spec PR yet

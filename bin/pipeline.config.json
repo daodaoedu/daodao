@@ -1,0 +1,222 @@
+{
+  "$comment": "daodao AI pipeline 單一事實來源（SSOT）。所有腳本、skill、文件引用此檔，不得另行硬編碼。修改此檔需 PR review。",
+  "version": 3,
+  "org": "daodaoedu",
+  "monorepo": "daodao",
+  "workRoot": "/tmp/daodao-work",
+  "highRiskRepos": [
+    "daodao-storage",
+    "daodao-infra"
+  ],
+  "repos": {
+    "daodao-server": {
+      "defaultBranch": "dev",
+      "install": "pnpm install --frozen-lockfile",
+      "quality": {
+        "fix": "pnpm run lint:fix",
+        "lint": "pnpm run lint",
+        "typecheck": "pnpm run typecheck",
+        "test": "pnpm test"
+      },
+      "formatFile": "npx eslint --fix \"{file}\"",
+      "reviewFocus": [
+        "邏輯錯誤：null/undefined 處理、async/await、錯誤處理路徑",
+        "安全：SQL injection、缺少認證/授權、輸入驗證（Zod）",
+        "效能：不必要的資料庫查詢、大量資料未分頁、缺少 cache",
+        "架構：service 層分離、禁用 any、factory 函式而非 class、API response 格式一致"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-f2e": {
+      "defaultBranch": "dev",
+      "install": "pnpm install --frozen-lockfile",
+      "quality": {
+        "fix": "pnpm run check:fix",
+        "lint": "pnpm run lint",
+        "typecheck": "pnpm run typecheck",
+        "test": "pnpm test"
+      },
+      "formatFile": "npx biome check --write \"{file}\"",
+      "reviewFocus": [
+        "邏輯錯誤：條件判斷、邊界情況、錯誤處理",
+        "安全：XSS、注入攻擊、敏感資料外洩",
+        "效能：不必要的 re-render、N+1 query、缺少 memo/useMemo",
+        "架構：使用 @daodao/* packages、元件拆分合理性"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-ai-backend": {
+      "defaultBranch": "dev",
+      "install": "uv sync",
+      "quality": {
+        "fix": "make format",
+        "lint": "make check && make lint",
+        "typecheck": null,
+        "test": "make test"
+      },
+      "formatFile": "uv run black \"{file}\" && uv run ruff check --fix \"{file}\"",
+      "reviewFocus": [
+        "邏輯錯誤：async 處理、異常路徑、None 處理",
+        "安全：SQL injection、缺少認證、prompt injection 面",
+        "效能：資料庫查詢、大量資料未分頁、缺少 cache",
+        "架構：FastAPI 模式、service 層分離"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-admin-ui": {
+      "defaultBranch": "dev",
+      "install": "pnpm install --frozen-lockfile",
+      "quality": {
+        "fix": "pnpm run check:fix",
+        "lint": "pnpm run lint",
+        "typecheck": "npx tsc --noEmit",
+        "test": "pnpm run test"
+      },
+      "formatFile": "npx biome check --write \"{file}\"",
+      "reviewFocus": [
+        "邏輯錯誤：條件判斷、邊界情況、錯誤處理",
+        "安全：XSS、注入攻擊、敏感資料外洩",
+        "效能：不必要的 re-render、缺少 memo/useMemo",
+        "架構：單一 axios instance（不用 fetch）、shadcn/ui 元件慣例"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-worker": {
+      "defaultBranch": "main",
+      "install": "npm install",
+      "quality": {
+        "fix": null,
+        "lint": null,
+        "typecheck": "npm run typecheck",
+        "test": "npm test"
+      },
+      "formatFile": null,
+      "reviewFocus": [
+        "邏輯錯誤：條件判斷、邊界情況、錯誤處理",
+        "安全：CORS 設定、secrets 使用",
+        "效能：不必要的 KV/R2 呼叫、cold start、bundle size",
+        "架構：Hono 路由結構、Cloudflare Workers 限制"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-mcp": {
+      "defaultBranch": "main",
+      "install": "pnpm install --frozen-lockfile",
+      "quality": {
+        "fix": null,
+        "lint": null,
+        "typecheck": "pnpm run typecheck",
+        "test": "pnpm run test"
+      },
+      "formatFile": null,
+      "reviewFocus": [
+        "邏輯錯誤：條件判斷、邊界情況、錯誤處理",
+        "MCP 協定正確性：tool schema、錯誤回傳格式"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-storage": {
+      "defaultBranch": "main",
+      "install": null,
+      "quality": {
+        "fix": null,
+        "lint": null,
+        "typecheck": null,
+        "test": null
+      },
+      "formatFile": null,
+      "reviewFocus": [
+        "migration 不可變性：已套用的 migration 禁止修改",
+        "schema 相容性：破壞性變更需要 migration 計畫"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    },
+    "daodao-infra": {
+      "defaultBranch": "main",
+      "install": null,
+      "quality": {
+        "fix": null,
+        "lint": null,
+        "typecheck": null,
+        "test": null
+      },
+      "formatFile": null,
+      "reviewFocus": [
+        "IaC 安全：secrets 不入版控、最小權限",
+        "部署風險：不可逆操作需人工確認"
+      ],
+      "protectedPaths": [
+        ".github/workflows/*",
+        ".env*",
+        "secrets/*",
+        "migrate/sql/*"
+      ]
+    }
+  },
+  "models": {
+    "$comment": "供 code-review 第三引擎與未來 council 使用。session 模型由 CCR routine 設定決定，不在此控制。",
+    "dispatch": "claude-haiku-4-5-20251001",
+    "reviewer": "claude-haiku-4-5-20251001",
+    "judge": "claude-haiku-4-5-20251001"
+  },
+  "scopeCaps": {
+    "$comment": "token cap 在 v3 移除（無法在 session-native 模式下量測），改用可強制執行的 proxy：檔案數與 diff 行數。verify.sh 強制檢查。",
+    "XS": {
+      "maxFiles": 3,
+      "maxDiffLines": 300
+    },
+    "S": {
+      "maxFiles": 10,
+      "maxDiffLines": 1200
+    },
+    "M": {
+      "maxFiles": 30,
+      "maxDiffLines": 4000
+    },
+    "L": {
+      "maxFiles": 0,
+      "maxDiffLines": 0
+    }
+  },
+  "quotas": {
+    "fetchPerRepo": 10,
+    "operatePerRound": 5,
+    "prPatrolPerRound": 3,
+    "verifyAttempts": 2
+  }
+}

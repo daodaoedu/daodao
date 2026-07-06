@@ -6,11 +6,15 @@
 
 | 文件 | 說明 |
 |---|---|
-| [architecture.md](architecture.md) | Pipeline 架構總覽（ASCII 圖 + 元件說明） |
+| [architecture.md](architecture.md) | Pipeline 架構總覽（v3 工單模式，ASCII 圖 + 元件說明） |
+| [OPERATOR.md](OPERATOR.md) | 操作手冊（v3）：日常操作速查、錯誤處置決策表、絕對禁止事項 |
+| [routine-b-prompt-v3.md](routine-b-prompt-v3.md) | **現行** Routine B CCR prompt（工單模式） |
+| [routine-b-prompt-v2.md](routine-b-prompt-v2.md) | v2 prompt（**棄用**，留檔備查） |
 | [troubleshooting.md](troubleshooting.md) | 常見 failure modes、log 位置、人工介入定義 |
 | [manual-issue-to-routine.md](manual-issue-to-routine.md) | 人類手寫 issue 反向丟給 routine 的 step-by-step 指南 |
 | [pipeline-status.md](pipeline-status.md) | Pipeline 即時狀態（自動產生） |
-| [evals.md](evals.md) | Weekly 評估指標（自動產生） |
+| [evals.md](evals.md) | 評估指標（目前人工檢視） |
+| [../adr/](../adr/README.md) | 架構決策紀錄（ADR）：高風險 plan-only、工單模式、scope caps、SSOT 等 |
 
 ## High-Level 介紹
 
