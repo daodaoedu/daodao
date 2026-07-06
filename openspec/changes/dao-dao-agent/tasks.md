@@ -90,8 +90,9 @@
 - [ ] 12.2 審批雙模式：實作 normal / auto 模式與 allowlist / denylist 設定（config > db > env）；排程執行採 auto + 明確 allowlist
 - [ ] 12.3 第三方憑證供裝：connector token 統一由設定層解析（config > db > env），拒用對話中提供的 token；可用 connector 依角色 / 組織綁定管理
 - [ ] 12.4 資源容量護欄：session / turn 啟動前與執行中檢查記憶體與磁碟餘裕，不足時拒絕或降級（壓縮 / 分批 / 截斷）
-- [ ] 12.5 Trace / Audit：daodao-storage 新增 `agent_audit_log` migration，記錄 LLM 呼叫、tool_call、approval 決策、Skill 觸發；支援依 thread / user / 時間查詢
+- [ ] 12.5 Trace / Audit：daodao-storage 新增 `agent_audit_log` migration，記錄 LLM 呼叫、tool_call、approval 決策、Skill 觸發；支援依 thread / user / 時間查詢；保留至少 180 天
 - [ ] 12.6 Citation：Agent 回覆與報告附資料來源引用（DB 查詢摘要、API 端點、外部 URL）
 - [ ] 12.7 檔案暫存 30 天 TTL：檔案工具記錄建立時間，逾 30 天由清理任務移除
 - [ ] 12.8 可重用程式碼沉澱：任務完成後評估沉澱為腳本 / Dynamic Skill，走 draft → active → 升格 review 流程後才可掛排程
 - [x] 12.9 第三方開源方案調研（AnythingLLM / Open WebUI / LibreChat 等）— 已調研，無特別進展，不採用，維持自建
+- [ ] 12.10 排程執行身分：排程以建立者身分執行與記 audit，建立者失去 admin 角色時自動停用其排程；排程定義可明確設定 dry_run=false，預覽樣本改寫入執行報告

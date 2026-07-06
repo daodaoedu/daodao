@@ -34,11 +34,15 @@ Skill SHALL 對每位用戶以 LLMClient 生成信件，輸出 JSON 欄位 `subj
 
 ### Requirement: 預覽先行
 
-在 `dry_run=true` 或首次執行時，Skill MUST 輸出前 `preview_count` 封完整內容並等待人工確認（「確認發送」或「調整後重試」），不得直接發送。
+互動情境下，在 `dry_run=true` 或首次執行時，Skill MUST 輸出前 `preview_count` 封完整內容並等待人工確認（「確認發送」或「調整後重試」），不得直接發送。排程（無人值守）執行時 SHALL 改將樣本寫入執行報告與 audit log 供事後查驗，不等待確認（見 agent-security 預覽先行）。
 
 #### Scenario: dry_run 僅預覽
 - **WHEN** Skill 以 `dry_run=true` 執行
 - **THEN** 系統 MUST 只輸出樣本內容，且不呼叫任何發信 API
+
+#### Scenario: 排程執行不等待確認
+- **WHEN** Skill 由排程以 auto 模式觸發，且排程定義已明確設定 `dry_run=false`
+- **THEN** Skill SHALL 將前 `preview_count` 封樣本寫入執行報告後續行發送，不等待人工確認
 
 ### Requirement: 去重檢查
 

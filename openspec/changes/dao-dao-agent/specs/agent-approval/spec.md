@@ -2,7 +2,7 @@
 
 ### Requirement: 批次寫入觸發審批
 
-Harness SHALL 在批次寫入操作（如發信、推播）執行前主動推出 `approval_request`。Turn MUST 在此暫停，等待用戶回傳 `allow` 或 `deny` 後才繼續。
+在 normal 模式下、或 auto 模式下該 action 不在 allowlist 內時，Harness SHALL 在批次寫入操作（如發信、推播）執行前主動推出 `approval_request`。Turn MUST 在此暫停，等待用戶回傳 `allow` 或 `deny` 後才繼續。auto 模式下 allowlist 內 action 的放行規則見「審批雙模式」。
 
 #### Scenario: 發信前要求審批
 - **WHEN** Agent 準備執行批次發信
