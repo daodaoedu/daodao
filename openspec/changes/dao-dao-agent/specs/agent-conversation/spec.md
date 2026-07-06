@@ -55,3 +55,15 @@ Thread 的讀取、resume、fork、archive 操作 SHALL 限定於 owner（`Threa
 #### Scenario: Item 完成標記
 - **WHEN** 一個 tool_call 執行結束
 - **THEN** 對應 Item MUST 標記為 completed 並附帶執行結果
+
+### Requirement: 回覆附資料來源引用（Citation）
+
+Agent 以資料為依據的回覆與報告 SHALL 附上資料來源引用，至少標明：DB 查詢（資料表／查詢摘要）、API 端點、或外部網頁 URL。純對話性回覆（問候、確認）不受此限。
+
+#### Scenario: 數據回覆附來源
+- **WHEN** Agent 回覆中包含由 DB 查詢得出的統計數字
+- **THEN** 回覆 MUST 標明該數字來自哪個查詢或資料表，供用戶追溯驗證
+
+#### Scenario: 外部資訊附連結
+- **WHEN** Agent 引用 web_search 或 stealth_fetch 取得的外部資訊
+- **THEN** 回覆 MUST 附上來源 URL

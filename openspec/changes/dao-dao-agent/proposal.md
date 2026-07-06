@@ -11,19 +11,23 @@
 - 新增 **Skill：monthly-insights**：查詢指定月份活躍與互動指標 → LLM 撰寫洞察 → 輸出 Markdown / 寫入 Notion，建議排程每月 1 日。
 - 新增 **工具清單與能力邊界**：資料查詢層（MCP pg、admin REST API）、通訊整合層（Email、Notification、Notion）、通用工具層（stealth_fetch、web_search、python_repl、檔案讀寫、bash、cron），工具定義能力邊界，具體做什麼由對話決定。
 - 新增 **多 provider 模型層**：透過現有 `LLMClient` 驅動，以開源模型為主（OpenRouter / Groq / Cloudflare / Gemini / Ollama），對話中可任意切換，預設 `openrouter` + `deepseek/deepseek-v4-flash`。
-- 新增 **安全規範**：prod DB 唯讀、預覽先行、批次上限 500 封、PII 保護、Dry-run 預設。
+- 新增 **安全規範**：DB 一律唯讀（prod 與 dev 皆唯讀）、預覽先行、批次上限 500 封、PII 保護、Dry-run 預設、第三方憑證由開發者供裝（解析優先序 config > db > env）、全程 trace / audit。
+- 新增 **審批雙模式**：`normal`（寫入型 action 逐一審批）與 `auto`（allowlist 直接放行、denylist 一律拒絕、其餘仍審批），參考 Claude Code 的 allow / deny action 模型。
+- 新增 **資源容量護欄**：每次 session / thread 執行前與執行中評估所處 VM 的記憶體與磁碟餘裕，避免 OOM / out of disk。
+- 新增 **產出物治理**：Agent 產生的暫存檔案保留 30 天；任務完成後評估可否沉澱為可重用腳本／Skill，供排程復用與開發者 audit，避免 ad-hoc 程式碼累積。
+- 新增 **回覆引用（Citation）**：Agent 回覆與報告附資料來源引用（SQL 查詢、API 端點、外部 URL）。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `agent-harness`: Agent 核心基礎設施——QueryEngine 任務循環、Context 注入、AppState 會話狀態、Context 耐久性、Model Drift 偵測。
-- `agent-conversation`: Thread / Turn / Item 三基本單位的建模、生命週期與持久化（resume / fork / archive、streaming delta）。
-- `agent-approval`: 批次寫入操作的 Approval Flow——server → client 反向請求、Turn 暫停與 allow/deny 續行。
-- `agent-skills`: Skill 系統——Static / Dynamic 雙來源、Memory 層、漸進式載入、升格流程、生命週期。
-- `agent-tools`: 工具層能力邊界——資料查詢、通訊整合、通用工具的封裝與可用清單。
+- `agent-harness`: Agent 核心基礎設施——QueryEngine 任務循環、Context 注入、AppState 會話狀態、Context 耐久性、Model Drift 偵測、資源容量護欄。
+- `agent-conversation`: Thread / Turn / Item 三基本單位的建模、生命週期與持久化（resume / fork / archive、streaming delta）、回覆附 citation。
+- `agent-approval`: 批次寫入操作的 Approval Flow——server → client 反向請求、Turn 暫停與 allow/deny 續行、`auto` / `normal` 雙審批模式與 allowlist / denylist。
+- `agent-skills`: Skill 系統——Static / Dynamic 雙來源、Memory 層、漸進式載入、升格流程、生命週期、任務後可重用程式碼沉澱評估。
+- `agent-tools`: 工具層能力邊界——資料查詢、通訊整合、通用工具的封裝與可用清單、第三方憑證供裝、檔案暫存 30 天。
 - `agent-model-routing`: 多 provider 模型路由——LLMClient 後端切換、預設模型、對話中指令切換。
-- `agent-security`: 安全規範——prod 唯讀、預覽先行、批次上限、PII 保護、dry-run 預設。
+- `agent-security`: 安全規範——DB 一律唯讀（prod + dev）、預覽先行、批次上限、PII 保護、dry-run 預設、第三方憑證管理、trace / audit。
 - `skill-practice-completion-email`: 完成實踐慶賀信 Skill 的查詢、LLM 生成、預覽、批次發送、去重與回報需求。
 - `skill-monthly-insights`: 月度洞察 Skill 的指標查詢、留存計算、LLM 撰寫、報告組裝與輸出需求。
 
@@ -34,11 +38,12 @@
 ## Impact
 
 - **daodao-ai-backend**：新增 `src/services/agent/`（engine / state / context / approval / agent / skills / tools）與 `src/routers/agent.py` 對話 API 端點。`config.py` 需將 `openrouter.model` 更新為 `deepseek/deepseek-v4-flash` 並確認各 provider API key。
-- **daodao-storage**：新增 `agent_threads`、`agent_skills`、`agent_memory` 等資料表與對應 SQL migration（`migrate/sql/`）。
+- **daodao-storage**：新增 `agent_threads`、`agent_skills`、`agent_memory`、`agent_audit_log` 等資料表與對應 SQL migration（`migrate/sql/`）。
 - **daodao-server**：沿用既有 `POST /api/email/send`、`/api/email/bulk`、`/api/notifications`、`/api/admin/statistics/*`、`/api/admin/users`，Agent 以 admin token 呼叫；無新增 server 路由。
-- **外部整合**：MCP pg（dev / prod 唯讀）、Notion MCP；皆為現有連線。
+- **外部整合**：MCP pg（dev 與 prod 皆唯讀）、Notion MCP；皆為現有連線。第三方 connector 憑證由開發者供裝並依角色 / 組織管理，用戶不得自帶 token 接入任意外部應用。
 - **Non-goals**：
   - 不實作前端對話 UI（本 change 聚焦後端 Agent 與 API 契約）。
+  - 不支援語音輸入，文字對話為唯一入口（會議決議：不需要）。
   - 不修改既有 daodao-server REST 介面，僅呼叫。
   - 不將使用者 DNA / persona 注入 RAG（屬 `add-learner-persona` 範疇）。
   - 不在本 change 內建立實際 cron 排程，僅定義 Skill 的「建議排程」與升格路徑。

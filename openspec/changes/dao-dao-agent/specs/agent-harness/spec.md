@@ -40,6 +40,18 @@ Harness SHALL 主動管理 context 健康度，在長對話後對退化的 conte
 - **WHEN** 對話累積大量中間查詢結果導致 context 品質退化
 - **THEN** Harness SHALL 摘要化早期 turns 或壓縮大型結果，以維持決策品質
 
+### Requirement: 資源容量護欄
+
+Harness MUST 在每次 session / thread 開始前評估所處 VM／容器的記憶體與磁碟餘裕，並在執行高耗用操作（python_repl、檔案寫入、大型查詢結果）時持續檢查。餘裕不足時 SHALL 拒絕啟動或降級處理（壓縮、分批、截斷），MUST NOT 使程序 out of memory 或 out of disk。
+
+#### Scenario: 啟動前容量不足
+- **WHEN** 新 session 啟動時偵測到記憶體或磁碟餘裕低於安全水位
+- **THEN** 系統 MUST 拒絕啟動該 session 並回報資源不足，而非帶病執行
+
+#### Scenario: 執行中降級處理
+- **WHEN** Turn 進行中一筆查詢結果大到逼近記憶體水位
+- **THEN** Harness SHALL 對結果採取壓縮、分批或截斷，使 Turn 得以完成而不 OOM
+
 ### Requirement: Model Drift 偵測
 
 Harness SHALL 在每個 Turn 結束時自我檢查當前執行路徑是否仍在用戶原始指令範圍內。偵測到偏離時 MUST 中斷並重新向用戶確認。
