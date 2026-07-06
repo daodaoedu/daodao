@@ -1,13 +1,18 @@
+> **實作狀態對帳（2026-07-06）**：本清單勾選狀態經與程式碼實際比對後修正——
+> - **第 1 節**：`agent_*` migration 在 daodao-storage **所有分支皆不存在**（掃過全部 remote branches），原勾選為誤標，已取消。
+> - **第 2.1、3–10 節**：實作僅存在於 daodao-ai-backend 的 `feat/agent` 分支（commit `6c06aae`，基底落後 dev 4 個 commits，未合併、未經 CI）。勾選保留，但合併進 dev 並通過驗證前不得視為交付。
+> - **第 11.1–11.3、11.5 節**：所列測試檔（test_context.py、test_approval.py、test_skill_registry.py、test_security.py）在 ai-backend **所有分支皆不存在**，原勾選為誤標，已取消。
+
 ## 1. 資料層（daodao-storage）
 
-- [x] 1.1 在 `migrate/sql/` 新增 `agent_threads` 表 migration（id、user_id、status、created_at、updated_at；支援 resume / fork / archive）
-- [x] 1.2 新增 `agent_skills` 表 migration（name、description、skill_md、status：draft/active/archived、created_at）
-- [x] 1.3 新增 `agent_memory` 表 migration（key、value、scope、updated_at）供動態行為參數
-- [ ] 1.4 撰寫 migration 的 rollback / drop 腳本並於 dev DB 驗證套用（rollback SQL 已寫，待 dev DB 實際套用）
+- [ ] 1.1 在 `migrate/sql/` 新增 `agent_threads` 表 migration（id、user_id、status、created_at、updated_at；支援 resume / fork / archive）（對帳：不存在於任何分支）
+- [ ] 1.2 新增 `agent_skills` 表 migration（name、description、skill_md、status：draft/active/archived、created_at）（對帳：不存在於任何分支）
+- [ ] 1.3 新增 `agent_memory` 表 migration（key、value、scope、updated_at）供動態行為參數（對帳：不存在於任何分支）
+- [ ] 1.4 撰寫 migration 的 rollback / drop 腳本並於 dev DB 驗證套用（對帳：rollback SQL 並不存在，原註記有誤）
 
 ## 2. 設定與 provider（daodao-ai-backend）
 
-- [x] 2.1 更新 `config.py`：`openrouter.model` 改為 `deepseek/deepseek-v4-flash`
+- [x] 2.1 更新 `config.py`：`openrouter.model` 改為 `deepseek/deepseek-v4-flash`（僅在 feat/agent 分支；dev 仍為 `meta-llama/llama-3.3-70b-instruct:free`）
 - [ ] 2.2 確認 OpenRouter / Gemini / Ollama 等 provider API key 設定與讀取
 - [ ] 2.3 驗證 `LLMClient` 可依指令切換 provider，並可回退預設
 
@@ -77,11 +82,11 @@
 
 ## 11. 測試與驗證
 
-- [x] 11.1 Harness 單元測試（context 注入、AppState 跨 Turn、Model Drift 觸發）— test_context.py 5 cases
-- [x] 11.2 Approval Flow 測試（暫停、allow、deny 三路徑）— test_approval.py 4 cases
-- [x] 11.3 Skill registry 測試（合併、漸進式載入、升格）— test_skill_registry.py 5 cases
+- [ ] 11.1 Harness 單元測試（context 注入、AppState 跨 Turn、Model Drift 觸發）（對帳：test_context.py 不存在於任何分支）
+- [ ] 11.2 Approval Flow 測試（暫停、allow、deny 三路徑）（對帳：test_approval.py 不存在於任何分支）
+- [ ] 11.3 Skill registry 測試（合併、漸進式載入、升格）（對帳：test_skill_registry.py 不存在於任何分支）
 - [ ] 11.4 兩個 Skill 的 dry-run 端到端驗證（不實際發送 / 不寫 Notion）— 需接入 LLMClient mock
-- [x] 11.5 安全規範 regression（prod 寫入被拒、批次 >500 二次確認、PII 不出庫）— test_security.py 5 cases
+- [ ] 11.5 安全規範 regression（prod 寫入被拒、批次 >500 二次確認、PII 不出庫）（對帳：test_security.py 不存在於任何分支）
 - [ ] 11.6 開放 dry_run=false 前的人工驗收
 
 ## 12. 會議決議增補（2026-07）
@@ -96,3 +101,5 @@
 - [ ] 12.8 可重用程式碼沉澱：任務完成後評估沉澱為腳本 / Dynamic Skill，走 draft → active → 升格 review 流程後才可掛排程
 - [x] 12.9 第三方開源方案調研（AnythingLLM / Open WebUI / LibreChat 等）— 已調研，無特別進展，不採用，維持自建
 - [ ] 12.10 排程執行身分：排程以建立者身分執行與記 audit，建立者失去 admin 角色時自動停用其排程；排程定義可明確設定 dry_run=false，預覽樣本改寫入執行報告
+- [ ] 12.11 處置 ai-backend `feat/agent` 分支：rebase 上 dev（落後 4 commits）、補齊第 11 節缺失的測試、通過 CI 後合併——處置方式待人工決定
+- [ ] 12.12 daodao-storage 補齊第 1 節四張表 migration（`agent_threads` / `agent_skills` / `agent_memory` / `agent_audit_log`）與 rollback 腳本
