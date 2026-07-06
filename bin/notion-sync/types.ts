@@ -14,10 +14,10 @@ export const TARGET_REPOS = [
 export type TargetRepo = (typeof TARGET_REPOS)[number];
 
 // High-risk repos that are forced to plan-only regardless of Auto Mode
-export const HIGH_RISK_REPOS: readonly TargetRepo[] = [
-  "daodao-storage",
-  "daodao-infra",
-];
+// SSOT: bin/pipeline.config.json
+import { highRiskRepos } from "../routine-dispatch/config.js";
+export const HIGH_RISK_REPOS: readonly TargetRepo[] =
+  highRiskRepos() as readonly TargetRepo[];
 
 export const AutoModeSchema = z.enum(["plan-only", "auto-pr", "manual"]);
 export type AutoMode = z.infer<typeof AutoModeSchema>;

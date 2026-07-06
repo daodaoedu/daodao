@@ -665,115 +665,13 @@ Merge 到 main（或 dev）後，GitHub Actions 會自動觸發部署：
 
 ## Phase 9：自動化代理（Remote Agent）
 
-Phase 1-8 是「半自動」流程 — 每一步由人類觸發，AI 執行。Phase 9 將其中可自動化的部分交給 Anthropic 雲端的 Scheduled Remote Agent，實現「人類只寫 issue，AI 自動做到開 PR」。
+Phase 1-8 是「半自動」流程 — 每一步由人類觸發，AI 執行。Phase 9 現在由 daodao 自動化 pipeline 承擔：Notion 卡片自動同步成 GitHub issue，routine 依工單模式（腳本出工單、模型實作、腳本驗收）完成 plan、code、開 PR，並回寫 Notion 進度。
 
-### 9.1 架構
+詳見 `docs/automation/`：
 
-```mermaid
-flowchart TD
-    A["人類完成 OpenSpec<br/>（Phase 1-2）"] --> B["/publish-tasks skill"]
-    B --> C["GitHub Issues<br/>+ auto label"]
-    C --> D["Scheduled Remote Agent<br/>每 2 小時"]
-    D --> E{"掃描 4 個 repo<br/>有 auto issue？"}
-    E -- 有 --> F["clone repo → 讀 issue → 實作 → 開 PR"]
-    E -- 沒有 --> G["掃描 auto/ PRs"]
-    F --> G
-    G --> H{"有 review feedback？"}
-    H -- 有 --> I["修改 → push → 留言"]
-    H -- 沒有 --> J{"CI 全綠？"}
-    J -- 是 --> K["留言：可以 merge 了"]
-    J -- 否 --> L["等待下次掃描"]
-```
-
-### 9.2 Remote Agent 是什麼
-
-Claude Code 的 Remote Trigger 功能。在 Anthropic 雲端以 cron 排程自動啟動獨立的 Claude Code session，不需要你的電腦開著。
-
-| 項目 | 說明 |
-|------|------|
-| 執行環境 | Anthropic 雲端（非本地） |
-| 排程 | 每 2 小時（`0 */2 * * *`） |
-| 模型 | claude-sonnet-4-6 |
-| 可用工具 | Bash、Read、Write、Edit、Glob、Grep |
-| clone 的 repo | daodao-server、daodao-f2e、daodao-ai-backend、daodao-storage |
-| 管理頁面 | https://claude.ai/code/scheduled |
-
-### 9.3 兩個階段
-
-Remote Agent 每次執行時依序完成兩個階段：
-
-**階段 1：Issue 監聽**
-
-掃描 4 個 repo 的 `auto` label issues。對每個沒有對應 PR 的 issue：
-1. 讀取 issue 內容（Tasks、Technical Context、Specs）
-2. cd 到對應的 repo 目錄
-3. 建立 `auto/<issue-number>-<short-desc>` branch
-4. 根據 issue 描述實作功能
-5. 跑測試、commit、push
-6. 開 PR（body 引用 `Closes #<number>`）
-7. 在 issue 留言通知
-
-**階段 2：PR 巡邏**
-
-掃描 4 個 repo 的 open PRs，篩選 `auto/` 開頭的 branch：
-- 有 review feedback → 修改、測試、push、留言
-- CI 全綠 + 無未處理 review → 留言通知可以 merge
-
-### 9.4 `/publish-tasks` skill
-
-這是連接 OpenSpec 和 Remote Agent 的橋梁。跑完 OpenSpec 產出 `tasks.md` 後，用這個 skill 把未完成的 tasks 發到 GitHub：
-
-```
-/publish-tasks
-```
-
-它會：
-1. 讀取 OpenSpec change 的 tasks、proposal、design、specs
-2. 將未完成的 tasks 分組為 GitHub issues
-3. 每個 issue 包含完整的 context（Why、Tasks、Technical Context、Specs、Acceptance Criteria）
-4. 加上 `auto` label
-5. 發到對應的 repo（server 的 tasks 發到 daodao-server，f2e 的發到 daodao-f2e，以此類推）
-
-關鍵原則：**issue body 必須自給自足**。Remote Agent 沒有本地檔案存取權限，所有它需要的 context 都必須寫在 issue 裡。
-
-### 9.5 完整的自動化流程
-
-```
-你本地跑 OpenSpec     你寫 issue 或      Remote Agent
-（需求→規格→任務）    /publish-tasks      每 2 小時自動
-       ↓                   ↓                   ↓
-  proposal.md         GitHub Issues      掃描 auto issues
-  design.md           + auto label       → 實作 → 開 PR
-  specs/                                 → 修 review
-  tasks.md                               → 通知 merge
-       ↓                   ↓                   ↓
-    人類審查            人類不用管           人類只需
-    每個 artifact       AI 自己做            review + merge
-```
-
-人類的工作從「每步都要觸發」簡化為：
-1. **寫需求** — OpenSpec 或直接寫 issue
-2. **審查規格** — 確認方向正確
-3. **Review + Merge** — 最終品質把關
-
-### 9.6 限制
-
-| 限制 | 說明 | 應對方式 |
-|------|------|---------|
-| 方案只能建 1 個 trigger | Anthropic 付費方案限制 | 用一個 trigger 掃描所有 repo |
-| 最短間隔 1 小時 | cron 最小粒度 | 目前設定每 2 小時 |
-| 無本地檔案存取 | 雲端環境隔離 | issue body 寫完整 context |
-| 每次 session 無記憶 | 無狀態 | 用 GitHub issue/PR 作為狀態儲存 |
-| 不適合複雜設計決策 | AI 判斷有限 | 需求分析和設計仍由人類主導（Phase 1-2） |
-
-### 9.7 各 repo 開發規則（Remote Agent 遵循）
-
-| Repo | 技術棧 | 關鍵規則 | 測試指令 |
-|------|--------|---------|---------|
-| daodao-server | Express + TypeScript + Prisma | 禁止 class，用 factory pattern + const object；RESTful + Zod + OpenAPI | `pnpm test` |
-| daodao-f2e | Next.js + React Native + Expo | 禁止 any；用 @daodao/* packages | `pnpm test` |
-| daodao-ai-backend | FastAPI + Python 3.12 | 使用 pytest；向量搜尋用 Qdrant | `pytest` |
-| daodao-storage | PostgreSQL | Migration 在 migrate/sql/；Schema 在 schema/ | — |
+- [architecture.md](automation/architecture.md) — pipeline 架構總覽（v3 工單模式）
+- [OPERATOR.md](automation/OPERATOR.md) — 操作手冊
+- [routine-b-prompt-v3.md](automation/routine-b-prompt-v3.md) — 現行 CCR prompt
 
 ---
 

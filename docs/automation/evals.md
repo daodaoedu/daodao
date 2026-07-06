@@ -1,19 +1,13 @@
-# Pipeline Weekly Evals
+# Pipeline Evals
 
-> **此檔案將由 weekly cron 自動產生（v2 範圍）。**
->
-> 自動更新排程：`pnpm tsx bin/evals-snapshot.ts`（每週執行，commit 含 `[skip ci]`）。
+> **自動 evals 尚未實作。** 目前以 `pnpm tsx bin/pipeline-status.ts` 的輸出與 PR merge 率**人工檢視**。
+> 待自動化實作後再更新此文件（屆時應同步更新 [README.md](README.md) 索引）。
 
-<!-- AUTO-GENERATED BELOW — DO NOT EDIT MANUALLY -->
+## 人工檢視指標
 
-## 指標說明
-
-| 指標 | 說明 |
-|---|---|
-| Per-scope merge 率 | scope:XS/S/M/L PR 在 7 天內 merged 的比率 |
-| Failure 分類 | CI fail / context overflow / token overrun / human takeover / dedup race / spec rejected / judge dissent |
-| Token cost | per-PR token 使用量（p50 / p95 / p99） |
-| 人介次數 | per-issue intervention count（定義見 [troubleshooting.md#intervention-definition](troubleshooting.md#intervention-definition)） |
-| Council dissent rate | reviewer-agent 與 writer-agent 分歧率（5%~30% 為健康區間） |
-
-_（尚無資料，等待 bin/evals-snapshot.ts 初次執行）_
+| 指標 | 說明 | 資料來源 |
+|---|---|---|
+| Per-scope merge 率 | scope:XS/S/M/L PR 在 7 天內 merged 的比率 | `gh pr list` + labels |
+| Failure 分類 | verify.sh exit 4/5 原因、human takeover、spec rejected | issue comments / `human-coding` label |
+| 人介次數 | per-issue intervention count（定義見 [troubleshooting.md#intervention-definition](troubleshooting.md#intervention-definition)） | issue/PR timeline |
+| Pipeline 即時狀態 | 各 issue 所在階段、卡住的卡 | `pnpm tsx bin/pipeline-status.ts` |

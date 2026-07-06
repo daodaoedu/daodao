@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - '.claude/hooks/**'
-      - '.claude/settings.json'
-      - '.claude/skills/collect-pr-feedback/**'
+      - '.claude/shared/**'
+      - '.claude/sync.sh'
+      - 'bin/pipeline.config.json'
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
   schedule:
@@ -39,35 +39,12 @@ jobs:
           token: ${{ secrets.REPO_SYNC_TOKEN }}
           path: target
 
-      - name: Sync hooks, settings, and workflows
+      - name: Sync shared harness (single implementation: .claude/sync.sh)
         run: |
-          # Claude hooks + settings
-          mkdir -p target/.claude/hooks
-          cp .claude/hooks/*.sh target/.claude/hooks/
-          chmod +x target/.claude/hooks/*.sh
-
-          if [ -f target/.claude/settings.json ]; then
-            jq -s '.[0] * .[1]' target/.claude/settings.json .claude/settings.json > target/.claude/settings.json.tmp
-            mv target/.claude/settings.json.tmp target/.claude/settings.json
-          else
-            cp .claude/settings.json target/.claude/settings.json
-          fi
-
-          # Shared skills
-          for skill in collect-pr-feedback; do
-            if [ -d ".claude/skills/$skill" ]; then
-              mkdir -p "target/.claude/skills/$skill"
-              cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
-            fi
-          done
-
-          # Shared workflows
-          mkdir -p target/.github/workflows
-          for wf in auto-pr-description.yml code-review.yml; do
-            if [ -f ".github/workflows/$wf" ]; then
-              cp ".github/workflows/$wf" "target/.github/workflows/$wf"
-            fi
-          done
+          # sync.sh 期望「父目錄下有各 repo 目錄」的結構，用 symlink 模擬
+          mkdir -p sync-parent
+          ln -s "$PWD/target" "sync-parent/${{ matrix.repo }}"
+          .claude/sync.sh "$PWD/sync-parent"
 
       - name: Check for changes
         id: diff

@@ -1,0 +1,22 @@
+{
+  "repo": "daodao",
+  "defaultBranch": "main",
+  "highRisk": false,
+  "quality": {
+    "fix": null,
+    "lint": null,
+    "typecheck": null,
+    "test": "pnpm test"
+  },
+  "formatFile": null,
+  "reviewFocus": [
+    "pipeline 腳本正確性：exit code、set -e 陷阱、jq 解析",
+    "SSOT 一致性：新增設定是否進了 bin/pipeline.config.json"
+  ],
+  "protectedPaths": [
+    ".github/workflows/*",
+    ".env*",
+    "secrets/*"
+  ],
+  "generatedBy": "daodao/.claude/sync.sh"
+}

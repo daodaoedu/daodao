@@ -8,24 +8,16 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 
-export type Stage =
-  | "dispatch"  // label-based routing in state.ts → Haiku (fast, cheap)
-  | "handler"   // XS/S code writing → Sonnet
-  | "spec"      // M/L openspec generation → Opus (deep reasoning)
-  | "reviewer"  // council reviewer-agent → Sonnet (independent context)
-  | "judge";    // council judge-agent → Haiku (structured verdict)
+import { loadConfig } from "./config.js";
 
-export const MODEL_MAP: Record<Stage, string> = {
-  dispatch: "claude-haiku-4-5-20251001",
-  handler:  "claude-sonnet-4-6",
-  spec:     "claude-opus-4-7",
-  reviewer: "claude-sonnet-4-6",
-  judge:    "claude-haiku-4-5-20251001",
-};
+// v3: 實作與 spec 皆由 CCR session 模型親自執行（不再巢狀呼叫 claude CLI），
+// 因此不再有 handler/spec stage。此 router 只服務輔助性呼叫
+// （code-review 第三引擎、未來 council）。Model ID 來自 bin/pipeline.config.json。
+export type Stage = "dispatch" | "reviewer" | "judge";
 
-/** Returns the model ID for the given pipeline stage. */
+/** Returns the model ID for the given pipeline stage (from pipeline.config.json). */
 export function routeModel(stage: Stage): string {
-  const model = MODEL_MAP[stage];
+  const model = loadConfig().models[stage];
   if (!model) throw new Error(`model-router: unknown stage "${stage}"`);
   return model;
 }

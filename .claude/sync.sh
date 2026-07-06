@@ -1,60 +1,91 @@
 #!/usr/bin/env bash
-# 同步 .claude/ 和 .github/workflows/ 到所有子專案
-# 用法: .claude/sync.sh /path/to/daodao
+# 同步 .claude/ 共用 harness 到所有子專案（v3）
+#
+# 正本：
+#   .claude/shared/hooks/*.sh        → <repo>/.claude/hooks/
+#   .claude/shared/settings.json     → <repo>/.claude/settings.json（整檔覆蓋，防 drift）
+#   .claude/shared/skills/*/SKILL.md → <repo>/.claude/skills/*/SKILL.md
+#   bin/pipeline.config.json         → <repo>/.claude/repo.json（產生，單一事實來源）
+#   .github/workflows/{auto-pr-description,code-review}.yml → <repo>/.github/workflows/
+#
+# repo 清單來自 bin/pipeline.config.json，不要在此另行維護。
+# 用法: .claude/sync.sh /path/to/daodao-parent-dir
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SOURCE_HOOKS="$SCRIPT_DIR/hooks"
-SOURCE_SETTINGS="$SCRIPT_DIR/settings.json"
+CONFIG="$BASE_ROOT/bin/pipeline.config.json"
+SHARED="$SCRIPT_DIR/shared"
 SOURCE_WORKFLOWS="$BASE_ROOT/.github/workflows"
-
-# 要同步的共用 workflows（頂層 → 子專案）
 SHARED_WORKFLOWS=(auto-pr-description.yml code-review.yml)
+SHARED_SKILLS=(pre-commit-check format-commit code-review collect-pr-feedback)
 
-REPOS=(daodao-f2e daodao-server daodao-ai-backend daodao-storage daodao-worker daodao-infra)
+command -v jq >/dev/null || { echo "FATAL: 需要 jq"; exit 1; }
+[ -f "$CONFIG" ] || { echo "FATAL: $CONFIG 不存在"; exit 1; }
 
-if [ "${1:-}" != "" ]; then
-  BASE_DIR="$1"
-  for repo in "${REPOS[@]}"; do
-    target="$BASE_DIR/$repo"
-    [ ! -d "$target" ] && echo "⏭ $repo not found, skipping" && continue
-
-    # 同步 .claude/hooks
-    mkdir -p "$target/.claude/hooks"
-    cp "$SOURCE_HOOKS/pre-write-guard.sh" "$target/.claude/hooks/"
-    cp "$SOURCE_HOOKS/post-write-format.sh" "$target/.claude/hooks/"
-    chmod +x "$target/.claude/hooks/"*.sh
-
-    # 合併 settings.json（保留現有設定，加入 hooks + permissions）
-    if [ -f "$target/.claude/settings.json" ]; then
-      jq -s '.[0] * .[1]' "$target/.claude/settings.json" "$SOURCE_SETTINGS" > "$target/.claude/settings.json.tmp"
-      mv "$target/.claude/settings.json.tmp" "$target/.claude/settings.json"
-    else
-      cp "$SOURCE_SETTINGS" "$target/.claude/settings.json"
-    fi
-
-    # 同步共用 skills
-    for skill in collect-pr-feedback; do
-      if [ -d "$SCRIPT_DIR/skills/$skill" ]; then
-        mkdir -p "$target/.claude/skills/$skill"
-        cp "$SCRIPT_DIR/skills/$skill/SKILL.md" "$target/.claude/skills/$skill/SKILL.md"
-      fi
-    done
-
-    # 同步共用 workflows
-    mkdir -p "$target/.github/workflows"
-    for wf in "${SHARED_WORKFLOWS[@]}"; do
-      if [ -f "$SOURCE_WORKFLOWS/$wf" ]; then
-        cp "$SOURCE_WORKFLOWS/$wf" "$target/.github/workflows/$wf"
-      fi
-    done
-
-    echo "✅ $repo synced"
-  done
-  echo "🎉 Done"
-  exit 0
+if [ "${1:-}" = "" ]; then
+  echo "Usage: $0 /path/to/daodao-parent-dir"
+  exit 1
 fi
+BASE_DIR="$1"
 
-echo "Usage: $0 /path/to/daodao-parent-dir"
-echo "  Example: $0 /Users/xiaoxu/Projects/daodao"
+gen_repo_json() { # <repo-name> <target-file>
+  jq --arg r "$1" \
+    '{repo: $r,
+      defaultBranch: .repos[$r].defaultBranch,
+      highRisk: (.highRiskRepos | index($r) != null),
+      quality: .repos[$r].quality,
+      formatFile: .repos[$r].formatFile,
+      reviewFocus: .repos[$r].reviewFocus,
+      protectedPaths: .repos[$r].protectedPaths,
+      generatedBy: "daodao/.claude/sync.sh — 不要手改，改 bin/pipeline.config.json 後重新 sync"
+    }' "$CONFIG" > "$2"
+}
+
+sync_repo() { # <target-dir> <repo-name>
+  local target="$1" repo="$2"
+
+  mkdir -p "$target/.claude/hooks"
+  cp "$SHARED/hooks/pre-write-guard.sh" "$target/.claude/hooks/"
+  cp "$SHARED/hooks/post-write-format.sh" "$target/.claude/hooks/"
+  chmod +x "$target/.claude/hooks/"*.sh
+
+  cp "$SHARED/settings.json" "$target/.claude/settings.json"
+
+  for skill in "${SHARED_SKILLS[@]}"; do
+    mkdir -p "$target/.claude/skills/$skill"
+    cp "$SHARED/skills/$skill/SKILL.md" "$target/.claude/skills/$skill/SKILL.md"
+  done
+
+  gen_repo_json "$repo" "$target/.claude/repo.json"
+
+  mkdir -p "$target/.github/workflows"
+  for wf in "${SHARED_WORKFLOWS[@]}"; do
+    [ -f "$SOURCE_WORKFLOWS/$wf" ] && cp "$SOURCE_WORKFLOWS/$wf" "$target/.github/workflows/$wf"
+  done
+  echo "✅ $repo synced"
+}
+
+while read -r repo; do
+  target="$BASE_DIR/$repo"
+  [ ! -d "$target" ] && echo "⏭ $repo not found, skipping" && continue
+  sync_repo "$target" "$repo"
+done < <(jq -r '.repos | keys[]' "$CONFIG")
+
+# monorepo 自己也要 hooks/settings/共用 skills/repo.json
+mkdir -p "$BASE_ROOT/.claude/hooks"
+cp "$SHARED/hooks/"*.sh "$BASE_ROOT/.claude/hooks/"
+chmod +x "$BASE_ROOT/.claude/hooks/"*.sh
+cp "$SHARED/settings.json" "$BASE_ROOT/.claude/settings.json"
+for skill in "${SHARED_SKILLS[@]}"; do
+  mkdir -p "$BASE_ROOT/.claude/skills/$skill"
+  cp "$SHARED/skills/$skill/SKILL.md" "$BASE_ROOT/.claude/skills/$skill/SKILL.md"
+done
+jq -n '{repo: "daodao", defaultBranch: "main", highRisk: false,
+  quality: {fix: null, lint: null, typecheck: null, test: "pnpm test"},
+  formatFile: null,
+  reviewFocus: ["pipeline 腳本正確性：exit code、set -e 陷阱、jq 解析", "SSOT 一致性：新增設定是否進了 bin/pipeline.config.json"],
+  protectedPaths: [".github/workflows/*", ".env*", "secrets/*"],
+  generatedBy: "daodao/.claude/sync.sh"}' > "$BASE_ROOT/.claude/repo.json"
+
+echo "🎉 Done"

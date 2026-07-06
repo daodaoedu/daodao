@@ -18,7 +18,7 @@ describe("NotionRowSchema", () => {
     syncToGitHub: true,
     autoMode: "plan-only",
     scope: "M",
-    targetRepo: "daodao-f2e",
+    targetRepos: ["daodao-f2e"],
     labels: [],
   } as const;
 
@@ -43,13 +43,13 @@ describe("NotionRowSchema", () => {
   });
 
   it("fixture 5: invalid Target Repo fails validation", () => {
-    const result = NotionRowSchema.safeParse({ ...base, targetRepo: "daodao-unknown" });
+    const result = NotionRowSchema.safeParse({ ...base, targetRepos: ["daodao-unknown"] });
     expect(result.success).toBe(false);
   });
 
   it("fixture 6: all 8 target repos are valid", () => {
     for (const repo of TARGET_REPOS) {
-      const result = NotionRowSchema.safeParse({ ...base, targetRepo: repo });
+      const result = NotionRowSchema.safeParse({ ...base, targetRepos: [repo] });
       expect(result.success, `${repo} should be valid`).toBe(true);
     }
   });

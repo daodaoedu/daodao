@@ -12,9 +12,8 @@ ISSUE_NUM="${2:?Usage: handoff.sh <repo> <issue_num>}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Source policy enforcement
-# shellcheck source=policy/enforce.sh
-source "${SCRIPT_DIR}/policy/enforce.sh"
+# v3: policy/enforce.sh 已移除（gh 呼叫直接執行；防護移至 verify.sh）
+safe_run() { eval "$1"; }
 
 log() { echo "[handoff] $*"; }
 
