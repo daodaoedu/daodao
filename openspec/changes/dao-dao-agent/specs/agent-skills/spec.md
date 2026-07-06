@@ -66,7 +66,7 @@ Agent 啟動時 SHALL 合併 Static Skills 與 active Dynamic Skills 的 metadat
 
 ### Requirement: Dynamic Skill 工具白名單
 
-Dynamic Skill（存於 `agent_skills`，status=draft/active）SHALL 只能呼叫白名單工具：唯讀資料工具（pg SELECT、describe_schema、get_user_full_context）與通用唯讀工具（web_search、stealth_fetch、python_repl）。MUST 禁止呼叫寫入型與系統型工具（bash、write_file、cron_create、email/bulk、notifications）。Dynamic Skill MUST NOT 在定義內覆寫 `dry_run`，干run 強制為 `true`。
+Dynamic Skill（存於 `agent_skills`，status=draft/active）SHALL 只能呼叫白名單工具：唯讀資料工具（pg SELECT、describe_schema、get_user_full_context）與通用唯讀工具（web_search、stealth_fetch、python_repl）。MUST 禁止呼叫寫入型與系統型工具（bash、write_file、cron_create、email/bulk、notifications）。Dynamic Skill MUST NOT 在定義內覆寫 `dry_run`，dry_run 強制為 `true`。
 
 #### Scenario: Dynamic Skill 嘗試呼叫 bash 被擋
 - **WHEN** 一個 Dynamic Skill 定義中包含 bash 工具呼叫
@@ -91,3 +91,15 @@ Dynamic Skill（存於 `agent_skills`，status=draft/active）SHALL 只能呼叫
 #### Scenario: 高頻 Skill 升級排程
 - **WHEN** 某 Skill 被高頻使用且適合無人值守
 - **THEN** 系統 SHALL 支援將其包裝為排程任務並設定執行週期
+
+### Requirement: 任務後可重用程式碼沉澱評估
+
+Agent 於任務完成後 SHALL 評估該次流程是否可沉澱為可重用腳本或 Dynamic Skill，以供後續排程復用與開發者 audit，避免一次性 ad-hoc 程式碼累積。沉澱產物 MUST 走 `draft → active →（升格）` 流程取得人工 review，MUST NOT 未經 review 直接進入排程。
+
+#### Scenario: 任務完成後建議沉澱
+- **WHEN** Agent 完成一個由多步工具組合的臨時任務，且判斷該流程具重複使用價值
+- **THEN** 系統 SHALL 主動向用戶建議將其存為 draft Dynamic Skill 或腳本，並附上內容摘要供審閱
+
+#### Scenario: 沉澱物需 review 才能排程
+- **WHEN** 一段任務產生的腳本被要求直接掛上 cron 排程
+- **THEN** 系統 MUST 要求先完成 draft → active（或升格 Static）之 review 流程，不得直接排程未經審閱的程式碼
