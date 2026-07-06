@@ -94,4 +94,4 @@
 - [ ] 12.6 Citation：Agent 回覆與報告附資料來源引用（DB 查詢摘要、API 端點、外部 URL）
 - [ ] 12.7 檔案暫存 30 天 TTL：檔案工具記錄建立時間，逾 30 天由清理任務移除
 - [ ] 12.8 可重用程式碼沉澱：任務完成後評估沉澱為腳本 / Dynamic Skill，走 draft → active → 升格 review 流程後才可掛排程
-- [ ] 12.9 第三方開源方案調研（AnythingLLM / Open WebUI / LibreChat 等）— Tim 負責，結論回寫 design.md
+- [x] 12.9 第三方開源方案調研（AnythingLLM / Open WebUI / LibreChat 等）— 已調研，無特別進展，不採用，維持自建
