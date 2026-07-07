@@ -27,7 +27,104 @@
 
 一個關鍵的現實校正：逐一核對 server、ai-backend、f2e 的程式碼後確認，**這條主循環已經通電**。靈感牆 feed、六種快速回應（encourage、touched、fire、useful、sameHere、curious）、兩層留言含 @mention、關注與連結、複製實踐的 API 與前端全部已實作——儘管多份 PRD/FRD 仍標示「規劃中」。島島今天缺的不是迴圈本身，而是量測迴圈是否在轉的儀表，以及放大它的高階機制。
 
-## 三、八層生態：每個服務的位置
+## 三、生態系全景圖
+
+下圖以顏色標示通電度：<span>🟩 已上線</span>、<span>🟧 部分實作</span>、<span>⬜ 規劃中（虛線）</span>。三條虛箭頭是生態圈的關鍵動力學——先有果實才收費、節律層人工維持迴圈節奏、治理層的策展扮演分解者。
+
+```mermaid
+graph TB
+    classDef live fill:#2E7D6E,stroke:#1d5249,color:#fff,stroke-width:1.5px;
+    classDef partial fill:#F0A868,stroke:#c9822f,color:#3a2410,stroke-width:1.5px;
+    classDef planned fill:#F6F5F1,stroke:#8C9A94,color:#3a463f,stroke-width:1.5px,stroke-dasharray:4 3;
+    classDef layer fill:none,stroke:#c9c7bc,stroke-width:1px,color:#5E6E69;
+
+    subgraph CYCLE["🔄 養分循環（已通電）"]
+        direction LR
+        C1[建立實踐] --> C2[打卡行動]
+        C2 --> C3[被社群看見]
+        C3 --> C4[收到快速回應]
+        C4 --> C5[動機回流]
+        C5 --> C2
+        C2 -.複製鏈.-> CX[成為他人模板]
+        C2 -.資產匯出.-> CY[成為信譽資產]
+    end
+    class C1,C2,C3,C4,C5,CX live
+    class CY planned
+
+    subgraph L1["個體層 · 學習者核心迴圈　~100%"]
+        A1[主題實踐 CRUD]:::live
+        A2[打卡 心情/筆記/照片/標籤]:::live
+        A3[複製實踐]:::live
+        A4[買車決策助手]:::live
+        A5[卡片顏色 階段1]:::partial
+    end
+
+    subgraph L2["引導層 · 降低啟動門檻　~70%"]
+        B1[action-maker]:::live
+        B2[quiz 測驗]:::live
+        B3[Onboarding API]:::live
+        B4[persona API]:::live
+        B5[島島 AI 雙入口]:::planned
+        B6[人物誌漸進顯影]:::planned
+        B7[mentor API · 孤兒]:::partial
+    end
+
+    subgraph L3["同儕層 · 群落互動　~70%"]
+        D1[快速回應 x6]:::live
+        D2[兩層留言 + @mention]:::live
+        D3[關注 人/實踐]:::live
+        D4[連結 雙向請求]:::live
+        D5[Buddy 僅請求收發]:::partial
+        D6[火苗 Ember]:::planned
+        D7[共同挑戰]:::planned
+    end
+
+    subgraph L4["可見性層 · 能量傳導　~70%"]
+        E1[靈感牆 feed]:::live
+        E2[Social Hub 頁面]:::live
+        E3[展示廣場 showcase]:::live
+        E4[瀏覽追蹤]:::live
+        E5[我的小島 完整版]:::planned
+    end
+
+    subgraph L5["信號層 · 生態圈的果實　~10%"]
+        F1[資產匯出 PDF/MD]:::planned
+        F2[數位驗證章]:::planned
+        F3[ESCO 技能標籤]:::planned
+        F4[質化指標 Insightful]:::partial
+    end
+
+    subgraph L6["節律層 · 季節與氣候　~50%"]
+        G1[通知系統]:::live
+        G2[推薦 recommendation]:::live
+        G3[洞察 insight]:::live
+        G4[學習週報]:::planned
+        G5[workflow 旅程引擎]:::planned
+    end
+
+    subgraph L7["治理層 · 共同演化　~100%"]
+        H1[許願池 wish]:::live
+        H2[公開 Roadmap + 投票]:::live
+    end
+
+    subgraph L8["經濟層 · 外部能量輸入　~10%"]
+        I1[訂閱 僅 DB schema]:::partial
+        I2[支付整合]:::planned
+        I3[四級方案權限]:::planned
+    end
+
+    CYCLE --> L1
+    L1 --> L2
+    L2 --> L3
+    L3 --> L4
+    L4 --> L5
+    L5 -.先有果實才收費.-> L8
+    L6 -.人工維持節奏.-> CYCLE
+    L7 -.策展=分解者.-> L4
+    class L1,L2,L3,L4,L5,L6,L7,L8,CYCLE layer
+```
+
+## 四、八層生態：每個服務的位置
 
 ### 第一層：個體層——學習者核心迴圈（通電度約 100%）
 
@@ -81,7 +178,7 @@
 
 生態圈視角對這一層有明確的建議：**收費點應該對齊生態圈產生的價值，而不是功能解鎖**。對「卡片自訂色」收費，是在對裝飾收費；對「數位驗證章、AI 額度、資產匯出」收費，是在對學習者的收成收費——付費時刻與收穫時刻重合，付費就不是阻力而是收穫儀式。這也決定了經濟層必須排在信號層之後：先有果實，才有東西可賣。
 
-## 四、這個視角揭露的四個結構性事實
+## 五、這個視角揭露的四個結構性事實
 
 **第一，島島已經從「單機版」畢業，但自己還不知道。** 文件狀態普遍落後程式碼：快速回應、留言、關注連結、複製、feed、許願池在 PRD/FRD 裡都還標「規劃中」，實際上全部已實作。這不只是文件債——每一次以文件為地圖的規劃討論，都建立在錯誤的現實上。依島島自己的工作守則「文件與 codebase 現實衝突時以現實為準並修正文件」，這需要一次系統性的回寫。
 
@@ -91,7 +188,7 @@
 
 **第四，指標體系量的是個體，不是生態。** 北極星「註冊三天內建立第一個實踐」、主題完成率、留存率——全部是個體迴圈指標。它們回答「單個學習者有沒有動起來」，回答不了「這是不是一個活的生態圈」。
 
-## 五、生態指標：從個體升級為網絡
+## 六、生態指標：從個體升級為網絡
 
 生態圈的健康要看能量是否在成員**之間**流動。以下六個指標全部可以從既有資料表計算，不需要新增任何埋點：
 
@@ -106,7 +203,7 @@
 
 同時延續島島既有的指標戒律：連續打卡天數、學習時長、嚴格 deadline 達成率**仍然禁用**。生態指標的原則是「量流動、不量壓力；量網絡、不量個人耐力」——所有指標衡量的都是「之間」發生的事，沒有一項會變成壓在使用者身上的計數器。
 
-## 六、行動順序：量測 → 放大 → 對齊變現
+## 七、行動順序：量測 → 放大 → 對齊變現
 
 **第一步：量測。** 兩件低成本高槓桿的事——(a) 生態儀表板：六個網絡指標的可視化，資料都在 PostgreSQL 裡，ai-backend 的 insight 路由和 admin-ui 骨架都是現成的，主要涉及 ai-backend 與 admin-ui 兩個 repo；(b) docs/product 狀態回寫，只動 daodao 主 repo 的文件。沒有儀表板，後面所有投入都無從得知有沒有讓生態更健康。
 
