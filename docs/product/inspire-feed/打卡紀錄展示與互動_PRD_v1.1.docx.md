@@ -2,6 +2,8 @@
 
 版本 1.1　｜　2026-04-22
 
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但靈感牆（Inspire Feed）已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-ai-backend/src/routers/feed.py`、`daodao-f2e/packages/api/src/services/feed-hooks.ts`。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+
 ## **Overview**
 
 Dao Dao 的「靈感」（Inspire）版塊原本只顯示主題實踐卡片（Practice Showcase Card）。本功能集讓使用者的單次打卡紀錄也能出現在社群動態中，讓即時的學習行動被看見，形成具溫度的學習陪伴場景。

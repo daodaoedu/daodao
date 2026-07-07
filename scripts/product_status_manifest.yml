@@ -21,7 +21,7 @@
 #   signals    程式碼證據；每個 signal 命中＝file 存在且（若給 pattern）pattern 命中
 #   detected   （由 script 計算，不手填）全部 signal 命中→shipped；部分→partial；零→absent
 #
-# 最後校準：2026-07-06（Fable 5，全 repo 實地盤點）
+# 最後校準：2026-07-06（Fable 5，全 repo 實地盤點；6 個漂移功能已回寫文件狀態並校正 declared，現 0 漂移）
 # ─────────────────────────────────────────────────────────────────────────────
 
 # 各子 repo 在 CI checkout 時要用的 branch（對齊 system-map）
@@ -38,21 +38,21 @@ features:
 
   - name: quick-response
     doc: docs/product/quick-response
-    declared: planned
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/reaction.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
       - { repo: daodao-f2e,    file: packages/api/src/services/reaction.ts }
 
   - name: social-comments
     doc: docs/product/social
-    declared: planned
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/comment.routes.ts, pattern: 'mention-candidates' }
       - { repo: daodao-f2e,    file: packages/api/src/services/comments.ts }
 
   - name: social-follow-connect
     doc: docs/product/social
-    declared: planned
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/follow.routes.ts,     pattern: '\.(get|post|put|patch|delete)\(' }
       - { repo: daodao-server, file: src/routes/connection.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
@@ -61,20 +61,20 @@ features:
 
   - name: copy-practice
     doc: docs/product/copy
-    declared: planned
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/practice.routes.ts, pattern: '/:id/copy' }
 
   - name: inspire-feed
     doc: docs/product/inspire-feed
-    declared: planned
+    declared: shipped
     signals:
       - { repo: daodao-ai-backend, file: src/routers/feed.py, pattern: '@router' }
       - { repo: daodao-f2e,        file: packages/api/src/services/feed-hooks.ts }
 
   - name: wishpool-roadmap
     doc: docs/product/wishpool
-    declared: planned
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/wish.routes.ts,    pattern: '\.(get|post|put|patch|delete)\(' }
       - { repo: daodao-server, file: src/routes/roadmap.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
