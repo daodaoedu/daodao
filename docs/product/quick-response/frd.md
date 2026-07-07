@@ -1,3 +1,5 @@
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但「快速回應」功能已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-server/src/routes/reaction.routes.ts`、`daodao-f2e/packages/api/src/services/reaction.ts`。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+
 ## **Purpose**
 
 本功能主要在解決學習社群中常見的「社交冷場」問題。透過將傳統的「按讚」升級為具備對話感的「快速回應 (Quick Reactions)」，並輔以「引導文字 (Prompts)」，達到以下目標：
