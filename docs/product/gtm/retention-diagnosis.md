@@ -82,7 +82,8 @@
 
 | 需求 | 現況 | 判定 |
 |------|------|------|
-| 梯次期間 | `practices.start_date` / `end_date` 已存在（`410_create_table_practices.sql:18`） | ✅ 不用動 |
+| 梯次期間（資料層） | `practices.start_date` / `end_date` 已存在（`410_create_table_practices.sql:18`）；server 驗證允許 7–90 天（`me.validators.ts:249`） | ✅ 不用動 |
+| **梯次期間（前端選項）** | 建立實踐 UI 僅四檔 7/14/21/30 天（`create/manual/schema.ts:21`），**無 60/90**；開始日期限未來 14 天內（`step-2.tsx:61`）。現有三活動全 ≤30 天——上限反向塑造了活動形態，90 天考期團與 builder 梯是第一批撞牆者 | 🔴 **缺口 #2（工程量最小）**：`DURATION_DAYS_OPTIONS` 加 60/90 選項＋i18n，server 免改。連帶驗證：複製實踐時期間是否繼承來源——若複製要求重選期間，此修正為入梯硬前置 |
 | 複製鏈記錄 | 複製時寫入 `source_practice_id`（`practice.service.ts:1700`） | ✅ 資料一直在記 |
 | 打卡引導 | 模板說明欄承載（執行包 Day 2 模板即此設計） | ✅ 不需新欄位 |
 | 週題 | 無機制 | ✅ 營運層解決（Discord 公告），第一梯不產品化 |
