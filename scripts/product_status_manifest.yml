@@ -1,0 +1,101 @@
+# product_status_manifest.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# 產品文件狀態 vs 程式碼現實的對照清單（single source of truth for status drift）。
+#
+# 背景：docs/product 的 PRD/FRD 狀態在功能上線後無人回寫，AI 照文件規劃會重做
+# 已上線功能。本檔把「文件宣稱的狀態」與「可在程式碼驗證的 signal」並列，由
+# scripts/check_product_status.py 定期比對，漂移就發 Discord（見
+# .github/workflows/product-status-drift.yml）。理念同 daodao-storage 的
+# schema-sync-check：把跨 repo 漂移變成自動偵測，而非靠人記得。
+#
+# 維護方式：
+#   - 每加一個 product 功能，就在此登一筆（declared 照 PRD 當下寫的狀態）。
+#   - 功能上線後 CI 會抓到 declared 與 code 不符 → 收到通知就把 declared 改對，
+#     並回寫對應 PRD/FRD 的狀態段落。
+#   - signal 的 file 路徑必須真實存在才有意義；新增前先在該 repo 確認。
+#
+# 欄位：
+#   name       功能代號
+#   doc        對應 docs/product 資料夾（相對主 repo）
+#   declared   文件宣稱狀態：planned | partial | shipped
+#   signals    程式碼證據；每個 signal 命中＝file 存在且（若給 pattern）pattern 命中
+#   detected   （由 script 計算，不手填）全部 signal 命中→shipped；部分→partial；零→absent
+#
+# 最後校準：2026-07-06（Fable 5，全 repo 實地盤點；6 個漂移功能已回寫文件狀態並校正 declared，現 0 漂移）
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 各子 repo 在 CI checkout 時要用的 branch（對齊 system-map）
+repos:
+  daodao-server:     { ref: dev }
+  daodao-ai-backend: { ref: main }
+  daodao-f2e:        { ref: dev }
+  daodao-storage:    { ref: main }
+  daodao-worker:     { ref: main }
+  daodao-admin-ui:   { ref: dev }
+
+features:
+  # ── 已漂移：文件說規劃中／待實作，程式碼其實已上線（照文件規劃會重做）──────────
+
+  - name: quick-response
+    doc: docs/product/quick-response
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/reaction.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
+      - { repo: daodao-f2e,    file: packages/api/src/services/reaction.ts }
+
+  - name: social-comments
+    doc: docs/product/social
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/comment.routes.ts, pattern: 'mention-candidates' }
+      - { repo: daodao-f2e,    file: packages/api/src/services/comments.ts }
+
+  - name: social-follow-connect
+    doc: docs/product/social
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/follow.routes.ts,     pattern: '\.(get|post|put|patch|delete)\(' }
+      - { repo: daodao-server, file: src/routes/connection.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
+      - { repo: daodao-f2e,    file: packages/api/src/services/follow.ts }
+      - { repo: daodao-f2e,    file: packages/api/src/services/connection.ts }
+
+  - name: copy-practice
+    doc: docs/product/copy
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/practice.routes.ts, pattern: '/:id/copy' }
+
+  - name: inspire-feed
+    doc: docs/product/inspire-feed
+    declared: shipped
+    signals:
+      - { repo: daodao-ai-backend, file: src/routers/feed.py, pattern: '@router' }
+      - { repo: daodao-f2e,        file: packages/api/src/services/feed-hooks.ts }
+
+  - name: wishpool-roadmap
+    doc: docs/product/wishpool
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/wish.routes.ts,    pattern: '\.(get|post|put|patch|delete)\(' }
+      - { repo: daodao-server, file: src/routes/roadmap.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
+      - { repo: daodao-f2e,    file: packages/api/src/services/roadmap.ts }
+
+  # ── 誠實的 partial：文件狀態與程式碼一致，不應報漂移（驗證 checker 不是全報）──────
+
+  - name: buddy
+    doc: docs/product/buddy
+    declared: partial
+    signals:
+      # 請求收發已上線
+      - { repo: daodao-server, file: src/routes/buddy-request.routes.ts, pattern: '\.(get|post|put|patch|delete)\(' }
+      # 但 f2e 尚無 buddy service（配對/火苗/前端未做）→ 此 signal 應 miss → detected=partial
+      - { repo: daodao-f2e,    file: packages/api/src/services/buddy.ts }
+
+  - name: subscription
+    doc: docs/product/subscription
+    declared: partial
+    signals:
+      # DB schema 已完成
+      - { repo: daodao-storage, file: schema/070_create_table_subscription_plan.sql }
+      # 但 server 尚無 subscription API route → miss → detected=partial
+      - { repo: daodao-server,  file: src/routes/subscription.routes.ts }

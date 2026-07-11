@@ -1,3 +1,5 @@
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但「關注／連結」功能已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-server/src/routes/follow.routes.ts`、`daodao-server/src/routes/connection.routes.ts`、`daodao-f2e/packages/api/src/services/{follow,connection}.ts`。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+
 ## **Purpose** 
 
 定義「關注 (Follow)」與「連結 (Connect)」兩種不同強度的社交關係。透過「單向關注」與「雙向關注」的差異化設計，建立具備信任感的學習生態，並以此作為內容存取權限的判斷基準。

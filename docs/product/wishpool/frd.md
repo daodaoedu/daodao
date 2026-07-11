@@ -2,6 +2,8 @@
 
 版本 v1.0　｜　2026-05-25　｜　對應 PRD：[`docs/product/wishpool/prd.md`](./prd.md)（v1.3）
 
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但許願池與公開 Roadmap 已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-server/src/routes/wish.routes.ts`、`daodao-server/src/routes/roadmap.routes.ts`、`daodao-f2e/packages/api/src/services/roadmap.ts`、product app 的 `/roadmap` 頁面。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+
 > 本文承接 PRD 已定案決策，補齊資料模型、API、前後台與通知的技術規格。涉及子專案：**daodao-storage**（schema/migration）、**daodao-server**（API）、**daodao-f2e/product**（公開頁與互動）、**daodao-admin-ui**（策展與報表）。慣例對齊既有程式碼：Prisma `Int` 自增主鍵 + 對外資源以 `external_id`（UUID）暴露、`/api/v1` RESTful、Zod 驗證、OpenAPI 以 `registry.registerPath` 定義、`authenticate` / `optionalAuth` middleware。
 
 ---

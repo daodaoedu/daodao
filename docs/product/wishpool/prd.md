@@ -2,6 +2,8 @@
 
 版本 v1.3　｜　2026-05-25　｜　參考原型：[好室友 Roadmap 原型](https://housemate-roadmap-prototype.netlify.app/)
 
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但許願池與公開 Roadmap 已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-server/src/routes/wish.routes.ts`、`daodao-server/src/routes/roadmap.routes.ts`、`daodao-f2e/packages/api/src/services/roadmap.ts`、product app 的 `/roadmap` 頁面。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+
 ## Overview
 
 島島阿學在持續迭代的過程中，會從使用者身上收到大量的回饋與功能許願，但目前這些聲音散落在各處（私訊、表單、口頭），既難以彙整，也讓使用者感覺「講了沒有回應」。
