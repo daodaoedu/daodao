@@ -1,0 +1,96 @@
+name: Product Status Drift Check
+
+# docs/product 的 PRD/FRD 狀態在功能上線後常無人回寫，AI 照文件當規劃地圖會重做
+# 已上線功能。本 workflow 定期比對 product_status_manifest.yml 宣稱的狀態與各 repo
+# 程式碼現實，漂移就發 Discord。理念與 daodao-storage 的 schema-sync-check 相同。
+
+on:
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'scripts/check_product_status.py'
+      - 'scripts/product_status_manifest.yml'
+      - 'docs/product/**'
+  schedule:
+    # 每週一 UTC 00:00（台北 08:00）跑一次，抓跨 repo 狀態漂移
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check Product Status Drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout daodao (docs + manifest + script)
+        uses: actions/checkout@v4
+        with:
+          path: daodao
+
+      - name: Checkout daodao-server
+        uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-server
+          token: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          path: daodao-server
+          ref: dev
+
+      - name: Checkout daodao-ai-backend
+        uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-ai-backend
+          token: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          path: daodao-ai-backend
+          ref: main
+
+      - name: Checkout daodao-f2e
+        uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-f2e
+          token: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          path: daodao-f2e
+          ref: dev
+
+      - name: Checkout daodao-storage
+        uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-storage
+          token: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          path: daodao-storage
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install pyyaml
+
+      # 各子 repo 與 daodao 平行 checkout，故 --projects-dir 指向 workspace 根
+      - name: Run Product Status Drift Check
+        working-directory: daodao
+        run: |
+          python scripts/check_product_status.py \
+            --ci --verbose \
+            --projects-dir "$GITHUB_WORKSPACE" \
+            --report "$GITHUB_STEP_SUMMARY"
+
+  notify:
+    needs: [check]
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'schedule'
+    steps:
+      - name: Notify Discord
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d '{
+                  "content": "⚠️ 產品文件狀態漂移！docs/product 的狀態標示與程式碼現實不符。",
+                  "embeds": [{
+                    "title": "🔍 Product Status Drift Detected",
+                    "description": "每週排程檢查發現 PRD/FRD 狀態落後或超前程式碼。照文件規劃前請先修正狀態（見 product-status-check skill）。",
+                    "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "color": 16776960,
+                    "footer": { "text": "Weekly scheduled check" }
+                  }]
+                }' \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
