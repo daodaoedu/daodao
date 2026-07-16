@@ -31,3 +31,6 @@
 
 - 2026-07-10：完成 codebase 盤點（daodao-server / daodao-f2e / daodao-ai-backend）、
   設計提案與兩版 prompt 草稿。待決策：起始 Phase、反向推演保留程度、藍圖篇幅。
+- 2026-07-16：決定先在 admin playground 試行驗證 prompt 品質，
+  開立 OpenSpec change [`life-design-coach-admin-trial`](../../../openspec/changes/life-design-coach-admin-trial/proposal.md)
+  （ai-backend prompt seed ＋ playground 多輪對話、admin-ui 對話串 UI）。
