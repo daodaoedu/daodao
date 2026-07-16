@@ -20,14 +20,16 @@
 
 #### Scenario: 歷史中的 user 訊息違規
 - **WHEN** `history` 內任一 user 訊息觸發 `GuardrailViolationError`
-- **THEN** 系統 SHALL 回傳 `400 Bad Request` 並附違規說明，不呼叫 LLM
+- **THEN** 系統 SHALL 回傳錯誤（依 `api_response_decorator` 既有慣例：HTTP 200 ＋
+  `success: false` envelope，`error.details.status_code = 400`）並附違規說明，不呼叫 LLM
 
 ### Requirement: 多輪呼叫的記錄與配額
 每一輪多輪對話呼叫 SHALL 與現行單次呼叫相同：經 `LoggingLLMClient` 寫入 `ai_query_logs`（context=`playground`、user_id=admin id），並於呼叫前檢查 token 配額。
 
 #### Scenario: 配額用盡
 - **WHEN** admin 當月（或當日）token 用量已達 `user_token_quotas` 上限
-- **THEN** 系統 SHALL 回傳 `429` 並附中文配額訊息，與現行行為一致
+- **THEN** 系統 SHALL 回傳配額錯誤（同上述 envelope 慣例，`status_code = 429`）
+  並附中文配額訊息，與現行行為一致
 
 ### Requirement: admin-ui 對話串介面
 PlaygroundPage 的 chat 功能 SHALL 提供對話模式：以訊息串（thread）顯示雙方往來，每次送出時 SHALL 將完整歷史（不含 system prompt）與新訊息一併送至 API，並提供「清除對話」重新開始。模型、system prompt、生成參數選擇 SHALL 沿用既有元件；對話進行中 SHALL 鎖定 system prompt 切換（避免中途換人格）。
