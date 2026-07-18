@@ -12,7 +12,7 @@ SOURCE_WORKFLOWS="$BASE_ROOT/.github/workflows"
 # 要同步的共用 workflows（頂層 → 子專案）
 SHARED_WORKFLOWS=(auto-pr-description.yml code-review.yml)
 
-REPOS=(daodao-f2e daodao-server daodao-ai-backend daodao-storage daodao-worker daodao-infra)
+REPOS=(daodao-f2e daodao-server daodao-ai-backend daodao-storage daodao-worker daodao-infra daodao-admin-ui)
 
 if [ "${1:-}" != "" ]; then
   BASE_DIR="$1"
@@ -35,7 +35,7 @@ if [ "${1:-}" != "" ]; then
     fi
 
     # 同步共用 skills
-    for skill in collect-pr-feedback; do
+    for skill in collect-pr-feedback post-merge-wrapup; do
       if [ -d "$SCRIPT_DIR/skills/$skill" ]; then
         mkdir -p "$target/.claude/skills/$skill"
         cp "$SCRIPT_DIR/skills/$skill/SKILL.md" "$target/.claude/skills/$skill/SKILL.md"
