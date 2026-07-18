@@ -127,3 +127,17 @@ description: PRD 快速生成、需求補洞、優化顧問三合一工具。從
 - **完整流程** → Phase 1 → Phase 2（補洞後修正） → Phase 3（最終優化）
 
 使用者未指定時，詢問要執行哪個 phase。若使用者說「完整流程」或「全部跑」，則依序串接三個 phase。
+
+## 前置：先驗證現狀
+
+生成 PRD 前，先執行 `.claude/skills/product-status-check/SKILL.md`——docs/product 的狀態標示普遍落後於程式碼，需求可能早已上線。跳過這步可能整份 PRD 在規劃一個已存在的功能。
+
+## 後續：銜接開發流程
+
+PRD 定稿後，詢問使用者：「要進入開發規劃嗎？」
+
+- Yes → 依變更所在 repo 銜接：
+  1. 確認目標 repo（後端 API → daodao-server、AI 功能 → daodao-ai-backend、其他 → 詢問使用者）
+  2. 目標 repo 有 openspec skill（daodao、daodao-server、daodao-ai-backend）→ 以 PRD 為輸入執行該 repo 的 `openspec-new-change`，把「功能說明」對應到 spec、「驗收條件」對應到 verification、「Edge Case」納入 design 考量
+  3. 目標 repo 沒有 openspec（f2e / admin-ui / worker / storage）→ 把 PRD 交給使用者，建議直接以 PRD 的功能說明拆 task 實作
+- No → 結束，告知 PRD 存放位置
