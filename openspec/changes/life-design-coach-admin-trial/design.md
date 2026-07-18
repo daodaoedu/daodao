@@ -78,6 +78,28 @@
 
 **原因**：stage summary 是教練 prompt 的核心機制（Phase 2 續聊依賴它），試行時 admin 必須看得到才能驗證品質；但混在正文會干擾對話閱讀。後端不剝除是因為 history 回傳時需要原文（教練靠它記得前面階段）。
 
+## Phase 1/2 架構原則（試行後續的約束，非本次實作範圍）
+
+**踩過的坑用買的，沒踩過的坑用最便宜的鞋去探。** 本次試行刻意用最低成本的攤平法
+（鷹架，非地基），目的是回答四個沒人能替島島回答的產品問題：教練品質（繁中、含 16 歲 TA）、
+單場 token 成本、模型選擇、值不值得做使用者端。試行**不是**用來重新驗證
+「純 prompt 會漂移」這種業界已知結論。
+
+試行結束後，Phase 1/2 的實作必須遵守：
+
+1. **不自建已商品化的元件。** 規則遵守與格式保證交給 provider 原生能力，不用 prompt 求、
+   不自己手刻：
+   - JSON 輸出 → provider 原生 structured outputs（解碼層保證合法，取代 ResponseParser
+     容錯重試整套邏輯）
+   - 規則權威性 → 原生 system role（含對話中途 system message），不再攤平成文字
+   - stage summary → 結構化獨立呼叫或 schema 化 tool call，不再靠文字標籤＋regex
+   - 對話流程 → 後端狀態機驅動階段（`coach_sessions.stage`），模型只負責單一階段內的生成
+2. **不遷就 `BaseLLMBackend` 的「10 provider 通吃、單一字串」抽象。** 該抽象為單次呼叫
+   （insight）設計，天生用不到原生能力。教練功能依試行結果選定 1–2 個 provider
+   走原生介面（新開 backend 方法或獨立 client），而不是在舊抽象上重解已解決的問題。
+3. **引入現成框架前先評估原生 SDK 是否已足夠**——多輪管理、工具迴圈、重試等
+   SDK 已內建者不另造。
+
 ## Risks / Trade-offs
 
 | 風險 | 緩解 |
