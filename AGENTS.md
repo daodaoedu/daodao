@@ -39,7 +39,7 @@ daodao 是一個 monorepo，各子專案職責如下：
 | daodao-server | Jest | `pnpm test` |
 | daodao-ai-backend | pytest | `make test` |
 | daodao-worker | Vitest | `pnpm test` |
-| daodao-admin-ui | — | — |
+| daodao-admin-ui | Vitest | `pnpm test` |
 
 ## Commit 流程
 
@@ -57,13 +57,24 @@ commit 時必須依序執行：
 | daodao-server | `pnpm run lint` | `pnpm run typecheck` | `pnpm run lint:fix` |
 | daodao-ai-backend | `make lint` | — | `make format` |
 | daodao-worker | — | `pnpm run typecheck` | — |
-| daodao-admin-ui | `npm run lint` | `npx tsc --noEmit` | `npm run lint -- --fix` |
+| daodao-admin-ui | `pnpm run lint` | `pnpm run typecheck` | `pnpm run check:fix` |
 
 ## Push 流程
 
 使用者說要 push 時，先詢問「要 review 嗎？」：
 - Yes → 執行 `.claude/skills/code-review/SKILL.md` skill，review 完再 push
 - No → 直接 push
+
+## Merge 後流程
+
+PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾：歸檔 openspec change、更新 docs/product 的功能狀態、校準地圖文件。
+
+## 需求規劃流程
+
+收到新需求或想寫 PRD 時：
+1. 先執行 `.claude/skills/product-status-check/SKILL.md` 驗證功能是否早已上線
+2. 執行 `.claude/skills/prd-generation/SKILL.md` 產出 PRD（生成 → 補洞 → 優化）
+3. PRD 定稿後銜接 `.claude/skills/openspec-new-change/SKILL.md` 進入開發規劃
 
 ## Bug Issue 流程
 
