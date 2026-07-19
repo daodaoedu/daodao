@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>島島小島 spike — 免費素材場景</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { margin: 0; overflow: hidden; font-family: system-ui; }
+  #ui { position: fixed; top: 12px; left: 12px; z-index: 10; display: flex; gap: 8px; }
+  button { padding: 8px 16px; border: 0; border-radius: 8px; background: #0ea5e9; color: #fff;
+           font-size: 14px; cursor: pointer; }
+  button.active { background: #f97316; }
+  #stats { position: fixed; bottom: 12px; left: 12px; color: #475569; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <button id="idleBtn" class="active">Idle</button>
+  <button id="walkBtn">Walk</button>
+  <span style="align-self:center;color:#475569;font-size:13px;background:#ffffffcc;padding:6px 10px;border-radius:8px">
+    WASD / 方向鍵走動，或點擊地面前往
+  </span>
+</div>
+<div id="stats"></div>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xd8f1fb);
+scene.fog = new THREE.Fog(0xd8f1fb, 30, 70);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 120);
+camera.position.set(13, 10, 17);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.8, 0);
+controls.maxPolarAngle = Math.PI * 0.49;
+
+scene.add(new THREE.HemisphereLight(0xbfe8ff, 0xf2d9a8, 0.9));
+const sun = new THREE.DirectionalLight(0xffe8c0, 2.6);
+sun.position.set(8, 14, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -18; sun.shadow.camera.right = 18;
+sun.shadow.camera.top = 18; sun.shadow.camera.bottom = -18;
+scene.add(sun);
+
+// ---------- 島嶼地形：沙灘 + 海 ----------
+const sand = new THREE.Mesh(
+  new THREE.CylinderGeometry(14, 14.8, 0.5, 64),
+  new THREE.MeshStandardMaterial({ color: 0xf2e2c4 })
+);
+sand.position.y = -0.25;
+sand.receiveShadow = true;
+scene.add(sand);
+
+const water = new THREE.Mesh(
+  new THREE.CircleGeometry(70, 64),
+  new THREE.MeshStandardMaterial({ color: 0x6cc9de, transparent: true, opacity: 0.92, roughness: 0.25 })
+);
+water.rotation.x = -Math.PI / 2;
+water.position.y = -0.32;
+scene.add(water);
+
+// 島邊白色浪圈（緩慢呼吸）
+const foam = new THREE.Mesh(
+  new THREE.RingGeometry(14.9, 16.1, 72),
+  new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 })
+);
+foam.rotation.x = -Math.PI / 2;
+foam.position.y = -0.30;
+scene.add(foam);
+
+// 營火光
+const fireLight = new THREE.PointLight(0xff8c42, 0, 6);
+fireLight.position.set(-1.6, 0.6, -1.8);
+scene.add(fireLight);
+
+// ---------- 載入器 ----------
+const loader = new GLTFLoader();
+const draco = new DRACOLoader();
+draco.setDecoderPath('https://unpkg.com/three@0.170.0/examples/jsm/libs/draco/');
+loader.setDRACOLoader(draco);
+const loadGlb = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+
+const shadowify = (obj) => obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+
+// seeded PRNG（佈局 deterministic）
+let seed = 20260719;
+const rand = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+
+// ---------- 場景物件（免費素材，位置寫死＝資料映射的替身） ----------
+// 各包原始比例不一致（帳篷高 0.49、棕櫚 4.25），以角色身高 1.55 為基準統一
+const PLACEMENTS = [
+  // 實踐營地：帳篷＋營火（中央偏北）
+  { url: './models/tent-canvas.glb',   pos: [-3.4, 0, -3.2], rotY: 0.6,  scale: 3.6 },
+  { url: './models/campfire-pit.glb',  pos: [-1.6, 0, -1.8], rotY: 0,    scale: 3.2 },
+  // 棕櫚樹（沿島緣散布）
+  { url: './models/palm-detailed-bend.glb', pos: [  9.5, 0, -6.5], rotY: 1.2, scale: 0.75 },
+  { url: './models/palm-straight.glb',      pos: [ -9.0, 0,  7.0], rotY: 2.4, scale: 0.8 },
+  { url: './models/palm-detailed-bend.glb', pos: [  7.0, 0,  8.5], rotY: 4.0, scale: 0.65 },
+  { url: './models/palm-straight.glb',      pos: [-10.5, 0, -5.5], rotY: 5.1, scale: 0.7 },
+  { url: './models/palm-detailed-bend.glb', pos: [  0.5, 0,-11.0], rotY: 2.8, scale: 0.8 },
+  { url: './models/palm-straight.glb',      pos: [-11.5, 0,  1.0], rotY: 0.9, scale: 0.72 },
+  // 岩石
+  { url: './models/rocks-sand-a.glb', pos: [ 6.0, 0, -9.0], rotY: 0.8, scale: 0.38 },
+  { url: './models/rocks-sand-b.glb', pos: [-7.5, 0,  2.5], rotY: 2.2, scale: 0.42 },
+  { url: './models/rocks-sand-a.glb', pos: [ 10.5, 0, 3.5], rotY: 3.9, scale: 0.30 },
+  // 碼頭與小船（社交映射替身）
+  { url: './models/structure-platform-dock.glb', pos: [0.4, 0, 13.4], rotY: 0,   scale: 1.1 },
+  { url: './models/boat-row-small.glb',          pos: [2.4, -0.28, 15.6], rotY: 0.4, scale: 1.4 },
+];
+
+const palms = [];
+for (const p of PLACEMENTS) {
+  loadGlb(p.url).then(g => {
+    const o = g.scene;
+    o.position.set(...p.pos);
+    o.rotation.y = p.rotY;
+    o.scale.setScalar(p.scale);
+    shadowify(o);
+    scene.add(o);
+    if (p.url.includes('palm')) palms.push({ o, phase: p.pos[0] });
+  }).catch(e => console.warn('load fail', p.url, e));
+}
+
+// 草叢 InstancedMesh（效能測試：植栽=打卡的替身）
+loadGlb('./models/patch-grass.glb').then(g => {
+  let srcMesh = null;
+  g.scene.traverse(o => { if (o.isMesh && !srcMesh) srcMesh = o; });
+  if (!srcMesh) return;
+  const COUNT = 400;
+  const inst = new THREE.InstancedMesh(srcMesh.geometry, srcMesh.material, COUNT);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3();
+  for (let i = 0; i < COUNT; i++) {
+    const r = 1.5 + rand() * 11.0, a = rand() * Math.PI * 2;
+    v.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2);
+    const k = 0.4 + rand() * 0.35;
+    s.set(k, k, k);
+    m.compose(v, q, s);
+    inst.setMatrixAt(i, m);
+  }
+  inst.castShadow = true;
+  scene.add(inst);
+});
+
+// ---------- 角色（現有泡泡替身） ----------
+let body = null, magnifier = null, root = null;
+let bodyBaseY = 0, magBase = null;
+loadGlb('./role-d-opt.glb').then(gltf => {
+  root = gltf.scene;
+  root.scale.setScalar(0.75);
+  root.traverse(o => {
+    if (o.isMesh) o.castShadow = true;
+    if (o.name === 'Body') { body = o; bodyBaseY = o.position.y; }
+    if (o.name === 'Magnifier') { magnifier = o; magBase = o.position.clone(); }
+  });
+  scene.add(root);
+});
+
+let mode = 'idle';
+const setMode = (m) => {
+  mode = m;
+  idleBtn.classList.toggle('active', m === 'idle');
+  walkBtn.classList.toggle('active', m === 'walk');
+};
+idleBtn.onclick = () => setMode('idle');
+walkBtn.onclick = () => setMode('walk');
+
+// ---------- 鍵盤操控（按下任何移動鍵即接管） ----------
+const keys = {};
+const KEYMAP = { KeyW: 'f', ArrowUp: 'f', KeyS: 'b', ArrowDown: 'b',
+                 KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r' };
+addEventListener('keydown', e => {
+  if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; mode = 'explore';
+    idleBtn.classList.remove('active'); walkBtn.classList.remove('active'); e.preventDefault(); }
+});
+addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; });
+
+const ISLAND_R = 13.2;          // 可行走範圍
+let heading = 0;                // 角色目前朝向
+let prevT = 0;
+
+// ---------- 點擊地板移動 ----------
+let walkTarget = null;
+const raycaster = new THREE.Raycaster();
+const marker = new THREE.Mesh(
+  new THREE.RingGeometry(0.25, 0.4, 32),
+  new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0 })
+);
+marker.rotation.x = -Math.PI / 2;
+marker.position.y = 0.02;
+scene.add(marker);
+
+let downPos = null;
+renderer.domElement.addEventListener('pointerdown', e => { downPos = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!downPos) return;
+  const moved = Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]);
+  downPos = null;
+  if (moved > 6 || !root) return;   // 是拖曳（轉視角）不是點擊
+  const ndc = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObject(sand, false);
+  if (!hits.length) return;
+  const p = hits[0].point;
+  const d = Math.hypot(p.x, p.z);
+  if (d > ISLAND_R) { p.x *= ISLAND_R / d; p.z *= ISLAND_R / d; }
+  walkTarget = new THREE.Vector3(p.x, 0, p.z);
+  marker.position.set(p.x, 0.02, p.z);
+  marker.material.opacity = 0.9;
+  mode = 'explore';
+  idleBtn.classList.remove('active'); walkBtn.classList.remove('active');
+});
+
+const clock = new THREE.Clock();
+let frames = 0, fpsT = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  const dt = Math.min(t - prevT, 0.05);
+  prevT = t;
+
+  if (root && body) {
+    if (mode === 'explore') {
+      // 以相機朝向為基準的移動向量
+      const camDir = new THREE.Vector3();
+      camera.getWorldDirection(camDir);
+      camDir.y = 0; camDir.normalize();
+      const camRight = new THREE.Vector3().crossVectors(camDir, new THREE.Vector3(0, 1, 0));
+      const move = new THREE.Vector3();
+      if (keys.f) move.add(camDir);
+      if (keys.b) move.sub(camDir);
+      if (keys.r) move.add(camRight);
+      if (keys.l) move.sub(camRight);
+      if (move.lengthSq() > 0) walkTarget = null;   // 鍵盤優先，取消點擊目標
+      // 點擊目標導航
+      if (walkTarget) {
+        const toT = new THREE.Vector3().subVectors(walkTarget, root.position);
+        toT.y = 0;
+        if (toT.length() < 0.15) { walkTarget = null; }
+        else move.copy(toT.normalize());
+      }
+      const moving = move.lengthSq() > 0;
+      if (moving) {
+        move.normalize();
+        root.position.addScaledVector(move, 4.2 * dt);
+        // 島界限制
+        const d = Math.hypot(root.position.x, root.position.z);
+        if (d > ISLAND_R) { root.position.x *= ISLAND_R / d; root.position.z *= ISLAND_R / d; }
+        // 平滑轉向移動方向
+        const target = Math.atan2(move.x, move.z);
+        let diff = target - heading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        heading += diff * Math.min(1, dt * 10);
+        root.rotation.y = heading;
+        // 彈跳步伐
+        const hop = Math.abs(Math.sin(t * 7));
+        body.position.y = bodyBaseY + hop * 0.2;
+        const sq = 1 + (hop - 0.5) * 0.14;
+        body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
+        body.rotation.x = 0.07;
+      } else {
+        const breathe = 1 + Math.sin(t * 2.2) * 0.02;
+        body.scale.set(1 / breathe, breathe, 1 / breathe);
+        body.position.y = bodyBaseY + Math.sin(t * 2.2) * 0.03;
+        body.rotation.x *= 0.9;
+      }
+      // 相機跟隨角色（保留滑鼠旋轉）
+      controls.target.lerp(new THREE.Vector3(root.position.x, root.position.y + 1.1, root.position.z), 0.12);
+    } else if (mode === 'idle') {
+      root.position.set(1.2, 0, 1.6);
+      const breathe = 1 + Math.sin(t * 2.2) * 0.02;
+      body.scale.set(1 / breathe, breathe, 1 / breathe);
+      body.position.y = bodyBaseY + Math.sin(t * 2.2) * 0.03;
+      body.rotation.x *= 0.9;
+    } else {
+      const w = t * 0.4, R = 6.5, hop = Math.abs(Math.sin(t * 6));
+      root.position.set(Math.sin(w) * R, 0, Math.cos(w) * R);
+      root.rotation.y = w + Math.PI / 2;
+      body.position.y = bodyBaseY + hop * 0.22;
+      const sq = 1 + (hop - 0.5) * 0.16;
+      body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
+      body.rotation.x = 0.08;
+    }
+    if (magnifier && magBase) {
+      const hopFollow = mode === 'walk' ? (body.position.y - bodyBaseY) * 0.6 : 0;
+      magnifier.position.y = magBase.y + Math.sin(t * 1.8 + 1) * 0.06 + hopFollow;
+      magnifier.rotation.z = Math.sin(t * 1.4) * 0.08;
+    }
+  }
+  // 環境動態：棕櫚搖曳、營火閃爍、浪圈呼吸
+  for (const { o, phase } of palms) o.rotation.z = Math.sin(t * 0.9 + phase) * 0.025;
+  if (marker.material.opacity > 0) marker.material.opacity = walkTarget ? 0.9 : marker.material.opacity * 0.9;
+  fireLight.intensity = 6 + Math.sin(t * 9) * 1.6 + Math.sin(t * 23) * 0.9;
+  foam.material.opacity = 0.25 + Math.sin(t * 1.1) * 0.12;
+  const fs = 1 + Math.sin(t * 1.1) * 0.012;
+  foam.scale.set(fs, fs, 1);
+
+  controls.update();
+  renderer.render(scene, camera);
+
+  frames++;
+  if (t - fpsT > 1) {
+    stats.textContent = `fps: ${frames} | draw calls: ${renderer.info.render.calls} | tris: ${renderer.info.render.triangles}`;
+    frames = 0; fpsT = t;
+  }
+}
+animate();
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
