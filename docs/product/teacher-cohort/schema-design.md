@@ -56,7 +56,9 @@ CREATE TABLE cohorts (
   display_name    VARCHAR(100) NOT NULL,       -- 自由文字（給人看）
   start_date      DATE NOT NULL,
   end_date        DATE NOT NULL,
-  join_token      UUID UNIQUE DEFAULT gen_random_uuid(),  -- 邀請連結/QR
+  join_token      UUID UNIQUE DEFAULT gen_random_uuid(),  -- 邀請連結/QR；可 rotate（重設）、NULL＝暫停加入
+  join_deadline   DATE,                        -- 加入截止日；NULL＝預設至 end_date（時效跟著期走）
+  capacity        INT,                         -- 人數上限；NULL＝不限（P3 免費配額政策以此承載）
   invite_message  TEXT,                        -- 邀請信自訂段（FRD 7.3.5）
   status          VARCHAR(20) NOT NULL DEFAULT 'draft',   -- draft/published/archived
   created_at      TIMESTAMPTZ DEFAULT now(),
@@ -71,7 +73,7 @@ CREATE TABLE cohort_enrollments (
   email        VARCHAR(255) NOT NULL,          -- 聯絡紀錄，非身分
   user_id      INT REFERENCES users(id),       -- 受邀未註冊為 NULL；加入時回填
   invite_token UUID UNIQUE DEFAULT gen_random_uuid(),
-  status       VARCHAR(20) NOT NULL DEFAULT 'invited',  -- invited/joined/exited
+  status       VARCHAR(20) NOT NULL DEFAULT 'invited',  -- invited/joined/exited/removed（removed＝教練移除，審計記操作者）
   role         VARCHAR(20) NOT NULL DEFAULT 'member',   -- member/assistant 預留
   invited_at   TIMESTAMPTZ DEFAULT now(),
   joined_at    TIMESTAMPTZ,
@@ -129,6 +131,10 @@ CREATE UNIQUE INDEX idx_draft_once
 | 5 | 身分綁定以 enrollment 的 `invite_token` 為準，email 降級為聯絡紀錄 | 解「報課 email ≠ 島島帳號 email」的真實邊角；夥伴名單頁顯示不受影響 |
 | 6 | `metrics` jsonb 最小形狀：`enrolled / activated / checkins / active_members / top_tags / exited` | 全為計數與聚合、零個人識別——期滿只留快照自動合規 |
 | 7 | 開營者採組織模型（organizers ＋ organizer_members） | 支援多人共管品牌；個人＝單成員組織；登入門檻＝成員資格（使用者定案） |
+| 8 | 連結時效跟著期走：join_deadline（預設 end_date）＋手動 rotate/停用；個人 invite_token 吃同一窗口 | 固定時鐘效期會逼教練反覆重發連結；期本身就是天然生命週期。過期連結落地頁＝教練名片＋下一期導流（2026-07-21 定案） |
+| 9 | capacity 欄位承載人數上限與 P3 配額政策；enrollment status 加 removed | 成員治理四件套：移除/上限/重設/時效（2026-07-21 定案） |
+| 10 | 帳號刪除＝名冊列匿名化不刪列（email 清空、user_id 解除、顯示「已刪除的使用者」） | 「名冊層永久」指計數與結構非個資；教練營運紀錄不破洞、當事人刪除權成立（2026-07-21 定案） |
+| 11 | 官方共同挑戰＝島島官方自己註冊為一個組織 | 同容器零特例，`programs.organizer_id NOT NULL` 不需放寬 |
 
 ## Server 層對應（摘要）
 
