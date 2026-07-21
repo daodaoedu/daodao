@@ -129,7 +129,7 @@ CREATE UNIQUE INDEX idx_draft_once
 | 3 | 逾期邀請 email 自動清除：**暫不做** | 使用者決定先不處理；記為後續個資強化項 |
 | 4 | `cohorts.status` 只存編輯狀態（draft/published/archived），進行中/已結束由日期推導 | 免 cron 翻狀態的資料不一致風險；90 天唯讀同理以 `end_date+90` 推導 |
 | 5 | 身分綁定以 enrollment 的 `invite_token` 為準，email 降級為聯絡紀錄 | 解「報課 email ≠ 島島帳號 email」的真實邊角；夥伴名單頁顯示不受影響 |
-| 6 | `metrics` jsonb 最小形狀：`enrolled / activated / checkins / active_members / top_tags / exited` | 全為計數與聚合、零個人識別——期滿只留快照自動合規 |
+| 6 | `metrics` jsonb 最小形狀：`enrolled / activated / checkins / active_members / top_tags / exited / hour_histogram`（時段節律用的 24 格計數） | 全為計數與聚合、零個人識別——期滿只留快照自動合規 |
 | 7 | 開營者採組織模型（organizers ＋ organizer_members） | 支援多人共管品牌；個人＝單成員組織；登入門檻＝成員資格（使用者定案） |
 | 8 | 連結時效跟著期走：join_deadline（預設 end_date）＋手動 rotate/停用；個人 invite_token 吃同一窗口 | 固定時鐘效期會逼教練反覆重發連結；期本身就是天然生命週期。過期連結落地頁＝教練名片＋下一期導流（2026-07-21 定案） |
 | 9 | capacity 欄位承載人數上限與 P3 配額政策；enrollment status 加 removed | 成員治理四件套：移除/上限/重設/時效（2026-07-21 定案） |
