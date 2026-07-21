@@ -99,3 +99,13 @@ features:
       - { repo: daodao-storage, file: schema/070_create_table_subscription_plan.sql }
       # 但 server 尚無 subscription API route → miss → detected=partial
       - { repo: daodao-server,  file: src/routes/subscription.routes.ts }
+
+  # ── 規劃中：尚無任何程式碼，signals 全 miss 屬預期（上線時 CI 會抓到 declared 過期）──
+
+  - name: teacher-cohort
+    doc: docs/product/teacher-cohort
+    declared: planned
+    signals:
+      # 老師後台（陪跑教練台）：cohort API、f2e 老師端 service 都尚未存在
+      - { repo: daodao-server, file: src/routes/cohort.routes.ts }
+      - { repo: daodao-f2e,    file: packages/api/src/services/cohort.ts }
