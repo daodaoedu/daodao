@@ -29,8 +29,8 @@
 
 | FRD 名詞 | 問題 | 建議 |
 |---|---|---|
-| **Event** | 業界 Event 一律指行事曆單次活動（Circle event space、Eventbrite、Luma）；且**島島內部已撞名**——daodao-server admin 已有整套 `/api/v1/admin/events`（活動管理/RSVP/報到） | 改叫 **Program**（中文「系列」/「課程線」；Maven 用 Course、Disco 用 Product）。資料表 `programs`，完全避開既有 events |
-| **Cohort Tag** | 「Tag」業界語意是標籤（多對多、無實體），但此物有名單、起訖日、可加入——是容器非標籤。且 7.2.1 限英文命名、7.6.4 又顯示給參與者，中文使用者會看到英文代碼 | 叫 **Cohort**（中文「梯次」；使用者端顯示用「陪跑營」語言，見 prd.md 詞彙定案）。欄位拆 `slug`（英數，給系統/網址）＋`display_name`（自由文字，給人看） |
+| **Event** | 業界 Event 一律指行事曆單次活動（Circle event space、Eventbrite、Luma）；且**島島內部已撞名**——daodao-server admin 已有整套 `/api/v1/admin/events`（活動管理/RSVP/報到） | 改叫 **Program**（中文「系列」，2026-07-21 定案——合作方含服務/讀書會型，「課程線」不合身）。資料表 `programs`，完全避開既有 events |
+| **Cohort Tag** | 「Tag」業界語意是標籤（多對多、無實體），但此物有名單、起訖日、可加入——是容器非標籤。且 7.2.1 限英文命名、7.6.4 又顯示給參與者，中文使用者會看到英文代碼 | 叫 **Cohort**（中文結構詞「期」，2026-07-21 定案——營隊/諮詢/讀書會一輪皆為一期；「陪跑營」退為行銷詞，見 prd.md 詞彙定案）。欄位拆 `slug`（英數，給系統/網址）＋`display_name`（自由文字，給人看） |
 | **夥伴帳號** | 雙重撞名：SaaS 業界 Partner 指經銷/整合夥伴；**站內「夥伴」已被 Buddy 功能佔用**（找夥伴、`practice_buddy_requests`） | 對外叫 **主辦方/合作方**，個人角色用市場驗證過的「教練」（見 prd.md 詞彙定案的實查依據）；內部實體 `organizers`，使用者端文案避開「夥伴」二字 |
 | **夥伴管理端（Admin Site）** | 「admin」撞內部後台（admin.daodao.so，base path 也是 `/admin/`），且 `/admin` 是掃描器首要目標 | 產品名 **「燈塔」**、URL `/lighthouse`（2026-07-21 定案，見第五節 D3） |
 

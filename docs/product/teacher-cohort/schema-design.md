@@ -37,7 +37,7 @@ CREATE TABLE organizer_members (
 );
 CREATE INDEX idx_organizer_members_user ON organizer_members(user_id);
 
--- programs：課程線（FRD 的 Event 改名）
+-- programs：系列（FRD 的 Event 改名；中文結構詞 2026-07-21 定為「系列」，不預設課程形態）
 CREATE TABLE programs (
   id            SERIAL PRIMARY KEY,
   organizer_id  INT NOT NULL REFERENCES organizers(id),
@@ -48,7 +48,7 @@ CREATE TABLE programs (
   updated_at    TIMESTAMPTZ
 );
 
--- cohorts：陪跑營（梯次）
+-- cohorts：期（中文結構詞 2026-07-21 定為「期」——營隊/諮詢包/讀書會一輪皆為一期；display_name 由開營者自由命名）
 CREATE TABLE cohorts (
   id              SERIAL PRIMARY KEY,
   program_id      INT NOT NULL REFERENCES programs(id),
