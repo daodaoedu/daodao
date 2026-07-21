@@ -1,0 +1,8 @@
+analytics-event-catalog
+workflow-skill-manager
+admin-user-management
+data-export
+email-history
+notifications
+notification-preferences
+learning-footprints
