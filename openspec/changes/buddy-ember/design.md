@@ -116,14 +116,26 @@ daodao 已完成 Buddy 的後端骨架（buddy_requests CRUD、BuddyRequest / Bu
 
 ## DB Migration
 
+### D7（新增）：火苗歸屬——user-pair，不綁特定 practice request
+
+**決策**：`buddy_embers` 綁的是「兩個人的關係」，不綁某筆 `practice_buddy_requests`。同一對用戶可在多個 practice 成為 Buddy，但只有一簇火苗。
+
+**實作**：`buddy_embers` 以 `(user_a_id, user_b_id)` 為 unique key，寫入時永遠以較小的 `user_id` 作為 `user_a_id`（canonical ordering），避免正反向重複建立。
+
+**`GET /users/me/buddies`**：以 user-pair 層級回傳，每個 Buddy 只出現一次；若該對有多筆 accepted requests（不同 practice），顯示最新的那個 practice 名稱作為代表。
+
+---
+
 ### 新增 buddy_embers 表
 
-> 注意：`practice_buddy_requests` 使用 `SERIAL`（INT）PK，故 FK 與 PK 均用 INT 對齊現有慣例。
+> 火苗歸屬 user-pair（見 D7），不 FK 到 practice_buddy_requests。
+> ID 型別對齊現有慣例（SERIAL INT）。
 
 ```sql
 CREATE TABLE buddy_embers (
   id                      SERIAL PRIMARY KEY,
-  buddy_request_id        INT NOT NULL REFERENCES practice_buddy_requests(id) ON DELETE CASCADE,
+  user_a_id               INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_b_id               INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   last_checkin_at         TIMESTAMPTZ,
   consecutive_days        INTEGER NOT NULL DEFAULT 0,
   companion_score_a       INTEGER NOT NULL DEFAULT 0,
@@ -131,26 +143,35 @@ CREATE TABLE buddy_embers (
   watch_over_notified_at  TIMESTAMPTZ,
   created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (buddy_request_id)
+  UNIQUE (user_a_id, user_b_id),
+  CHECK (user_a_id < user_b_id)
 );
 
+CREATE INDEX idx_buddy_embers_user_a ON buddy_embers (user_a_id);
+CREATE INDEX idx_buddy_embers_user_b ON buddy_embers (user_b_id);
 CREATE INDEX idx_buddy_embers_last_checkin ON buddy_embers (last_checkin_at);
 ```
 
+建立邏輯：接受 Buddy 請求時（`PATCH /buddy-requests/:id` status='accepted'），若 user-pair 的 ember 不存在，則 INSERT；已存在則不重複建立（一對只有一簇）。
+
 ### 新增 buddy_cards 表
+
+> 卡片綁到 user-pair（sender → receiver），不綁特定 practice request。
 
 ```sql
 CREATE TABLE buddy_cards (
-  id               SERIAL PRIMARY KEY,
-  buddy_request_id INT NOT NULL REFERENCES practice_buddy_requests(id) ON DELETE CASCADE,
-  sender_id        INT NOT NULL REFERENCES users(id),
-  card_type        TEXT NOT NULL CHECK (card_type IN ('preset', 'custom')),
-  preset_key       TEXT,
-  content          TEXT,
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id          SERIAL PRIMARY KEY,
+  sender_id   INT NOT NULL REFERENCES users(id),
+  receiver_id INT NOT NULL REFERENCES users(id),
+  card_type   TEXT NOT NULL CHECK (card_type IN ('preset', 'custom')),
+  preset_key  TEXT,
+  content     TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (sender_id <> receiver_id)
 );
 
-CREATE INDEX idx_buddy_cards_relationship ON buddy_cards (buddy_request_id, created_at DESC);
+CREATE INDEX idx_buddy_cards_sender   ON buddy_cards (sender_id,   created_at DESC);
+CREATE INDEX idx_buddy_cards_receiver ON buddy_cards (receiver_id, created_at DESC);
 ```
 
 ### practices.title FTS index
@@ -178,12 +199,9 @@ CREATE INDEX idx_practices_title_tsv ON practices USING GIN (title_tsv);
 
 ## Open Questions
 
-1. **✅ 已解：buddy 關係的底層表**：確認為 `practice_buddy_requests`（SERIAL INT PK），無獨立 `buddy_relationships` 表。`buddy_embers` 與 `buddy_cards` 均 FK 至 `practice_buddy_requests(id)`。
-2. **🔴 待決：一對用戶 vs. per-practice 火苗**：`practice_buddy_requests` 是 practice-specific 的，同一對用戶可能在多個 practice 建立 buddy 關係，理論上會產生多簇火苗。需決定：
-   - 選項 A：一對用戶只有一簇火苗（`GET /users/me/buddies` 以 user-pair 層級 dedup，取最近的 accepted request 對應的 ember）
-   - 選項 B：每筆 accepted `practice_buddy_requests` 各有一簇火苗（更簡單，但可能違反 PRD「1:1 per Buddy 關係」原意）
-   **影響 task 1.1 的 `UNIQUE` constraint 設計與 2.2 的列表 dedup 邏輯，需在實作前拍板。**
-3. **🔴 待決：`GET /users/me/buddies` dedup 層級**：若同一個人在多個 practice 是 buddy，回傳格式應是 per-practice 還是 per-user（dedup 到用戶層級）？與 OQ2 連動。
+1. **✅ 已解：buddy 關係的底層表**：確認為 `practice_buddy_requests`（SERIAL INT PK），無獨立 `buddy_relationships` 表。
+2. **✅ 已解：一對用戶 vs. per-practice 火苗**：選 A——user-pair 一簇火苗，不綁特定 practice。`buddy_embers` 以 `(user_a_id, user_b_id)` unique，不限制同一對在多個 practice 成為 Buddy。詳見 D7。
+3. **✅ 已解：`GET /users/me/buddies` dedup 層級**：per-user（一個 Buddy 只出現一次），若有多筆 accepted requests 則顯示最新的 practice 名稱作代表。
 4. **守望相助留言公開/私密**：本 design 以私密為預設（buddy_cards 表），若後續決定支援公開選項，需新增 `visibility` 欄位。
 5. **火苗狀態的精確天數門檻**：目前假設 d=5 對齊守望相助通知；若調整通知門檻，狀態計算邏輯同步更新。
 6. **companion_score 在 profile 的呈現形式**：資料模型已備，UI 設計待另行討論。

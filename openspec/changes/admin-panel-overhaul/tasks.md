@@ -1,3 +1,136 @@
+## 0. Admin 改善需求（來源：Admin.md）
+
+### P0 — 純前端快速修正
+
+- [ ] 0.1 用戶管理表格增加 `customId` 欄位 `[server]` `[admin-ui]`
+  - server: `adminUserListItemSchema` 加 `customId` 欄位，SQL query select `custom_id`
+  - admin-ui: `AdminUserListItem` type 加 `customId`，表格加一欄「Custom ID」顯示 `@username`
+  - 驗收：用戶列表可看到每位用戶的 custom_id
+
+- [ ] 0.2 用戶管理表格增加 tag 欄位 `[server]` `[admin-ui]`
+  - server: admin users list API 回傳中加入用戶 tags 資料
+  - admin-ui: 表格加一欄「標籤」顯示用戶所屬 tags（Badge 形式）
+  - 驗收：用戶列表可看到每位用戶的標籤
+  - 依賴：4.1、4.2（tag 資料表與 API 須先建立）
+
+- [ ] 0.3 用戶標籤頁「手動標籤」改名為「全部標籤」 `[admin-ui]`
+  - UserTagsPage 中 h2 文字改為「全部標籤」
+  - 自動標籤結果也顯示在同一列表中
+  - 驗收：標題變更，自動產生的標籤也出現在全部標籤列表
+
+### P1 — 前端 + 小幅 Server 修改
+
+- [ ] 0.4 主題實踐搜尋增加「實踐期間」篩選 `[admin-ui]`
+  - PracticesPage 新增期間篩選 Select（7/14/21/30 天）
+  - 傳送 `duration` 參數給 API
+  - 驗收：可依實踐期間篩選列表
+
+- [ ] 0.5 主題實踐列表增加「實踐期間」數據欄位 `[server]` `[admin-ui]`
+  - server: practices list API 回傳加入 `duration`（實踐天數）
+  - admin-ui: 表格新增「實踐期間」欄位
+  - 驗收：列表可看到每個實踐的天數
+
+- [ ] 0.6 主題實踐搜尋增加 tag 篩選 `[admin-ui]`
+  - PracticesPage 新增 tag 篩選 Select（載入所有 tags）
+  - 傳送 `tagId` 參數給 API
+  - 驗收：可依標籤篩選實踐列表
+  - 依賴：4.2（tag API）
+
+- [ ] 0.7 內容分析（公開 Practice）增加使用者名稱及 email 欄位 `[server]` `[admin-ui]`
+  - server: content performance API 回傳加入 creator `name` 和 `email`
+  - admin-ui: ContentPerformancePage practice tab 表格加「建立者」「Email」欄位
+  - 驗收：可看到每篇公開 Practice 的作者資訊
+
+- [ ] 0.8 內容分析增加被複製次數及複製來源欄位 `[server]` `[admin-ui]`
+  - server: content performance API 回傳加入 `copyCount` 和 `copiedFrom`
+  - admin-ui: 表格加「被複製次數」「複製來源」欄位
+  - 驗收：可看到每篇 Practice 的複製統計
+
+- [ ] 0.9 Onboarding 頁增加期間和 tag 搜尋 `[admin-ui]`
+  - OnboardingFlowsPage 新增日期範圍篩選和 tag 篩選
+  - 驗收：可依期間和標籤篩選 Onboarding 數據
+
+- [ ] 0.10 社群互動分析增加使用者 tag 篩選 `[admin-ui]`
+  - 確認對應頁面（CommunityMapPage 或 ContentPerformancePage）
+  - 新增 tag 篩選 Select
+  - 驗收：可依使用者標籤篩選社群互動資料
+
+### P2 — 需要較多 Server 端工作
+
+- [ ] 0.11 用戶標籤頁：實作標籤指派功能 `[server]` `[admin-ui]`
+  - server: POST /api/v1/admin/tags/:tagId/assign（指派 tag 給用戶）
+  - admin-ui: UserTagsPage 編輯按鈕功能實作（目前是 alert('功能開發中')）
+  - 驗收：可從標籤頁指定標籤給使用者
+  - 關聯：既有 task 4.2、4.3
+
+- [ ] 0.12 用戶標籤頁：Excel 批次指派 tag `[server]` `[admin-ui]`
+  - server: POST /api/v1/admin/users/bulk-tag 支援接收 userId + tagId 陣列
+  - admin-ui: UserTagsPage 新增「上傳 Excel」按鈕，解析 Excel 後呼叫 bulk-tag API
+  - 驗收：上傳 Excel 可批次指派 tag 給多位用戶
+  - 關聯：既有 task 4.2
+
+- [ ] 0.13 用戶來源整合進 tag 體系 `[server]` `[storage]`
+  - 將 S1/S2/S3 用戶來源視為系統 tag（tag category = 'source'）
+  - 標籤表增加 `category` 欄位區分「來源」和「用戶特性」
+  - admin-ui: UserTagsPage 分欄顯示不同類別的 tag
+  - 驗收：來源以 tag 形式呈現，標籤分類正確顯示
+
+- [ ] 0.14 自動標籤：特定參數 URL 入口 `[server]`
+  - 為不同入口產生帶有特定參數的 URL
+  - 從特定參數 URL 註冊的用戶自動加上對應 tag
+  - 驗收：透過帶參數 URL 註冊的用戶自動獲得對應標籤
+  - 關聯：既有 task 4.2（tag-rules conditionType 需支援 'url_param'）
+
+- [ ] 0.15 自動標籤：活躍度標籤 `[server]`
+  - 根據用戶活躍度自動標籤（如：活躍/不活躍/沉睡）
+  - 驗收：用戶依活躍度自動獲得標籤
+  - 關聯：既有 task 4.2（tag-rules conditionType 需支援 'activity_level'）
+
+- [ ] 0.16 信件管理：預約寄信功能 `[server]` `[admin-ui]`
+  - server: sendCustomEmail API 支援 `scheduledAt` 參數，排程發送
+  - admin-ui: EmailManagementPage compose tab 加日期時間選擇器
+  - 驗收：可設定未來時間發送郵件
+  - 關聯：既有 task 5.5
+
+- [ ] 0.17 信件管理：選擇 tag 寄信 `[server]` `[admin-ui]`
+  - server: POST /api/v1/admin/email/send-bulk 支援 `tagIds` 參數
+  - admin-ui: compose tab 收件人區域加 tag 選擇（多選），選擇 tag 後顯示預估人數
+  - 驗收：可選擇一或多個 tag，寄信給所有符合標籤的用戶
+  - 關聯：既有 task 5.5、5.6
+
+- [ ] 0.18 信件管理：使用者搜尋表單 `[admin-ui]`
+  - compose tab 新增「選擇收件者」按鈕，開啟 modal
+  - modal 中可搜尋用戶（名稱/email），勾選多位作為收件者
+  - 驗收：可搜尋並勾選特定使用者為收件者
+
+### P3 — 需產品決策或跨 Repo 修改
+
+- [ ] 0.19 主題實踐指標公式定義 `[product]`
+  - 定義「活躍中」計算公式
+  - 定義「平均完成率」計算公式
+  - 定義「分類分佈」的分類依據
+  - 驗收：公式確定後可進入實作
+
+- [ ] 0.20 Onboarding 參與度指標公式定義 `[product]`
+  - 定義「H 參與度指標」計算公式
+  - 驗收：公式確定後可進入實作
+
+- [ ] 0.21 打卡動態：心情改非必填、tag 改必填 `[server]` `[f2e]`
+  - 這是產品端的改動，需修改前端產品頁 + 後端 API validation
+  - server: checkin API 的 mood 欄位改 optional，tag 改 required
+  - f2e: 打卡 UI 調整對應欄位必填性
+  - 驗收：打卡時心情可不填，tag 必填
+
+- [ ] 0.22 公開 Practice 是否合併到主題實踐頁 `[product]` `[admin-ui]`
+  - 決策：ContentPerformancePage 的 practice tab 是否移到 PracticesPage
+  - 若合併：PracticesPage 增加公開 Practice 專區
+  - 驗收：產品確認架構後實作
+
+- [ ] 0.23 被設為精選後的展示位置說明 `[product]` `[admin-ui]`
+  - 在精選操作旁加 tooltip 說明精選內容會出現在哪裡
+  - 或在精選設定 UI 中顯示展示位置選項
+  - 驗收：管理員清楚知道精選內容的展示位置
+
 ## 1. 基礎設施與共用元件
 
 - [ ] 1.1 安裝新依賴 xlsx、@dnd-kit/core、@dnd-kit/sortable `[admin-ui]`

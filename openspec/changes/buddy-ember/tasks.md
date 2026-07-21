@@ -1,8 +1,8 @@
 ## 1. DB Migration（daodao-storage）
 
-- [ ] 1.1 拍板 OQ2（per-practice vs. user-pair 火苗）與 OQ3（buddies list dedup 層級），更新 design.md 後再動手寫 migration；驗收：design.md Open Questions 標記為已決
-- [ ] 1.2 新增 `buddy_embers` 表 migration SQL（SERIAL PK，`buddy_request_id INT REFERENCES practice_buddy_requests(id)`，last_checkin_at, consecutive_days, companion_score_a/b, watch_over_notified_at）；驗收：migration up/down 皆可乾淨執行
-- [ ] 1.3 新增 `buddy_cards` 表 migration SQL（SERIAL PK，`buddy_request_id INT REFERENCES practice_buddy_requests(id)`，`sender_id INT REFERENCES users(id)`，card_type, preset_key, content）；驗收：card_type CHECK constraint 有效
+- [ ] 1.1 新增 `buddy_embers` 表 migration SQL（SERIAL PK，`user_a_id / user_b_id INT REFERENCES users(id)`，UNIQUE(user_a_id, user_b_id)，CHECK user_a_id < user_b_id）；驗收：migration up/down 皆可乾淨執行
+- [ ] 1.2 修改 buddy request 接受邏輯（`updateBuddyRequest` status='accepted'）：在寫入後 upsert `buddy_embers`（user-pair 不存在則 INSERT，已存在則跳過）；驗收：同一對用戶重複 accept 不會建立多筆 ember
+- [ ] 1.3 新增 `buddy_cards` 表 migration SQL（SERIAL PK，`sender_id / receiver_id INT REFERENCES users(id)`，card_type, preset_key, content）；驗收：card_type CHECK constraint 有效
 - [ ] 1.4 新增 `practices.title_tsv` GENERATED STORED column 與 GIN index；驗收：FTS query 可正確命中中文標題
 
 ## 2. 後端：Buddy 配對 API（daodao-server）

@@ -1,0 +1,8 @@
+gamification
+report-center
+analytics-core
+social-hub
+universal-view-tracking
+challenge-completion
+user-avatar-upload
+privacy
