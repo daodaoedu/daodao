@@ -183,9 +183,28 @@ practice_created              既有事件，建立來源需可歸因（from=ins
 
 ## 6. Phase 2/3 預留（本次不實作，僅確認不被 MVP 擋路）
 
-- **Feed 插卡**：ai-backend `schemas/feed.py` 已有 `SlotType.B` 預留；屆時 f2e `FeedItem` union 加 `type: "inspiration"`、`FeedReasonType` 加 `daily_quote`。`daily_inspirations` 表結構已含 `theme`，可供依使用者 practice 標籤選卡
-- **分享圖**：沿用 `app/api/og-image/route.ts` 模式
-- **信件/推播**：`notification-weekly` digest 模板加書摘區塊
+### 6.1 Feed 插卡（Phase 2）
+
+ai-backend `schemas/feed.py` 已有 `SlotType.B` 預留；屆時 f2e `FeedItem` union 加 `type: "inspiration"`、`FeedReasonType` 加 `daily_quote`。`daily_inspirations` 表結構已含 `theme`，可供依使用者 practice 標籤選卡。
+
+### 6.2 分享圖（Phase 3）
+
+沿用 `app/api/og-image/route.ts` 模式。
+
+### 6.3 信件整合（Phase 3，優先序已排）
+
+server 信件基礎建設完整（email queues、`email_templates`、`email_trigger_rules`、`notification_preferences`），書摘進信件不需新機制。email worker 與 inspiration service 同在 server，直接呼叫 service 取素材（不走 HTTP）。決定性輪播的副作用是**信裡與首頁當日同句**，形成跨渠道重複曝光，零同步成本。
+
+依「改動成本 × 情境相關度」排序：
+
+| 優先 | 觸點 | 做法 | 為什麼 |
+|------|------|------|--------|
+| P1 | 既有實踐信（PE 系列：週報、打卡鼓勵信） | 信尾加「本週一句」區塊；進階：依 practice tag 對應素材 `theme` 選句 | 收信者正在做實踐，情境最準；只改既有模板，零新增寄信頻率 |
+| P1 | Onboarding 序列信（`onboarding-email` queue） | 書摘 + 模板 CTA 深連結（`from=email` 溯源） | 收信者是「還沒開始實踐」族群，轉換假說最強的位置；漏斗量測直接沿用 |
+| P2 | Weekly digest（`notification-weekly` queue） | 加「本週靈感」區塊 | 順手做，零風險 |
+| P3 | 獨立每日靈感信 | **必須 opt-in**（`notification_preferences` 新增 type）；先看 P1/P2 開信與點擊數據再決定 | 每日一信退訂/垃圾信風險高，不預設開 |
+
+量測：email 端 CTA 帶 `from=email&touchpoint={pe_weekly|onboarding|digest}` 參數，併入 3.4 漏斗；開信/點擊沿用既有 `email_logs` 追蹤。
 
 ---
 

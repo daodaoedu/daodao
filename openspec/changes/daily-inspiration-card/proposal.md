@@ -65,7 +65,7 @@
 - **Feed 插卡（Slot B）**：ai-backend feed 引擎的 `SlotType.B` 已預留但未使用，把靈感卡混入動態流屬 Phase 2，本次不做
 - **個人化選卡**：依使用者 practice 標籤 / persona 挑主題相符的書摘，留待 Phase 2 與 feed 插卡一起評估
 - **分享圖（og-image）**：名言卡轉發分享圖，Phase 3
-- **推播/信件整合**：weekly digest、打卡鼓勵混入書摘，Phase 3
+- **推播/信件整合**：Phase 3（優先序與觸點已規劃於 design 6.3——既有實踐信與 onboarding 序列信優先、weekly digest 順做、獨立每日信僅 opt-in 且看數據再決定）
 - **使用者投稿**：本素材庫為官方策展；社群投稿已有獨立提案（`encouragement-messages`），兩者不混用
 - **多語系素材**：MVP 僅 zh-TW（表結構保留 `locale` 欄位以備擴充）
 - **mobile app**：MVP 僅 product web，Expo app 不在範圍
