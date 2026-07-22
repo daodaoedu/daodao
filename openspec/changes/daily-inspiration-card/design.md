@@ -38,7 +38,7 @@ Seed data 併入同一支 migration（或緊接的下一序號），內容見附
 | slug | 中文 | 對應素材 |
 |------|------|----------|
 | `habit` | 習慣養成 | 原子習慣、富有的習慣 |
-| `discipline` | 紀律 | 紀律等於自由、執行長日記 |
+| `discipline` | 紀律 | 自律就是自由、執行長日記 |
 | `mindset` | 心態與身份 | 七個習慣、原則 |
 | `neuroplasticity` | 神經可塑性 | Rewire、改變是大腦的天性 |
 | `action` | 立即行動 | 兩分鐘法則類 |
@@ -228,7 +228,7 @@ server 信件基礎建設完整（email queues、`email_templates`、`email_trig
 
 MVP 只做 3.5 的機率混合；以下進階留 Phase 2：
 
-- **情境選句**：依 practice tags 對應 theme（運動→habit、日記→reflection）、打卡 mood 低落→自我慈悲類素材、連續打卡里程碑（第 7/30/66 天）→複利與迴路固化類素材（第 66 天彈「神經迴路穩固」書摘，用科學語言為堅持蓋章）
+- **情境選句**：採用 `materials.md` 定義的**八種使用者狀態情境分類法**（A 起步/B 里程碑/C 中斷回歸/D 低潮/E 拖延/F 慶祝/G 焦慮/H 迷惘），每種情境有可程式判斷的訊號與選句優先序（B > C > D > G > A > F）；對應素材已收集 89 條（v2）。DB 擴充屆時再定（`context_codes` 欄位或 mapping 表），不影響 MVP schema
 - **LLM 鼓勵搭配**：ai-backend `encouragement/generate` 失敗或限流時以書摘為 fallback（版位永遠有內容）；或 LLM 個人化鼓勵尾附一句書摘出處（溫度 + 權威感）
 - **版位統一決策**：屆時打卡回饋內容來源有三種（系統鼓勵語、社群鼓勵語 encouragement-messages、書摘），需與該提案負責人共同定義優先序/輪替策略，避免兩提案在同一版位打架
 
@@ -236,7 +236,7 @@ MVP 只做 3.5 的機率混合；以下進階留 Phase 2：
 
 ## 附錄 A：首批 seed 素材（40 條）
 
-> 來源：團隊整理（Grok 對話彙整）。**皆為重點詮釋非逐字引文**，匯入前需人工校對書名譯名與內容。格式：theme | quote_text | action_hint | book_title | book_author
+> 來源：團隊整理（Grok 對話彙整）。**皆為重點詮釋非逐字引文**，匯入前需人工校對書名譯名與內容（校對規範見 `materials.md` 編輯守則；v2 擴充素材 89 條亦在該檔）。格式：theme | quote_text | action_hint | book_title | book_author
 > `suggested_template_id` 不在 seed 內寫死（模板 id 依環境而異）——上線後由營運在 admin 頁逐條配對；**行動型素材（#7、#8、#20、#28、#33 等有 action_hint 者）優先配對**。
 
 | # | theme | quote_text | action_hint | 書名 / 作者 |
@@ -263,7 +263,7 @@ MVP 只做 3.5 的機率混合；以下進階留 Phase 2：
 | 20 | habit | 每天閱讀 30 分鐘以上，能大幅拉開你與他人的差距。 | 今天挑一本書，讀 30 分鐘。 | 富有的習慣 / Thomas C. Corley |
 | 21 | reflection | 痛苦＋反思＝進步。遇到挫折時，勇敢面對並找出根本原因，這就是成長的捷徑。 | 回想最近一次挫折，寫下它教你的一件事。 | 原則 / Ray Dalio |
 | 22 | mindset | 擁抱現實，無論它有多殘酷。只有接受真相，才能做出正確的決定。 | — | 原則 / Ray Dalio |
-| 23 | discipline | 紀律等於自由。當你能掌控自己，你才能掌控人生。 | — | 紀律等於自由 / Jocko Willink |
+| 23 | discipline | 紀律等於自由。當你能掌控自己，你才能掌控人生。 | — | 自律就是自由 / Jocko Willink |
 | 24 | neuroplasticity | 大腦不是一出生就固定。透過重複的行為與思考，你正在親手重塑自己的大腦。 | — | 改變是大腦的天性 / Norman Doidge |
 | 25 | neuroplasticity | 科學已證實：我們的思考、習慣和學習，能實際改變腦內的神經連結。 | — | 改變是大腦的天性 / Norman Doidge |
 | 26 | neuroplasticity | 即使受過傷、年紀較大，或有先天限制，大腦依然擁有驚人的自癒與重塑能力。改變永遠不嫌晚。 | — | 改變是大腦的天性 / Norman Doidge |
