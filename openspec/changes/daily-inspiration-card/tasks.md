@@ -67,7 +67,19 @@
 - [ ] 無資料/錯誤時首頁 layout 不跳動
 - [ ] lint + typecheck 通過
 
-## T7. [admin-ui] 每日靈感管理頁（~4h）
+## T7. [server + f2e] 打卡回饋混入書摘（~3h）
+
+- server：`GET /api/v1/inspirations/random?theme=`（沿用 T3 的 service pool；Zod + `registry.registerPath`）
+- f2e：打卡成功畫面內容池 70/30 機率混合（比例常數集中管理）；書摘格式含「整理自《書名》」出處、**不帶 actionHint/CTA**
+- 曝光事件 `inspiration_checkin_impression`
+
+**驗收**
+- [ ] random API 單元測試：只回 active 素材；theme 篩選正確；pool 空回 `inspiration: null`
+- [ ] 打卡成功畫面可觸發顯示書摘（機率路徑可測，如注入比例常數）
+- [ ] 既有鼓勵語行為不變（70% 路徑），random API 失敗時 fallback 回鼓勵語不阻斷打卡流程
+- [ ] lint + typecheck + test 通過
+
+## T8. [admin-ui] 每日靈感管理頁（~4h）
 
 - `api/admin-inspirations.ts`（前綴 `/daodao-server/api/v1/admin/...`，用 `apiClient`）
 - `hooks/useInspirations.ts`（queryKey `['admin','inspirations',...]`）
@@ -78,9 +90,10 @@
 - [ ] CRUD 全流程可操作；toggle 後今日預覽即時更新
 - [ ] `pnpm run lint` + `pnpm run typecheck` + `pnpm test` 通過
 
-## T8. [daodao] 驗收與收尾（~3h）
+## T9. [daodao] 驗收與收尾（~3h）
 
-- dev 環境端到端驗證：後台改素材 → 首頁卡片正確輪播；配對模板 → 一鍵建立流程走通
+- dev 環境端到端驗證：後台改素材 → 首頁卡片正確輪播；配對模板 → 一鍵建立流程走通；打卡成功可見書摘回饋
+- 與 `encouragement-messages` 提案負責人對齊打卡回饋版位的內容決策（design 6.4）
 - 營運完成行動型素材的模板配對（design 附錄 A 註記的優先條目）
 - 定義漏斗報表查詢（曝光→點擊→建立→7 日打卡；有模板 vs 無模板對比），確認數據可取得
 - 素材校對簽核紀錄（誰校對、哪些條目有修改）
