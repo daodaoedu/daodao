@@ -19,6 +19,7 @@
 - 新增後台 API `/api/v1/admin/inspirations`：素材 CRUD + 啟用開關 + 模板配對
 - 前端首頁「靈感」tab 新增 `InspirationCard` 元件：顯示當日書摘（引文 + 出處 + 行動建議）；有配對模板時 CTA 深連結至**預填模板的實踐建立流程**（一鍵開始），將動機高峰即時轉換為行動
 - 新增轉換漏斗量測：卡片曝光 → CTA 點擊 → 實踐建立（可歸因）→ 7 日內首次打卡
+- **打卡成功回饋混入書摘**：既有鼓勵語版位以 70/30 機率混入書摘（新增 `GET /api/v1/inspirations/random`），在「剛完成行動」的獎賞時刻強化習慣迴路（原子習慣第四法則）
 - admin-ui「內容」分組新增「每日靈感」管理頁（含模板配對）
 - Seed data：首批 40 條書摘素材（8 本書，經人工校對後匯入）
 
@@ -33,7 +34,8 @@
 
 ### Modified Capabilities
 
-- 無（首頁僅新增一個獨立區塊，不動既有 feed 組裝邏輯；實踐建立流程沿用既有模板機制，僅增加來源歸因參數）
+- `checkin-feedback`：打卡成功回饋內容池加入書摘（70% 既有鼓勵語 / 30% 書摘，機率混合；不帶 CTA，純獎賞不導流）——既有鼓勵語行為不變
+- 其餘不動（首頁僅新增獨立區塊，不動 feed 組裝邏輯；實踐建立流程沿用既有模板機制，僅增加來源歸因參數）
 
 ## Impact
 
@@ -43,14 +45,15 @@
 
 **後端（daodao-server）**
 - `prisma/schema.prisma` 同步新表 + `prisma:generate`
-- 新增 route/controller/service：`inspiration.routes.ts`（public today + admin CRUD）
+- 新增 route/controller/service：`inspiration.routes.ts`（public today + random + admin CRUD）
 - Zod validators + `registry.registerPath`（讓 f2e 的 sync-openapi 自動生成型別）
 
 **前端（daodao-f2e / product app）**
 - `packages/api/src/services/inspiration.ts` + `inspiration-hooks.ts`（SWR）
 - `apps/product/src/components/showcase/inspiration-card.tsx`（CTA 深連結預填模板 + 溯源參數）
 - 首頁 `(with-layout)/page.tsx` 插入卡片（ResonanceCarousel 與 feed 列表之間）
-- analytics 事件：`inspiration_card_impression`、`inspiration_cta_click`（沿用 `@daodao/analytics` 慣例）
+- 打卡成功流程：回饋內容池 70/30 混入書摘（機率常數集中管理）
+- analytics 事件：`inspiration_card_impression`、`inspiration_cta_click`、`inspiration_checkin_impression`（沿用 `@daodao/analytics` 慣例）
 - i18n keys
 
 **管理後台（daodao-admin-ui）**
@@ -67,6 +70,7 @@
 - **分享圖（og-image）**：名言卡轉發分享圖，Phase 3
 - **推播/信件整合**：Phase 3（優先序與觸點已規劃於 design 6.3——既有實踐信與 onboarding 序列信優先、weekly digest 順做、獨立每日信僅 opt-in 且看數據再決定）
 - **使用者投稿**：本素材庫為官方策展；社群投稿已有獨立提案（`encouragement-messages`），兩者不混用
+- **打卡情境選句與 LLM 搭配**：依 mood/tags/連續打卡里程碑選句、與 ai-backend LLM 鼓勵的 fallback/組合，留 Phase 2（design 6.4）——MVP 打卡整合只做機率混合
 - **多語系素材**：MVP 僅 zh-TW（表結構保留 `locale` 欄位以備擴充）
 - **mobile app**：MVP 僅 product web，Expo app 不在範圍
 
@@ -75,3 +79,4 @@
 - **素材著作權與正確性**：首批素材為 AI 整理的重點詮釋，**非原書逐字引文**。上線前需人工校對；卡片出處文案一律用「整理自《書名》」而非直引格式，避免誤植為原文
 - **輪播穩定性**：素材數量變動（新增/停用）會改變 `日序 % 總數` 的對應，某天的卡片可能因此跳動——MVP 接受此行為，營運端知悉即可
 - **對轉換的誠實預期**：純名言卡的動機提升以秒計衰減，卡片本身主要貢獻**回訪與品牌調性**；促成主題實踐的力道來自**模板一鍵深連結**。漏斗數據（尤其「有模板 vs 無模板」對比）是決定 Phase 2 是否加碼（feed 插卡、個人化選卡）的判準
+- **打卡回饋版位協調**：`encouragement-messages` 提案（社群鼓勵語池）規劃使用同一個打卡成功版位。兩提案落地時需統一內容決策（design 6.4），實作前先與該提案負責人對齊

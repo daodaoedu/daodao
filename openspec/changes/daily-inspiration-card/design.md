@@ -88,7 +88,16 @@ today    = pool[dayIndex % pool.length]
 - Redis cache：key `inspiration:today:zh-TW`，TTL 到當日台北時間午夜；admin 寫入操作時清除
 - 素材增減會位移對應關係（proposal 已列為已知風險）
 
-### 2.3 Admin CRUD
+### 2.3 Public：隨機一則（打卡回饋用）
+
+```
+GET /api/v1/inspirations/random?theme=habit    # theme 可選
+```
+
+- 從 active pool 隨機回傳一則（與 today 不同：每次呼叫可不同句），response 形狀同 2.1（不含 `date`）
+- 供打卡成功回饋混用（見 3.5）；與既有 `checkin-encouragements/random` 端點**並存**，混合策略放前端
+
+### 2.4 Admin CRUD
 
 掛在 `admin.routes.ts`（沿用既有 admin middleware / 角色檢查）：
 
@@ -99,7 +108,7 @@ PUT    /api/v1/admin/inspirations/:id      # update（含 is_active 切換）
 DELETE /api/v1/admin/inspirations/:id      # hard delete（誤刪風險低，素材可重建）
 ```
 
-### 2.4 檔案觸點
+### 2.5 檔案觸點
 
 | 檔案 | 動作 |
 |------|------|
@@ -159,6 +168,15 @@ practice_created              既有事件，建立來源需可歸因（from=ins
 - 溯源方式：CTA 深連結帶 query 參數，建立完成時寫入歸因（實作時對齊既有 analytics/interaction_events 慣例，避免另建機制）
 - 觀察指標：曝光→點擊率、點擊→建立率、建立→7 日打卡率；並可對比「有模板 vs 無模板」素材的轉換差異（這是驗證本設計假說的實驗）
 
+### 3.5 打卡成功回饋混入書摘（MVP）
+
+行為設計依據：《原子習慣》第四法則「讓獎賞令人滿足」——打卡完成是全產品接受度最高的時刻，且版位已存在（`checkin_encouragements` 打卡成功隨機鼓勵語）。書摘在此不開新版位，而是讓既有版位的內容變強。
+
+- 打卡成功畫面的內容池加入書摘：**70% 既有鼓勵語 / 30% 書摘**（機率混合在前端，比例常數集中管理便於調整）
+- 書摘顯示格式與靈感卡一致（引文 +「整理自《書名》— 作者」），**不顯示 actionHint 與 CTA**——使用者剛完成行動，這一刻是獎賞不是導流
+- 曝光追蹤：`inspiration_checkin_impression`（帶 inspirationId）；此整合目標是留存/連續打卡而非轉換，歸因困難，MVP 只追曝光、不強行歸因 streak
+- ⚠️ **版位協調**：`encouragement-messages` 提案（社群鼓勵語池）規劃使用同一版位。該提案落地時需統一「打卡回饋內容決策」（建議：里程碑日書摘優先、平日社群/系統鼓勵語輪替），詳見 6.4
+
 ## 4. 管理後台（daodao-admin-ui）
 
 照 `admin-content.ts` + `useContentPerformance.ts` + `ContentPerformancePage.tsx` 範本：
@@ -205,6 +223,14 @@ server 信件基礎建設完整（email queues、`email_templates`、`email_trig
 | P3 | 獨立每日靈感信 | **必須 opt-in**（`notification_preferences` 新增 type）；先看 P1/P2 開信與點擊數據再決定 | 每日一信退訂/垃圾信風險高，不預設開 |
 
 量測：email 端 CTA 帶 `from=email&touchpoint={pe_weekly|onboarding|digest}` 參數，併入 3.4 漏斗；開信/點擊沿用既有 `email_logs` 追蹤。
+
+### 6.4 打卡整合進階（Phase 2）
+
+MVP 只做 3.5 的機率混合；以下進階留 Phase 2：
+
+- **情境選句**：依 practice tags 對應 theme（運動→habit、日記→reflection）、打卡 mood 低落→自我慈悲類素材、連續打卡里程碑（第 7/30/66 天）→複利與迴路固化類素材（第 66 天彈「神經迴路穩固」書摘，用科學語言為堅持蓋章）
+- **LLM 鼓勵搭配**：ai-backend `encouragement/generate` 失敗或限流時以書摘為 fallback（版位永遠有內容）；或 LLM 個人化鼓勵尾附一句書摘出處（溫度 + 權威感）
+- **版位統一決策**：屆時打卡回饋內容來源有三種（系統鼓勵語、社群鼓勵語 encouragement-messages、書摘），需與該提案負責人共同定義優先序/輪替策略，避免兩提案在同一版位打架
 
 ---
 
