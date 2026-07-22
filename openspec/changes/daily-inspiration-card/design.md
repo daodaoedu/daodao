@@ -16,6 +16,8 @@ CREATE TABLE daily_inspirations (
     book_title  VARCHAR(200) NOT NULL,            -- 書名（中文版書名）
     book_author VARCHAR(100) NOT NULL,            -- 作者
     theme       VARCHAR(50)  NOT NULL,            -- 主題 slug，值域由應用層管控（見 1.2）
+    suggested_template_id INTEGER REFERENCES practice_templates(id) ON DELETE SET NULL,
+                                                  -- 配對的實踐模板（可為 NULL）；一鍵轉換的關鍵欄位，見 3.3
     locale      VARCHAR(10)  NOT NULL DEFAULT 'zh-TW',
     is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
     sort_order  INTEGER      NOT NULL DEFAULT 0,
@@ -64,6 +66,7 @@ GET /api/v1/inspirations/today
       "bookTitle": "原子習慣",
       "bookAuthor": "James Clear",
       "theme": "habit",
+      "suggestedTemplate": { "id": 12, "title": "每日閱讀 30 分鐘" },  // 無配對模板時為 null
       "date": "2026-07-22"
     }
   }
@@ -131,9 +134,30 @@ DELETE /api/v1/admin/inspirations/:id      # hard delete（誤刪風險低，素
 
 > 位置備選：feed 首張固定卡。MVP 採獨立區塊（不動 `reorderFeedItems`，實作與回滾都簡單）；若上線後想更沉浸再併入 feed（見 Phase 2）。
 
-### 3.3 行動導流（可選加分項）
+### 3.3 行動導流（轉換的關鍵設計，非加分項）
 
-actionHint 下方放「建立實踐」輕量入口 → `/practices/create`。與既有 `AddTaskFAB` 動線一致，不新增路由。
+行為設計依據：名言卡只能短暫拉高動機（Fogg B=MAP 的 M），動機高峰以秒計衰減——CTA 必須在**同一張卡片內**把行動門檻（A）降到最低，否則轉換鏈在「進入空白建立頁」就斷掉。
+
+- **有配對模板**（`suggestedTemplate != null`）：CTA 顯示「用這個模板開始：{{template.title}} →」，深連結至既有 practices 建立流程並**預填模板**（帶 `template` 參數 + 溯源參數，實作時對齊 `practices/create` 模板流程現況）
+- **無配對模板**：CTA 退回一般「建立實踐 →」→ `/practices/create`
+- 素材與模板的天然配對範例：兩分鐘法則→「每天 2 分鐘小事」、每日閱讀 30 分鐘→閱讀打卡模板、復盤日記→「睡前 5 分鐘復盤」（配對關係由營運在 admin 頁維護）
+
+### 3.4 成效量測（漏斗定義，MVP 必做）
+
+沒有這條漏斗，無法回答「這張卡有沒有促成主題實踐」。沿用既有 `@daodao/analytics` 事件慣例與 server `interaction_events` / view-tracking 基礎：
+
+```
+inspiration_card_impression   卡片進入 viewport（帶 inspirationId, theme, hasTemplate）
+        ↓
+inspiration_cta_click         點擊 CTA（帶 inspirationId, templateId?）
+        ↓
+practice_created              既有事件，建立來源需可歸因（from=inspiration&inspirationId=N）
+        ↓
+7 日內首次打卡                 既有 checkin 資料可回溯查詢，不需新事件
+```
+
+- 溯源方式：CTA 深連結帶 query 參數，建立完成時寫入歸因（實作時對齊既有 analytics/interaction_events 慣例，避免另建機制）
+- 觀察指標：曝光→點擊率、點擊→建立率、建立→7 日打卡率；並可對比「有模板 vs 無模板」素材的轉換差異（這是驗證本設計假說的實驗）
 
 ## 4. 管理後台（daodao-admin-ui）
 
@@ -143,7 +167,7 @@ actionHint 下方放「建立實踐」輕量入口 → `/practices/create`。與
 |------|------|
 | `src/api/admin-inspirations.ts` | 新增。**前綴 `/daodao-server/api/v1/admin/inspirations`**（打 server，不是 ai-backend）；用 `apiClient`；型別就近 export |
 | `src/hooks/useInspirations.ts` | react-query；queryKey `['admin', 'inspirations', ...]`；mutation onSuccess invalidate |
-| `src/pages/InspirationsPage.tsx` | 列表（theme 篩選 + 啟用開關 inline toggle）+ 新增/編輯 dialog + 刪除確認。附「今日預覽」小卡（呼叫 public today API） |
+| `src/pages/InspirationsPage.tsx` | 列表（theme 篩選 + 啟用開關 inline toggle + 是否配對模板欄位）+ 新增/編輯 dialog（含**模板配對下拉選單**，選項來自 practice templates 列表；若 admin 無現成端點，於 server admin CRUD 一併補簡單 list）+ 刪除確認。附「今日預覽」小卡（呼叫 public today API） |
 | `src/App.tsx` | lazy route `/inspirations` |
 | `src/components/layout/Sidebar.tsx` | 「內容」group 加 `{ to: '/inspirations', label: '每日靈感', icon: Quote }`（lucide-react） |
 
@@ -168,6 +192,7 @@ actionHint 下方放「建立實踐」輕量入口 → `/practices/create`。與
 ## 附錄 A：首批 seed 素材（40 條）
 
 > 來源：團隊整理（Grok 對話彙整）。**皆為重點詮釋非逐字引文**，匯入前需人工校對書名譯名與內容。格式：theme | quote_text | action_hint | book_title | book_author
+> `suggested_template_id` 不在 seed 內寫死（模板 id 依環境而異）——上線後由營運在 admin 頁逐條配對；**行動型素材（#7、#8、#20、#28、#33 等有 action_hint 者）優先配對**。
 
 | # | theme | quote_text | action_hint | 書名 / 作者 |
 |---|-------|-----------|-------------|--------------|
