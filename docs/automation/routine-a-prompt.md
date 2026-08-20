@@ -1,52 +1,49 @@
-# Routine A — Notion → GitHub Issue 同步
+# Routine A — Board → Sub-repo Dispatch（Actions script 運維手冊）
 
-## 使用前設定
+> 2026-08 二次改版：Routine A 不再由 Claude 執行，改為 GitHub Actions 跑純 script。
+> Notion 版（notion-sync）與 cloud routine 版皆已退役，見 git 歷史。
 
-> **警告：複製貼上前，必須先在 Claude Code Console 的 Routine 環境變數設定中加入以下 env：**
->
-> ```
-> NOTION_API_KEY=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-> NOTION_DB_ID=3549cc8126978036803af61048468bde
-> GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-> ```
->
-> **不可把 API key 直接寫進 prompt 文字。**
+## 組成
 
-## Routine 設定
+| 元件 | 位置 |
+|---|---|
+| Workflow | `.github/workflows/pipeline-dispatch.yml`（每小時 `:07` UTC + `workflow_dispatch`） |
+| 入口 | `bin/pipeline/dispatch.ts` |
+| 判斷邏輯（純函式） | `bin/pipeline/lib.ts`（vitest：`bin/pipeline/__tests__/lib.test.ts`） |
+| gh CLI 封裝 | `bin/pipeline/gh.ts` |
+| Secret | `GIT_HUB_ACCESS_TOKEN`（PAT，需 `repo` + `project` scope） |
 
-- **名稱**：Notion to GitHub Issue Sync
-- **Schedule**：`0 * * * *`（每小時整點，可手動 trigger）
-- **Working directory**：`/path/to/daodao`（monorepo 根）
+## 行為摘要
 
-## Prompt（≤25 行，貼上此區段）
+1. `.automation-paused` 存在 → 直接退出
+2. 掃 Planning board（project 10）`Status=Ready for Dev` 的中央卡；需有 `auto` label、無 `dispatched`/`needs-spec`/`human-driving`
+3. Spec gate：body `OpenSpec: <slug>` + `openspec/changes/<slug>/tasks.md` 存在，否則標 `needs-spec` + comment 退回
+4. 規則化拆卡：每個 `## section` 一張鏡像 issue；repo 判定順序 = section 標題提及 → task 內文提及 → 卡片唯一 `repo:*` label；判不出 → `needs-spec`
+5. 鏡像 issue（labels: `auto` + `auto:<mode>` + `scope:*`，storage/infra 強制 plan-only）掛為中央卡 sub-issue；中央卡 `dispatched` + comment；board → In Progress
+6. 每輪最多 3 張卡；冪等（以 title + `Parent:` 反查），部分失敗不標 `dispatched`
 
-```
-你是 Notion → GitHub issue 同步代理。
+## 手動操作
 
-步驟：
-1. cd 到 daodao monorepo 根目錄。
-2. 確認 NOTION_API_KEY / NOTION_DB_ID / GITHUB_TOKEN 三個 env 都已設定，
-   任一缺失則立刻 exit 並輸出「ABORT: missing env <varname>」，不執行任何同步。
-3. 確認 .automation-paused 檔案不存在；若存在則輸出「⏸️ paused」並 exit 0。
-4. 跑：flock -n /tmp/notion-sync.lock pnpm tsx bin/notion-sync/sync.ts
-   若 flock 拿不到鎖，輸出「⏸️ another instance running, skip」並 exit 0。
-5. 把完整 stdout / stderr 與 exit code 輸出。
-6. 若 exit code 非 0，讀取 .omc/logs/notion-sync-latest.log 後 80 行並回報。
-7. 跑：pnpm tsx bin/pipeline-status.ts
-   然後 git add docs/automation/pipeline-status.md &&
-        git commit -m "chore(automation): refresh pipeline status [skip ci]" &&
-        git push origin HEAD。
+```bash
+# 本機 dry-run（不改任何東西，印出會做什麼）
+pnpm tsx bin/pipeline/dispatch.ts --dry-run
 
-涵蓋的 sub-repo（共 8 個）：
-daodao-server / daodao-f2e / daodao-ai-backend / daodao-storage /
-daodao-admin-ui / daodao-infra / daodao-mcp / daodao-worker
+# 本機實跑
+pnpm tsx bin/pipeline/dispatch.ts
 
-注意：daodao-storage 與 daodao-infra 為高風險 repo，
-sync.ts 會在 issue body 自動加入警示文字，handler 層亦強制 plan-only。
+# 從 GitHub 手動觸發（可勾 dry_run）
+gh workflow run pipeline-dispatch.yml -R daodaoedu/daodao -f dry_run=true
+
+# 看最近的 run log
+gh run list -R daodaoedu/daodao --workflow pipeline-dispatch.yml --limit 5
+gh run view <run-id> -R daodaoedu/daodao --log
 ```
 
-## 相關文件
+## 除錯快查
 
-- 架構說明：`docs/automation/architecture.md`
-- 故障排查：`docs/automation/troubleshooting.md`
-- Pipeline 狀態：`docs/automation/pipeline-status.md`
+| 症狀 | 檢查 |
+|---|---|
+| 卡在 Ready for Dev 沒被撿 | 有 `auto` label 嗎？有殘留 `dispatched`/`needs-spec` 嗎？ |
+| 被標 needs-spec | body 的 `OpenSpec:` 註記與 tasks.md 是否存在；section 是否判得出 repo |
+| board 操作 403 | `GIT_HUB_ACCESS_TOKEN` 缺 `project` scope |
+| 鏡像 issue 重複 | 檢查 title 是否被人工改過（冪等以 title + `Parent:` 比對） |

@@ -1,15 +1,17 @@
 # Routine B v2 — CCR Native Prompt
 
+> 2026-08 改版：Notion 退場。狀態回寫改為中央 issue comment（見階段 2 spec 流程步驟 7）；
+> 上游任務來源見 [routine-a-prompt.md](routine-a-prompt.md)、架構見 [github-pipeline.md](github-pipeline.md)。
+
 ## 使用前設定
 
 > **必須在 Claude Code Routines Console 的環境變數中設定：**
 >
 > ```
-> GITHUB_TOKEN=ghp_xxxx
-> NOTION_API_KEY=secret_xxxx
+> GITHUB_TOKEN=ghp_xxxx   # 需含 repo scope（project scope 由 Routine A/C 使用）
 > ```
 >
-> **不可把 API key 直接寫進 prompt。**
+> **不可把 API key 直接寫進 prompt。Notion env 已移除。**
 
 ---
 
@@ -173,14 +175,13 @@ EOF
          gh issue comment <num> --repo daodaoedu/<repo> --body "🚨 spec PR #$PR_NUM label 無法套用，需人類介入。"
          跳過此 issue
        fi
-    7. 回寫 Notion 狀態為 "Spec Review"：
-       從 issue body 解析 Notion page ID（格式：Notion page ID: `<id>`）
-       NOTION_PAGE_ID=$(gh issue view <num> --repo daodaoedu/<repo> --json body -q '.body' \
-         | grep -o 'Notion page ID: `[^`]*`' | sed 's/Notion page ID: `//;s/`//')
-       若 NOTION_PAGE_ID 非空：
-         cd <monorepo root>
-         pnpm tsx bin/notion-sync/update-status.ts "$NOTION_PAGE_ID" "Spec Review"
-         cd /tmp/<repo>
+    7. 回報中央卡「spec 進入 review」：
+       從 issue body 解析 Parent（格式：Parent: daodaoedu/daodao#<n>）
+       PARENT_NUM=$(gh issue view <num> --repo daodaoedu/<repo> --json body -q '.body' \
+         | grep -o 'Parent: daodaoedu/daodao#[0-9]*' | grep -o '[0-9]*$')
+       若 PARENT_NUM 非空：
+         gh issue comment $PARENT_NUM --repo daodaoedu/daodao \
+           --body "📋 Spec PR 已開：daodaoedu/daodao#$PR_NUM（來自 daodaoedu/<repo>#<num>），等待 review。"
     8. 結束此 issue（等 spec merge 後下輪再處理 code）
   state=needs-code:
     1. 同 scope:S 的 TDD 流程
@@ -213,7 +214,7 @@ EOF
     gh label create "auto" --repo daodaoedu/<repo> \
       --color "0075ca" --description "Routine B dispatch trigger" --force
     gh label create "tracked" --repo daodaoedu/<repo> \
-      --color "0e8a16" --description "PR tracked for Notion status sync" --force
+      --color "0e8a16" --description "PR tracked for board status sync" --force
 
     # PR body 必須用 HEREDOC 寫入暫存檔，確保真換行（不是字面 \n）
     # 不可自由發揮、不可加入實作細節、不可改動格式
