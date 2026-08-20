@@ -167,6 +167,25 @@ sequenceDiagram
 - token 超 cap / verification 2 次失敗 → `human-coding` 移交人類
 - `human-driving` label → routine 立即退場
 
+## Context Pack（確定性檢索，2026-08-20 加入）
+
+依「Context Pack 實戰筆記」引入：review／實作只看 diff 會漏掉「同類呼叫點、
+被改模組的 importer、進行中的工作」——這三種都是確定性查詢，不需要 RAG。
+
+| 元件 | 位置 | 用途 |
+|---|---|---|
+| `retrieve-context.sh` | monorepo `.github/scripts/`（sub-repo 各自 vendor 一份） | rg/git/gh 打包 diff 外脈絡成 context-pack.md：① 改動 symbol 的 caller ② 被改檔案的 importer ③ 同呼叫模式的其他出現點 ④ in-flight 工作（open PR 交集 + 近 21 天 commit）⑤ 精簡 repo map |
+| `test-retrieve-context.sh` | 同上 | fixture 回歸：重演「修 1 個漏 N 個」案例，斷言 pack 必列出漏掉的檔案；改腳本必過 |
+| Reviewer 規則 | sub-repo `code-review.yml` 的 system prompt | 每個 ⚠ 位置判斷「需不需要同樣的修改」；同缺陷未提 → 🔴 Incomplete scope |
+| Routine B Step 0 | `gh-pipeline/references/agentic-flows.md` | 實作前查 in-flight 衝突；開 PR 前自查 ⚠ 位置，範圍外的在 PR body 註記 Known incomplete scope |
+
+噪音採**分級摘要**（命中 >60 或分散 >15 檔 → 壓一行計數；每檔 ≤3 行；pack ≤16KB）。
+已內建的 CI 坑解法：merge-base 兩點 diff、rg 無命中 `|| true`、截斷前先 sort、BSD/GNU 相容。
+
+試點：`daodao-server`（NestJS/TS）。依筆記「每個 repo 會教你一種新的漏抓」，
+第二個試點應選不同語言（`daodao-ai-backend`，Python）再宣稱通用。
+另一半的失敗型態（分支流程錯）由 CI 規則守門，尚未實作。
+
 ## 相關 skills
 
 | Skill | 用途 |
