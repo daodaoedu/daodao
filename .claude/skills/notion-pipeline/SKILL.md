@@ -1,9 +1,14 @@
 ---
 name: notion-pipeline
-description: daodao Notion→Issue→Plan→PR 自動化 pipeline 的 routine 行為規範。Use when running Routine A/B, implementing an auto issue, opening a pipeline PR, or writing pipeline comments. Triggered by keywords: routine, pipeline, auto issue, handler, agentic phase, notion-sync, dispatch.
+description: "[DEPRECATED 2026-08] Notion pipeline 已退場，routine 行為規範改用 gh-pipeline skill（GitHub Projects 版）。Do not use unless explicitly asked to operate the legacy Notion pipeline."
 ---
 
 # notion-pipeline
+
+> ⚠️ **已棄用（2026-08）**：改用 `gh-pipeline` skill。現行架構見
+> `docs/automation/github-pipeline.md`。本文件僅供考古。
+
+
 
 daodao 自動化 pipeline 行為規範。Routine A/B 在 agentic phase 前必須載入此 skill。
 

@@ -1,9 +1,14 @@
 ---
 name: notion-card
-description: 在 daodao 任務 Notion DB 建立新卡片。Use when user says "開 Notion 卡"、"建 notion 單"、"新增任務"、"create notion card"、"開一張卡"、"記到 notion"。從對話或報告自動推斷欄位，互動確認後建立。
+description: "[DEPRECATED 2026-08] Notion 已退場，開卡請改用 gh-card skill（GitHub 中央 issue + Planning board）。Do not use unless explicitly asked to operate the legacy Notion DB."
 ---
 
 # notion-card
+
+> ⚠️ **已棄用（2026-08）**：任務管理改用 GitHub Projects + daodaoedu/daodao issues，
+> 開卡請用 `gh-card` skill。本文件僅供考古。
+
+
 
 在 daodao 任務 DB 建立 Notion 卡片，欄位互動確認後送出。
 

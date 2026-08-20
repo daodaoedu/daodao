@@ -1,5 +1,9 @@
 # Pipeline Architecture
 
+> ⚠️ **已過時（2026-08）**：本文件描述的是 Notion 時代的 pipeline。
+> 現行架構（GitHub Projects + 中央 issues）見 [github-pipeline.md](github-pipeline.md)。
+> Routine B 的 agentic 實作細節（state.ts / main.sh / handler）仍然有效，可參考。
+
 ## Overview
 
 Notion → GitHub Issue → Plan → PR 自動化 pipeline，把 Notion 任務 DB 中標記為「可開發」的卡片自動同步成 GitHub sub-repo issue，再由 Claude Code routine 接力做 plan、code、開 PR，並將進度回寫 Notion。

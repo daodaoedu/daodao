@@ -1,8 +1,8 @@
-name: Routine C — PR Merge → Notion Status Done
+name: Pipeline — Merged PR → Board Done (Routine C)
 
 on:
   schedule:
-    - cron: '0 * * * *'  # every hour UTC
+    - cron: '37 * * * *'  # hourly UTC
   workflow_dispatch:
     inputs:
       dry_run:
@@ -15,8 +15,8 @@ on:
         default: '48'
 
 jobs:
-  sync-done:
-    name: Mark merged-PR Notion tasks as Done
+  board-sync:
+    name: Sync merged auto PRs back to the Planning board
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,13 +39,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Routine C
+      - name: Run pipeline-board-sync
         env:
-          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-          NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+          # PAT with repo + project scope (org project item-edit and cross-repo issues/PRs)
           GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
         run: |
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           if [ -n "${{ inputs.hours }}" ]; then ARGS="$ARGS --hours ${{ inputs.hours }}"; fi
-          pnpm tsx bin/routine-c/sync-done.ts $ARGS
+          pnpm tsx bin/pipeline/board-sync.ts $ARGS

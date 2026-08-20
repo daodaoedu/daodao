@@ -1,8 +1,8 @@
-name: Routine A — Notion → GitHub Issue Sync
+name: Pipeline — Board → Sub-repo Dispatch (Routine A)
 
 on:
   schedule:
-    - cron: '0 * * * *'  # every hour UTC
+    - cron: '7 * * * *'  # hourly UTC
   workflow_dispatch:
     inputs:
       dry_run:
@@ -11,8 +11,8 @@ on:
         default: false
 
 jobs:
-  sync:
-    name: Sync Notion tasks to GitHub issues
+  dispatch:
+    name: Dispatch Ready-for-Dev cards to sub-repos
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -35,12 +35,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run Routine A
+      - name: Run pipeline-dispatch
         env:
-          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-          NOTION_DB_ID: ${{ secrets.NOTION_DB_ID }}
+          # PAT with repo + project scope (org project item-list/item-edit and cross-repo issues)
           GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
         run: |
           ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="--dry-run"; fi
-          pnpm tsx bin/notion-sync/sync.ts $ARGS
+          pnpm tsx bin/pipeline/dispatch.ts $ARGS
