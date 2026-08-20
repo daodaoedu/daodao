@@ -1,5 +1,27 @@
 # Agentic Implementation Flows
 
+## Step 0（所有 scope 共用）— Context Pack
+
+實作前與開 PR 前各跑一次確定性檢索，把 diff 外的脈絡放到自己眼前
+（腳本在 monorepo `.github/scripts/retrieve-context.sh`，sub-repo 若有同名腳本用 sub-repo 的）：
+
+```bash
+# 實作前：了解要改的東西在 diff 外有哪些 caller / importer / in-flight 工作
+GH_REPO=daodaoedu/<repo> bash .github/scripts/retrieve-context.sh origin/dev HEAD context-pack.md
+```
+
+規則：
+1. **實作前**讀 pack 的「同檔案進行中的工作」——若目標檔案正被 open PR 動到，
+   在 issue 留 comment 註記潛在衝突再繼續（撞到進行中工作是已知失敗型態）
+2. **開 PR 前**重跑一次，對每個 ⚠ 位置回答「這個位置需不需要同樣的修改」：
+   - 需要且已改 → ok
+   - 需要但不在本 issue 範圍 → PR body 的 Implementation Notes 註記
+     「Known incomplete scope: {位置清單}」，並在 issue 留 comment
+   - 不需要 → 不用寫
+3. pack 產不出來（腳本缺失/報錯）→ 照常實作，PR body 註記「context pack unavailable」
+
+---
+
 ## scope:XS — 單一 PR（plan + code 合一）
 
 **Token cap**: 50,000  
