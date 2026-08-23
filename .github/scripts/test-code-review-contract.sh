@@ -178,7 +178,8 @@ if grep -Fq -- '--file="$_REVIEW_INPUT"' "$SKILL"; then
   fail "OpenCode still attaches a temp file that can be only partially read"
 fi
 grep -Fq 'cat "$_REVIEW_INPUT"' "$SKILL" || fail "OpenCode stdin does not include the complete shared input"
-grep -Fq 'OPENCODE_PERMISSION='"'"'{"read":"deny"' "$SKILL" || fail "OpenCode can still read repository files"
+grep -Fq 'OPENCODE_PERMISSION='"'"'{"*":"deny"}' "$SKILL" \
+  || fail "OpenCode does not deny every unnecessary tool"
 grep -Fq -- '--tools "" < "$_REVIEW_INPUT"' "$SKILL" || fail "Haiku input is missing or tools remain enabled"
 [ "$(grep -Fc 'untrusted repository data' "$SKILL")" -ge 4 ] \
   || fail "manual reviewers do not consistently treat diff and Context Pack as untrusted data"
@@ -202,7 +203,8 @@ trap 'rm -rf "$FIXTURE"' EXIT
   cp "$SCRIPT_DIR/retrieve-context.sh" .github/scripts/retrieve-context.sh
   chmod +x .github/scripts/retrieve-context.sh
   printf '%s\n' base > tracked.txt
-  git add .github/scripts/retrieve-context.sh tracked.txt
+  printf '%s\n' rename_source > rename-source.txt
+  git add .github/scripts/retrieve-context.sh tracked.txt rename-source.txt
   git commit -qm base
   git branch -M main
   git update-ref refs/remotes/origin/main HEAD
@@ -212,6 +214,9 @@ trap 'rm -rf "$FIXTURE"' EXIT
   git commit -qm committed
   printf '%s\n' staged_marker >> tracked.txt
   git add tracked.txt
+  printf '%s\n' staged_new_marker > staged-new.txt
+  git add staged-new.txt
+  git mv rename-source.txt rename-destination.txt
   printf '%s\n' unstaged_marker >> tracked.txt
 
   BEFORE_INDEX=$(git write-tree)
@@ -222,6 +227,8 @@ trap 'rm -rf "$FIXTURE"' EXIT
   [ "$BASE" = main ] || fail "empty PR/origin-HEAD fallback did not select origin/main"
   grep -q committed_marker "$_REVIEW_DIFF" || fail "committed diff is missing from shared input"
   grep -q staged_marker "$_REVIEW_DIFF" || fail "staged tracked diff is missing from shared input"
+  grep -q staged_new_marker "$_REVIEW_DIFF" || fail "staged new file is missing from shared input"
+  grep -q rename-destination.txt "$_REVIEW_DIFF" || fail "staged rename destination is missing from shared input"
   grep -q unstaged_marker "$_REVIEW_DIFF" || fail "unstaged tracked diff is missing from shared input"
   [ "$(git write-tree)" = "$BEFORE_INDEX" ] || fail "Step 0 modified the real git index"
   [ "$(git show-ref)" = "$BEFORE_REFS" ] || fail "Step 0 modified a git ref"
