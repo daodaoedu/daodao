@@ -190,7 +190,9 @@ open PR 交集排除，避免把自己誤判為 in-flight 衝突。diff、pack �
 
 首次合併時會執行 base branch 上既有的可信腳本版本；只有 base 完全沒有該腳本或腳本執行
 失敗時，CI 才會安全降級成 diff-only review。合併後的後續 PR 才會使用這次更新的 Context Pack。
-六個正式 sub-repo 的 vendor 同步會由各 repo 獨立 PR 追蹤，不在本 root PR 內宣稱完成。
+共享設定同步 Action 會為各 target repo 建立獨立 PR，並同步兩個 workflow、可信 Context Pack
+腳本與 regression contracts；由具 ruleset bypass 權限的同步 bot 合併，失敗時保留 GitHub CLI
+錯誤並讓 workflow 明確失敗，不會靜默留下待人工處理的 PR。
 
 Fixture 覆蓋 TypeScript importer、JSX 呼叫模式、Python dotted module、current PR 排除，
 以及超過 pipe buffer 時仍保持 UTF-8 完整行截斷。
