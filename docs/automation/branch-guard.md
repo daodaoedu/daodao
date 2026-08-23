@@ -14,6 +14,9 @@ Workflow 會從 PR 的 base SHA 讀取 `.github/scripts/check-branch-guard.sh`
 到 runner 暫存目錄後執行，避免執行 PR 可修改的 checkout 腳本。若 base revision
 還沒有該腳本，則使用 workflow 內建的可信 bootstrap 規則。
 
+另有獨立 regression job 執行 PR 版本的測試；該 job 使用 `permissions: {}`，
+checkout 也不保留 credentials，因此不會把 token 或 secrets 暴露給 PR 程式碼。
+
 ## 啟用守門
 
 Workflow 本身只會回報 check。Repository 管理員仍需在 `main` branch protection

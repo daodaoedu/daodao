@@ -43,15 +43,39 @@ output="$(HEAD="feat/large-pr" BASE="main" CHANGED=61 "$CHECK" 2>&1)" || fail "6
 [[ "$output" == *"branch guard passed"* ]] || fail "61 files 缺少通過訊息：$output"
 echo "✅ 61 files warning/pass"
 
+job_section() {
+  local job="$1"
+  awk -v header="  $job:" '
+    $0 == header { inside = 1 }
+    inside && $0 != header && $0 ~ /^  [[:alnum:]_-]+:$/ { exit }
+    inside { print }
+  ' "$WORKFLOW"
+}
+
+guard_job="$(job_section guard)"
+regression_job="$(job_section regression)"
+
 base_load_pattern="git show \"\$BASE_SHA:.github/scripts/check-branch-guard.sh\" > \"\$TRUSTED_CHECK\""
 trusted_run_pattern="\"\$RUNNER_TEMP/check-branch-guard.sh\""
-grep -Fq "$base_load_pattern" "$WORKFLOW" \
+grep -Fq "$base_load_pattern" <<< "$guard_job" \
   || fail "workflow 未從 base SHA 載入可信腳本"
-grep -Fq "$trusted_run_pattern" "$WORKFLOW" \
+grep -Fq "$trusted_run_pattern" <<< "$guard_job" \
   || fail "workflow 未執行 runner 暫存目錄內的可信副本"
-if grep -Eq '^[[:space:]]+\.github/scripts/check-branch-guard\.sh([[:space:]]|$)' "$WORKFLOW"; then
-  fail "workflow 不得直接執行 PR checkout 內的腳本"
+if grep -Fq '.github/scripts/test-branch-guard.sh' <<< "$guard_job"; then
+  fail "production guard job 不得執行 PR checkout 內的測試"
 fi
 echo "✅ trusted base script boundary"
+
+[[ -n "$regression_job" ]] || fail "workflow 缺少 regression job"
+grep -Fq 'permissions: {}' <<< "$regression_job" \
+  || fail "regression job 必須使用 permissions: {}"
+grep -Fq 'persist-credentials: false' <<< "$regression_job" \
+  || fail "regression checkout 不得保留 credentials"
+grep -Fq 'run: .github/scripts/test-branch-guard.sh' <<< "$regression_job" \
+  || fail "regression job 未執行 PR 版本測試"
+if grep -Eq '(secrets\.|GITHUB_TOKEN|permissions:[[:space:]]*$)' <<< "$regression_job"; then
+  fail "regression job 不得取得 secrets、token 或額外 permissions"
+fi
+echo "✅ tokenless regression job contract"
 
 echo "✅ branch guard regression tests passed"
