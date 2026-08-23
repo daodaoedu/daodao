@@ -42,8 +42,8 @@ flowchart TD
     H --> I["Push<br/>code-review skill"]
     I --> J[開 PR]
 
-    J --> K["Auto PR Description<br/>GPT-4o-mini"]
-    J --> L["AI Code Review<br/>GPT-4o-mini"]
+    J --> K["Auto PR Description<br/>Workers AI"]
+    J --> L["AI Code Review<br/>Workers AI"]
     J --> M["Gemini Code Assist<br/>Google"]
     J --> N["CI<br/>lint + typecheck + test"]
 
@@ -444,7 +444,7 @@ Push 到遠端並開 PR 後，GitHub Actions 會自動觸發四道平行的檢�
 ```
 PR opened / updated
   ├── 1. Auto PR Description — 自動產生 PR 標題和描述
-  ├── 2. AI Code Review — GPT-4o-mini 審查 diff
+  ├── 2. AI Code Review — Cloudflare Workers AI 審查 diff
   ├── 3. Gemini Code Assist — Google AI 審查
   └── 4. CI — lint + typecheck + test + build
 ```
@@ -456,9 +456,12 @@ PR opened / updated
 | 項目 | 說明 |
 |------|------|
 | 觸發時機 | PR opened |
-| 引擎 | GPT-4o-mini（GitHub Models） |
+| 引擎 | Cloudflare Workers AI（GLM 4.7 Flash，Gemma 4 26B fallback） |
 | 效果 | 根據 commit log 自動產生繁體中文的 Why / How 描述 |
 | 設定檔 | `.github/workflows/auto-pr-description.yml` |
+
+需要在 GitHub Actions secrets 設定 `CLOUDFLARE_WORKERS_AI_ACCOUNT_ID` 與
+`CLOUDFLARE_WORKERS_AI_API_TOKEN`。API token 只需具備 Workers AI Read 權限。
 
 這不是取代你自己寫 PR description — 而是提供一個起點。自動產生的描述通常能涵蓋 80% 的內容，你只需要補充遺漏的部分。
 
@@ -467,8 +470,8 @@ PR opened / updated
 | 項目 | 說明 |
 |------|------|
 | 觸發時機 | PR opened + synchronize（每次 push 都會重新跑） |
-| 引擎 | GPT-4o-mini（GitHub Models） |
-| 效果 | 審查 diff，產生嚴重度分級的 review comment |
+| 引擎 | Cloudflare Workers AI（Gemma 4 26B，GPT-OSS 120B fallback） |
+| 效果 | 審查 diff + 確定性 Context Pack，追蹤 caller、importer、同模式漏改與 in-flight 衝突，產生嚴重度分級的 review comment |
 | 設定檔 | `.github/workflows/code-review.yml` |
 
 Review comment 按嚴重度分級：
@@ -649,8 +652,8 @@ Merge 到 main（或 dev）後，GitHub Actions 會自動觸發部署：
 | **Commit** | pre-commit-check skill | Commit 前自動 lint + typecheck + 修復 |
 | **Commit** | format-commit skill | 結構化 commit message（Why / How） |
 | **Review** | code-review skill | Push 前本地 code review |
-| **PR** | Auto PR Description | GPT-4o-mini 自動產生 PR 描述 |
-| **PR** | AI Code Review | GPT-4o-mini 自動審查 diff |
+| **PR** | Auto PR Description | Workers AI 自動產生 PR 描述 |
+| **PR** | AI Code Review | Workers AI 自動審查 diff |
 | **PR** | Gemini Code Assist | Google AI 額外審查 |
 | **PR** | collect-pr-feedback skill | 收集所有 review 回饋，分類整理 |
 | **CI** | GitHub Actions | 自動化品質檢查（lint + typecheck + test + build） |
