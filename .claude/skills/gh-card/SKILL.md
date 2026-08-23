@@ -33,7 +33,7 @@ description: 在 daodaoedu/daodao 建立中央 feature issue 並掛上 org Plann
 - **Status**：預設 `Todo`（安全；`Ready for Dev` 才會被 Routine A 撿走）
 - **Target repo(s)**：提到了哪些 sub-repo → `repo:<name>` label
 - **Scope**：根據複雜度估計 → `scope:XS|S|M|L` label
-- **Auto mode**：`auto` + `auto:plan-only`（保守預設）或 `auto:auto-pr`；不加 `auto` = 純人工卡
+- **Auto mode**：預設 plan-only（不用掛 label）；要全自動開 PR 掛 `auto:auto-pr`；不想被 pipeline 碰掛 `human-driving`
 
 ### Step 2：互動確認
 
@@ -45,7 +45,7 @@ description: 在 daodaoedu/daodao 建立中央 feature issue 並掛上 org Plann
 Title:        {推斷值}
 Status:       Todo ← 預設（改 "Ready for Dev" 才會進 pipeline）
 Labels:       {scope:M, repo:daodao-f2e, ...}
-Auto:         （不加）← 預設；要進自動 pipeline 需 auto + auto:plan-only|auto-pr
+Auto:         plan-only ← 預設（Ready for Dev 即派工）；auto:auto-pr = 全自動開 PR；human-driving = 退出 pipeline
 Body:         {摘要}
 ```
 
@@ -67,7 +67,7 @@ gh project item-edit --project-id PVT_kwDOBTLl0c4Bgxef --id <item-id> \
 ### Step 4：回報
 
 - Issue URL + board 連結
-- 若 Status=`Ready for Dev` 且有 `auto` label → 提示「下次 Routine A 執行時（最慢 1 小時）會自動 dispatch 到 sub-repo」
+- 若 Status=`Ready for Dev`（且無 `human-driving`）→ 提示「下次 Routine A 執行時（最慢 1 小時）會自動 dispatch 到 sub-repo」
 - 若無 spec（issue body 沒有 OpenSpec change 連結、沒有 Acceptance Criteria）→ 提示「Routine A 會標 `needs-spec`，建議先跑 `prd-generation` / `openspec-ff-change` 產 spec」
 
 ---
@@ -101,6 +101,6 @@ gh project item-edit --project-id PVT_kwDOBTLl0c4Bgxef --id <item-id> \
 
 - Status 預設 `Todo`（安全），避免意外觸發 dispatch
 - Scope 預設 `M`（保守）
-- Auto mode 預設 `auto:plan-only`；**沒有 `auto` label 的卡 Routine A 永遠不碰**
+- Auto mode 預設 plan-only；**Ready for Dev 即派工，掛 `human-driving` 的卡 Routine A 永遠不碰**
 - 高風險 repo（`daodao-storage`、`daodao-infra`）：建立時提示「此 repo 為高風險，pipeline 強制 plan-only」
 - Priority field 目前沒有 options，暫不設定
