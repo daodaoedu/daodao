@@ -1,0 +1,32 @@
+name: Branch Guard
+
+# Enforcement runs from the default branch's trusted workflow definition.
+# Never checkout or execute pull-request code in this workflow.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  guard:
+    name: Branch flow rules
+    runs-on: ubuntu-latest
+    permissions:
+      # Required only while actions/checkout reads the trusted default branch.
+      contents: read
+
+    steps:
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Check branch name and base
+        env:
+          HEAD: ${{ github.event.pull_request.head.ref }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: .github/scripts/check-branch-guard.sh
