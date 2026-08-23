@@ -9,6 +9,9 @@ on:
       - '.claude/skills/collect-pr-feedback/**'
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
+      - '.github/scripts/retrieve-context.sh'
+      - '.github/scripts/test-retrieve-context.sh'
+      - '.github/scripts/test-code-review-contract.sh'
   schedule:
     # 每週一 UTC 01:00 (台灣 09:00)
     - cron: '0 1 * * 1'
@@ -54,12 +57,11 @@ jobs:
           fi
 
           # Shared skills
-          for skill in collect-pr-feedback; do
-            if [ -d ".claude/skills/$skill" ]; then
-              mkdir -p "target/.claude/skills/$skill"
-              cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
-            fi
-          done
+          skill="collect-pr-feedback"
+          if [ -d ".claude/skills/$skill" ]; then
+            mkdir -p "target/.claude/skills/$skill"
+            cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
+          fi
 
           # Shared workflows
           mkdir -p target/.github/workflows
@@ -69,11 +71,22 @@ jobs:
             fi
           done
 
+          # Trusted Context Pack runtime and regression contracts
+          mkdir -p target/.github/scripts
+          for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh; do
+            cp ".github/scripts/$script" "target/.github/scripts/$script"
+            chmod +x "target/.github/scripts/$script"
+          done
+
       - name: Check for changes
         id: diff
         working-directory: target
         run: |
-          git diff --quiet && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+          if [ -z "$(git status --porcelain -- .claude .github/workflows .github/scripts)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Get default branch
         if: steps.diff.outputs.changed == 'true'
@@ -94,19 +107,20 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          BRANCH="chore/sync-claude-config-$(date +%Y%m%d%H%M)"
+          BRANCH="chore/sync-claude-config-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git checkout -b "$BRANCH"
-          git add -f .claude/ .github/workflows/
+          git add -f .claude/ .github/workflows/ .github/scripts/
           git commit -m "chore: sync shared config from daodao
 
-          Auto-synced hooks, settings, and workflows from daodao/.claude"
+          Auto-synced hooks, settings, workflows, and trusted review scripts from daodao"
           git push origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore: sync shared config" \
-            --body "Auto-synced from daodao/.claude. Updates hooks, settings, and workflows." \
+            --body "Auto-synced from daodao. Updates hooks, settings, workflows, and trusted review scripts." \
             --base "$DEFAULT_BRANCH")
-          if gh pr merge "$PR_URL" --squash --admin 2>/dev/null; then
+          if gh pr merge "$PR_URL" --squash --admin --delete-branch; then
             echo "✅ PR merged: $PR_URL"
           else
-            echo "✅ PR created (manual merge required): $PR_URL"
+            echo "::error::Admin merge failed; inspect the gh error above: $PR_URL"
+            exit 1
           fi
