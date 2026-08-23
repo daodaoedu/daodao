@@ -14,7 +14,7 @@
   - Routine A 把 Ready for Dev 的中央卡 dispatch 成 sub-repo **鏡像 issue**（掛 sub-issue）
   - Routine B 對鏡像 issue 做 plan / code / 開 PR
   - Routine C 把 merged PR 的完成狀態回寫 board
-- **兩道閘門**：board `Status=Ready for Dev` **且** 中央 issue 有 `auto` label，缺一不 dispatch
+- **單一閘門**：board `Status=Ready for Dev` 即派工（Ready for Dev = 派工佇列）；不想被 pipeline 碰的卡掛 `human-driving` 退出
 - **Spec gate**：中央 issue body 必須註記 `OpenSpec: openspec/changes/{slug}/` 且該 change 有 tasks.md，否則標 `needs-spec` 退回
 
 ## 全流程圖
@@ -25,11 +25,11 @@ flowchart TD
         PRD["docs/product PRD/FRD<br/>（prd-generation skill）"]
         SPEC["OpenSpec change<br/>openspec/changes/&lt;slug&gt;/<br/>（openspec-ff-change）"]
         CARD["gh-card skill 開卡<br/>daodaoedu/daodao issue<br/>→ 掛 Planning board"]
-        READY{"人工確認：<br/>Status → Ready for Dev<br/>+ auto label"}
+        READY{"人工確認：<br/>Status → Ready for Dev"}
     end
 
     subgraph routineA["Routine A（Actions script・每小時）Board → Dispatch"]
-        SCAN_A["掃 board<br/>Status=Ready for Dev + auto<br/>−dispatched −needs-spec"]
+        SCAN_A["掃 board<br/>Status=Ready for Dev<br/>−dispatched −needs-spec −human-driving"]
         GATE{"spec gate：<br/>OpenSpec 註記存在？"}
         NEEDSPEC["標 needs-spec + comment<br/>退回人工補 spec"]
         MIRROR["拆 tasks → sub-repo 開鏡像 issue<br/>（auto + scope + auto-mode labels）<br/>掛為 sub-issue"]
@@ -70,7 +70,7 @@ flowchart TD
 ```mermaid
 stateDiagram-v2
     [*] --> Todo : gh-card 開卡
-    Todo --> ReadyForDev : 人工：spec 完成<br/>設 Status + auto label
+    Todo --> ReadyForDev : 人工：spec 完成<br/>設 Status
     ReadyForDev --> ReadyForDev : Routine A 標 needs-spec<br/>（spec gate 未過，退回）
     ReadyForDev --> InProgress : Routine A dispatch<br/>（鏡像 issue + sub-issues）
     InProgress --> InProgress : Routine B plan/code/PR<br/>Routine C 回報 n/m
@@ -78,9 +78,9 @@ stateDiagram-v2
     Done --> [*] : product 驗收<br/>手動 close issue
 
     note right of ReadyForDev
-        兩道閘門：
+        單一閘門：
         Status=Ready for Dev
-        AND auto label
+        （human-driving 可退出）
     end note
 ```
 
@@ -97,7 +97,7 @@ sequenceDiagram
     participant RC as Routine C
 
     P->>C: gh-card 開卡（附 FRD/OpenSpec）
-    P->>B: Status → Ready for Dev + auto label
+    P->>B: Status → Ready for Dev
     A->>B: 每小時掃 Ready for Dev
     A->>C: spec gate 檢查
     alt 無 spec
@@ -122,8 +122,8 @@ sequenceDiagram
 
 | Label | 誰加 | 意義 |
 |---|---|---|
-| `auto` | 人工（gh-card） | 允許進 pipeline（第二道閘門） |
-| `auto:plan-only` / `auto:auto-pr` | 人工 | 鏡像 issue 繼承的執行模式 |
+| `human-driving` | 人工 | 退出 pipeline（Ready for Dev 也不派工） |
+| `auto:plan-only` / `auto:auto-pr` | 人工 | 執行模式；未掛一律 plan-only |
 | `scope:XS/S/M/L` | 人工 | 複雜度，決定 agentic flow |
 | `repo:<sub-repo>` | 人工 | 目標 repo 標注（board 篩選用） |
 | `dispatched` | Routine A | 已 dispatch，避免重複處理 |

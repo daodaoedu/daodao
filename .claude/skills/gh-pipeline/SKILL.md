@@ -29,13 +29,14 @@ Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
 Script 行為（判斷邏輯在 `bin/pipeline/lib.ts`，有 vitest 測試）：
 1. `.automation-paused` 存在 → exit 0
-2. 掃 board `Status=Ready for Dev`，issue 需有 `auto` label、無 `dispatched`/`needs-spec`/`human-driving`、state open
+2. 掃 board `Status=Ready for Dev`，issue 需無 `dispatched`/`needs-spec`/`human-driving`、state open（Ready for Dev 即派工；`human-driving` 是退出閥）
 3. **Spec gate**：body 的 `OpenSpec: <slug>` 註記 + `openspec/changes/<slug>/tasks.md` 存在，否則標 `needs-spec` + comment
 4. **規則化拆卡**：tasks.md 每個 `## section` 一張鏡像 issue；target repo 依「section 標題 → task 內文提及的 sub-repo 名稱 → 卡片唯一 `repo:*` label」判定，判不出 → `needs-spec` 退回
 5. 鏡像 issue 掛 sub-issue、中央卡 `dispatched` + comment、board → In Progress；每輪最多 3 張卡
 6. 冪等：以鏡像 title + body 的 `Parent:` 反查去重，部分失敗不標 `dispatched`，下輪續跑
 
 高風險 repo（`daodao-storage` / `daodao-infra`）：鏡像 issue 一律 `auto:plan-only`，不論中央卡 label。
+執行模式：中央卡有 `auto:auto-pr` → 鏡像 issue 直接開 code PR；否則一律 plan-only。
 
 ---
 
