@@ -36,9 +36,10 @@ _REVIEW_INPUT="$_REVIEW_TMP_DIR/review-input.md"
 _TRUSTED_RETRIEVER="$_REVIEW_TMP_DIR/retrieve-context.sh"
 _REVIEW_INDEX="$_REVIEW_TMP_DIR/review.index"
 
-# 用暫存 index + synthetic commit 擷取 HEAD 加上 staged/unstaged tracked 檔案的最終狀態。
+# 複製目前 index 到暫存 index，再用 synthetic commit 擷取 staged 狀態加上
+# unstaged tracked 檔案的最終狀態；已 staged 的新增檔與 rename destination 也會保留。
 # 不會改寫真實 index 或任何 ref，untracked 檔案不在 review 範圍。
-GIT_INDEX_FILE="$_REVIEW_INDEX" git read-tree HEAD
+cp -- "$(git rev-parse --git-path index)" "$_REVIEW_INDEX"
 GIT_INDEX_FILE="$_REVIEW_INDEX" git add -u --
 _REVIEW_TREE=$(GIT_INDEX_FILE="$_REVIEW_INDEX" git write-tree)
 _REVIEW_HEAD=$(printf '%s\n' 'daodao code review synthetic snapshot' | \
@@ -170,7 +171,7 @@ Never output the clean phrase when the table contains an issue.
 BEGIN UNTRUSTED REVIEW INPUT"
   cat "$_REVIEW_INPUT"
   printf '%s\n' 'END UNTRUSTED REVIEW INPUT'
-} | OPENCODE_PERMISSION='{"read":"deny","edit":"deny","bash":{"*":"deny"},"task":"deny","webfetch":"deny","websearch":"deny","external_directory":"deny"}' \
+} | OPENCODE_PERMISSION='{"*":"deny"}' \
   opencode run \
     --pure \
     --model "$_OPENCODE_REVIEW_MODEL" \
