@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { routeModel, buildAdrFragment, MODEL_MAP, type Stage } from "../model-router.js";
 
 vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
+  spawnSync: vi.fn(),
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -15,7 +15,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 describe("routeModel", () => {
@@ -56,7 +56,7 @@ describe("MODEL_MAP", () => {
 
 describe("buildAdrFragment", () => {
   beforeEach(() => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(spawnSync).mockReset();
     vi.mocked(existsSync).mockReturnValue(false);
     vi.mocked(readdirSync).mockReturnValue([]);
   });
@@ -102,9 +102,14 @@ describe("buildAdrFragment", () => {
   });
 
   it("includes issue body area spec when gh returns area annotation", () => {
-    vi.mocked(execSync).mockReturnValue(
-      JSON.stringify({ body: "<!-- area: auth -->\nFix login" })
-    );
+    vi.mocked(spawnSync).mockReturnValue({
+      stdout: JSON.stringify({ body: "<!-- area: auth -->\nFix login" }),
+      stderr: "",
+      status: 0,
+      pid: 0,
+      output: [],
+      signal: null,
+    });
     vi.mocked(readFileSync as ReturnType<typeof vi.fn>).mockImplementation(
       (path: string) => {
         if (String(path).includes("openspec/specs/auth/spec.md")) return "# Auth Spec";
@@ -120,8 +125,13 @@ describe("buildAdrFragment", () => {
   });
 
   it("skips issue area lookup gracefully when gh fails", () => {
-    vi.mocked(execSync).mockImplementation(() => {
-      throw new Error("gh not found");
+    vi.mocked(spawnSync).mockReturnValue({
+      stdout: "",
+      stderr: "gh not found",
+      status: 1,
+      pid: 0,
+      output: [],
+      signal: null,
     });
     const result = buildAdrFragment({ repo: "daodao-f2e", issueNum: "99" });
     expect(result).toBe("");
