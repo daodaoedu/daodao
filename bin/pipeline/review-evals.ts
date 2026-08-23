@@ -67,10 +67,11 @@ export function parseReviewFindings(body: string): Finding[] {
     const m = /^\|\s*(?:🔴|🟡|🟢)?\s*(High|Medium|Low)\s*\|(.+)$/.exec(line.trim());
     if (!m) continue;
     const rest = m[2]!;
-    const fileMatch = /`([^`]+)`/.exec(rest);
+    const fileCell = rest.split("|", 1)[0]!.trim();
+    const quotedFile = /^`([^`]+)`$/.exec(fileCell);
     findings.push({
       severity: m[1] as Finding["severity"],
-      file: fileMatch?.[1] ?? "",
+      file: quotedFile?.[1] ?? fileCell,
       incompleteScope: /incomplete scope/i.test(rest),
     });
   }
@@ -83,8 +84,8 @@ export function fileWasTouched(flagged: string, touched: string[]): boolean {
   const clean = flagged.replace(/^\.\//, "").split(":")[0]!; // 去掉可能的 :line
   if (clean.includes("/")) return touched.includes(clean);
   const base = clean.split("/").pop()!;
-  const matches = touched.filter((t) => t === base || t.endsWith(`/${base}`));
-  return matches.length === 1;
+  const matches = new Set(touched.filter((t) => t === base || t.endsWith(`/${base}`)));
+  return matches.size === 1;
 }
 
 interface Outcome {

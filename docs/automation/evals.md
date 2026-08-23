@@ -37,6 +37,13 @@ _（既有 pipeline 指標尚無資料；AI review 接受率會由 weekly workfl
   就視為已修復。這不依賴 `committedDate`，但仍不能證明具體問題真的被修復。
   snapshot head 不在 PR commits 中時，該 PR 會警告並跳過，避免產生不準數據。
 
+### Rollout dependency
+
+必須先合併並部署 producer 的 per-head snapshot 合約，再啟用這個
+consumer；root 與各 sub-repo 的 `code-review.yml` 都要先能產生上述
+generic + head markers。若 consumer 先上線，舊 producer 的 comments 會全被拒絕，
+weekly row 將誤寫為零；這種零值不得解讀為「沒有 findings」。
+
 ## 待辦：免費 reviewer 模型同場評測
 
 目前的本機 reviewer 預設只代表「已測試可用」，尚未經足以證明最佳的
