@@ -11,6 +11,7 @@
 #
 # Env（皆可選）:
 #   GH_REPO   owner/name — 有設且 gh 可用時，才產出「進行中的工作」的 open PR 交集
+#   CURRENT_PR_NUMBER — CI review 中排除目前 PR，避免把自己誤報成 in-flight 衝突
 #   MAX_HITS / MAX_FILES / PER_FILE_LINES / PACK_BYTES — 噪音門檻覆寫
 #
 # 已內建的坑（來源：筆記第五節）：
@@ -87,7 +88,7 @@ render_hits() { # $1 = label
     { count[$1]++ }
     count[$1] <= cap { print "  - " $0 }
     count[$1] == cap + 1 { print "  - " $1 "：其餘 " "省略" }
-  ' | head -n 100
+  ' | awk 'NR <= 100 { print }'
 }
 
 # ── 1. 改動的 symbol 與其 caller ────────────────────────────────────────
@@ -129,7 +130,7 @@ section_symbol_callers() {
     out="$(search "\\b${sym}\\b" | outside_diff | render_hits "$sym")"
     if [ -n "$out" ]; then printf '%s\n' "$out"; any=1; fi
   done <<EOF
-$(collect_symbols | head -n 20)
+$(collect_symbols | awk 'NR <= 20 { print }')
 EOF
   [ "$any" = 0 ] && echo "（無）"
   echo
@@ -156,8 +157,13 @@ $(search "<${name}[ />]" | outside_diff | render_hits "<${name}>")"
         fi
         ;;
       *.py)
-        local mod
-        mod="$(printf '%s' "${f%.py}" | tr '/' '.')"
+        local mod mod_path
+        mod_path="${f%.py}"
+        # monorepo root 的子專案目錄含連字號，不是合法 Python module；import 從 src 起算。
+        case "$mod_path" in
+          daodao-*/src/*) mod_path="${mod_path#*/}" ;;
+        esac
+        mod="$(printf '%s' "$mod_path" | tr '/' '.')"
         out="$(search "(import|from) +${mod//./\\.}\\b" | outside_diff | render_hits "import ${mod}")"
         ;;
     esac
@@ -184,7 +190,7 @@ section_call_patterns() {
 $(printf '%s\n' "$ADDED_LINES" \
     | grep -oE '[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]+){1,3}\(' \
     | grep -vE '^(console|Math|JSON|Object|Array|String|Number|Promise|expect|this|self|props|res|req|process|Date)\b' \
-    | sort | uniq -c | sort -rn | awk '{print $2}' | head -n 8)
+    | sort | uniq -c | sort -rn | awk 'NR <= 8 {print $2}')
 EOF
   [ "$any" = 0 ] && echo "（無）"
   echo
@@ -198,7 +204,7 @@ section_inflight() {
   local f recent any=0
   while IFS= read -r f; do
     [ -z "$f" ] && continue
-    recent="$(git log --since='21 days ago' --oneline "$MB" -- "$f" 2>/dev/null | head -n 3 || true)"
+    recent="$(git log --since='21 days ago' --oneline "$MB" -- "$f" 2>/dev/null | awk 'NR <= 3 { print }' || true)"
     if [ -n "$recent" ]; then
       printf -- '- `%s` 近 21 天的 commit：\n' "$f"
       printf '%s\n' "$recent" | sed 's/^/  - /'
@@ -210,8 +216,11 @@ EOF
   # open PR 檔案交集（需要 gh + GH_REPO）
   if [ -n "${GH_REPO:-}" ] && command -v gh >/dev/null 2>&1; then
     local prs
-    prs="$(gh pr list --repo "$GH_REPO" --state open --json number,title,files \
+    prs="$(gh pr list --repo "$GH_REPO" --state open --limit 100 --json number,title,files \
       --jq '.[] | .number as $n | .title as $t | .files[].path as $p | "\($p)\t#\($n) \($t)"' 2>/dev/null | sort || true)"
+    if printf '%s' "${CURRENT_PR_NUMBER:-}" | grep -qE '^[0-9]+$'; then
+      prs="$(printf '%s\n' "$prs" | awk -F'\t' -v current="#$CURRENT_PR_NUMBER " '$2 !~ "^" current' || true)"
+    fi
     if [ -n "$prs" ]; then
       local hot
       while IFS= read -r f; do
@@ -243,7 +252,7 @@ section_repo_map() {
   echo "## 4. 精簡 repo map"
   echo
   local d
-  for d in $(git ls-tree -d --name-only "$HEAD_REF" 2>/dev/null | head -n 15); do
+  for d in $(git ls-tree -d --name-only "$HEAD_REF" 2>/dev/null | awk 'NR <= 15 { print }'); do
     case "$d" in node_modules|dist|build|coverage|.github) continue ;; esac
     printf -- '- `%s/`：%s 檔\n' "$d" "$(git ls-files "$d" | wc -l | tr -d ' ')"
   done
@@ -267,7 +276,12 @@ build_pack() {
   section_repo_map
 }
 
-PACK="$(build_pack | head -c "$PACK_BYTES")"
+# 以完整行控制 byte budget，避免 head -c 從 UTF-8 中文或 Markdown 行中間切斷。
+PACK="$(build_pack | LC_ALL=C awk -v cap="$PACK_BYTES" '
+  { bytes = length($0) + 1 }
+  !full && used + bytes <= cap { print; used += bytes; next }
+  { full = 1 }
+')"
 
 if [ -n "$OUT_FILE" ]; then
   printf '%s\n' "$PACK" > "$OUT_FILE"
