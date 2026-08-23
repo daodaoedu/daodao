@@ -1,0 +1,72 @@
+name: Pipeline — AI Review Weekly Evals
+
+on:
+  schedule:
+    - cron: '23 22 * * 0'  # 週日 22:23 UTC = 週一 06:23 台北
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Lookback window in days (default: 7)'
+        type: string
+        default: '7'
+      dry_run:
+        description: 'Dry run (no commit)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ai-review-weekly-evals
+  cancel-in-progress: false
+
+jobs:
+  evals:
+    name: Collect review acceptance stats
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.15.1'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run review-evals
+        env:
+          # PAT：要能讀所有 sub-repo 的 PR/comments
+          GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          EVAL_DAYS: ${{ inputs.days || '7' }}
+          EVAL_DRY_RUN: ${{ inputs.dry_run || false }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::GIT_HUB_ACCESS_TOKEN is required for cross-repo review metrics"
+            exit 1
+          fi
+          args=(--days "$EVAL_DAYS")
+          if [ "$EVAL_DRY_RUN" = "true" ]; then args+=(--dry-run); fi
+          pnpm tsx bin/pipeline/review-evals.ts "${args[@]}"
+
+      - name: Commit evals.md
+        if: inputs.dry_run != true
+        run: |
+          if git diff --quiet docs/automation/evals.md; then
+            echo "no changes"
+            exit 0
+          fi
+          git config user.name "daodao-pipeline"
+          git config user.email "noreply@daodaoedu.github.com"
+          git add docs/automation/evals.md
+          git commit -m "chore(automation): weekly review evals [skip ci]"
+          git push origin HEAD
