@@ -182,9 +182,18 @@ sequenceDiagram
 噪音採**分級摘要**（命中 >60 或分散 >15 檔 → 壓一行計數；每檔 ≤3 行；pack ≤16KB）。
 已內建的 CI 坑解法：merge-base 兩點 diff、rg 無命中 `|| true`、截斷前先 sort、BSD/GNU 相容。
 
-試點：`daodao-server`（NestJS/TS）。依筆記「每個 repo 會教你一種新的漏抓」，
-第二個試點應選不同語言（`daodao-ai-backend`，Python）再宣稱通用。
-另一半的失敗型態（分支流程錯）由 CI 規則守門，尚未實作。
+Root AI Code Review 會在送出 diff 前產生 Context Pack，並把兩者一起送到 Workers AI。
+CI 一律從 PR 的 **base SHA** 讀取可信版本的 `retrieve-context.sh`，不執行 PR checkout
+中可被修改的腳本；diff 與 pack 使用相同的 `merge-base → head SHA`。目前 PR 會從
+open PR 交集排除，避免把自己誤判為 in-flight 衝突。diff、pack 與 review body 都透過
+`$RUNNER_TEMP` 檔案跨 step 傳遞，不使用固定 heredoc delimiter。
+
+首次合併時會執行 base branch 上既有的可信腳本版本；只有 base 完全沒有該腳本或腳本執行
+失敗時，CI 才會安全降級成 diff-only review。合併後的後續 PR 才會使用這次更新的 Context Pack。
+六個正式 sub-repo 的 vendor 同步會由各 repo 獨立 PR 追蹤，不在本 root PR 內宣稱完成。
+
+Fixture 覆蓋 TypeScript importer、JSX 呼叫模式、Python dotted module、current PR 排除，
+以及超過 pipe buffer 時仍保持 UTF-8 完整行截斷。
 
 ## 相關 skills
 
