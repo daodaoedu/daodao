@@ -44,6 +44,18 @@ describe("parseReviewFindings", () => {
     expect(f[1]!.severity).toBe("Medium");
     expect(f[2]!.incompleteScope).toBe(false);
   });
+
+  it("parses a plain file cell without mistaking issue code for the path", () => {
+    const findings = parseReviewFindings(
+      "| 🟡 Medium | src/lib/sdk.ts:42 | `request()` 沒有 timeout | 加上 timeout |"
+    );
+    expect(findings).toEqual([{
+      severity: "Medium",
+      file: "src/lib/sdk.ts:42",
+      incompleteScope: false,
+    }]);
+  });
+
   it("returns empty for no-issue reviews", () => {
     expect(parseReviewFindings("## Code Review\n\n✅ 沒有發現明顯問題")).toEqual([]);
   });
@@ -61,6 +73,11 @@ describe("fileWasTouched", () => {
   it("does not treat a different path or ambiguous basename as fixed", () => {
     expect(fileWasTouched("src/a/index.ts", ["src/b/index.ts"])).toBe(false);
     expect(fileWasTouched("index.ts", ["src/a/index.ts", "src/b/index.ts"])).toBe(false);
+  });
+
+  it("deduplicates repeated touches to one path without merging distinct paths", () => {
+    expect(fileWasTouched("sdk.ts", ["src/lib/sdk.ts", "src/lib/sdk.ts"])).toBe(true);
+    expect(fileWasTouched("sdk.ts", ["src/lib/sdk.ts", "src/other/sdk.ts"])).toBe(false);
   });
 });
 
