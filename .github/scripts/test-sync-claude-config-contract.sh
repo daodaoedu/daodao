@@ -11,6 +11,7 @@ fail() {
 }
 
 for path in \
+  ".claude/skills/code-review/**" \
   ".github/workflows/auto-pr-description.yml" \
   ".github/workflows/code-review.yml" \
   ".github/scripts/retrieve-context.sh" \
@@ -18,6 +19,9 @@ for path in \
   ".github/scripts/test-code-review-contract.sh"; do
   grep -Fq -- "- '$path'" "$WORKFLOW" || fail "push paths 未監聽 $path"
 done
+
+grep -Fq 'for skill in collect-pr-feedback code-review; do' "$WORKFLOW" \
+  || fail "sync workflow 未同步 code-review skill"
 
 for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh; do
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"

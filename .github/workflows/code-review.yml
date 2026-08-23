@@ -155,6 +155,8 @@ jobs:
       - name: Normalize and validate review
         if: steps.review.outputs.generated == 'true'
         id: normalize
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           is_valid_review() {
             local input="$1"
@@ -185,12 +187,18 @@ jobs:
             exit 1
           fi
 
+          if ! printf '%s\n' "$HEAD_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::Expected a lowercase 40-character pull request head SHA"
+            exit 1
+          fi
+          HEAD_MARKER="<!-- daodao-ai-code-review-head:$HEAD_SHA -->"
+
           case "$BODY" in
             '✅ 沒有發現明顯問題'|'✅ 沒有發現明顯問題。'|'✅ 沒有發現明顯問題.'|'✅ 沒有發現明顯問題!'|'✅ 沒有發現明顯問題！')
-              printf '## Code Review\n\n<!-- daodao-ai-code-review -->\n\n%s\n' "$BODY" > "$RUNNER_TEMP/review-body.md"
+              printf '## Code Review\n\n<!-- daodao-ai-code-review -->\n%s\n\n%s\n' "$HEAD_MARKER" "$BODY" > "$RUNNER_TEMP/review-body.md"
               ;;
             *)
-              awk 'NR == 1 { print; print ""; print "<!-- daodao-ai-code-review -->"; next } { print }' \
+              awk -v head_marker="$HEAD_MARKER" 'NR == 1 { print; print ""; print "<!-- daodao-ai-code-review -->"; print head_marker; next } { print }' \
                 "$RUNNER_TEMP/review-body.normalized" > "$RUNNER_TEMP/review-body.md"
               ;;
           esac
@@ -202,10 +210,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           BODY="$(cat "$RUNNER_TEMP/review-body.md")"
+          HEAD_MARKER="<!-- daodao-ai-code-review-head:$HEAD_SHA -->"
           COMMENTS="$(gh api --paginate --slurp "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
-            --jq 'add | [.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- daodao-ai-code-review -->")))]')"
+            --jq "add | [.[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$HEAD_MARKER\")))]")"
           EXISTING=$(printf '%s' "$COMMENTS" | jq 'length')
 
           if [ "$EXISTING" -gt "0" ]; then
@@ -213,10 +223,10 @@ jobs:
             gh api "repos/$REPOSITORY/issues/comments/$COMMENT_ID" \
               --method PATCH \
               -f body="$BODY"
-            echo "✅ Updated existing review comment"
+            echo "✅ Updated review snapshot for current head SHA"
           else
             gh api "repos/$REPOSITORY/issues/$PR_NUMBER/comments" \
               --method POST \
               -f body="$BODY"
-            echo "✅ Posted new review comment"
+            echo "✅ Posted immutable review snapshot for new head SHA"
           fi

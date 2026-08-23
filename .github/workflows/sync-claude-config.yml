@@ -7,6 +7,7 @@ on:
       - '.claude/hooks/**'
       - '.claude/settings.json'
       - '.claude/skills/collect-pr-feedback/**'
+      - '.claude/skills/code-review/**'
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
       - '.github/scripts/retrieve-context.sh'
@@ -57,11 +58,12 @@ jobs:
           fi
 
           # Shared skills
-          skill="collect-pr-feedback"
-          if [ -d ".claude/skills/$skill" ]; then
-            mkdir -p "target/.claude/skills/$skill"
-            cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
-          fi
+          for skill in collect-pr-feedback code-review; do
+            if [ -d ".claude/skills/$skill" ]; then
+              mkdir -p "target/.claude/skills/$skill"
+              cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
+            fi
+          done
 
           # Shared workflows
           mkdir -p target/.github/workflows
