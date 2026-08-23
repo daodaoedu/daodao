@@ -10,18 +10,36 @@
 - PR base 必須是 `main`。
 - 變更超過 60 個檔案時顯示警告，但不會只因檔案數量而擋下 PR。
 
-Workflow 會從 PR 的 base SHA 讀取 `.github/scripts/check-branch-guard.sh`
-到 runner 暫存目錄後執行，避免執行 PR 可修改的 checkout 腳本。若 base revision
-還沒有該腳本，則使用 workflow 內建的可信 bootstrap 規則。
+Enforcement workflow 使用 `pull_request_target`，因此 workflow definition 來自
+repository 的 trusted default branch。它只 checkout default branch 並執行其中的
+`.github/scripts/check-branch-guard.sh`，不會 checkout 或執行 PR code；checkout
+所需的 `contents: read` token 也不會持久化到 git config。
 
-另有獨立 regression job 執行 PR 版本的測試；該 job 使用 `permissions: {}`，
-checkout 也不保留 credentials，因此不會把 token 或 secrets 暴露給 PR 程式碼。
+`.github/workflows/branch-guard-regression.yml` 是獨立的 PR regression workflow。
+它執行 PR 版本的測試，但使用 `permissions: {}`、不保留 checkout credentials，
+且 check 名稱不是 `Branch flow rules`。不可把這個 untrusted regression check
+設成 enforcement workflow 的替代品。
 
 ## 啟用守門
 
-Workflow 本身只會回報 check。Repository 管理員仍需在 `main` branch protection
-或 ruleset 將 `Branch flow rules` 設成 required status check，才會成為實際的
-merge gate。
+Workflow merge 到 default branch 後，Organization 管理員需建立 branch ruleset：
+
+1. 到 organization **Settings → Rules → Rulesets → New branch ruleset**。
+2. Repository targeting 選擇 `daodaoedu/daodao`。
+3. Target branches 選 **Include all branches**，不可只選 `main`；否則以 `dev`
+   或其他 branch 為 base 的錯誤 PR 不受規則約束。
+4. 啟用 **Require workflows to pass before merging**，source repository 選
+   `daodaoedu/daodao`，workflow 選 default branch 上的
+   `.github/workflows/branch-guard.yml`。
+5. 將 Enforcement status 設為 **Active**，儲存後用兩個測試 PR 核驗：
+   `feature/invalid → main` 與 `feat/valid → dev` 都必須被 required workflow 擋下。
+
+這裡要求的是由 source repository + workflow file 識別的 **required workflow**，
+不是只按 job 名稱比對的 required status check；後者可能被 PR 內另一個 workflow
+產生同名 check 冒充。GitHub 官方設定說明見
+[Require workflows to pass before merging](https://docs.github.com/en/enterprise-cloud@latest/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-workflows-to-pass-before-merging)
+與
+[建立 organization ruleset](https://docs.github.com/en/enterprise-cloud@latest/organizations/managing-organization-settings/creating-rulesets-for-repositories-in-your-organization)。
 
 本 PR 只涵蓋 root monorepo。各 sub-repo 有不同的 `dev`／`main` 政策，
 需要各自的 workflow 與 PR。
