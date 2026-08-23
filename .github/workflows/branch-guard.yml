@@ -1,0 +1,61 @@
+name: Branch Guard
+
+# 分支流程守門：無效 PR 有一半是流程錯（base 錯、分支名不合規），
+# 10 行 CI 規則的投報率高過任何檢索系統。
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  guard:
+    name: Branch flow rules
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load trusted branch guard
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          TRUSTED_CHECK="$RUNNER_TEMP/check-branch-guard.sh"
+
+          if git cat-file -e "$BASE_SHA:.github/scripts/check-branch-guard.sh" 2>/dev/null; then
+            git show "$BASE_SHA:.github/scripts/check-branch-guard.sh" > "$TRUSTED_CHECK"
+          else
+            # Bootstrap only: the base revision predates the checked-in script.
+            # Keep this fallback in the trusted workflow instead of executing the
+            # pull request's checkout copy.
+            cat > "$TRUSTED_CHECK" <<'BRANCH_GUARD'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          BRANCH_RE='^(feat|fix|refactor|perf|test|docs|chore|ci|build|hotfix|release|auto|claude|codex|dependabot|renovate)/.+'
+          if [[ ! "$HEAD" =~ $BRANCH_RE ]]; then
+            echo "::error::分支名 '$HEAD' 不符慣例（type/description，type ∈ feat|fix|refactor|perf|test|docs|chore|ci|build|hotfix|release|auto|claude|codex|dependabot|renovate）"
+            exit 1
+          fi
+          if [[ "$BASE" != "main" ]]; then
+            echo "::error::PR base 是 '$BASE'，monorepo 的 PR 應以 main 為 base"
+            exit 1
+          fi
+          if (( CHANGED > 60 )); then
+            echo "::warning::此 PR 變更 $CHANGED 個檔案（>60）——請確認沒有帶入非本題檔案或 base 選錯"
+          fi
+          echo "✅ branch guard passed: $HEAD → $BASE ($CHANGED files)"
+          BRANCH_GUARD
+          fi
+
+          chmod +x "$TRUSTED_CHECK"
+
+      - name: Check branch name and base
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          "$RUNNER_TEMP/check-branch-guard.sh"
