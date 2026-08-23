@@ -26,6 +26,7 @@ const DAYS = parseDays(process.argv);
 const REPOS = [CENTRAL_REPO, ...SUB_REPOS];
 const BOT_LOGINS = new Set(["github-actions", "github-actions[bot]"]);
 const REVIEW_MARKER = "<!-- daodao-ai-code-review -->";
+const REVIEW_HEAD_RE = /<!-- daodao-ai-code-review-head:([0-9a-f]{40}) -->/;
 const EVALS_PATH = join(process.cwd(), "docs", "automation", "evals.md");
 const MARKER = "<!-- review-evals -->";
 
@@ -126,6 +127,10 @@ export interface ReviewComment {
   login: string;
 }
 
+export interface ReviewSnapshot extends ReviewComment {
+  headSha: string;
+}
+
 interface ApiIssueComment {
   body: string;
   created_at: string;
@@ -148,23 +153,40 @@ export function commitFilesFromPages(
   return pages.flatMap((page) => page.files ?? []).map((file) => file.filename);
 }
 
-/** 只接受本專案 AI reviewer bot 寫入、且帶穩定 marker 的 review。 */
-export function selectLatestBotReview(comments: ReviewComment[]): ReviewComment | undefined {
+/**
+ * 只接受 lookback 內、本專案 bot 寫入的 per-head finding snapshot。
+ * GitHub API 陣列順序不是 contract，所以明確依 updatedAt 取最新。
+ */
+export function selectLatestBotReview(
+  comments: ReviewComment[],
+  sinceIso: string
+): ReviewSnapshot | undefined {
   return comments
-    .filter(
-      (comment) =>
-        BOT_LOGINS.has(comment.login) &&
-        comment.body.startsWith("## Code Review") &&
-        comment.body.includes(REVIEW_MARKER)
-    )
+    .flatMap((comment): ReviewSnapshot[] => {
+      const headMatch = REVIEW_HEAD_RE.exec(comment.body);
+      if (
+        !BOT_LOGINS.has(comment.login) ||
+        !comment.body.startsWith("## Code Review") ||
+        !comment.body.includes(REVIEW_MARKER) ||
+        !headMatch ||
+        comment.updatedAt < sinceIso ||
+        parseReviewFindings(comment.body).length === 0
+      ) {
+        return [];
+      }
+      return [{ ...comment, headSha: headMatch[1]! }];
+    })
+    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
     .pop();
 }
 
-export function commitsAfterReview<T extends { date: string }>(
+export function commitsAfterReviewedHead<T extends { oid: string }>(
   commits: T[],
-  reviewUpdatedAt: string
-): T[] {
-  return commits.filter((commit) => commit.date > reviewUpdatedAt);
+  headSha: string
+): T[] | undefined {
+  const reviewedHeadIndex = commits.findIndex((commit) => commit.oid === headSha);
+  if (reviewedHeadIndex === -1) return undefined;
+  return commits.slice(reviewedHeadIndex + 1);
 }
 
 interface RepoStats {
@@ -201,26 +223,32 @@ function collectRepo(repo: string, sinceIso: string): RepoStats {
     const comments = normalizeCommentPages(
       JSON.parse(commentsJson) as ApiIssueComment[][]
     );
-    const review = selectLatestBotReview(comments);
+    const review = selectLatestBotReview(comments, sinceIso);
     if (!review) continue;
 
     const findings = parseReviewFindings(review.body);
-    if (findings.length === 0) continue;
+
+    // reviewed head 之後動過的檔案；不依賴 commit timestamp。
+    const commitsJson = gh([
+      "pr", "view", String(pr.number),
+      "--repo", `${OWNER}/${repo}`,
+      "--json", "commits",
+      "--jq", "[.commits[] | {oid}]",
+    ]);
+    const commits = JSON.parse(commitsJson) as Array<{ oid: string }>;
+    const commitsAfterReview = commitsAfterReviewedHead(commits, review.headSha);
+    if (!commitsAfterReview) {
+      log(`${repo}#${pr.number}: review head ${review.headSha} not found; skipping`);
+      continue;
+    }
+
     stats.prsWithReview++;
     stats.findings += findings.length;
     stats.high += findings.filter((f) => f.severity === "High").length;
     stats.incompleteScope += findings.filter((f) => f.incompleteScope).length;
 
-    // review 之後動過的檔案
-    const commitsJson = gh([
-      "pr", "view", String(pr.number),
-      "--repo", `${OWNER}/${repo}`,
-      "--json", "commits",
-      "--jq", "[.commits[] | {oid, date: .committedDate}]",
-    ]);
-    const commits = JSON.parse(commitsJson) as Array<{ oid: string; date: string }>;
     const touched: string[] = [];
-    for (const c of commitsAfterReview(commits, review.updatedAt)) {
+    for (const c of commitsAfterReview) {
       const files = gh([
         "api", "--paginate", "--slurp",
         `repos/${OWNER}/${repo}/commits/${c.oid}`,
@@ -265,6 +293,19 @@ export function insertEvalsRow(content: string, row: string): string {
   );
   if (separatorIndex === -1) {
     throw new Error("review-evals marker exists without its table separator");
+  }
+
+  const rowDate = /^\|\s*(\d{4}-\d{2}-\d{2})\s*\|/.exec(row)?.[1];
+  if (!rowDate) {
+    throw new Error("review-evals row must start with an ISO UTC date");
+  }
+  for (let index = separatorIndex + 1; index < lines.length; index++) {
+    if (!lines[index]!.startsWith("|")) break;
+    const existingDate = /^\|\s*(\d{4}-\d{2}-\d{2})\s*\|/.exec(lines[index]!)?.[1];
+    if (existingDate === rowDate) {
+      lines[index] = row;
+      return lines.join("\n");
+    }
   }
   lines.splice(separatorIndex + 1, 0, row);
   return lines.join("\n");

@@ -3,7 +3,7 @@ import {
   buildEvalsRow,
   classifyFindings,
   commitFilesFromPages,
-  commitsAfterReview,
+  commitsAfterReviewedHead,
   fileWasTouched,
   hasAuthorReply,
   insertEvalsRow,
@@ -26,6 +26,11 @@ const REVIEW_BODY = `## Code Review
 ### 總結
 
 一句話。`;
+
+const HEAD_A = "a".repeat(40);
+const HEAD_B = "b".repeat(40);
+const snapshotBody = (headSha: string, body = REVIEW_BODY) =>
+  `${body}\n\n<!-- daodao-ai-code-review -->\n<!-- daodao-ai-code-review-head:${headSha} -->`;
 
 describe("parseReviewFindings", () => {
   it("parses severity, file, and incomplete-scope flag from the table", () => {
@@ -82,24 +87,26 @@ describe("hasAuthorReply", () => {
 
 describe("selectLatestBotReview", () => {
   const botReview = {
-    body: "## Code Review\n\n<!-- daodao-ai-code-review -->",
+    body: snapshotBody(HEAD_A),
     createdAt: "2026-08-21T10:00:00Z",
     updatedAt: "2026-08-21T12:00:00Z",
     login: "github-actions[bot]",
   };
 
-  it("uses updatedAt as the cutoff for commits and author replies", () => {
-    const selected = selectLatestBotReview([botReview]);
+  it("uses the reviewed head position for commits and updatedAt for author replies", () => {
+    const selected = selectLatestBotReview([botReview], "2026-08-21T00:00:00Z");
     expect(selected?.updatedAt).toBe("2026-08-21T12:00:00Z");
+    expect(selected?.headSha).toBe(HEAD_A);
 
-    const commits = commitsAfterReview(
+    const commits = commitsAfterReviewedHead(
       [
-        { oid: "before", date: "2026-08-21T11:00:00Z" },
-        { oid: "after", date: "2026-08-21T12:01:00Z" },
+        { oid: "before", date: "2026-08-21T13:00:00Z" },
+        { oid: HEAD_A, date: "2026-08-21T10:00:00Z" },
+        { oid: "after", date: "2026-08-21T09:00:00Z" },
       ],
-      selected!.updatedAt
+      selected!.headSha
     );
-    expect(commits.map((commit) => commit.oid)).toEqual(["after"]);
+    expect(commits?.map((commit) => commit.oid)).toEqual(["after"]);
     expect(
       hasAuthorReply(
         [
@@ -122,20 +129,65 @@ describe("selectLatestBotReview", () => {
   it("ignores a newer fake human review even when it copies the marker", () => {
     const fakeHumanReview = {
       ...botReview,
-      body: "## Code Review\n\n<!-- daodao-ai-code-review -->\n| High | fake |",
+      body: snapshotBody(HEAD_B),
       createdAt: "2026-08-21T13:00:00Z",
       updatedAt: "2026-08-21T13:00:00Z",
       login: "attacker",
     };
-    expect(selectLatestBotReview([botReview, fakeHumanReview])).toEqual(botReview);
+    expect(
+      selectLatestBotReview([botReview, fakeHumanReview], "2026-08-21T00:00:00Z")
+    ).toEqual({ ...botReview, headSha: HEAD_A });
   });
 
-  it("rejects bot comments without the dedicated marker", () => {
+  it("selects by updatedAt rather than API array order", () => {
+    const newer = {
+      ...botReview,
+      body: snapshotBody(HEAD_B),
+      updatedAt: "2026-08-21T13:00:00Z",
+    };
+    expect(
+      selectLatestBotReview([newer, botReview], "2026-08-21T00:00:00Z")?.headSha
+    ).toBe(HEAD_B);
+  });
+
+  it("excludes snapshots updated before the lookback", () => {
+    expect(
+      selectLatestBotReview([botReview], "2026-08-21T12:30:00Z")
+    ).toBeUndefined();
+  });
+
+  it("keeps the latest finding snapshot when a newer snapshot is clean", () => {
+    const clean = {
+      ...botReview,
+      body: snapshotBody(HEAD_B, "## Code Review\n\n✅ 沒有發現明顯問題"),
+      updatedAt: "2026-08-21T13:00:00Z",
+    };
+    expect(
+      selectLatestBotReview([botReview, clean], "2026-08-21T00:00:00Z")?.headSha
+    ).toBe(HEAD_A);
+  });
+
+  it("rejects bot comments without both dedicated markers", () => {
     expect(
       selectLatestBotReview([
         { ...botReview, body: "## Code Review\n\n| High | unrelated |" },
-      ])
+      ], "2026-08-21T00:00:00Z")
     ).toBeUndefined();
+    expect(
+      selectLatestBotReview([
+        { ...botReview, body: `${REVIEW_BODY}\n<!-- daodao-ai-code-review -->` },
+      ], "2026-08-21T00:00:00Z")
+    ).toBeUndefined();
+    expect(
+      selectLatestBotReview([
+        { ...botReview, body: snapshotBody("A".repeat(40)) },
+      ], "2026-08-21T00:00:00Z")
+    ).toBeUndefined();
+  });
+
+  it("returns undefined when the reviewed head is absent from PR commits", () => {
+    expect(commitsAfterReviewedHead([{ oid: "before" }, { oid: "after" }], HEAD_A))
+      .toBeUndefined();
   });
 });
 
@@ -236,6 +288,22 @@ describe("insertEvalsRow", () => {
     expect(updated.indexOf("| 2026-08-21 | 2 |")).toBeLessThan(
       updated.indexOf("| 2026-08-20 | 1 |")
     );
+  });
+
+  it("replaces the same UTC date row instead of duplicating it", () => {
+    const content = `# Evals
+
+## AI Review 接受率（weekly）<!-- review-evals -->
+
+| 週 | findings |
+|---|---|
+| 2026-08-21 | old |
+| 2026-08-20 | 1 |
+`;
+    const updated = insertEvalsRow(content, "| 2026-08-21 | new |");
+    expect(updated.match(/\| 2026-08-21 \|/g)).toHaveLength(1);
+    expect(updated).toContain("| 2026-08-21 | new |");
+    expect(updated).not.toContain("| 2026-08-21 | old |");
   });
 });
 
