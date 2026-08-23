@@ -10,7 +10,8 @@
  *
  * Flow (hourly via .github/workflows/pipeline-dispatch.yml):
  *   1. List board items with Status="Ready for Dev" on the central repo
- *   2. Gate: issue open, has `auto` label, no dispatched/needs-spec/human-driving
+ *   2. Gate: issue open, no dispatched/needs-spec/human-driving (opt-out via `human-driving`;
+ *      mode defaults to plan-only unless the card carries `auto:auto-pr`)
  *   3. Spec gate: body has "OpenSpec: <slug>" and openspec/changes/<slug>/tasks.md exists
  *   4. Rule-based split: each tasks.md "## section" → one mirror issue in its sub-repo
  *   5. Mirror issues become native sub-issues; central card gets `dispatched` + comment;
@@ -87,10 +88,6 @@ function main(): void {
 
     const issue = getIssue(CENTRAL_REPO, item.issueNumber!);
     if (!issue || issue.state !== "OPEN") continue;
-    if (!issue.labels.includes("auto")) {
-      log(`#${issue.number} has no auto label — skip`);
-      continue;
-    }
     if (issue.labels.some((l) => ["dispatched", "needs-spec", "human-driving"].includes(l))) {
       log(`#${issue.number} labeled ${issue.labels.join(",")} — skip`);
       continue;
