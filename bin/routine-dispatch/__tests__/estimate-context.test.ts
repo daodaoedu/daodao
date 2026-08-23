@@ -3,7 +3,7 @@ import { estimateTokens, estimateIssueTokens } from "../estimate-context.js";
 
 // Mock child_process to avoid real gh calls
 vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
+  spawnSync: vi.fn(),
 }));
 
 vi.mock("node:fs", async (importOriginal) => {
@@ -15,7 +15,7 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 describe("estimateTokens", () => {
   it("returns 0 for empty string", () => {
@@ -41,17 +41,22 @@ describe("estimateTokens", () => {
 
 describe("estimateIssueTokens", () => {
   beforeEach(() => {
-    vi.mocked(execSync).mockReset();
+    vi.mocked(spawnSync).mockReset();
   });
 
   it("sums title + body + comments from gh output", () => {
-    vi.mocked(execSync).mockReturnValue(
-      JSON.stringify({
+    vi.mocked(spawnSync).mockReturnValue({
+      stdout: JSON.stringify({
         title: "Fix login bug",       // 13 chars
         body: "x".repeat(400),        // 400 chars
         comments: [{ body: "y".repeat(200) }], // 200 chars
-      })
-    );
+      }),
+      stderr: "",
+      status: 0,
+      pid: 0,
+      output: [],
+      signal: null,
+    });
     const tokens = estimateIssueTokens("daodao-f2e", "42");
     // total chars = 13 + 400 + 200 = 613 → ceil(613/4) = 154
     expect(tokens).toBeGreaterThan(100);
@@ -59,21 +64,31 @@ describe("estimateIssueTokens", () => {
   });
 
   it("returns 0 when gh call fails", () => {
-    vi.mocked(execSync).mockImplementation(() => {
-      throw new Error("gh not found");
+    vi.mocked(spawnSync).mockReturnValue({
+      stdout: "",
+      stderr: "gh not found",
+      status: 1,
+      pid: 0,
+      output: [],
+      signal: null,
     });
     const tokens = estimateIssueTokens("daodao-f2e", "99");
     expect(tokens).toBe(0);
   });
 
   it("5KB issue body estimates ~1250 tokens (±20%)", () => {
-    vi.mocked(execSync).mockReturnValue(
-      JSON.stringify({
+    vi.mocked(spawnSync).mockReturnValue({
+      stdout: JSON.stringify({
         title: "",
         body: "x".repeat(5000),
         comments: [],
-      })
-    );
+      }),
+      stderr: "",
+      status: 0,
+      pid: 0,
+      output: [],
+      signal: null,
+    });
     const tokens = estimateIssueTokens("daodao-server", "1");
     expect(tokens).toBeGreaterThanOrEqual(1000);
     expect(tokens).toBeLessThanOrEqual(1500);

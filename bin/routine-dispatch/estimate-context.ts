@@ -6,7 +6,7 @@
 // Usage: pnpm tsx estimate-context.ts <repo> <issue_num>
 // Output: token estimate (stdout, integer)
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { statSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -21,11 +21,15 @@ export function estimateIssueTokens(repo: string, issueNum: string): number {
 
   // Fetch issue body
   try {
-    const issueJson = execSync(
-      `gh issue view ${issueNum} --repo daodaoedu/${repo} --json body,title,comments`,
+    const result = spawnSync(
+      "gh",
+      ["issue", "view", issueNum, "--repo", `daodaoedu/${repo}`, "--json", "body,title,comments"],
       { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }
     );
-    const issue = JSON.parse(issueJson) as {
+    if (result.status !== 0 || result.error) {
+      throw result.error ?? new Error(`gh exited ${result.status}`);
+    }
+    const issue = JSON.parse(result.stdout) as {
       title: string;
       body: string;
       comments: Array<{ body: string }>;
@@ -77,6 +81,10 @@ if (process.argv[1]?.endsWith("estimate-context.ts") || process.argv[1]?.endsWit
   const issueNum = process.argv[3];
   if (!repo || !issueNum) {
     console.error("Usage: estimate-context.ts <repo> <issue_num>");
+    process.exit(1);
+  }
+  if (!/^\d+$/.test(issueNum)) {
+    console.error("estimate-context: issue_num must be a positive integer");
     process.exit(1);
   }
   const tokens = estimateIssueTokens(repo, issueNum);
