@@ -2,6 +2,19 @@
 
 Install the secret-scan + dependency-audit pre-commit hook for each of the 8 sub-repos.
 
+## 待辦：依專案選擇品質檢查
+
+目前 `.claude/skills/pre-commit-check/SKILL.md` 把 `make check` 與
+`make lint` 當成通用入口，但 daodao root 與各子專案並沒有統一使用 Make。
+後續需將 skill 改成先辨識目前 repo、變更檔案與可用 scripts，再執行對應檢查：
+
+- [ ] 只有在 Makefile 實際宣告 target 時才執行 `make check`／`make lint`，不得把「沒有 target」當成品質檢查結果。
+- [ ] Node 子專案依 `package.json` 與本文件的專案對照執行 `pnpm` lint、typecheck 與測試。
+- [ ] `daodao-ai-backend` 使用 `make lint`／`make format`／`make test`；不要套用 Node 指令。
+- [ ] root workflow、shell script 與 automation 變更使用 `bash -n`、ShellCheck、fixture／contract tests、YAML parse 與 `git diff --check`。
+- [ ] 跨 repo commit 分別回報每個 repo 實際執行的命令、pass／fail／unavailable；不得用單一通用狀態概括。
+- [ ] 為 repo／工具鏈選擇邏輯加入 regression test，覆蓋 root、Node、Python 與無對應指令的情況。
+
 ---
 
 ## Prerequisites

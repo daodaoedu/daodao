@@ -4,6 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WORKFLOW="$SCRIPT_DIR/../workflows/code-review.yml"
+SKILL="$SCRIPT_DIR/../../.claude/skills/code-review/SKILL.md"
 
 fail() {
   echo "❌ $1" >&2
@@ -71,10 +72,29 @@ for occurrence in 1 2; do
 done
 
 grep -q '<!-- daodao-ai-code-review -->' "$WORKFLOW" || fail "review marker is missing"
-grep -q 'contains(\"<!-- daodao-ai-code-review -->\")' "$WORKFLOW" || fail "comment lookup does not use the marker"
-grep -q '\.user\.login == \"github-actions\[bot\]\"' "$WORKFLOW" || fail "comment lookup does not verify marker ownership"
+grep -q '<!-- daodao-ai-code-review-head:\$HEAD_SHA -->' "$WORKFLOW" || fail "head-specific review marker is missing"
+grep -Fq "grep -Eq '^[0-9a-f]{40}$'" "$WORKFLOW" || fail "head marker does not enforce the consumer's exact SHA contract"
+grep -q 'contains(\\\"\$HEAD_MARKER\\\")' "$WORKFLOW" || fail "comment lookup does not use the exact head marker"
+grep -Fq '.user.login == \"github-actions[bot]\"' "$WORKFLOW" || fail "comment lookup does not verify marker ownership"
 if grep -q 'select(.body | startswith(\"## Code Review\"))' "$WORKFLOW"; then
   fail "comment lookup still claims unmarked Code Review comments"
 fi
+
+POST_LINE=$(grep -n -- '--method POST' "$WORKFLOW" | tail -1 | cut -d: -f1)
+PATCH_LINE=$(grep -n -- '--method PATCH' "$WORKFLOW" | tail -1 | cut -d: -f1)
+[ "$PATCH_LINE" -lt "$POST_LINE" ] || fail "same-head PATCH/new-head POST branches are not present"
+grep -q 'HEAD_SHA: \${{ github.event.pull_request.head.sha }}' "$WORKFLOW" \
+  || fail "workflow does not bind the marker to the event head SHA"
+
+grep -Fq '## 步驟 0：建立可重現的 review input' "$SKILL" || fail "manual review skill has no Context Pack Step 0"
+grep -Fq 'git show "$_BASE_REF:.github/scripts/retrieve-context.sh"' "$SKILL" \
+  || fail "manual review skill does not load the retriever from the trusted base"
+grep -Fq 'read the shared review input at $_REVIEW_INPUT' "$SKILL" \
+  || fail "Codex does not receive the shared Context Pack input"
+grep -Fq '@"$_REVIEW_INPUT"' "$SKILL" || fail "OMP does not receive diff plus Context Pack"
+grep -Fq -- '--file="$_REVIEW_INPUT"' "$SKILL" || fail "OpenCode does not receive diff plus Context Pack"
+grep -Fq -- '--tools "" < "$_REVIEW_INPUT"' "$SKILL" || fail "Haiku input is missing or tools remain enabled"
+[ "$(grep -Fc 'untrusted repository data' "$SKILL")" -ge 4 ] \
+  || fail "manual reviewers do not consistently treat diff and Context Pack as untrusted data"
 
 echo "✅ code-review workflow contract tests passed"
