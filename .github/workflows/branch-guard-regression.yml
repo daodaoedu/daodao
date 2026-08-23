@@ -1,0 +1,28 @@
+name: Branch Guard Regression
+
+# This workflow intentionally runs pull-request code. It is isolated from the
+# required enforcement workflow and receives no repository permissions.
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/check-branch-guard.sh'
+      - '.github/scripts/test-branch-guard.sh'
+      - '.github/workflows/branch-guard.yml'
+      - '.github/workflows/branch-guard-regression.yml'
+
+permissions: {}
+
+jobs:
+  regression:
+    name: Branch guard regression (untrusted PR)
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Checkout pull request for tests
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run branch guard regression tests
+        run: .github/scripts/test-branch-guard.sh
