@@ -44,7 +44,9 @@ daodao/
 
 ### 1.1a 防撞檢查（建 worktree 前必做）
 
-1. **跟 pipeline 防撞**：中央卡（daodaoedu/daodao）有 `auto` label 時，手動開工前必須加 `human-coding` label（`gh issue edit <n> --repo daodaoedu/daodao --add-label human-coding`），讓 Routine A/B 退場，避免兩邊重工；cleanup 時再移除。（org 實際 label 名為 `human-coding`；部分舊文件寫 `human-driving`，以 `gh label list` 為準）
+1. **跟 pipeline 防撞**：任務對應中央卡（daodaoedu/daodao）時，手動開工前必須加 **`human-driving`** label（`gh issue edit <n> --repo daodaoedu/daodao --add-label human-driving`）；cleanup 時再移除。
+   - 依據：`bin/pipeline/dispatch.ts:91` 的閘門只認 `dispatched` / `needs-spec` / `human-driving`——828b902 起 auto label 閘門已移除，**卡片一到 Ready for Dev 就會被派工**，human-driving 是唯一的人工退場機制
+   - 不要跟 `human-coding` 混淆：那是 sub-repo 鏡像 issue 的「機器做不動、移交人類」標記，dispatch.ts 不認它，掛了也擋不住派工
 2. **跟其他任務防撞**：對每個目標 repo 檢查 in-flight 工作：
    - `git worktree list`（在 `projects/<repo>` 內）→ 已有任務在做同一個 repo 時，比對雙方 scope 是否碰同一片檔案
    - `gh pr list --repo daodaoedu/<repo> --base dev --state open` → 有 open PR 改到同區域時，在 task.md 備註標注，實作時避開或先等它 merge
@@ -194,7 +196,7 @@ git fetch origin dev   # 讓 projects/ 的 dev 追上
 ```
 
 3. 刪任務資料夾：`rm -rf "$TASK"`（task.md 若有留存價值，先摘要進 issue comment）
-4. 開工時加過 `human-coding` label 的：移除它
+4. 開工時加過 `human-driving` label 的：移除它
 5. 接 `post-merge-wrapup` skill（歸檔 openspec change、更新 docs/product）
 6. clone 模式的任務：確認無未 push commit 後 `rm -rf`
 7. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
