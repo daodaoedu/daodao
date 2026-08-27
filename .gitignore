@@ -16,6 +16,13 @@ daodao-admin-ui/
 .gstack/
 .refact/
 
+# dev-task 平行開發專區（worktree / clone，見 .claude/skills/dev-task/）
+worktrees/
+
+# session 工作暫存（plan/review/驗證產物，不入版控）
+.work/
+artifacts/
+
 # Monorepo tooling
 node_modules/
 dist/
