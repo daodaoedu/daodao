@@ -102,8 +102,8 @@ features:
 
   # ── 規劃中：尚無任何程式碼，signals 全 miss 屬預期（上線時 CI 會抓到 declared 過期）──
 
-  - name: teacher-cohort
-    doc: docs/product/teacher-cohort
+  - name: lighthouse
+    doc: docs/product/lighthouse
     declared: planned
     signals:
       # 老師後台（陪跑教練台）：cohort API、f2e 老師端 service 都尚未存在

@@ -1,8 +1,0 @@
-[
-  ".github/workflows/**",
-  ".env*",
-  "secrets/**",
-  "apps/*/dist/**",
-  "node_modules/**",
-  "migrate/sql/**"
-]
