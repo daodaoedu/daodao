@@ -104,7 +104,7 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 1. **先讀 task.md** — 確認 scope、phases、目前狀態
 2. 工作範圍鎖在自己的任務資料夾，**不碰 `projects/`、不碰其他 worktrees/**
 3. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
-   1. **自行輕量驗證**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；後端變更 → curl 打一輪。這是 phase 級的快篩，完整驗收留給 verify 階段
+   1. **自行輕量驗證**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `pre-commit-check` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。這是 phase 級的快篩，完整驗收留給 verify 階段
    2. 驗證過 → `pre-commit-check` → `format-commit` skill commit
    3. 更新 task.md 的 checkbox 與 Status
    4. 直接進下一個 phase

@@ -34,6 +34,19 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 
 claude-in-chrome 不可用時全程用 playwright。注意：不要觸發 alert/confirm 對話框（會卡住 session）。
 
+**多任務競爭瀏覽器時：多開，不要排隊等**
+
+playwright MCP 是共用單一瀏覽器實例——兩個 session 同時用會互相把頁面導走、狀態互踩。發現被佔用（頁面莫名跳走、操作對象不是自己開的頁）時**不要等別人用完**，直接開自己的：
+
+1. **claude-in-chrome**：本來就該各自開新 tab（`tabs_create_mcp`），tab 之間互不干擾，優先用這條
+2. **自己起獨立 Playwright**：worktree 裡寫一支驗證 script 用專案的 playwright devDependency（沒有就 `npx playwright`）跑 headless 截圖，瀏覽器實例完全屬於自己：
+   ```bash
+   cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
+     http://localhost:<port>/<path> ../evidence/<phase>-<checkpoint>.png
+   ```
+   互動流程就寫小段 script（page.goto → click → screenshot），存 `$TASK/verify/` 重複使用
+3. 驗證用的瀏覽器歸驗證用，跑完就關，不佔著
+
 ## 3a. 登入牆處理（碰到「要登入才能看」時，先自己解，不要直接丟回給使用者）
 
 依序嘗試，走到哪一層記進 task.md 備註：
