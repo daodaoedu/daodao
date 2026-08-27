@@ -109,6 +109,12 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
    3. 更新 task.md 的 checkbox 與 Status
    4. 直接進下一個 phase
    5. 只有驗證**失敗且修不掉**、或發現 scope 之外的問題時才停下來問使用者
+4. **連續執行原則**：phase 邊界是繼續點，不是回報暫停點。**禁止**在 phase 完成後用「下一步：…要繼續嗎？」「要推的話說一聲」等句式收尾等指示——commit 完就開始下一個 phase。合法的停下來只有四種：
+   - 全部 phase 完成 → 進 verify
+   - 碰到 task.md 記載的待決事項**且該 phase 無法繞過它先行**（能先做別的就先做）
+   - 驗證失敗 2 次修不掉
+   - 使用者主動喊停
+   進度回報用一行 status 夾在過程中說，不要當成回合終點
 5. 定期 push：`git push -u origin feat/<slug>`——task.md 是本機檔案（gitignored），push 過的 branch 才是災難時唯一留得住的；跨多天的大任務每完成一個 phase 順手在 issue comment 記一行進度，讓狀態不只活在這台機器
 6. 跨 repo 依賴順序：`storage (migration) → server (API) → ai-backend → f2e`
 7. 需要跑 dev server 時，檢查 task.md 的 Port offset，避免與其他任務相撞

@@ -73,10 +73,11 @@ GH_REPO=daodaoedu/<repo> bash .github/scripts/retrieve-context.sh origin/dev HEA
 ```
 目標：寫 spec PR，不寫任何 production code。
 
-1. bin/openspec-headless.ts 已由 m.sh 呼叫
-2. 若 headless exit 2 → 在 issue 留 comment 說明缺什麼資訊，exit
+1. 依 OpenSpec 慣例在 openspec/changes/<slug>/ 撰寫 proposal / design / specs / tasks.md
+   （舊 bin/openspec-headless.ts 與 m.sh 已退役，由 Routine B 直接撰寫）
+2. 若 issue 資訊不足以寫出 tasks.md → 在 issue 留 comment 說明缺什麼資訊，exit
 3. PR body 套用 M spec PR 模板
-4. 加 spec-pending label（m.sh 已處理）
+4. 加 spec-pending label（含 PR 與 issue，見 routine-b-prompt-v2.md 步驟 2.3）
 ```
 
 ### Phase 2（state=needs-code）
@@ -117,4 +118,4 @@ commit 順序必須是：
 1. `test(...)`: 跑一次 → 必須 fail（若 pass 表示 test 無效，重寫）
 2. `feat/fix(...)`: 跑一次 → 必須 pass
 
-CI 或 verification-loop.sh 會驗證這個順序。違反時 handler 會 escalate。
+CI 會驗證這個順序（舊 verification-loop.sh 已退役）。違反時升級 human-coding。

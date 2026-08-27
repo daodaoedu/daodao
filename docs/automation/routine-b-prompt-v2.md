@@ -31,15 +31,25 @@
 4. 若 install 失敗，輸出錯誤並結束
 
 ═══════════════════════════════════════════════════════════
-階段 1：spec-merged-scan
+階段 1：spec-merged-scan（純 gh 指令，無腳本依賴）
 ═══════════════════════════════════════════════════════════
 
-執行：pnpm tsx bin/routine-dispatch/spec-merged-scan.ts
+目的：spec PR merge 後，把對應 issue 標成 spec-merged，
+讓階段 2 的 state 判斷進入 needs-code。冪等，可重複執行。
 
-此腳本掃描 monorepo 自 last_scan_at 起所有 merged spec PR，
-解析 PR body issue ref → 對應 sub-repo issue 加 spec-merged label。
-成功後更新 state-store.json:last_scan_at。
-失敗則跳過 timestamp 更新，繼續執行階段 2。
+對 8 個 sub-repo 各執行：
+  gh pr list --repo daodaoedu/<repo> --state merged \
+    --search "[spec] in:title" --json number,title,mergedAt --limit 20
+
+對每個「mergedAt 在 48 小時內」且標題符合 `[spec] #<num> ...` 的 PR：
+  1. 從標題解析 <num>
+  2. 若該 issue 已含 spec-merged label → 跳過（冪等）
+  3. gh label create "spec-merged" --repo daodaoedu/<repo> \
+       --color "0e8a16" --description "Spec PR merged, ready for code" --force
+  4. gh issue edit <num> --repo daodaoedu/<repo> \
+       --add-label spec-merged --remove-label spec-pending
+
+任一 repo 失敗不中斷，繼續掃下一個，最後進入階段 2。
 
 ═══════════════════════════════════════════════════════════
 階段 2：dispatch auto issues
@@ -59,21 +69,22 @@
 
 對每個 issue，依序執行：
 
-【步驟 2.1：取得 state】
-  讀取 issue labels（用 gh issue view），傳給 state.ts：
-    ISSUE_LABELS="label1,label2,..." pnpm --silent tsx \
-      bin/routine-dispatch/state.ts <repo> <issue-num>
+【步驟 2.1：取得 state（label 判斷表內建，無腳本依賴）】
+  讀取 issue 狀態與 labels：
+    gh issue view <num> --repo daodaoedu/<repo> --json state,labels
 
-  根據回傳的 state 決定動作：
-    human-blocked      → 跳過（不計 quota）
-    human-driving      → 跳過（不計 quota）
-    human-coding       → 跳過（不計 quota）
-    manual-mode        → 跳過（不計 quota）
-    done               → 跳過（不計 quota）
-    spec-in-review     → 跳過（不計 quota）
-    stop-after-plan-done → 跳過（不計 quota）
-    needs-spec         → 進入【步驟 2.2】（計入 quota）
-    needs-code         → 進入【步驟 2.2】（計入 quota）
+  依序套用以下規則，第一條命中即定案：
+    issue state 為 CLOSED                → done，跳過（不計 quota）
+    含 human-blocked / human-driving
+      / human-coding 任一 label          → 跳過（不計 quota）
+    不含 auto label                      → manual，跳過（不計 quota）
+    含 auto-pr-open label                → PR 已開，跳過（不計 quota）
+    含 spec-pending label                → spec-in-review，跳過（不計 quota）
+    含 auto:plan-only 且 issue 已有
+      plan comment 或 spec PR            → stop-after-plan-done，跳過（不計 quota）
+    scope:M 或 scope:L 且含 spec-merged  → needs-code，進入【步驟 2.2】（計 quota）
+    scope:M 或 scope:L 且不含 spec-merged → needs-spec，進入【步驟 2.2】（計 quota）
+    scope:XS / scope:S / 無 scope label  → needs-code，進入【步驟 2.2】（計 quota）
 
 【步驟 2.2：準備 sub-repo】
   如果 /tmp/<repo> 不存在：
@@ -181,7 +192,7 @@ EOF
          | grep -o 'Parent: daodaoedu/daodao#[0-9]*' | grep -o '[0-9]*$')
        若 PARENT_NUM 非空：
          gh issue comment $PARENT_NUM --repo daodaoedu/daodao \
-           --body "📋 Spec PR 已開：daodaoedu/daodao#$PR_NUM（來自 daodaoedu/<repo>#<num>），等待 review。"
+           --body "📋 Spec PR 已開：daodaoedu/<repo>#$PR_NUM（來自 daodaoedu/<repo>#<num>），等待 review。"
     8. 結束此 issue（等 spec merge 後下輪再處理 code）
   state=needs-code:
     1. 同 scope:S 的 TDD 流程
@@ -302,10 +313,11 @@ EOF
 
 ## 相關文件
 
-- Routine A：`docs/automation/routine-a-prompt.md`
+- Routine A（Actions script 運維手冊）：`docs/automation/routine-a-prompt.md`
 - v1 prompt（棄用）：`docs/automation/routine-b-prompt-diff.md`
-- State machine：`bin/routine-dispatch/state.ts`
-- Spec scan：`bin/routine-dispatch/spec-merged-scan.ts`
+- State 判斷與 spec scan：**已內建於本 prompt**（v2.2 起無腳本依賴；
+  舊 `bin/routine-dispatch/state.ts`、`spec-merged-scan.ts` 已隨 21c5bb5 移除）
+- 行為規範（agentic flow 細節）：`.claude/skills/gh-pipeline/`
 - 手動建 issue 指南：`docs/automation/manual-issue-to-routine.md`
 
 ---
@@ -331,3 +343,15 @@ EOF
 | Code PR labels | `auto` only | `auto` + `tracked` |
 | Notion 回寫 | 無（spec 階段 Notion 無感知）| spec PR 建立後回寫 `Spec Review` |
 | Stage 3 spec PR | 會巡邏並修改 spec PR | 有 `spec-pending` label → 跳過 |
+
+## v2.1 → v2.2 變更摘要（2026-08-27，bin/routine-dispatch 退役）
+
+| 項目 | v2.1 | v2.2 |
+|---|---|---|
+| 階段 1 spec scan | `spec-merged-scan.ts` + state-store.json | 純 gh 指令，48h 滑動視窗，冪等 |
+| 步驟 2.1 state | `state.ts` 腳本 | label 判斷表內建 prompt |
+| 階段 0 | monorepo pnpm install | 不再需要（無腳本依賴，可直接跳到階段 1） |
+| Spec 回報中央卡 | comment 誤寫 `daodaoedu/daodao#$PR_NUM` | 修正為 `daodaoedu/<repo>#$PR_NUM` |
+
+> ⚠️ **改完 repo 文件不等於部署**：CCR Console 上的 routine prompt 是獨立副本，
+> 需要人工把本文件的 prompt 區塊重新貼上 Console 才生效。
