@@ -75,4 +75,5 @@
 - 週摘要「併入現有週報」的具體位置與觸發（週報現況需盤點）
 - 零打卡使用者的 End 信是否寄送（FRD 待決議）
 - 「91 天內」是否需要後端驗證上限
-- admin 前台建立入口的「僅管理者可見」以何種角色判斷（users 角色 or 白名單）
+- ~~admin 前台建立入口的「僅管理者可見」以何種角色判斷~~ → 2026-08-28 定案：挑戰建立/管理與卡組管理集中於 daodao-admin-ui，權限沿用 Admin／SuperAdmin 角色（requireAdmin），不做前台建立入口
+- 挑戰期間受模板 duration_days（7/14/21/30，practice_templates CHECK）限制；FRD「91 天內」的自由期間若需 28 天等值，需另案放寬 CHECK
