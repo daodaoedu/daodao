@@ -3,18 +3,22 @@
 ## ADDED Requirements
 
 ### Requirement: 僅管理者可建立共同挑戰
-共同挑戰的實踐 SHALL 僅能由平台管理者建立。前台實踐建立流程 SHALL 僅對管理者顯示「共同挑戰」選項；一般使用者 SHALL 看不到此選項。建立後 SHALL NOT 直接出現在探索共同挑戰頁。
+共同挑戰 SHALL 僅能由平台管理者建立。建立入口 SHALL 位於 admin 後台（daodao-admin-ui），API SHALL 以 Admin／SuperAdmin 角色（requireAdmin）把關；前台實踐建立流程 SHALL NOT 提供「共同挑戰」選項（2026-08-28 決策：靈感卡與挑戰管理集中於 admin-ui，取代 FRD FR-CC-01 的前台建立描述）。建立後 SHALL NOT 直接出現在探索共同挑戰頁。
 
-#### Scenario: 管理者於前台建立
-- **WHEN** 具管理者身分的使用者於前台建立實踐並勾選「共同挑戰」
-- **THEN** 建立成功，該實踐出現在 admin 後台的挑戰管理清單，但不出現在探索共同挑戰頁
+#### Scenario: 管理者於 admin 後台建立
+- **WHEN** 具管理者身分的使用者於 admin 後台建立挑戰主題與期
+- **THEN** 建立成功，該期以草稿狀態存在於挑戰管理清單，不出現在探索共同挑戰頁
 
-#### Scenario: 一般使用者看不到選項
-- **WHEN** 一般使用者進入實踐建立流程
-- **THEN** 介面不顯示「共同挑戰」選項，API 亦拒絕一般使用者以挑戰型態建立
+#### Scenario: 非管理者呼叫管理 API
+- **WHEN** 非 Admin／SuperAdmin 角色的使用者呼叫 `/api/v1/admin/challenges/*`
+- **THEN** API 回應 403
 
 ### Requirement: admin 後台以 lighthouse 模式管理挑戰
-admin 後台 SHALL 提供共同挑戰管理，模式比照 lighthouse：可設定主題（program），並在主題底下設期（cohort），為每一期指定使用模板與開始日。挑戰項目 SHALL 支援複製、刪除、修改（修改自動帶入現行編輯頁樣式）。
+admin 後台 SHALL 提供共同挑戰管理，模式比照 lighthouse：可設定主題（program），並在主題底下設期（cohort），為每一期指定使用模板與開始日。挑戰項目 SHALL 支援複製、刪除（封存）、修改。一期 SHALL 只綁定一個模板；模板有持續天數時，期的結束日 SHALL 由開始日 + 持續天數 − 1 推算，使加入時複製的實踐期間與挑戰一致。已有人加入的期 SHALL NOT 更改期間或模板；純改名稱／名額／截止日 SHALL NOT 改動日期。
+
+#### Scenario: 已有人加入後修改
+- **WHEN** 管理者對已有參與者的期修改開始日或模板
+- **THEN** API 回應 409；修改名稱或名額則成功且日期不變
 
 #### Scenario: 設定主題與期
 - **WHEN** 管理者在 admin 後台建立挑戰主題，並在底下新增一期、指定模板與開始日
