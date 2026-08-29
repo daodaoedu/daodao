@@ -68,7 +68,7 @@ gh project item-edit --project-id PVT_kwDOBTLl0c4Bgxef --id <item-id> \
 
 - Issue URL + board 連結
 - 若 Status=`Ready for Dev`（且無 `human-driving`）→ 提示「下次 Routine A 執行時（最慢 1 小時）會自動 dispatch 到 sub-repo」
-- 若無 spec（issue body 沒有 OpenSpec change 連結、沒有 Acceptance Criteria）→ 提示「Routine A 會標 `needs-spec`，建議先跑 `prd-generation` / `openspec-ff-change` 產 spec」
+- 若無 OpenSpec（issue body 沒有 `OpenSpec: <slug>` 註記，或 `openspec/changes/<slug>/tasks.md` 不存在／無未完成 task）→ 提示「改 Ready for Dev 後 Routine A 會標 `needs-spec`；只有 Acceptance Criteria 不夠，要進 pipeline 請先跑 `openspec-ff-change` 產最小 spec。人工開發（`human-driving` + `/dev-task`）則 AC 即可」
 
 ---
 

@@ -4,7 +4,7 @@
 
 島島阿學（daodao）是一個由多個子專案組成的教育平台，涵蓋前端、後端、AI 服務、資料庫、基礎設施與背景任務。隨著專案規模成長，我們建立了一套從需求到部署的完整工作流程，核心理念是：
 
-1. **規格先行** — 用 OpenSpec 將模糊需求轉化為可執行的工程任務，避免開發方向偏移
+1. **規格先行、深淺分級** — FRD 是需求真相、OpenSpec 是工程真相、issue 是指標；scope 決定要寫到哪一層（Phase 1.5）
 2. **自動化品質守護** — 透過 hooks、CI/CD、AI Code Review 等機制，讓品質檢查發生在每一個環節
 3. **人類保有最終決策權** — 自動化處理繁瑣工作，但每個關鍵節點（規格審查、commit 確認、PR merge）都由人類做最終判斷
 
@@ -14,7 +14,7 @@
 
 ## 全貌
 
-整個開發流程可以分為 10 個階段（Phase 0-9）：
+整個開發流程分為 Phase 0–9，其中 Phase 1.5（規格層級判定）決定一件工作要走多深：
 
 ```mermaid
 flowchart TD
@@ -36,7 +36,9 @@ flowchart TD
     B --> C["/openspec-new-change 建立 change"]
     C --> D["產生 artifacts<br/>/openspec-continue-change<br/>或 /openspec-ff-change"]
     D --> E["人類審查<br/>proposal → design → specs → tasks"]
-    E --> F["/openspec-apply-change 開始實作"]
+    E --> E2["/gh-card 開中央 issue<br/>掛 Planning board"]
+    A4 -- "scope S：只寫 AC" --> E2
+    E2 --> F["/dev-task<br/>worktrees/<n>-<slug>/ 隔離開發<br/>start → dev → verify → finish"]
     F --> G["Hooks 自動保護 + format"]
     G --> H["Commit<br/>pre-commit-check skill + format-commit skill"]
     H --> I["Push<br/>code-review skill"]
@@ -51,16 +53,15 @@ flowchart TD
     O --> P{需要修正？}
     P -- 是 --> Q[修正 → commit → push] --> O
     P -- 否 --> R[Merge → CD 自動部署]
-    R --> S["/openspec-verify-change 驗收"]
-    S --> T["/openspec-archive-change 歸檔"]
+    R --> S["/dev-task cleanup<br/>移除 worktree、human-driving"]
+    S --> T["/post-merge-wrapup<br/>openspec 歸檔、docs/product 狀態"]
 
     Q -. 遇到錯誤 .-> U["/post skill 寫文章記錄<br/>quidproquo.cc"]
     F -. 遇到錯誤 .-> U
     F -. 無法修復的 bug .-> Y["/file-bug-issue skill<br/>開 GitHub Issue 追蹤"]
     Q -. 無法修復的 bug .-> Y
 
-    D -. 自動化路線 .-> V["/publish-tasks<br/>tasks → GitHub Issues + auto label"]
-    V --> W["Scheduled Remote Agent<br/>每 2 小時掃描"]
+    E2 -. "auto:auto-pr" .-> W["Routine A/B<br/>派工到 sub-repo、雲端實作"]
     W --> X["自動實作 → 開 PR → 修 feedback"]
     X --> P
 ```
@@ -163,37 +164,35 @@ pnpm run lint && pnpm run typecheck
 
 ## Phase 1：需求輸入
 
-每一個功能的開發都從需求開始。需求大致分為兩類：**新功能開發**和**Bug 修復 / 小改動**，兩者有不同的處理流程。
+每一個功能的開發都從需求開始。需求分兩類：**新功能開發**走 PRD/FRD → 規格 → 開卡 → 隔離開發；**Bug 修復 / 小改動**直接修。分流依據見 [Phase 1.5](#phase-15規格層級判定)。
 
 ### 新功能開發
 
-需求可以從三個來源進入，最終都會放到 `docs/product/` 目錄作為 OpenSpec 的輸入素材。這確保了所有需求都有文字記錄，不會只存在於某個人的腦中或某次會議的口頭討論裡。
+需求可以從三個來源進入，最終都會放到 `docs/product/` 目錄。這確保所有需求都有文字記錄，不會只存在於某個人的腦中或某次會議的口頭討論裡。
 
 ### 1.1 PM 撰寫 PRD / FRD
 
-最正式的需求來源。PM 會在 `docs/product/` 目錄下撰寫兩種文件：
+最正式的需求來源。PM 在 Google Doc 撰寫，定稿後落到 `docs/product/<功能>/`：
 
-| 文件類型 | 全名 | 用途 | 典型內容 |
+| 文件類型 | 全名 | 回答什麼 | 典型內容 |
 |---------|------|------|---------|
-| **PRD** | Product Requirements Document | 定義「要做什麼」和「為什麼做」 | 產品目標、目標用戶、用戶故事、成功指標、優先級 |
-| **FRD** | Functional Requirements Document | 定義「具體怎麼運作」 | 功能規格、介面行為、資料流程、邊界條件、錯誤處理 |
+| **PRD** | Product Requirements Document | 要做什麼、為什麼做 | 產品目標、目標用戶、用戶故事、成功指標、優先級 |
+| **FRD** | Functional Requirements Document | 具體怎麼運作 | 功能規格、介面行為、資料流程、邊界條件、錯誤處理、**Test Points（驗收條件）** |
 
-PRD 回答的是產品策略層面的問題，FRD 則是 PM 和工程師之間的溝通橋梁。不是每個功能都需要兩份文件 — 小功能可能只需要一份 FRD，大功能則建議兩份都寫。
+PRD 回答產品策略層面的問題，FRD 是 PM 和工程師之間的溝通橋梁。小功能可能只需要一份 FRD，大功能建議兩份都寫。FRD 的 Test Points 之後會成為 `/dev-task` verify 階段逐條驗收的清單，所以請寫成可以打勾的句子。
+
+**工程審閱**：FRD 送工程審閱後常有定案（例如「統一 90 天／3 段／50 字上限」）。定案要回寫 FRD；來不及回寫時，以 OpenSpec 的 `design.md` 為準（見 Phase 2）。
 
 ### 1.2 設計師出 Figma 設計稿
 
-視覺設計是需求的另一個重要來源。設計師在 Figma 完成 UI 設計後：
+設計師在 Figma 完成 UI 設計後：
 
-- 截圖放到 `docs/product/<功能>/` 目錄，或直接提供 Figma URL
-- 開發時可以透過 Figma MCP 直接從 Claude Code 讀取設計稿（`get_design_context`、`get_screenshot`），不需要來回切換工具
-
-這讓工程師可以一邊看設計稿一邊寫 code，減少「設計稿長這樣，但我記錯了」的問題。
+- 截圖放到 `docs/product/<功能>/`，或直接提供 Figma URL
+- 開發時透過 Figma MCP 直接從 Claude Code 讀取設計稿（`get_design_context`、`get_screenshot`）
 
 ### 1.3 在分支開發 Prototype
 
-有些需求用文字和設計稿很難說清楚，特別是涉及互動體驗或技術可行性驗證的場景。這時候直接在 feature branch 上做一個 prototype，用 code 來回答「這樣行不行？」的問題。
-
-Prototype 驗證完成後，將結論（截圖、關鍵發現、技術限制）整理到 `docs/` 作為正式開發的參考。
+有些需求用文字和設計稿很難說清楚，特別是互動體驗或技術可行性。直接在 feature branch 上做 prototype，用 code 回答「這樣行不行」。驗證完成後，把結論（截圖、關鍵發現、技術限制）整理到 `docs/product/<功能>/` 作為正式開發的參考。
 
 ### 1.4 放置位置
 
@@ -201,162 +200,245 @@ Prototype 驗證完成後，將結論（截圖、關鍵發現、技術限制）�
 
 ```
 docs/product/
-├── island/           ← 我的小島（PRD + FRD）
-├── notification/     ← 通知系統
-├── challenge/        ← 共同挑戰
-├── social/           ← 社交功能
 ├── practice/         ← 實踐相關
-├── search/           ← 展示與搜尋
+├── challenge/        ← 共同挑戰
+├── lighthouse/       ← 燈塔
+├── notification/     ← 通知系統
+├── social/           ← 社交功能
 ├── onboarding/       ← 新手引導
 ├── admin/            ← 後台管理
-├── quiz-store/       ← 題庫
-├── subscription/     ← 訂閱
 └── ...
 ```
 
-這個結構讓任何人都能快速找到特定功能的所有需求文件 — 不用翻 Notion、不用搜 Slack，一個目錄搞定。
-
 ### Bug 修復 / 小改動
 
-不是所有工作都需要走完整的 PRD → OpenSpec 流程。Bug 修復和小改動有兩種處理路徑：
+不是所有工作都需要走 PRD → 規格 → 開卡。Bug 和小改動有兩條路徑：
 
-#### 路徑 A：直接在 Claude Code App 修復
+**路徑 A：直接在 Claude Code 修復** — 原因明確、範圍小。把截圖、錯誤訊息、重現步驟貼給 Claude Code，修完直接進 Phase 4（commit → PR），不開卡、不寫 spec。
 
-適合原因明確、範圍小的問題。把截圖、錯誤訊息、重現步驟直接貼到 Claude Code App 的對話中，讓 AI 分析並修復。
-
-```
-典型場景：
-- 使用者回報按鈕點了沒反應（附截圖）
-- console 出現特定錯誤訊息
-- 文字顯示有誤、樣式跑版
-```
-
-這條路徑修完後直接進入 Phase 4（開分支 → commit → PR），跳過 Phase 2、3。
-
-#### 路徑 B：整理到 `docs/troubleshooting/` 分析
-
-適合原因不明、需要調查的問題。在 `docs/troubleshooting/` 下建立子目錄，用 `bug.md` 描述問題，並附上截圖或 log 作為佐證：
+**路徑 B：整理到 `docs/troubleshooting/` 分析** — 原因不明、需要調查。建子目錄放 `bug.md`（一句話描述現象）＋截圖／log，讓 Claude Code 分析後寫回 `analysis.md`：
 
 ```
 docs/troubleshooting/
-├── auth-error/                  ← 範例：登入錯誤調查
-│   ├── bug.md                   ← 問題描述（一句話說明現象）
-│   ├── login_error.png          ← 截圖
-│   └── analysis.md              ← Claude Code 分析後產生的調查報告
-├── interest-bug/                ← 另一個調查案例
-│   ├── bug.md
-│   └── ...
+├── auth-error/
+│   ├── bug.md            ← 現象
+│   ├── login_error.png   ← 佐證
+│   └── analysis.md       ← 根因與修復計畫
 └── android-oauth-login-fix.md   ← 已解決的簡單案例（不需要子目錄）
 ```
 
-以 `auth-error` 為例，`bug.md` 只需簡短描述現象：
+分析後原因明確 → Phase 4 直接修；發現問題複雜（跨 repo、要改資料模型）→ 當成新功能走 Phase 1.5 判定。
 
-> 用戶點擊 Google 登入後，無法完成登入，最終停在 `/auth/login?redirect=%2Fauth%2Ferror%3Freason%3Dinvalid_state`
+---
 
-搭配截圖 `login_error.png` 提供視覺佐證。接著用 Claude Code 讀取這些素材進行分析、找出根因、規劃修復任務清單，分析結果會寫回同目錄（如 `analysis.md`）。
+## Phase 1.5：規格層級判定
 
-如果分析後發現問題複雜，可以轉入 Phase 2 用 OpenSpec 管理；如果原因明確，直接進入 Phase 4 修復。
+這一步決定「要寫多少規格才能開工」。過去的混亂來自於沒有明確規則——有時候寫 OpenSpec、有時候只有 FRD、有時候什麼都沒有就開 issue。現在的規則：
+
+> **FRD 是需求真相，OpenSpec 是工程真相，issue 是兩者的指標。**
+
+三份東西各有角色，不是二選一：
+
+| | PRD / FRD | OpenSpec change | 中央 issue |
+|---|---|---|---|
+| 誰寫 | PM | 工程（從 FRD 產生） | `/gh-card` 從對話推斷 |
+| 回答什麼 | 要做什麼、為什麼 | 怎麼做、做到哪算完成 | 現在做到哪、誰在做 |
+| 位置 | `docs/product/<功能>/` | `openspec/changes/<slug>/` | daodaoedu/daodao issue + Planning board |
+| 誰消費 | 工程師、OpenSpec 的輸入 | Routine A spec gate、`/dev-task` 的 phases、`/openspec-verify-change`、歸檔 | Routine A 派工、`/dev-task` start、Routine C 回寫 |
+
+### 判定表
+
+| scope | 條件 | 規格要求 | 進入方式 |
+|---|---|---|---|
+| **L / M** | 跨 repo（storage + server + f2e）、改資料模型、有待決事項（OQ）、FRD 與工程審閱有落差需定案 | **必開 OpenSpec**（完整 proposal / design / specs / tasks）；issue body 貼 `openspec/changes/<slug>/` | Phase 2 → Phase 2.5 開卡 → Phase 3 `/dev-task` |
+| **S** | 單 repo、工程決策少、一天內做完 | 人工做（`/dev-task`）：issue body 寫 **Acceptance Criteria** 即可。要丟給 pipeline（Ready for Dev）：仍需 OpenSpec，用 `/openspec-ff-change` 一鍵產最小 spec | Phase 2.5 開卡 → `/dev-task`，或補 spec 後改 Ready for Dev |
+| **XS / bug** | 原因明確的修正、文案、樣式 | 不需要 spec，不需要 issue | 路徑 A 直接修 → Phase 4 |
+| **CI / skill / 文件** | 只動 monorepo 自身的 `.github/`、`.claude/`、`docs/` | issue 寫 AC（給自己追蹤）；不進 sub-repo pipeline | 直接在 monorepo main 或 branch 改 |
+
+判斷 L/M 的訊號只要中一個就算：跨 repo、要 migration、有 OQ、FRD 需要定案。`design.md` 就是放定案的地方——實踐建立流程（#141）的「統一 90 天／3 段／逐段行動同 50 字」定案沒回寫 Google Doc，工程以 `openspec/changes/practice-create-flow/design.md` 為準。
+
+### Routine A 的 spec gate 怎麼看
+
+中央 issue 到 **Ready for Dev** 時，Routine A（`bin/pipeline/dispatch.ts`）檢查三件事：body 有 `OpenSpec: <slug>` 註記、`openspec/changes/<slug>/tasks.md` 存在、tasks.md 有未完成 task。缺一即標 `needs-spec` 退回。**Acceptance Criteria 不能取代 OpenSpec**——AC 是給人工開發（`/dev-task`、`human-driving`）看的；要進 pipeline 就要有 tasks.md，因為 Routine A 是照 tasks.md 的 `## section` 拆鏡像 issue。
 
 ---
 
 ## Phase 2：規格拆解（OpenSpec）
 
-有了需求素材之後，下一步是將它們轉化為可執行的工程規格和任務。這是 OpenSpec 的工作。
+L/M 功能在這一步把 FRD 翻譯成工程規格。
 
-### 2.1 為什麼需要這一步？
+### 2.1 為什麼需要這一步
 
-PRD/FRD 描述的是「產品要什麼」，但工程師需要的是「具體該做什麼」。中間有一段翻譯工作：
-
-- 哪些 API 需要新增或修改？
-- 資料模型需要怎麼調整？
-- 前後端的分工是什麼？
-- 有哪些 edge cases 需要處理？
-- 任務之間的依賴順序是什麼？
-
-OpenSpec 的 artifact workflow 就是在做這件事 — 一步步把模糊的需求變成具體的工程計畫。
+FRD 描述「產品要什麼」，工程師需要「具體該做什麼」：哪些 API 新增或修改、資料模型怎麼調、前後端分工、edge cases、任務依賴順序。OpenSpec 的 artifact workflow 一步步把模糊需求變成具體工程計畫，而且**把工程審閱的定案記在 `design.md`**，讓之後每個接手的 session 都有同一份真相。
 
 ### 2.2 完整流程
 
-所有步驟都透過 Claude Code skills 執行，每個 skill 負責一個明確的階段：
-
 | 順序 | Skill | 用途 | 產出 |
 |------|-------|------|------|
-| 0 | `/openspec-explore` | 探索需求、釐清問題、思考方案 | 對需求的理解和初步想法 |
+| 0 | `/openspec-explore` | 探索需求、釐清問題（可選，範圍大時建議） | 對需求的理解和初步想法 |
 | 1 | `/openspec-new-change` | 建立新 change | `proposal.md` — 提案 |
-| 2 | `/openspec-continue-change` | 產生下一個 artifact | `design.md` — 技術設計 |
-| 3 | `/openspec-continue-change` | 繼續 | `specs/` — 細部規格 |
-| 4 | `/openspec-continue-change` | 繼續 | `tasks.md` — 工程任務清單 |
-| — | `/openspec-ff-change` | 快速模式，一次產生所有 artifacts | 全部 |
-
-`/openspec-explore` 是可選的，但建議在需求不夠清楚或範圍較大時使用。它像是跟 AI 做一場需求討論會 — 你提出問題、它幫你整理思路、找出模糊地帶。
+| 2 | `/openspec-continue-change` | 產生下一個 artifact | `design.md` — 技術設計與定案 |
+| 3 | `/openspec-continue-change` | 繼續 | `specs/` — SHALL 句細部規格 |
+| 4 | `/openspec-continue-change` | 繼續 | `tasks.md` — 工程任務清單（`/dev-task` 的 phases 依此編號） |
+| — | `/openspec-ff-change` | 快速模式，一次產生所有 artifacts | 全部（S 卡補 spec 用這個） |
 
 ### 2.3 Artifacts 結構
 
-每個 change 會在 `openspec/changes/` 下建立一個目錄：
-
 ```
-openspec/changes/<change-name>/
-├── .openspec.yaml    ← change 的狀態追蹤（當前階段、完成狀態）
-├── proposal.md       ← 提案：問題描述、解決方案、影響範圍、風險評估
-├── design.md         ← 技術設計：架構決策、API 設計、資料模型變更
-├── specs/            ← 細部規格：每個功能點的完整規格
-│   ├── <feature-a>/spec.md
-│   └── <feature-b>/spec.md
-└── tasks.md          ← 工程任務清單：具體的實作步驟和預估
+openspec/changes/<slug>/
+├── .openspec.yaml    ← 狀態追蹤
+├── proposal.md       ← 問題、解法、影響範圍、風險；「不做什麼」也寫在這
+├── design.md         ← 架構決策、API 設計、資料模型變更、工程審閱定案、OQ
+├── specs/
+│   └── <feature>/spec.md   ← SHALL 句 + Scenario（GIVEN/WHEN/THEN）
+└── tasks.md          ← 依 repo 順序（storage → server → f2e）編號的任務
 ```
 
-這些 artifacts 是逐步推導的：proposal 確認方向正確 → design 確認技術方案可行 → specs 確認每個細節 → tasks 確認執行計畫。每一步都是前一步的細化。
+proposal 確認方向 → design 確認技術方案 → specs 確認細節 → tasks 確認執行計畫。每一步都是前一步的細化。
 
 ### 2.4 人類審查
 
-在進入實作（`/openspec-apply-change`）之前，人類需要審查所有 artifacts。這是整個流程中最重要的品質關卡之一：
+進入開卡之前，人類審查所有 artifacts：
 
 - **proposal** — 方向對不對？範圍會不會太大或太小？
-- **design** — 技術方案合理嗎？有沒有更簡單的做法？
-- **specs** — 有沒有漏掉的 edge cases？錯誤處理完整嗎？
-- **tasks** — 粒度適當嗎？每個 task 建議控制在 2-4 小時。依賴順序合理嗎？
+- **design** — 技術方案合理嗎？定案都記進去了嗎？OQ 有沒有標清楚「本任務不做」？
+- **specs** — edge cases 漏了嗎？反面條件（不顯示什麼、不出現什麼）寫了嗎？
+- **tasks** — 粒度 2–4 小時一個？跨 repo 順序對嗎？
 
-寧可在這一步多花時間，也不要在寫了一半的 code 裡才發現方向錯了。
+寧可在這一步多花時間，也不要寫了一半的 code 才發現方向錯了。
 
 ---
 
-## Phase 3：開發
+## Phase 2.5：開卡（gh-card）
 
-規格確認後，正式進入寫 code 的階段。
+規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：Routine A 從這裡派工、`/dev-task` 從這裡讀需求、Routine C 在 merge 後回寫 Done。
 
-### 3.1 開始開發
-
-最常見的方式是直接從 OpenSpec tasks 開始：
-
-```bash
-/openspec-apply-change <change-name>
+```
+/gh-card（從對話推斷欄位，互動確認一次）
+  Title    功能名稱（中文，與 board 既有卡片同風格）
+  Body     Description + References（FRD、POC、OpenSpec 連結）+ Acceptance Criteria
+  Labels   scope:XS|S|M|L、repo:<sub-repo>（可多個）
+  Status   Todo（預設，安全）
 ```
 
-這會依照 `tasks.md` 的順序，逐一實作每個任務。Claude Code 會讀取對應的 specs，確保實作符合規格。
+三種派工模式，由 label 決定：
 
-也可以手動開發 — 特別是在做小修正或不值得走完整 OpenSpec 流程的情境下，直接到對應的子專案寫 code 即可。
+| 模式 | Label | 行為 |
+|---|---|---|
+| plan-only（預設） | 無 | Status 改 **Ready for Dev** 後，Routine A 在 sub-repo 開鏡像 issue 並產出計畫，不寫 code |
+| 全自動 | `auto:auto-pr` | Ready for Dev 後 Routine B 雲端實作、開 PR、修 feedback；適合 XS/S 雜項 |
+| 人工開發 | `human-driving` | Routine A 永遠不碰；`/dev-task` start 時自動掛上 |
 
-### 3.2 開發中的自動化（Hooks）
+高風險 repo（`daodao-storage`、`daodao-infra`）強制 plan-only，migration 一律由人工做。
 
-寫 code 的過程中，Claude Code hooks 會在背景自動保護程式碼品質：
+---
+
+## Phase 3：開發（dev-task）
+
+開發不在 `projects/<repo>` 裡做——那裡永遠停在 `dev`，乾淨、供整合與 pipeline 用。每個 issue 在 `worktrees/<issue#>-<slug>/` 有自己的隔離資料夾，多個 session 可同時開發不同 issue 互不干擾。
+
+```
+daodao/
+├── projects/<repo>/              ← 永遠 dev，不在這裡開發
+└── worktrees/                    ← gitignored
+    └── 141-practice-create-flow/
+        ├── task.md               ← 任務 manifest：唯一入口，接手先讀
+        ├── evidence/             ← verify 階段的截圖與結果
+        ├── daodao-storage/       ← worktree @ feat/practice-create-flow
+        ├── daodao-server/        ← 同名 branch
+        └── daodao-f2e/
+```
+
+### 3.1 五個階段
+
+`/dev-task` 依使用者輸入判斷進入哪個階段：
+
+| 說什麼 | 階段 | 做什麼 |
+|---|---|---|
+| 「開發 issue #141」 | **start** | 建立任務 |
+| 「接手 worktrees/141-…」或已在該資料夾內 | **dev** | 逐 phase 實作 |
+| 「驗證」或全部 phase 完成 | **verify** | 對 FRD Test Points 總驗收 |
+| 「發 PR」 | **finish** | rebase、品質檢查、code review、開 PR、回寫 issue |
+| 「merge 了」 | **cleanup** | 移除 worktree、label，歸檔 |
+
+#### start — 建立任務
+
+1. `gh issue view` 讀中央 issue：需求、FRD、POC、OpenSpec 連結
+2. **判定涉及哪些 repo**：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）；`repo:` label 只當參考
+3. **防撞**：中央 issue 掛 `human-driving`（否則一到 Ready for Dev 就被派工）；`git worktree list` 與 `gh pr list --base dev` 查同區域的 in-flight 工作，高重疊時先問
+4. 每個 repo：`git worktree add worktrees/<n>-<slug>/<repo> -b feat/<slug> origin/dev`（所有 repo 同名 branch；fix 用 `fix/`）
+5. 補 gitignored 檔案：複製 `.env*`、`pnpm install --ignore-workspace`（monorepo 根的 `pnpm-workspace.yaml` 會讓不加 flag 的 install 變 no-op）
+6. 寫 `task.md`：連結、範圍、phases（依 OpenSpec `tasks.md` 編號；只有 AC 就依 AC 拆）、驗證、Status、PR、備註
+7. 直接進 dev，不停下來建議換 session
+
+#### dev — 逐 phase 實作
+
+跨 repo 順序固定 **storage（migration）→ server（API）→ ai-backend → f2e**。每完成一個 phase 的預設動作序列，不問「要 commit 還是先看效果」：
+
+1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看；API → curl；migration / script / skill → 依 `pre-commit-check` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」
+2. 驗證過 → `/pre-commit-check` → `/format-commit`
+3. 更新 `task.md` 的 checkbox 與 Status
+4. 直接進下一個 phase；定期 `git push -u origin feat/<slug>`
+
+只有四種情況停下來：全部 phase 完成（進 verify）、碰到 task.md 記載的待決事項且無法繞過、驗證失敗 2 次修不掉、使用者喊停。phase 邊界是繼續點，不是回報暫停點。
+
+#### verify — 總驗收
+
+有 UI 變更的任務必須通過；純後端改跑 API 驗證後直接 finish。
+
+- 從 FRD Test Points 展開檢查清單，用瀏覽器（`claude-in-chrome` 或 Playwright 腳本）逐條走過，含窄螢幕（375px）、無障礙、反面條件
+- 每個檢查點截圖到 `evidence/`；task.md 新增「驗證」區塊記通過／失敗／未做
+- 同一項失敗 2 次 → 停下來整理現象給使用者
+- 全部通過 → Status `verified`
+
+#### finish — 發 PR
+
+對每個有變更的 repo：
+
+1. `git fetch origin dev && git rebase origin/dev`（衝突時列出檔案；openapi 生成物用官方腳本重產）
+2. `typecheck && lint && test`；既有紅測試用 origin/dev 乾淨 worktree 對照確認非本任務造成
+3. `/code-review`（四引擎＋誤判知識庫，見 Phase 5）
+4. push → `gh pr create --base dev`；跨 repo 時各 PR body 互相引用並標 merge 順序
+5. task.md Status → `in-review`，記 PR 連結
+6. **回寫 issue**：`gh issue comment` 列 PR、驗證摘要、Known incomplete scope
+
+注意：sub-repo 的 Auto PR Description workflow 會在 opened 時覆寫標題與內文，開完 PR 等它跑完再 `gh pr edit` 還原。
+
+#### cleanup — merge 後收尾
+
+1. 確認所有 PR merged
+2. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（task.md 有留存價值先摘要進 issue comment）
+3. 移除 `human-driving`
+4. `/post-merge-wrapup`：`/openspec-archive-change` 歸檔、更新 `docs/product` 功能狀態；Routine C 自動把 board 卡改 Done
+5. `ls worktrees/` 掃其他已 merge 未收尾的任務
+
+### 3.2 平行開發約定
+
+- 一個 issue 一個資料夾一個 session；2–3 個平行是甜蜜點
+- M/L 任務（有中途決策點）→ 獨立 session；XS/S → 整包委派 subagent 或標 `auto` 走 pipeline
+- 需要同時跑 dev server 的任務：後開的設 port offset 或用 clone 模式
+- DB / docker 全機共享，migration 類任務一次只做一個
+- issue 之間有依賴：B 的 worktree 從 A 的分支開，PR base 先設 A，A merge 後再 rebase 回 dev
+- rebase 只在「發 PR 前」和「輪到自己 merge 前有 conflict」兩個時機做
+
+### 3.3 開發中的自動化（Hooks）
 
 | 時機 | Hook | 做了什麼 |
 |------|------|---------|
-| AI 寫入檔案**前** | `pre-write-guard.sh` | 攔截敏感檔案（.env、.pem、.key）防止覆寫、保護 database migration 檔案不被意外修改、載入各專案的 project-rules 確保 AI 遵循專案慣例 |
-| AI 寫入檔案**後** | `post-write-format.sh` | 自動格式化剛寫入的檔案 — JavaScript/TypeScript 用 Biome 或 ESLint，Python 用 Black + Ruff |
+| AI 寫入檔案**前** | `pre-write-guard.sh` | 攔截敏感檔案（.env、.pem、.key）、保護 migration 檔案、載入各專案的 project-rules |
+| AI 寫入檔案**後** | `post-write-format.sh` | 自動格式化——JS/TS 用 Biome 或 ESLint，Python 用 Black + Ruff |
 
-這些 hooks 是防呆機制。AI 偶爾會做出意料之外的事（例如覆寫 .env 檔案），hooks 確保這些情況被攔截。
-
-### 3.3 各專案品質指令
-
-每個子專案有自己的品質檢查工具：
+### 3.4 各專案品質指令
 
 | 子專案 | 定位 | lint | typecheck | test | 自動修復 |
 |--------|------|------|-----------|------|---------|
 | daodao-f2e | Next.js 前端 | `pnpm run lint` | `pnpm run typecheck` | `pnpm test` | `pnpm run check:fix` |
-| daodao-server | NestJS 後端 | `pnpm run lint` | `pnpm run typecheck` | `pnpm test` | `pnpm run lint:fix` |
+| daodao-server | Express 後端 | `pnpm run lint` | `pnpm run typecheck` | `pnpm test` | `pnpm run lint:fix` |
+| daodao-storage | DB schema / migration | — | `make check-schema` | `make migrate-sql-dev` 冪等 | — |
 | daodao-ai-backend | FastAPI AI 服務 | `make lint` | — | `make test` | `make format` |
 | daodao-worker | Cloudflare Workers | — | `pnpm run typecheck` | `pnpm test` | — |
+
+server 跑 jest 會重寫 `openapi.json` / `openapi.yaml`，commit 前 `git checkout -- openapi.json openapi.yaml` 再用 `pnpm run openapi:generate && pnpm run openapi:generate-types` 重產。
 
 ---
 
@@ -600,34 +682,32 @@ Merge 到 main（或 dev）後，GitHub Actions 會自動觸發部署：
 
 ---
 
-## Phase 8：驗收與歸檔
+## Phase 8：收尾與歸檔
 
-功能部署上線後，回到 OpenSpec 完成最後的閉環。
+merge 不是終點。少了收尾，worktree 會堆積、openspec change 會堆積、`docs/product` 的狀態標示會腐爛（文件寫「規劃中」但功能早已上線）。
 
-### 8.1 驗收
+### 8.1 `/dev-task` cleanup
 
-```bash
-/openspec-verify-change <change-name>
-```
+PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
-這個 skill 會比對實際的 code 和 OpenSpec 的 specs，確認：
+1. 確認所有 PR merged（`gh pr view`）
+2. 每個 repo：`git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`
+3. `rm -rf worktrees/<n>-<slug>`（task.md 有留存價值先摘要進 issue comment）
+4. 移除中央 issue 的 `human-driving` label
+5. 接 `/post-merge-wrapup`
+6. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
-- 所有 tasks 都已實作
-- 實作內容符合 specs 的要求
-- 沒有遺漏的功能或 edge cases
+### 8.2 `/post-merge-wrapup`
 
-如果驗收發現落差，回到 Phase 3 補完缺漏的部分。
+1. 歸檔 openspec change：`/openspec-archive-change <slug>`（artifacts 保留在 `openspec/changes/archive/` 作歷史紀錄）
+2. 更新 `docs/product/<功能>/` 的狀態標示為「已上線（日期）」——不可跳過，這是根治「文件說規劃中、程式碼已上線」的關鍵
+3. 校準地圖文件（codebase-map、system-map）若本次變更動到結構
 
-### 8.2 歸檔
+### 8.3 Board 與 issue
 
-驗收通過後：
+Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Status 改 **Done** 並留言；**不自動 close**，留給 product 驗收後手動關。人工開發（`human-driving`）的卡 Routine C 一樣會回寫。
 
-```bash
-/openspec-archive-change <change-name>       # 歸檔單一 change
-/openspec-bulk-archive-change                # 批次歸檔多個 changes
-```
-
-歸檔後，change 的所有 artifacts 會保留在 `openspec/` 目錄作為歷史紀錄。下一輪需求從 Phase 1 重新開始。
+驗收若發現與 FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差重跑 OpenSpec。
 
 ---
 
@@ -683,7 +763,9 @@ Merge 到 main（或 dev）後，GitHub Actions 會自動觸發部署：
 | **前置** | GitHub Copilot / Codex | IDE 內 code completion / CLI agent |
 | **需求** | PRD / FRD | 產品和功能需求文件 |
 | **需求** | Figma + Figma MCP | UI 設計稿和直接讀取 |
-| **規格** | OpenSpec skills | 需求 → 提案 → 技術設計 → 規格 → 任務 |
+| **規格** | OpenSpec skills | 需求 → 提案 → 技術設計 → 規格 → 任務（L/M 必要；進 pipeline 的 S 卡用 ff-change） |
+| **開卡** | gh-card skill | 中央 issue + Planning board；label 決定 plan-only / auto-pr / human-driving |
+| **開發** | dev-task skill | issue 隔離 worktree（start → dev → verify → finish → cleanup）；projects/ 永遠停在 dev |
 | **開發** | Claude Code + hooks | AI 輔助開發 + 自動保護和格式化 |
 | **品質** | Biome / ESLint / Black + Ruff | Lint + Format |
 | **品質** | TypeScript / Pylint | 型別檢查 / 靜態分析 |
@@ -699,124 +781,68 @@ Merge 到 main（或 dev）後，GitHub Actions 會自動觸發部署：
 | **CI** | GitHub Actions | 自動化品質檢查（lint + typecheck + test + build） |
 | **CD** | GitHub Actions + Docker | 自動部署到 Linode / Cloudflare |
 | **同步** | sync-claude-config workflow | 共用設定從 daodao repo 同步到子專案 |
-| **自動化** | /publish-tasks skill | OpenSpec tasks → GitHub Issues + auto label |
-| **自動化** | Scheduled Remote Agent | 雲端每 2 小時掃描 auto issues → 實作 → 開 PR → 修 feedback |
+| **收尾** | post-merge-wrapup skill | 歸檔 openspec change、更新 docs/product 狀態 |
+| **自動化** | Routine A / B / C | Board → 鏡像 issue → plan/auto PR → 回寫 Done（每小時；見 Phase 9） |
+| **自動化** | /publish-tasks skill | Routine A 的手動版：OpenSpec tasks → sub-repo issues + auto label |
 | **Bug 追蹤** | /file-bug-issue skill | 無法立即修復的 bug 開成 GitHub issue |
 | **記錄** | /post skill → quidproquo.cc | 踩坑經驗記錄與知識分享 |
 
 ---
 
-## Phase 9：自動化代理（Remote Agent）
+## Phase 9：自動化 Pipeline（Routine A / B / C）
 
-Phase 1-8 是「半自動」流程 — 每一步由人類觸發，AI 執行。Phase 9 將其中可自動化的部分交給 Anthropic 雲端的 Scheduled Remote Agent，實現「人類只寫 issue，AI 自動做到開 PR」。
+Phase 1–8 是「人類觸發、AI 執行」。Phase 9 把 **Ready for Dev 之後**的工作交給三個每小時跑的 routine，人類只做三件事：寫規格、把卡改成 Ready for Dev、review + merge。
 
-### 9.1 架構
+> 完整架構、狀態機、label 體系、運維手冊見 [docs/automation/github-pipeline.md](automation/github-pipeline.md)。2026-08 起取代 Notion pipeline。
 
-```mermaid
-flowchart TD
-    A["人類完成 OpenSpec<br/>（Phase 1-2）"] --> B["/publish-tasks skill"]
-    B --> C["GitHub Issues<br/>+ auto label"]
-    C --> D["Scheduled Remote Agent<br/>每 2 小時"]
-    D --> E{"掃描 4 個 repo<br/>有 auto issue？"}
-    E -- 有 --> F["clone repo → 讀 issue → 實作 → 開 PR"]
-    E -- 沒有 --> G["掃描 auto/ PRs"]
-    F --> G
-    G --> H{"有 review feedback？"}
-    H -- 有 --> I["修改 → push → 留言"]
-    H -- 沒有 --> J{"CI 全綠？"}
-    J -- 是 --> K["留言：可以 merge 了"]
-    J -- 否 --> L["等待下次掃描"]
-```
+### 9.1 三個 Routine
 
-### 9.2 Remote Agent 是什麼
+| Routine | 載體 | 做什麼 |
+|---|---|---|
+| **A** Board → Dispatch | GitHub Actions script（`bin/pipeline/dispatch.ts`） | 掃 Planning board `Status=Ready for Dev` 且無 `dispatched`／`needs-spec`／`human-driving` 的卡 → **spec gate** → 依 `tasks.md` 的 `## section` 在各 sub-repo 開鏡像 issue（掛 sub-issue）→ 中央卡 `+dispatched`、Status → In Progress |
+| **B** Dispatch + PR Patrol | Claude cloud routine | 掃 sub-repo 的 open auto issue：plan-only 留計畫、`auto:auto-pr` 開 `auto/<n>-<slug>` branch 實作並開 PR；巡檢既有 auto PR 的 CI 與 review feedback 並修 |
+| **C** Merge → Done | GitHub Actions script | 掃 48h 內 merged 的 PR，由 `Parent:` 反查中央卡；部分完成留言 n/m，全部完成 Status → Done |
 
-Claude Code 的 Remote Trigger 功能。在 Anthropic 雲端以 cron 排程自動啟動獨立的 Claude Code session，不需要你的電腦開著。
+### 9.2 Spec gate（Routine A 的唯一閘門）
 
-| 項目 | 說明 |
-|------|------|
-| 執行環境 | Anthropic 雲端（非本地） |
-| 排程 | 每 2 小時（`0 */2 * * *`） |
-| 模型 | claude-sonnet-4-6 |
-| 可用工具 | Bash、Read、Write、Edit、Glob、Grep |
-| clone 的 repo | daodao-server、daodao-f2e、daodao-ai-backend、daodao-storage |
-| 管理頁面 | https://claude.ai/code/scheduled |
+程式碼（`dispatch.ts`）的判準：
 
-### 9.3 兩個階段
+1. issue body 有 `OpenSpec: <slug>` 註記
+2. `openspec/changes/<slug>/tasks.md` 存在
+3. tasks.md 有未完成的 task
 
-Remote Agent 每次執行時依序完成兩個階段：
+三條缺一即標 `needs-spec` 並留言退回。**只寫 Acceptance Criteria 不夠**——要進 pipeline 的卡一定要有 OpenSpec，S 卡用 `/openspec-ff-change` 產最小 spec 即可。人工開發（`human-driving`）的卡不經過這個閘門，AC 就夠。
 
-**階段 1：Issue 監聽**
-
-掃描 4 個 repo 的 `auto` label issues。對每個沒有對應 PR 的 issue：
-1. 讀取 issue 內容（Tasks、Technical Context、Specs）
-2. cd 到對應的 repo 目錄
-3. 建立 `auto/<issue-number>-<short-desc>` branch
-4. 根據 issue 描述實作功能
-5. 跑測試、commit、push
-6. 開 PR（body 引用 `Closes #<number>`）
-7. 在 issue 留言通知
-
-**階段 2：PR 巡邏**
-
-掃描 4 個 repo 的 open PRs，篩選 `auto/` 開頭的 branch：
-- 有 review feedback → 修改、測試、push、留言
-- CI 全綠 + 無未處理 review → 留言通知可以 merge
-
-### 9.4 `/publish-tasks` skill
-
-這是連接 OpenSpec 和 Remote Agent 的橋梁。跑完 OpenSpec 產出 `tasks.md` 後，用這個 skill 把未完成的 tasks 發到 GitHub：
+### 9.3 人類在 pipeline 裡的位置
 
 ```
-/publish-tasks
+寫 FRD → OpenSpec → /gh-card 開卡（Todo）
+        ↓ 人工確認規格 OK
+   Status → Ready for Dev            ← 這一下就是「派工」
+        ↓ Routine A（≤1h）
+   鏡像 issue 出現在 sub-repo
+        ↓ Routine B（≤1h）
+   plan comment 或 auto PR
+        ↓ 人工
+   review + merge                    ← 品質最後把關
+        ↓ Routine C（≤1h）
+   board Done → product 驗收 → 手動 close
 ```
 
-它會：
-1. 讀取 OpenSpec change 的 tasks、proposal、design、specs
-2. 將未完成的 tasks 分組為 GitHub issues
-3. 每個 issue 包含完整的 context（Why、Tasks、Technical Context、Specs、Acceptance Criteria）
-4. 加上 `auto` label
-5. 發到對應的 repo（server 的 tasks 發到 daodao-server，f2e 的發到 daodao-f2e，以此類推）
+不想被 pipeline 碰：掛 `human-driving`（`/dev-task` start 自動掛）。已派工要收回：移除 `dispatched`、關鏡像 issue。
 
-關鍵原則：**issue body 必須自給自足**。Remote Agent 沒有本地檔案存取權限，所有它需要的 context 都必須寫在 issue 裡。
+### 9.4 手動版
 
-### 9.5 完整的自動化流程
+`/publish-tasks` 是 Routine A 的手動版——把 OpenSpec tasks 直接發成 sub-repo issue 並標 `auto`，不經 board。適合想跳過 board 直接餵 Routine B 的情境。
 
-```
-你本地跑 OpenSpec     你寫 issue 或      Remote Agent
-（需求→規格→任務）    /publish-tasks      每 2 小時自動
-       ↓                   ↓                   ↓
-  proposal.md         GitHub Issues      掃描 auto issues
-  design.md           + auto label       → 實作 → 開 PR
-  specs/                                 → 修 review
-  tasks.md                               → 通知 merge
-       ↓                   ↓                   ↓
-    人類審查            人類不用管           人類只需
-    每個 artifact       AI 自己做            review + merge
-```
+### 9.5 限制
 
-人類的工作從「每步都要觸發」簡化為：
-1. **寫需求** — OpenSpec 或直接寫 issue
-2. **審查規格** — 確認方向正確
-3. **Review + Merge** — 最終品質把關
-
-### 9.6 限制
-
-| 限制 | 說明 | 應對方式 |
-|------|------|---------|
-| 方案只能建 1 個 trigger | Anthropic 付費方案限制 | 用一個 trigger 掃描所有 repo |
-| 最短間隔 1 小時 | cron 最小粒度 | 目前設定每 2 小時 |
-| 無本地檔案存取 | 雲端環境隔離 | issue body 寫完整 context |
-| 每次 session 無記憶 | 無狀態 | 用 GitHub issue/PR 作為狀態儲存 |
-| 不適合複雜設計決策 | AI 判斷有限 | 需求分析和設計仍由人類主導（Phase 1-2） |
-
-### 9.7 各 repo 開發規則（Remote Agent 遵循）
-
-| Repo | 技術棧 | 關鍵規則 | 測試指令 |
-|------|--------|---------|---------|
-| daodao-server | Express + TypeScript + Prisma | 禁止 class，用 factory pattern + const object；RESTful + Zod + OpenAPI | `pnpm test` |
-| daodao-f2e | Next.js + React Native + Expo | 禁止 any；用 @daodao/* packages | `pnpm test` |
-| daodao-ai-backend | FastAPI + Python 3.12 | 使用 pytest；向量搜尋用 Qdrant | `pytest` |
-| daodao-storage | PostgreSQL | Migration 在 migrate/sql/；Schema 在 schema/ | — |
+| 限制 | 應對 |
+|---|---|
+| Routine B 在雲端，無本地檔案 | 鏡像 issue body 由 Routine A 從 tasks.md 拆出，自給自足 |
+| 高風險 repo（storage、infra） | 強制 plan-only，migration 由人工 `/dev-task` 做 |
+| 複雜設計決策 | 留在 Phase 2 由人類定案，寫進 `design.md` |
+| 同一區域人工與 pipeline 並行 | `/dev-task` start 的防撞檢查 + `human-driving` |
 
 ---
 
