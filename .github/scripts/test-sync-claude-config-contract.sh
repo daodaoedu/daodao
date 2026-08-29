@@ -16,7 +16,9 @@ for path in \
   ".github/workflows/code-review.yml" \
   ".github/scripts/retrieve-context.sh" \
   ".github/scripts/test-retrieve-context.sh" \
-  ".github/scripts/test-code-review-contract.sh"; do
+  ".github/scripts/test-code-review-contract.sh" \
+  ".github/scripts/review-knowledge.cjs" \
+  ".github/review-knowledge/**"; do
   grep -Fq -- "- '$path'" "$WORKFLOW" || fail "push paths 未監聽 $path"
 done
 
@@ -42,3 +44,6 @@ grep -Fq '::error::Admin merge failed; inspect the gh error above' "$WORKFLOW" \
   || fail "同步失敗未讓 workflow 告警"
 
 echo "✅ sync shared-config workflow contract tests passed"
+grep -Fq 'cp .github/review-knowledge/false-positives.jsonl' "$WORKFLOW" \
+  || fail "sync workflow 未同步 review-knowledge jsonl"
+grep -Fq 'review-knowledge.cjs' "$WORKFLOW" || fail "sync workflow 未同步 review-knowledge.cjs"
