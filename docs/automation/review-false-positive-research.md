@@ -76,7 +76,7 @@
 |---|---|---|---|---|
 | 1 | Context Pack 補 route middleware／schema／刪檔替代者 | OpenCodeReview grounded tools、cubic | 改 `retrieve-context.sh`，一張卡 | [#168](https://github.com/daodaoedu/daodao/issues/168) Todo |
 | 2 | `review-knowledge.cjs verify`：「找不到 X」類 finding 後置 grep | G-Research validate-against-source-of-truth | 半天 | [#169](https://github.com/daodaoedu/daodao/issues/169) Todo |
-| 2b | Spec Drafter：S 卡缺 spec 時 Actions + Workers AI 自動起草最小 OpenSpec → PR | [spec-drafter-spike.md](spec-drafter-spike.md) 驗證可行 | 一張 M 卡 | spike 通過，待開卡 |
+| 2b | Spec Drafter：S 卡缺 spec 時 Actions + Workers AI 自動起草最小 OpenSpec → PR | [spec-drafter-spike.md](spec-drafter-spike.md) 驗證可行 | 一張 M 卡 | [#170](https://github.com/daodaoedu/daodao/issues/170) Todo |
 | 3 | 第二段 precision pass（另一次 call，看不到第一段推理） | G-Research 兩段式、OpenCodeReview Independent Reflection、CoVe | 改 workflow，一張卡；先用 jsonl sample 當 eval | 待開卡 |
 | 4 | 👎／`/fp` 自動收割進 `review-evals.ts` 週報，加樣態比例 | CodeRabbit Learnings、arXiv 2607.03316 | 半天 | 待開卡 |
 | 5 | 本機四引擎改對抗式：單引擎 High 交跨家族引擎反駁 | Refute-or-Promote | 改 skill 步驟 7–8 | 待開卡 |
