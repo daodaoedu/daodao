@@ -417,7 +417,13 @@ commit 完成後、push 到遠端之前，還有一道本地 review。
 git push 前
   → Claude 問「要 review 嗎？」
     → Yes → code-review skill 審查整個 branch
-      → 發現問題 → 修正 → 重新 commit
+      步驟 0   建共用 review input：diff + Context Pack + <known_false_positives>（誤判知識庫）
+      步驟 2–5 Codex / OMP / OpenCode / Haiku 四引擎獨立 review
+      步驟 6.5 對各引擎表格套誤判知識庫 filter（C 類自承看不到 → drop；D 類假設性 → 降 Low）
+      步驟 7   cross-model 分析（幾個引擎共同回報）
+      步驟 8   High 逐條用程式碼證據查證
+      步驟 8.5 查證為誤判的每一條 → review-knowledge.cjs record --source local（必做）
+      → 真問題 → 修正 → 重新 commit
         → git push
     → No → 直接 git push
 ```
@@ -432,6 +438,20 @@ git push 前
 4. **架構一致性** — 是否符合各專案的 project-rules？命名慣例對不對？有沒有用錯 pattern？
 
 這一步的價值是在 code 離開本機之前就抓到明顯問題，減少 PR 上的來回修正。
+
+### 5.3 誤判知識庫（與 CI 共用）
+
+四引擎會有誤判——2026-08-29 首批 24 筆中，High 幾乎全是誤判。查證的功不能只留在對話裡，所以本機 review 與 CI review 共用一份紀錄：
+
+| | 位置 |
+|---|---|
+| 紀錄 | `.github/review-knowledge/false-positives.jsonl`（monorepo 單一來源，sync 派發唯讀副本到各 sub-repo） |
+| 腳本 | `.github/scripts/review-knowledge.cjs` — `prompt-block`（彙整已知樣態餵模型）、`filter`（確定性過濾）、`record --db auto`（從任何 worktree 往上找 monorepo 寫回）、`test`（每筆 `sample`+`expected` 當 fixture） |
+| 樣態 | A absent-claim（對 diff 外程式碼做「找不到／缺少」斷言）、B deletion、C unverifiable、D hypothetical、E format、F misattribution — 定義與對策見 [.github/review-knowledge/README.md](../.github/review-knowledge/README.md) |
+
+兩條鐵律：**查證為誤判的 finding 必 `record`**；**改 `UNVERIFIABLE_RE`／`HYPOTHETICAL_RE` 必附 `--sample` + `--expected`**，`review-knowledge.cjs test` 要綠。記完在 monorepo commit + push main，sync 自動派發。
+
+知識庫解不了的（A 類過半、記錄靠人、關鍵字過濾脆弱）在 [docs/automation/review-false-positive-research.md](automation/review-false-positive-research.md) 有文獻對照與落地順序（#168 Context Pack 補脈絡、#169 verify 後置查證）。
 
 ---
 
@@ -472,7 +492,21 @@ PR opened / updated
 | 觸發時機 | PR opened + synchronize（每次 push 都會重新跑） |
 | 引擎 | Cloudflare Workers AI（Gemma 4 26B，GPT-OSS 120B fallback） |
 | 效果 | 審查 diff + 確定性 Context Pack，追蹤 caller、importer、同模式漏改與 in-flight 衝突，產生嚴重度分級的 review comment |
-| 設定檔 | `.github/workflows/code-review.yml` |
+| 設定檔 | `.github/workflows/code-review.yml`（monorepo 單一來源，sync 派發） |
+
+流程（全部從 **base ref** 載入腳本與知識庫，PR head 改不到帶 `pull-requests: write` 的程式）：
+
+```
+Get diff        排除 openapi.json / generated/** / lockfile，截 12KB 給模型；完整 diff 另存供修復器用
+Context Pack    retrieve-context.sh：caller / importer / 同模式 ⚠ / in-flight PR
+Known FP        review-knowledge.cjs prompt-block → <known_false_positives> 進 user prompt
+Workers AI      Gemma 4 26B → 不合格式 fallback GPT-OSS 120B
+Normalize       OpenCC 簡→繁 → 修復器（嚴重度中文、行號範圍、檔案欄只取路徑 token、
+                漏 :line 從完整 diff 補第一個新增行）
+Filter          review-knowledge.cjs filter（C 類 drop、D 類降 Low；全 drop 收斂成「✅ 沒有發現明顯問題」）
+Strict validate 每列必須 path:line；不合 → warning + 跳過留言（不讓 check 紅）
+Post            同 head PATCH、新 head POST；comment 帶 <!-- daodao-ai-code-review-head:<sha> --> marker
+```
 
 Review comment 按嚴重度分級：
 
@@ -483,6 +517,10 @@ Review comment 按嚴重度分級：
 | 🟢 Low | 風格偏好、微小優化 | 可忽略 |
 
 AI Code Review 不是完美的 — 它會有 false positive，也會漏掉某些問題。但它能穩定地抓到人類容易忽略的小問題（忘記 null check、未使用的 import、命名不一致等）。
+
+**對誤判的回覆方式**：在 PR 上回 `/fp <第幾條> <A-F> <一句為什麼>`（例：`/fp 1 A route 已掛 authenticate，引用行號指到別的函式`），`collect-pr-feedback` 會收割進誤判知識庫（見 5.3）。下次 review 這個樣態會出現在模型的 `<known_false_positives>` 裡。
+
+**Debug**：job log 有 `review-knowledge filter report` 與 `Invalid review body` group——run 顯示 success 但 PR 沒留言時先看這兩個。
 
 ### 6.4 Gemini Code Assist
 
@@ -525,6 +563,7 @@ CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有�
        - 必須修 — CI 失敗、High 嚴重度、人類明確要求
        - 建議修 — Medium 嚴重度、Gemini 建議
        - 可忽略 — Low 嚴重度、風格偏好、false positive
+       - 收割 `/fp <n> <A-F> <why>` 回覆 → review-knowledge.cjs record --source ci
     4. 詢問使用者：「這些要修哪些？」
     5. 確認後修正 → commit → push
     6. 可選：在 PR 上回覆 reviewer
@@ -651,7 +690,8 @@ Merge 到 main（或 dev）後，GitHub Actions 會自動觸發部署：
 | **品質** | Jest / Vitest / pytest | 測試 |
 | **Commit** | pre-commit-check skill | Commit 前自動 lint + typecheck + 修復 |
 | **Commit** | format-commit skill | 結構化 commit message（Why / How） |
-| **Review** | code-review skill | Push 前本地 code review |
+| **Review** | code-review skill | Push 前本地 code review（四引擎） |
+| **Review** | review-knowledge.cjs + false-positives.jsonl | 誤判知識庫：本機 skill 與 CI 共用的紀錄、prompt 提示、確定性過濾、fixture |
 | **PR** | Auto PR Description | Workers AI 自動產生 PR 描述 |
 | **PR** | AI Code Review | Workers AI 自動審查 diff |
 | **PR** | Gemini Code Assist | Google AI 額外審查 |
