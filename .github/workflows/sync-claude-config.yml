@@ -13,6 +13,8 @@ on:
       - '.github/scripts/retrieve-context.sh'
       - '.github/scripts/test-retrieve-context.sh'
       - '.github/scripts/test-code-review-contract.sh'
+      - '.github/scripts/review-knowledge.cjs'
+      - '.github/review-knowledge/**'
   schedule:
     # 每週一 UTC 01:00 (台灣 09:00)
     - cron: '0 1 * * 1'
@@ -75,16 +77,20 @@ jobs:
 
           # Trusted Context Pack runtime and regression contracts
           mkdir -p target/.github/scripts
-          for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh; do
+          for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh review-knowledge.cjs; do
             cp ".github/scripts/$script" "target/.github/scripts/$script"
             chmod +x "target/.github/scripts/$script"
           done
+
+          # 誤判知識庫（單一來源在本 repo；sub-repo 只讀，CI 從 base ref 取用）
+          mkdir -p target/.github/review-knowledge
+          cp .github/review-knowledge/false-positives.jsonl .github/review-knowledge/README.md target/.github/review-knowledge/
 
       - name: Check for changes
         id: diff
         working-directory: target
         run: |
-          if [ -z "$(git status --porcelain -- .claude .github/workflows .github/scripts)" ]; then
+          if [ -z "$(git status --porcelain -- .claude .github/workflows .github/scripts .github/review-knowledge)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -111,7 +117,7 @@ jobs:
           git config user.name "github-actions[bot]"
           BRANCH="chore/sync-claude-config-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git checkout -b "$BRANCH"
-          git add -f .claude/ .github/workflows/ .github/scripts/
+          git add -f .claude/ .github/workflows/ .github/scripts/ .github/review-knowledge/
           git commit -m "chore: sync shared config from daodao
 
           Auto-synced hooks, settings, workflows, and trusted review scripts from daodao"
