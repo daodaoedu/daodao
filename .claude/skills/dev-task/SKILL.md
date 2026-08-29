@@ -90,7 +90,10 @@ find . -name ".env*" -not -path "*/node_modules/*" -maxdepth 3 | while read f; d
 done
 
 # 裝依賴（pnpm 共享 store，多為 hardlink，很快）
-cd "$TASK/<repo>" && pnpm install
+# ⚠️ 必加 --ignore-workspace：monorepo 根的 pnpm-workspace.yaml 會把 worktrees/ 下的 repo 當成
+#    workspace 成員而 no-op（「Done in 274ms」、沒有 node_modules）。repo 自己有 pnpm-workspace.yaml
+#    的（daodao-f2e）不受影響但加了也無害。裝完用 ls node_modules/.bin 確認真的有東西
+cd "$TASK/<repo>" && pnpm install --ignore-workspace
 ```
 
 ### 1.5 寫 task.md

@@ -62,6 +62,18 @@ playwright MCP 是共用單一瀏覽器實例——兩個 session 同時用會�
 
 原則：**「無法替你操作 OAuth」不是終點**——OAuth 只是取得 session 的其中一條路，工程師有 DB 和 secret，永遠有別條路。
 
+**daodao 現成配方（2026-08 實測，走的是第 3 層）**：server 的 login/register 是 Google-only，web 端 auth 是 HttpOnly cookie `auth_token`（`src/utils/cookie-config.ts`），payload 見 `auth.controller.ts` 的 `jwtService.generateToken(payload)`。在 server worktree：
+
+```bash
+OUT=$TASK/.auth_token node -e '
+const fs=require("fs"),jwt=require("jsonwebtoken");
+const env=Object.fromEntries(fs.readFileSync(".env","utf8").split("\n").filter(l=>/^[A-Z_]+=/.test(l)).map(l=>{const i=l.indexOf("=");return[l.slice(0,i),l.slice(i+1)]}));
+fs.writeFileSync(process.env.OUT, jwt.sign({id:2,_id:"<users.external_id>",username:"小許",isTemp:false,roles:[],permissions:[]}, env.JWT_SECRET, {expiresIn:"12h"}));'
+curl -s --cookie "auth_token=$(cat $TASK/.auth_token)" http://localhost:4000/api/v1/auth/me   # 應回 success:true
+```
+
+Playwright：`context.addCookies([{ name:"auth_token", value, domain:"localhost", path:"/", httpOnly:true }])`（`@playwright/test` 在 f2e apps/product 的 node_modules 裡，`node script.mjs` 直接 import `chromium` 即可）。使用者 id 2 是 dev DB 裡使用者本人的帳號。
+
 ## 4. 驗證迴圈
 
 對清單每一項：
