@@ -51,16 +51,19 @@ git submodule update --remote
 
 | Skill | 用途 |
 |-------|------|
-| `/openspec-*` | 需求 → 規格 → 任務的完整工作流 |
+| `/openspec-*` | 需求 → 規格 → 任務（L/M 功能必要；S 卡進 pipeline 用 `ff-change`） |
+| `/gh-card` | 開中央 issue 掛 Planning board；label 決定 plan-only / auto-pr / human-driving |
+| `/dev-task` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
+| `/post-merge-wrapup` | merge 後歸檔 openspec、更新 docs/product 狀態 |
 | `/format-commit` | 結構化 commit message（Why / How） |
 | `/pre-commit-check` | Commit 前自動品質檢查與修復 |
 | `/code-review` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
 | `/collect-pr-feedback` | 收集 PR 上所有 review 回饋（含收割 `/fp` 回覆進誤判知識庫） |
 | `/file-bug-issue` | 無法立即修復的 bug 開成 GitHub issue |
-| `/publish-tasks` | 發布 OpenSpec tasks 為 GitHub issues 供 Remote Agent 自動實作 |
+| `/publish-tasks` | Routine A 的手動版：OpenSpec tasks → sub-repo issues + auto label |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
-詳細開發流程見 [docs/workflow.md](docs/workflow.md)。
+詳細開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / OpenSpec / issue AC）見其 Phase 1.5，自動化 pipeline 見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
 
 ### AI Code Review 誤判知識庫
 

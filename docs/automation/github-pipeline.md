@@ -15,7 +15,7 @@
   - Routine B 對鏡像 issue 做 plan / code / 開 PR
   - Routine C 把 merged PR 的完成狀態回寫 board
 - **單一閘門**：board `Status=Ready for Dev` 即派工（Ready for Dev = 派工佇列）；不想被 pipeline 碰的卡掛 `human-driving` 退出
-- **Spec gate**：中央 issue body 必須註記 `OpenSpec: openspec/changes/{slug}/` 且該 change 有 tasks.md，否則標 `needs-spec` 退回
+- **Spec gate**：中央 issue body 必須註記 `OpenSpec: openspec/changes/{slug}/` 且該 change 有含未完成 task 的 tasks.md，否則標 `needs-spec` 退回。Acceptance Criteria 不能取代——AC 只給人工開發（`human-driving` + `/dev-task`）用；規格層級判定見 [docs/workflow.md Phase 1.5](../workflow.md#phase-15規格層級判定)
 
 ## 全流程圖
 
