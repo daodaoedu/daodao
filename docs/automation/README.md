@@ -17,6 +17,7 @@
 | [manual-issue-to-routine.md](manual-issue-to-routine.md) | 人類手寫 issue 反向丟給 routine 的 step-by-step 指南 |
 | [pipeline-status.md](pipeline-status.md) | Pipeline 即時狀態（自動產生） |
 | [evals.md](evals.md) | Weekly 評估指標（自動產生） |
+| [spec-drafter-spike.md](spec-drafter-spike.md) | Actions + Workers AI 自動起草最小 OpenSpec 的 spike 結果與正式化建議 |
 | [review-false-positive-research.md](review-false-positive-research.md) | AI code review 誤判：知識庫解不了的三個問題的文獻對照與落地順序（#168／#169） |
 | [../../.github/review-knowledge/README.md](../../.github/review-knowledge/README.md) | 誤判知識庫：樣態 A–F、記錄方式、本機 skill 與 CI 共用機制 |
 | [architecture.md](architecture.md) | ⚠️ 舊版 Notion pipeline 架構（僅供考古） |
