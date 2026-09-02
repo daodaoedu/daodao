@@ -100,12 +100,28 @@ features:
       # 但 server 尚無 subscription API route → miss → detected=partial
       - { repo: daodao-server,  file: src/routes/subscription.routes.ts }
 
-  # ── 規劃中：尚無任何程式碼，signals 全 miss 屬預期（上線時 CI 會抓到 declared 過期）──
+  # ── 2026-09-02 校準：以下原列「規劃中」，燈塔與共同挑戰已上線，改為 shipped 並指向實際檔案 ──
 
   - name: lighthouse
+    # 2026-09-02 校準：燈塔已上線（server PR #440、f2e #961）。PRD/schema-design 原在
+    # docs/product/teacher-cohort/，於 d4269b5 被刪除且未搬到 docs/product/lighthouse/，
+    # 目前只能 git show d4269b5^:docs/product/teacher-cohort/prd.md 讀到
     doc: docs/product/lighthouse
-    declared: planned
+    declared: shipped
     signals:
-      # 老師後台（陪跑教練台）：cohort API、f2e 老師端 service 都尚未存在
-      - { repo: daodao-server, file: src/routes/cohort.routes.ts }
+      - { repo: daodao-server, file: src/routes/organization.routes.ts }
+      - { repo: daodao-server, file: src/routes/cohort-join.routes.ts }
       - { repo: daodao-f2e,    file: packages/api/src/services/cohort.ts }
+
+  - name: group-challenge
+    # 2026-09-02 校準：共同挑戰已上線（storage #202、server #432、f2e #953、admin-ui #115）
+    doc: docs/product/challenge
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/challenge.routes.ts }
+      - { repo: daodao-f2e,    file: packages/api/src/services/challenge.ts }
+
+  # activity-discovery（探索活動頁、cohorts.visibility；openspec: challenge-activity-space-wiring）
+  # 實作在 daodao-storage#213 / daodao-server#447 / daodao-f2e#965，合併後再登記為 shipped：
+  #   signals: daodao-server src/routes/activity.routes.ts、daodao-f2e packages/api/src/services/activity.ts
+  # 本檢查比對各 repo 的 dev，PR 未合併前登記會被判 overstated。
