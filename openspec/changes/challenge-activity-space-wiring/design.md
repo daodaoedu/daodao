@@ -41,7 +41,7 @@ GET /api/v1/activities/:cohortId      optionalAuth   → activityDetail
 | `programName`、`description` | programs | |
 | `organizationName` | organization.name | 探索卡的「主辦」 |
 | `participantCount` | cohort_enrollments status=joined 計數 | 與 challenge 同 helper |
-| `runStatus` | 由日期推導 | 沿用 `deriveRunStatus` |
+| `runStatus` | 由日期推導 | 沿用 `deriveRunStatus`；「今天」以 Asia/Taipei 日曆日計算 |
 | `canJoin`、`unavailableReason` | `deriveJoinability` + `join_paused` | `join_paused=true` → `unavailableReason='paused'` |
 | `isJoined` | 登入者的 enrollment | |
 | `joinToken` | cohorts.join_token | **只在 `canJoin=true` 時回傳**，否則 `null` |
@@ -60,8 +60,8 @@ challenge    : cohort_enrollments joined × program.kind=challenge
 event_course : cohort_enrollments joined × program.kind=lighthouse（每期一張卡）
 ```
 
-- `challenge` 卡：`memberCount` = 我加入的挑戰中「進行中」的參與者總數（若無進行中則取最近一檔）；`practiceCount` = 我的 `practices.cohort_id IN (挑戰 cohort)` 數；`hasActivePractice` = 其中有 `status='active'`；`memberAvatars` 取最近一檔挑戰前 N 位 joined。`id` 維持 `null`，前端仍導 `/spaces/challenge`。
-- `event_course` 卡：`id` 改為 `String(cohort.id)`；`name` = `display_name`；`host` = `organization.name`；`memberCount` = joined 數；`practiceCount` / `hasActivePractice` = 我在該 cohort 的實踐；`isHost` = 該 cohort enrollment role ∈ {owner, assistant}；`lastActivityAt` = 我在該 cohort 實踐的最新 `last_checkin_at`，無則 `joined_at`。
+- `challenge` 卡：`memberCount` 與 `memberAvatars` 取同一檔「代表挑戰」（進行中且最近開始的一檔，無進行中則取最近一檔）；`practiceCount` = 我的 `practices.cohort_id IN (挑戰 cohort)` 數；`hasActivePractice` = 其中有 `status='active'`；`memberAvatars` 取最近一檔挑戰前 N 位 joined。`id` 維持 `null`，前端仍導 `/spaces/challenge`。
+- `event_course` 卡：`id` 改為 `String(cohort.id)`；`name` = `display_name`；`host` = `organization.name`；`memberCount` = joined 數；`practiceCount` / `hasActivePractice` = 我在該 cohort 的實踐；`isHost` = 該 cohort enrollment role ∈ {owner, assistant}；`lastActivityAt` = 我在該 cohort 實踐最近的 `updated_at`／`created_at`（practices 沒有 last_checkin_at 欄位），無則 `joined_at`。
 - 排序：personal → challenge → event_course by `lastActivityAt desc`。
 
 `spaceListItemSchema` 的 `id` 型別由 uuid 改為 `string | null`（cohortId 字串），並補 `description` 說明語意。`space_members` / `spaces` 表在此函式中不再被讀取，但其餘 `/spaces/:id/*` 端點與表保留不動（Non-goal）。
@@ -130,4 +130,4 @@ END $$;
 ## Open Questions
 
 - OQ-1：探索頁「開放加入中」篩選是否也要排除 `join_paused`？本設計視 paused 為不可加入（`unavailableReason='paused'`），篩選時排除。
-- OQ-2：共同挑戰卡 `memberCount` 在同時有多檔進行中挑戰時的定義（本設計：加總）。若產品希望顯示「最近一檔」可在實作時改一行。
+- OQ-2（已定案）：共同挑戰卡 `memberCount` 在多檔進行中挑戰時取「代表挑戰」（最近開始的一檔），與頭像同源，避免人數對不上任何一檔。
