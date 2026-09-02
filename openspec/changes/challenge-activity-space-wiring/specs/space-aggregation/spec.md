@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: 共同挑戰空間卡反映真實參與
-`GET /api/v1/spaces` 的 `kind='challenge'` 卡 SHALL 由 `cohort_enrollments`（status=`joined`，program.kind=`challenge`）聚合：`memberCount` 為我加入的進行中挑戰參與者數（無進行中則取最近一檔）、`practiceCount` 為我的挑戰實踐數、`hasActivePractice` 為其中是否有 `status='active'`、`memberAvatars` 取最近一檔挑戰前 N 位參與者。未加入任何挑戰時 SHALL 仍回傳此卡，數值為 0。
+`GET /api/v1/spaces` 的 `kind='challenge'` 卡 SHALL 由 `cohort_enrollments`（status=`joined`，program.kind=`challenge`）聚合：`memberCount` 與 `memberAvatars` 取同一檔代表挑戰（進行中且最近開始的一檔，無進行中則取最近一檔）的參與者、`practiceCount` 為我的挑戰實踐數、`hasActivePractice` 為其中是否有 `status='active'`、`memberAvatars` 取最近一檔挑戰前 N 位參與者。未加入任何挑戰時 SHALL 仍回傳此卡，數值為 0。
 
 #### Scenario: 已加入進行中挑戰
 - **WHEN** 使用者加入一檔進行中且已有 12 人的挑戰，且自動複製的實踐為 active
@@ -14,7 +14,7 @@
 - **THEN** 挑戰卡仍存在，`memberCount=0`、`practiceCount=0`、`hasActivePractice=false`
 
 ### Requirement: 活動卡由參加的期產生
-`GET /api/v1/spaces` 的 `kind='event_course'` 卡 SHALL 對應使用者每一筆 status=`joined`、program.kind=`lighthouse` 的 enrollment 各一張：`id` 為 cohort id 字串、`name` 為期名稱、`host` 為組織名、`memberCount` 為該期 joined 數、`isHost` 為 enrollment role 屬 owner/assistant、`lastActivityAt` 為我在該期實踐的最近打卡時間（無則加入時間）。不再讀取 `space_members`。
+`GET /api/v1/spaces` 的 `kind='event_course'` 卡 SHALL 對應使用者每一筆 status=`joined`、program.kind=`lighthouse` 的 enrollment 各一張：`id` 為 cohort id 字串、`name` 為期名稱、`host` 為組織名、`memberCount` 為該期 joined 數、`isHost` 為 enrollment role 屬 owner/assistant、`lastActivityAt` 為我在該期實踐的最近更新時間（無則加入時間）。同一期重複的 joined 列 SHALL 只產生一張卡；停權組織的期 SHALL 不出現。不再讀取 `space_members`。
 
 #### Scenario: 參加兩期活動
 - **WHEN** 使用者 joined 兩個 lighthouse cohort
