@@ -100,7 +100,7 @@ features:
       # 但 server 尚無 subscription API route → miss → detected=partial
       - { repo: daodao-server,  file: src/routes/subscription.routes.ts }
 
-  # ── 規劃中：尚無任何程式碼，signals 全 miss 屬預期（上線時 CI 會抓到 declared 過期）──
+  # ── 2026-09-02 校準：以下原列「規劃中」，燈塔與共同挑戰已上線，改為 shipped 並指向實際檔案 ──
 
   - name: lighthouse
     # 2026-09-02 校準：燈塔已上線（server PR #440、f2e #961）。PRD/schema-design 原在
