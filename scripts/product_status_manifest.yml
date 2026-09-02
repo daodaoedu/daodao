@@ -121,7 +121,10 @@ features:
       - { repo: daodao-server, file: src/routes/challenge.routes.ts }
       - { repo: daodao-f2e,    file: packages/api/src/services/challenge.ts }
 
-  # activity-discovery（探索活動頁、cohorts.visibility；openspec: challenge-activity-space-wiring）
-  # 實作在 daodao-storage#213 / daodao-server#447 / daodao-f2e#965，合併後再登記為 shipped：
-  #   signals: daodao-server src/routes/activity.routes.ts、daodao-f2e packages/api/src/services/activity.ts
-  # 本檢查比對各 repo 的 dev，PR 未合併前登記會被判 overstated。
+  - name: activity-discovery
+    # 2026-09-02 上線（storage#213 / server#447 / f2e#965）：探索活動頁、cohorts.visibility、空間列表聚合
+    doc: openspec/changes/archive/2026-09-02-challenge-activity-space-wiring
+    declared: shipped
+    signals:
+      - { repo: daodao-server, file: src/routes/activity.routes.ts }
+      - { repo: daodao-f2e,    file: packages/api/src/services/activity.ts }
