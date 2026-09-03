@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 近期實踐次數顯示
 個人檔案頁 SHALL 顯示該使用者最近 7 天的實踐次數（Practice count）。

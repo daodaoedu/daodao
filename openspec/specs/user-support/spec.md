@@ -1,6 +1,6 @@
 # User Support 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 意見回饋列表顯示
 

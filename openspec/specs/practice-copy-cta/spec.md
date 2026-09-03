@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 顯示「我也想實踐」CTA 按鈕（詳情頁）
 非實踐擁有者在瀏覽他人實踐詳情頁時，SHALL 在 PracticeOverviewCard **外部**（卡片下方、獨立全寬）看到「我也想實踐」按鈕。

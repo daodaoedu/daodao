@@ -1,6 +1,6 @@
 # Content Performance 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 顯示逐項內容指標
 

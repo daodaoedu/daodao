@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 關注用戶（Follow User）
 用戶 SHALL 能單向關注其他用戶。關注後，當被關注用戶發起新的 Connect 邀請尋找夥伴時，關注者 SHALL 收到通知。

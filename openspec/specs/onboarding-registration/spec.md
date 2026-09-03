@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 > **實作背景**：`/auth/onboarding` 頁面與 `OnboardingForm` 元件（Steps 1–3 + Success）已存在。Steps 1–3 的欄位驗證、Schema、API 呼叫皆已實作。以下 Requirements 標注「**已存在**」者需確認是否完整符合 spec，標注「**待新增**」者為本次需新增功能。
 

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 設定頁面完整度進度顯示
 系統 SHALL 在設定頁面側邊欄顯眼位置，以「完成數/4」格式顯示用戶的個人資料完整度進度。進度由後端計算，前端從 API 取得後渲染。

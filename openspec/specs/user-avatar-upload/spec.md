@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 頭像圖片上傳
 使用者 SHALL 能透過個人檔案頁上傳頭像圖片，並儲存至 Cloudflare R2。

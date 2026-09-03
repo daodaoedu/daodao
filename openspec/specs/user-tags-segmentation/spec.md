@@ -1,6 +1,6 @@
 # User Tags & Segmentation 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 標籤列表顯示
 

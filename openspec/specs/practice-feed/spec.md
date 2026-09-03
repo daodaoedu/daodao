@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Practice privacy status
 每個練習 SHALL 具有 `privacy_status` 欄位，值為 `private`、`public`（即時公開）或 `delayed`（延遲分享）。預設值為 `private`。

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: In-App 通知批次更新（每小時）
 系統 SHALL 每小時整點（00:00, 01:00, ... 23:00）執行一次 In-App 批次處理，將 `notification_events` 中未處理的 P1 與 P2 事件寫入 `notifications` 表。

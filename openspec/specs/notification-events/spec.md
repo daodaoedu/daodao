@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 事件類型定義
 系統 SHALL 定義以下通知事件類型及其優先級：

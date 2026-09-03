@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 四種反應類型
 系統 SHALL 支援以下四種反應類型，儲存值為英文代碼：

@@ -1,6 +1,6 @@
 # Audit Log 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 自動記錄管理操作
 

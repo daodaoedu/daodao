@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 第二層回覆觸發站內通知給被回覆者
 

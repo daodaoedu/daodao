@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Feed API 回傳 feed_reason 欄位
 `/api/v1/feed` 回傳的每個 item SHALL 包含 `feed_reason` 欄位，說明該 item 出現在 Feed 的原因。
