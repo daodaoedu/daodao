@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 全局通知開關
 系統 SHALL 提供全局開關，允許用戶一鍵開啟或關閉所有通知頻道。

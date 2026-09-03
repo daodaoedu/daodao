@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Practice reaction action
 登入使用者 SHALL 能對靈感頁上任何可見的練習（Full Access Card 或 Brewing Card）執行反應操作（`POST /api/v1/practices/:id/react`），傳入 `reaction_type`。此端點取代原有未實作的 `/like` 路由。

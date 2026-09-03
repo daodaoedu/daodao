@@ -2,7 +2,7 @@
 > 本 spec 規範後端 `/api/v1/feed` 依 1:1:3（A→B→C→C→C）slot pattern 組裝；dev 實際是**前端 client-side `reorderFeedItems` 1:1:1 交錯**，無候選池 / Slot A 熱門冷啟動 / `slot_type` 欄位。
 > 待決定：(a) 改寫 spec 對齊前端現有行為，或 (b) 補後端 slot 演算法。明細見 `.omc/openspec-audit/specs/feed-composition-algorithm.md`。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Feed 依固定 Slot Pattern 組裝回傳
 

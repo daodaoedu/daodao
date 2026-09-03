@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 共同挑戰空間卡反映真實參與
 `GET /api/v1/spaces` 的 `kind='challenge'` 卡 SHALL 由 `cohort_enrollments`（status=`joined`，program.kind=`challenge`）聚合：`memberCount` 與 `memberAvatars` 取同一檔代表挑戰（進行中且最近開始的一檔，無進行中則取最近一檔）的參與者、`practiceCount` 為我的挑戰實踐數、`hasActivePractice` 為其中是否有 `status='active'`、`memberAvatars` 取最近一檔挑戰前 N 位參與者。未加入任何挑戰時 SHALL 仍回傳此卡，數值為 0。

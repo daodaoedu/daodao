@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Dashboard SHALL display personalized topic recommendations
 產品首頁 MUST 在主題實踐區塊下方提供「探索相關主題」推薦區塊，並在使用者已登入時顯示最多 3 張與使用者個人興趣、當前主題實踐或相關行為訊號有關的推薦卡片。

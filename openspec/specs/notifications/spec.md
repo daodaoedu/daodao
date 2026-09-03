@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 關注相關通知類型
 通知系統 SHALL 支援關注行為觸發的通知類型。

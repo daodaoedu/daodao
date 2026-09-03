@@ -1,6 +1,6 @@
 # Member Directory 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 建立自訂個人檔案欄位
 

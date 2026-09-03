@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 子設定類別必須能讀取環境特定 env 檔案
 `RedisSettings`、`PostgreSQLSettings`、`ClickHouseSettings`、`InsightSettings` 的 `model_config.env_file` SHALL 包含 `_ENV_FILE`（即 `.env.dev` 或 `.env.prod`），使其能讀取環境覆蓋值。

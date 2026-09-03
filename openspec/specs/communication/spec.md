@@ -1,6 +1,6 @@
 # Communication 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 站內通知建立
 

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 顯示個人互動足跡列表
 系統 SHALL 在用戶個人頁面提供「個人互動足跡」區塊，按時間倒序顯示該用戶所有留言與回覆紀錄。

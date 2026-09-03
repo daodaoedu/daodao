@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Early User Badge 於全部任務完成時發放
 系統 SHALL 在用戶完成所有 Onboarding 任務的瞬間，自動發放 Early User Badge，並觸發一次性通知。Badge 為限量早期用戶專屬，發放後不可撤銷。

@@ -1,6 +1,6 @@
 # User Analytics 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: DAU/WAU/MAU 趨勢圖表
 

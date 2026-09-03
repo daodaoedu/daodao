@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 公開個人檔案頁面可瀏覽
 系統 SHALL 提供公開個人檔案頁面（`/users/[identifier]`），任何人（含未登入訪客）皆可瀏覽。

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 連結請求管理——收到的請求
 社交關係中心 SHALL 顯示所有收到的待處理連結請求，提供接受或忽略操作。
