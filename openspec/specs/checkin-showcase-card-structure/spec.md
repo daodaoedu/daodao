@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: CheckInShowcaseCard 封面區（Cover Area）
 

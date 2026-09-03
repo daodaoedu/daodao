@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: CheckInShowcaseCard 批次 Reaction 資料（useReactionsBatch）
 

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 期的公開旗標
 燈塔的每一期（cohort）SHALL 具備 `visibility` 欄位，值域 `private` | `public`，預設 `private`。既有資料 SHALL 全部為 `private`。此欄位只對 `programs.kind='lighthouse'` 有意義；共同挑戰 API SHALL 不暴露也不讀取它。

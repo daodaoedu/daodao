@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 對留言按 reaction 觸發站內通知給留言作者
 

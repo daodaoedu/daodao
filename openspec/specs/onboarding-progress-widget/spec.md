@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Widget 顯示於畫面右下角
 浮動進度組件 SHALL 固定顯示於畫面右下角，不得遮擋核心操作按鈕（如：新增實踐按鈕）。組件在 Onboarding 未完成時預設為展開狀態；用戶可隨時收合，收合後保持懸浮圖示。

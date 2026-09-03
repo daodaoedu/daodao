@@ -1,6 +1,6 @@
 # Event Management 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 建立活動
 

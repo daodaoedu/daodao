@@ -1,6 +1,6 @@
 # User Detail Timeline 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 使用者個人資料顯示
 

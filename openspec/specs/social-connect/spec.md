@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 發送連結請求（標準門檻）
 當雙方在主題實踐中的留言互動**低於 3 次**時，用戶 SHALL 必須填寫連結原因才能發送請求。
