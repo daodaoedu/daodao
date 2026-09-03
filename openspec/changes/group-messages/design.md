@@ -143,7 +143,7 @@ contentState = cohort.status === 'archived' ? 'read_only' : getCohortContentStat
 
 **理由**：與 `requireCohortRole` 一致，讓「被移除即刻看不到」自動成立，不需要成員同步；組織成員即使沒 enrollment 也能進聊天室，符合「發起人自動成為 host」（FR-MSG-002、TP-MSG-003）。
 
-**待確認**：TP-MSG-050「已結束的活動課……」原文截斷。本設計預設：結束日後唯讀、+90 天下線、封存亦唯讀。若產品希望結束後仍可聊，把 `contentState` 判斷改成只擋 `archived` 即可，spec 與 task 不變。
+**FRD 依據**：TP-MSG-050「已結束的活動課程仍可查看歷史訊息」——FRD 只保證可讀，未提是否可再發言。本設計取唯讀：結束日後唯讀、封存亦唯讀、+90 天下線（後兩項是沿用既有 `getCohortContentState` 的推論，FRD 未寫）。若產品希望結束後仍可聊，把 `contentState` 判斷改成只擋 `archived` 即可，spec 與 task 不變。
 
 **捨棄**：*只認 enrollment*——組織成員多半沒 enrollment，host 會進不去。*只認 organization 成員為 host*——挑戰／未來的個人建活動會用 enrollment role owner；兩者都認才前後相容。
 
@@ -353,7 +353,7 @@ END $$;
 - [migration 回填與 server 部署時間差] → `ensureRoom` 在列表與存取時補建；順序仍應 storage → server。
 - [ILIKE 搜尋在大房間變慢] → 單室訊息量以千計時仍在毫秒級；超過再加 `pg_trgm` GIN index，不改 contract。
 - [f2e `types.ts` 需等 server 合入 dev 才同步] → f2e 先以 `chat-room.ts` 內的 zod schema 驗證（`useValidatedResponse` 慣例），types 同步後刪除擴充。
-- [唯讀規則與產品期待不符（TP-MSG-050 截斷）] → 集中在 `resolveRoomAccess` 一處，改判斷即可，見 D5「待確認」。
+- [唯讀規則與產品期待不符（TP-MSG-050 只保證可讀）] → 集中在 `resolveRoomAccess` 一處，改判斷即可，見 D5「待確認」。
 
 ## Migration Plan
 
@@ -364,8 +364,8 @@ END $$;
 
 ## Open Questions
 
-- OQ-1（預設：唯讀）：活動課程結束後聊天室是否唯讀？封存（`archived`）呢？本設計結束日後唯讀、封存唯讀、+90 天下線。
-- OQ-2（預設：計入）：系統訊息（成員加入／離開）是否計入未讀數？本設計計入，讓「有人加入」會亮 badge。
-- OQ-3（預設：403）：非成員存取聊天室回 403 還是 404？本設計 403（room 存在但無權）；challenge／停權組織 404。
-- OQ-4（預設：不做）：cohort 學員頁 `/cohorts/[cohortId]` 是否加「進入聊天室」入口（memberHome 回 `chatRoomId`）？列為 optional task 3.12。
+- OQ-1（預設：唯讀）：活動課程結束後是否仍可發言？FRD TP-MSG-050 只寫「仍可查看歷史訊息」。本設計結束日後唯讀、封存唯讀、+90 天下線；後兩項 FRD 未提。
+- OQ-2（預設：計入；FRD 未提）：系統訊息（成員加入／離開）是否計入未讀數？本設計計入，讓「有人加入」會亮 badge。
+- OQ-3（預設：403；FRD 未提）：非成員存取聊天室回 403 還是 404？本設計 403（room 存在但無權）；challenge／停權組織 404。
+- OQ-4（預設：不做；FRD 僅定義 sidebar「訊息」入口）：cohort 學員頁 `/cohorts/[cohortId]` 是否加「進入聊天室」入口（memberHome 回 `chatRoomId`）？列為 optional task 3.12。
 - OQ-5（預設：不需要）：是否需要 host 可「關閉聊天室」開關？FRD 未提，本輪不做；若需要加 `chat_rooms.closed_at` 即可。

@@ -97,7 +97,7 @@
 - **THEN** 置頂面板關閉、成員面板開啟
 
 ### Requirement: 期的生命週期決定聊天室可寫性
-聊天室 SHALL 依所屬期的狀態回傳 `contentState`：期結束日之前為 `writable`；結束日之後或期 `status='archived'` 為 `read_only`，此時傳送、編輯、刪除、按讚、置頂等寫入操作 SHALL 回 409，讀取與已讀游標照常；結束日後超過 90 天 SHALL 對所有端點回 410 且不再出現在列表。組織停權時其聊天室 SHALL 回 404。（TP-MSG-050 預設解讀，待確認）
+聊天室 SHALL 依所屬期的狀態回傳 `contentState`：期結束日之前為 `writable`；結束日之後或期 `status='archived'` 為 `read_only`，此時傳送、編輯、刪除、按讚、置頂等寫入操作 SHALL 回 409，讀取與已讀游標照常；結束日後超過 90 天 SHALL 對所有端點回 410 且不再出現在列表。組織停權時其聊天室 SHALL 回 404。（TP-MSG-050：已結束仍可查看歷史訊息；是否可再發言 FRD 未提，本規格取唯讀）
 
 #### Scenario: 已結束的期
 - **WHEN** 今天（Asia/Taipei）晚於期的結束日

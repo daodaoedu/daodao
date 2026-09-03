@@ -1,6 +1,6 @@
 # Proposal: 活動課程群組訊息
 
-> 2026-09-03 依 FRD（issue daodaoedu/daodao#154，Google Doc 1KHImv3q…，TP-MSG-050 後截斷）與 daodao-server / daodao-f2e 實地盤點產出。上游：活動課程 = lighthouse cohort（已歸檔的 `2026-09-02-challenge-activity-space-wiring`）。
+> 2026-09-03 依 FRD（issue daodaoedu/daodao#154，Google Doc 1KHImv3q…）與 daodao-server / daodao-f2e 實地盤點產出。上游：活動課程 = lighthouse cohort（已歸檔的 `2026-09-02-challenge-activity-space-wiring`）。
 
 ## Why
 
@@ -16,7 +16,7 @@
 | 即時性 | 本輪用 SWR 增量輪詢（開啟中的聊天室 5 秒、列表／未讀 30 秒），API 形狀保留升級到 SSE 的路徑（D3） |
 | 在線狀態 | 以 Redis TTL key 記錄「90 秒內有輪詢本聊天室」，成員面板據此顯示綠點（D3） |
 | 未讀數 | 每人每室一個已讀游標（`chat_room_reads.last_read_message_id`），列表端點同時回 `totalUnread` 給 sidebar badge；無推播（D4） |
-| 已結束／封存 cohort | 沿用 `getCohortContentState`：結束日後唯讀、90 天後 410；`status='archived'` 亦唯讀。**待確認**（TP-MSG-050 原文截斷）（D5） |
+| 已結束／封存 cohort | 沿用 `getCohortContentState`：結束日後唯讀、90 天後 410；`status='archived'` 亦唯讀。FRD TP-MSG-050 僅保證「已結束仍可查看歷史訊息」，可否再發言待確認（D5） |
 | 室內搜尋 | server ILIKE（body + 作者暱稱），回傳符合的訊息 id 清單，前端負責跳轉與 highlight；歷史訊息用 `before` cursor 分頁（D6） |
 | 編輯／刪除 | 軟刪除；被刪訊息不出現在時間軸，但被引用時引用區塊顯示「此訊息已刪除」；置頂訊息被刪同時取消置頂（D7） |
 | 日期分隔線／訊息群組 | 純前端由 `createdAt` 推導（Asia/Taipei 日曆日、同作者連續），不存資料（D1） |
