@@ -1,4 +1,4 @@
-## MODIFIED Requirements
+## Requirements
 
 ### Requirement: @mention 插入文字使用顯示名稱
 當使用者從 @mention 下拉選單選取候選人後，系統 SHALL 將 `@${candidate.name}` 插入輸入框，不得使用 `customId`。
