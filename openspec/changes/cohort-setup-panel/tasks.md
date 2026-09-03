@@ -62,7 +62,7 @@
 - [ ] 3.8 `daodao-f2e` — 學員端：`cohort-join-page.tsx` 拆出 `cohort-signup-view.tsx`（純展示：名稱、簡介、chip 列、互動方式卡片、時段、邀請訊息、隱私說明、CTA）；報名頁依 `signupMethod` 分流（島島報名 vs 「前往報名頁面」＋「已完成報名？加入場次」）；`cohort-member-page.tsx` 顯示會議連結／地點／時段；i18n `cohort` 補 key
   - 驗收：TP-SU-10～11；匿名訪客看不到會議連結；瀏覽器 390px 版面
   - 預估：4h
-- [ ] 3.9 `daodao-f2e` — 探索頁 `/activities`：`activity-card.tsx` 顯示簡介、互動方式 chip、免費／NT$ badge；篩選加「線上／實體」（`mode` query）；詳情頁 `[id]` 顯示地點、時段、外部報名連結；i18n `explore_activities` 補 key
+- [ ] 3.9 `daodao-f2e` — 探索頁 `/activities`：`activity-card.tsx` 顯示簡介、互動方式 chip、免費／NT$ badge；篩選加「線上／實體」（`mode` query）；詳情頁 `[id]` 顯示地點、時段、外部報名連結；i18n `explore_activities` 補 key。**注意**：探索頁 UI 以 issue #152 的 FRD 為準，若 #152 的 change 先行，本 task 縮減為只接新欄位
   - 驗收：瀏覽器：篩選生效、卡片新欄位顯示；vitest 250+ 維持綠
   - 預估：3h
 - [ ] 3.10 `daodao-f2e` — lint + typecheck + vitest；commit 依 format-commit skill；push

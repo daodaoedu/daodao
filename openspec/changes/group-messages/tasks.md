@@ -14,8 +14,8 @@
 - [ ] 2.1 `daodao-server` — Prisma `db pull` 或手改四個 model（`chat_rooms` ↔ `cohorts` 一對一、`chat_messages` 自參照 `reply_to`、`users` 三條具名 relation），`pnpm run prisma:generate`、`pnpm run schema:drift`；新增 `src/constants/chat.ts`（kinds、system events、content states、長度／分頁／TTL 常數）
   - 驗收：typecheck 通過；drift 檢查通過；constants 有單元測試覆蓋值域
   - 預估：1.5h
-- [ ] 2.2 `daodao-server` — 新增 `src/services/chat-acl.service.ts`：`resolveRoomAccess(roomId, userId)`（D5 邏輯：lighthouse／deleted／組織 active 檢查、member／host 推導、`contentState` 含 archived 與 `getCohortContentState`、gone → GoneError、非成員 → ForbiddenError）與 `listHostUserIds(cohortId)`；`assertWritable(access)` helper
-  - 驗收：單元測試：joined member、org member 無 enrollment（host）、exited、challenge cohort（404）、停權組織（404）、結束日後（read_only）、+91 天（410）、archived（read_only）
+- [ ] 2.2 `daodao-server` — 新增 `src/services/chat-acl.service.ts`：`resolveRoomAccess(roomId, userId)`（D5 邏輯：lighthouse／deleted／組織 active 檢查、member／host 推導、`contentState` 只看 archived（不用 `getCohortContentState`、無 gone）、非成員 → ForbiddenError）與 `listHostUserIds(cohortId)`；`assertWritable(access)` helper
+  - 驗收：單元測試：joined member、org member 無 enrollment（host）、exited、challenge cohort（404）、停權組織（404）、結束日後（writable）、+91 天（仍 writable，不回 410）、archived（read_only）
   - 預估：3h
 - [ ] 2.3 `daodao-server` — 新增 `src/services/chat-room.service.ts`：`ensureRoom(tx, cohortId)`（只對 lighthouse，`ON CONFLICT DO NOTHING`）、`appendSystemMessage(cohortId, event, user)`（更新 `last_message_at`）、`listMyRooms(userId)`（enrollment ∪ org member 的 lighthouse cohort、排除 gone、`unreadCount` 子查詢、`totalUnread`、`lastMessage`、`iconLabel`／`colorSeed`、缺 room 時補建）、`getRoom`、`listMembers`（合併 presence）、`markRead`（只前進）；在 `cohort.service.create`／`duplicate` 交易內呼叫 `ensureRoom`；在 `cohort-join.service.join`（newlyJoined）、`cohort-membership.service.exit`／`remove` 後 try/catch 呼叫 `appendSystemMessage`
   - 驗收：整合測試：建 lighthouse cohort 後 room 存在、建 challenge cohort 後不存在；join 後出現系統訊息且 coach 通知既有測試維持綠；exit 後列表消失；未讀計數符合 spec（本人不計、系統訊息計、無游標全計）；`markRead` 倒退不變
@@ -68,12 +68,10 @@
 - [ ] 3.10 `daodao-f2e` — 未讀整合：進入室且最新訊息可見時 `markChatRoomRead` + 樂觀更新 `useMyChatRooms` 快取（該室歸零、`totalUnread` 扣減）；delta 帶回新訊息且頁面在前景時即時標讀；`sidebar/desktop.tsx`、`mobile.tsx` 對 `badge === "unread-count"` 渲染 `totalUnread` pill（99+，0 不渲染）
   - 驗收：TP-MSG-007 手動通過；兩個分頁開同帳號，一邊標讀另一邊 30 秒內歸零；badge 0 時 DOM 無 pill
   - 預估：2h
-- [ ] 3.11 `daodao-f2e` — i18n：新增 `chat` namespace（zh-TW／en）涵蓋 FRD 全部文案（placeholder、空狀態、提示、系統訊息模板 `{name} 加入了聊天室`／`離開了聊天室`、唯讀標籤）；唯讀室 composer 改為提示文字並停用操作；已刪帳號顯示「已離開的島民」
+- [ ] 3.11 `daodao-f2e` — i18n：新增 `chat` namespace（zh-TW／en）涵蓋 FRD 全部文案（placeholder、空狀態、提示、系統訊息模板 `{name} 加入了聊天室`／`離開了聊天室`、已結束資訊標籤、已封存唯讀標籤）；封存室 composer 改為提示文字並停用操作；介面不提供「離開聊天室」；已刪帳號顯示「已離開的島民」
   - 驗收：`pnpm run lint`（Biome）無未使用 key 警告；切 en 無漏翻 key
   - 預估：2h
-- [ ] 3.12（optional，依 OQ-4）`daodao-f2e` + `daodao-server` — memberHome（`GET /api/v1/cohorts/{cohortId}`）回 `chatRoomId`，學員頁 `cohort-member-page.tsx` 加「進入聊天室」按鈕導向 `/messages?room=<id>`
-  - 驗收：點擊後開啟對應聊天室；challenge cohort 的 memberHome `chatRoomId=null` 且不顯示按鈕
-  - 預估：2h
+
 - [ ] 3.13 `daodao-f2e` — lint + typecheck + vitest；commit 依 format-commit skill；push 前 code-review skill
   - 驗收：CI 綠
   - 預估：1h

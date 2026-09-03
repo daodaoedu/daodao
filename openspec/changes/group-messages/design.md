@@ -43,7 +43,7 @@
 
 **Non-Goals（設計層，proposal 之外）**
 - 不做全文檢索索引（pg_trgm / tsvector）；先 ILIKE，量大再加。
-- 不做訊息保留／清理 job；跟隨 cohort 90 天 `gone` 規則自然下線。
+- 不做訊息保留／清理 job；聊天室不套用 cohort 內容的 90 天 `gone` 規則，封存後唯讀且永久可讀（PM 2026-09-03）。
 - 不把今日焦點訊息（`cohort_messages`）投影進群組時間軸。
 
 ## Decisions
@@ -122,7 +122,7 @@
 - 跨裝置只有游標同步（同帳號另一裝置標讀後，這裝置下次輪詢會歸零），沒有逐則已讀回條。
 - `chat_room_reads` 沒有列 = 全部未讀；回填後的舊 cohort 沒有歷史訊息所以不會爆量。
 
-### D5：權限 — 成員與 host 由 cohort 現有資料推導；結束後唯讀（待確認）
+### D5：權限 — 成員與 host 由 cohort 現有資料推導；結束後仍可聊，封存才唯讀
 
 **決策**（新 `chat-acl.service.ts` 的 `resolveRoomAccess(roomId, userId)`）：
 
@@ -133,17 +133,18 @@ enrollment = cohort_enrollments(cohort_id, user_id, status='joined')
 orgRole    = organization_members(organization_id, user_id).role
 isMember   = enrollment != null || orgRole != null
 isHost     = enrollment.role ∈ {owner, assistant} || orgRole != null
-contentState = cohort.status === 'archived' ? 'read_only' : getCohortContentState(cohort.end_date)
+contentState = cohort.status === 'archived' ? 'read_only' : 'writable'   // 結束日不影響；不用 getCohortContentState
 ```
 
 - 非成員 → 403（不是 404，避免區分「不存在」與「無權」的資訊洩漏爭議留給 OQ）。
-- `contentState='gone'` → 所有端點 410；`read_only` → 寫入端點（送出、編輯、刪除、按讚、置頂、已讀游標除外）409「本期已結束，聊天室目前為唯讀」；讀取照常。列表仍列出唯讀室（顯示「已結束」標籤），`gone` 的不列。
+- `read_only`（僅封存）→ 寫入端點（送出、編輯、刪除、按讚、置頂、已讀游標除外）409「本期已封存，聊天室目前為唯讀」；讀取照常。列表仍列出唯讀室（顯示「已封存」標籤）。已結束但未封存的期 `writable`，列表可加「已結束」資訊標籤但不限制操作。沒有 `gone` 狀態。
+- 不提供「離開聊天室」端點：成員身分只隨 enrollment（`/cohorts/:id/exit`、host 移除）變動，聊天室本身沒有獨立的退出動作。
 - 權限矩陣（FR-MSG-033）落在 service：編輯僅本人；刪除本人或 host；置頂／取消置頂僅 host；其餘成員皆可。系統訊息不可編輯／按讚／回覆／置頂，host 可刪。
 - 訊息的 `author.isHost` 每次列表計算：先取該室 host user id 集合（enrollment owner/assistant ∪ org members），再標記。
 
 **理由**：與 `requireCohortRole` 一致，讓「被移除即刻看不到」自動成立，不需要成員同步；組織成員即使沒 enrollment 也能進聊天室，符合「發起人自動成為 host」（FR-MSG-002、TP-MSG-003）。
 
-**FRD 依據**：TP-MSG-050「已結束的活動課程仍可查看歷史訊息」——FRD 只保證可讀，未提是否可再發言。本設計取唯讀：結束日後唯讀、封存亦唯讀、+90 天下線（後兩項是沿用既有 `getCohortContentState` 的推論，FRD 未寫）。若產品希望結束後仍可聊，把 `contentState` 判斷改成只擋 `archived` 即可，spec 與 task 不變。
+**FRD 依據與 PM 拍板**：TP-MSG-050「已結束的活動課程仍可查看歷史訊息」只保證可讀；PM 於 2026-09-03 拍板「結束後仍可聊」，因此結束日不改變可寫性，只有封存才唯讀，且不沿用 cohort 內容的 90 天 `gone` 下線。
 
 **捨棄**：*只認 enrollment*——組織成員多半沒 enrollment，host 會進不去。*只認 organization 成員為 host*——挑戰／未來的個人建活動會用 enrollment role owner；兩者都認才前後相容。
 
@@ -183,7 +184,7 @@ contentState = cohort.status === 'archived' ? 'read_only' : getCohortContentStat
 // src/constants/chat.ts
 CHAT_MESSAGE_KINDS = { TEXT: 'text', SYSTEM: 'system' }
 CHAT_SYSTEM_EVENTS = { MEMBER_JOINED: 'member_joined', MEMBER_LEFT: 'member_left' }
-CHAT_ROOM_CONTENT_STATES = { WRITABLE: 'writable', READ_ONLY: 'read_only' }   // gone 直接 410
+CHAT_ROOM_CONTENT_STATES = { WRITABLE: 'writable', READ_ONLY: 'read_only' }   // read_only 僅限 archived
 CHAT_MESSAGE_MAX_LENGTH = 2000, CHAT_PAGE_DEFAULT = 50, CHAT_PAGE_MAX = 100, CHAT_SEARCH_MAX = 200, CHAT_PRESENCE_TTL_SEC = 90
 
 // chat-room.validators.ts
@@ -229,7 +230,7 @@ chatSearchQuerySchema   = { q: z.string().trim().min(1).max(100) }
 | GET | `/api/v1/chat-rooms/{roomId}/messages/search?q=` | member | `chatSearchResponseSchema` |
 | PUT | `/api/v1/chat-rooms/{roomId}/read` | member（read_only 亦可） | `{ lastReadMessageId, unreadCount: 0 }` |
 
-錯誤碼：非成員 403；room 不存在／challenge／組織停權 404；`gone` 410；唯讀寫入 409；引用不同室訊息或引用系統訊息 400；編輯他人 403；重複置頂／按讚冪等回 200。
+錯誤碼：非成員 403；room 不存在／challenge／組織停權 404；唯讀（封存）寫入 409；引用不同室訊息或引用系統訊息 400；編輯他人 403；重複置頂／按讚冪等回 200。
 
 ## 各子專案實作方式
 
@@ -353,7 +354,7 @@ END $$;
 - [migration 回填與 server 部署時間差] → `ensureRoom` 在列表與存取時補建；順序仍應 storage → server。
 - [ILIKE 搜尋在大房間變慢] → 單室訊息量以千計時仍在毫秒級；超過再加 `pg_trgm` GIN index，不改 contract。
 - [f2e `types.ts` 需等 server 合入 dev 才同步] → f2e 先以 `chat-room.ts` 內的 zod schema 驗證（`useValidatedResponse` 慣例），types 同步後刪除擴充。
-- [唯讀規則與產品期待不符（TP-MSG-050 只保證可讀）] → 集中在 `resolveRoomAccess` 一處，改判斷即可，見 D5「待確認」。
+- [封存後仍有人想發言] → 唯讀判斷集中在 `resolveRoomAccess` 一處，若日後放寬只改此處。
 
 ## Migration Plan
 
@@ -362,10 +363,10 @@ END $$;
 3. f2e：`/messages` 頁替換 placeholder；sidebar badge 在 `totalUnread=0` 時不渲染，對既有使用者無感。
 4. 回滾順序反過來：先 f2e 回 placeholder，再 server，再（可選）drop 表。
 
-## Open Questions
+## Open Questions（已於 2026-09-03 由 PM 拍板，見 Google Doc「待 PM 確認 — 群組訊息／建立系列與場次 開放問題」）
 
-- OQ-1（預設：唯讀）：活動課程結束後是否仍可發言？FRD TP-MSG-050 只寫「仍可查看歷史訊息」。本設計結束日後唯讀、封存唯讀、+90 天下線；後兩項 FRD 未提。
-- OQ-2（預設：計入；FRD 未提）：系統訊息（成員加入／離開）是否計入未讀數？本設計計入，讓「有人加入」會亮 badge。
-- OQ-3（預設：403；FRD 未提）：非成員存取聊天室回 403 還是 404？本設計 403（room 存在但無權）；challenge／停權組織 404。
-- OQ-4（預設：不做；FRD 僅定義 sidebar「訊息」入口）：cohort 學員頁 `/cohorts/[cohortId]` 是否加「進入聊天室」入口（memberHome 回 `chatRoomId`）？列為 optional task 3.12。
-- OQ-5（預設：不需要）：是否需要 host 可「關閉聊天室」開關？FRD 未提，本輪不做；若需要加 `chat_rooms.closed_at` 即可。
+- OQ-1 → **結束後仍可聊**。結束日不影響可寫性，只有封存唯讀；不套用 90 天下線。已反映到 D5、spec、tasks。
+- OQ-2 → **系統訊息計入未讀**，有人加入時「訊息」入口亮 badge。PM 另補一條：**使用者無法自行離開聊天室**，成員身分只隨活動課程參與狀態變動（D5）。
+- OQ-3 → **403（無權限）**；challenge／停權組織 404 維持。
+- OQ-4 → **不做**學員頁入口；只要加入活動就自動進聊天室。optional task 3.12 移除。
+- OQ-5 → **本輪不做**關閉聊天室開關。

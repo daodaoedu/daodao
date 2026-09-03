@@ -405,8 +405,9 @@ DELETE .../home-page/blocks/:blockId
 2. 回滾：三支 migration 皆為加欄位／加表／放寬 NOT NULL，不刪資料；回滾 server 即可，欄位留著無害。088 的 `CHECK chk_space_home_pages_owner` 對既有 space 列成立（`space_id` 非 NULL、`cohort_id` NULL）。
 3. Phase A 上線後跑一次性 script 產出「`is_private=true` 但實踐 public」的 cohort 清單，交由帶領人在面板套用（不自動回溯）。
 
-## Open Questions
+## Open Questions（2026-09-03 PM 拍板，見 Google Doc「待 PM 確認 — 群組訊息／建立系列與場次 開放問題」）
 
-- OQ-1：`checkin_default_private`／`host_comment_default_private` 的強制何時做？預設：另開 change `cohort-content-visibility`，等 #154 群組訊息落地後一起設計逐則隱私（不影響本 change 的 specs／tasks）。
-- OQ-2：探索頁列表是否也要回 `location`？預設：列表不回（卡片空間有限、地點屬詳情），詳情回。
-- OQ-3：系列複製是否要連同「未封存的場次」一起深複製？預設：不（D9），若第一批帶領人回饋需要再加 `?withCohorts=true`。
+- OQ-1 → **照工程預設**：`checkin_default_private`／`host_comment_default_private` 本輪只存值＋UI 標示，強制行為另開 change `cohort-content-visibility`，等 #154 落地後一起設計。
+- OQ-2 → PM 指示探索頁以 issue #152「活動探索頁」的 FRD 為準（已可開發）。本 change 的 `activity-discovery` delta 維持「詳情回 `location`／`sessions`／`externalSignupUrl`、列表不回」的後端揭露邊界（D11）；列表卡片要顯示什麼、篩選怎麼排，由 #152 的 change 決定，屆時可再放寬列表欄位。
+- OQ-3：系列複製是否要連同「未封存的場次」一起深複製？預設：不（D9），若第一批帶領人回饋需要再加 `?withCohorts=true`。（未列入 PM 問卷，維持預設）
+- 另 PM 確認：切換「私密活動」為公開時**既有內容一起變公開**（D7 回溯，含確認框顯示影響數）。
