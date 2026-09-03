@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定義活動課程群組聊天室的存在條件、誰是成員與發起人、聊天室列表與未讀數、已讀游標、成員面板與在線狀態，以及活動課程生命週期對聊天室的唯讀與下線規則。
+定義活動課程群組聊天室的存在條件、誰是成員與發起人、聊天室列表與未讀數、已讀游標、成員面板與在線狀態，以及活動課程生命週期對聊天室的唯讀規則。
 
 ## ADDED Requirements
 
@@ -43,6 +43,10 @@
 #### Scenario: 非成員存取
 - **WHEN** 未加入該期、亦非該組織成員的登入使用者存取 `/api/v1/chat-rooms/{roomId}/*`
 - **THEN** 回 403
+
+#### Scenario: 成員不能自行離開聊天室
+- **WHEN** 成員在聊天室介面尋找「離開聊天室」操作，或直接呼叫任何聊天室端點嘗試移除自己
+- **THEN** 介面不提供該操作、API 亦無對應端點；成員身分只在退出活動課程或被發起人移除時才變動（PM 2026-09-03 拍板）
 
 ### Requirement: 聊天室列表與未讀數
 `GET /api/v1/me/chat-rooms` SHALL 回傳登入者所屬全部 lighthouse 聊天室，每筆含名稱（與期同名）、圖示派生資訊、最新訊息預覽（含是否為本人所發）、最近活動時間、成員數、`unreadCount`、`contentState`；並 SHALL 回傳 `totalUnread`。未讀數 SHALL 定義為該室 id 大於本人已讀游標、未刪除、且非本人所發的訊息數（系統訊息計入）。列表 SHALL 依最近活動時間降冪。（FR-MSG-003、FR-MSG-004、TP-MSG-005、TP-MSG-006）
@@ -97,12 +101,16 @@
 - **THEN** 置頂面板關閉、成員面板開啟
 
 ### Requirement: 期的生命週期決定聊天室可寫性
-聊天室 SHALL 依所屬期的狀態回傳 `contentState`：期結束日之前為 `writable`；結束日之後或期 `status='archived'` 為 `read_only`，此時傳送、編輯、刪除、按讚、置頂等寫入操作 SHALL 回 409，讀取與已讀游標照常；結束日後超過 90 天 SHALL 對所有端點回 410 且不再出現在列表。組織停權時其聊天室 SHALL 回 404。（TP-MSG-050：已結束仍可查看歷史訊息；是否可再發言 FRD 未提，本規格取唯讀）
+聊天室 SHALL 依所屬期的狀態回傳 `contentState`：期 `status='archived'` 為 `read_only`，此時傳送、編輯、刪除、按讚、置頂等寫入操作 SHALL 回 409，讀取與已讀游標照常；其餘狀態（含已過結束日）皆為 `writable`。聊天室 SHALL NOT 套用活動課程內容的 90 天下線規則，訊息 SHALL 永久可讀。組織停權時其聊天室 SHALL 回 404。（TP-MSG-050：已結束仍可查看歷史訊息；PM 2026-09-03 拍板結束後仍可發言）
 
-#### Scenario: 已結束的期
-- **WHEN** 今天（Asia/Taipei）晚於期的結束日
+#### Scenario: 已結束但未封存的期
+- **WHEN** 今天（Asia/Taipei）晚於期的結束日，且期未封存
+- **THEN** 列表仍列出該室，`POST messages` 與 `GET messages` 皆正常，介面可顯示「已結束」資訊標籤但不限制操作
+
+#### Scenario: 已封存的期
+- **WHEN** 期 `status='archived'`
 - **THEN** 列表仍列出該室並標示唯讀，`POST messages` 回 409，`GET messages` 正常
 
 #### Scenario: 結束超過 90 天
-- **WHEN** 今天晚於結束日 + 90 天
-- **THEN** 該室不出現在列表，直接存取回 410
+- **WHEN** 今天晚於結束日 + 90 天，期未封存
+- **THEN** 該室仍出現在列表且可讀可寫，不回 410
