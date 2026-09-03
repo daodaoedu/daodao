@@ -128,3 +128,30 @@ features:
     signals:
       - { repo: daodao-server, file: src/routes/activity.routes.ts }
       - { repo: daodao-f2e,    file: packages/api/src/services/activity.ts }
+
+  - name: explore-activities-page
+    # 探索活動頁增強：發起人解析、快覽端點、已結束期截斷、卡片欄位擴充
+    doc: openspec/changes/explore-activities-page
+    declared: partial
+    signals:
+      - { repo: daodao-server, file: src/routes/activity.routes.ts, pattern: 'hosts' }
+      - { repo: daodao-server, file: src/constants/activity.ts }
+      - { repo: daodao-f2e,    file: apps/product/src/app, pattern: 'activities' }
+
+  - name: group-messages
+    # 活動群組聊天室：聊天室 CRUD、訊息收發、釘選搜尋、在線狀態
+    doc: openspec/changes/group-messages
+    declared: partial
+    signals:
+      - { repo: daodao-server, file: src/routes/chat-room.routes.ts }
+      - { repo: daodao-server, file: src/services/chat-room.service.ts }
+      - { repo: daodao-f2e,    file: packages/api/src/services/chat.ts }
+
+  - name: cohort-setup-panel
+    # 場次設定面板：互動方式、費用、報名方式、時段、隱私級聯
+    doc: openspec/changes/cohort-setup-panel
+    declared: partial
+    signals:
+      - { repo: daodao-server, file: src/constants/cohort-setup.ts }
+      - { repo: daodao-server, file: src/validators/cohort.validators.ts, pattern: 'interactionModes|feeType|signupMethod' }
+      - { repo: daodao-f2e,    file: packages/api/src/services/cohort.ts, pattern: 'cohortSession' }

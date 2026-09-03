@@ -1,6 +1,6 @@
 # Community Onboarding 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 建立引導流程
 

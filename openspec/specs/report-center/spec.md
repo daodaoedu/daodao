@@ -1,6 +1,6 @@
 # Report Center 規格
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 排程報告建立
 

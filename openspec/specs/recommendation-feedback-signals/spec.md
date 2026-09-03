@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Recommendation feedback SHALL support like, unlike, dislike, and hide semantics
 系統 MUST 支援使用者對首頁推薦卡片執行喜歡、取消喜歡、不喜歡與隱藏行為，並維持每張卡片在單一使用者下的最新互動狀態。

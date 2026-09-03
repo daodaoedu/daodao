@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 擴充留言目標類型
 現有 `CommentTargetType` SHALL 擴充以支援 `practice`（主題實踐）作為留言目標。

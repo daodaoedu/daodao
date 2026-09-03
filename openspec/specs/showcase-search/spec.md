@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Keyword search API
 靈感 Tab 關鍵字搜尋 SHALL 使用 AI backend 現有端點 `GET /api/v1/users/practices?keyword=<keyword>`，在可見練習中進行多維度檢索。

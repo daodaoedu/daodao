@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Email 發送時效（高價值事件）
 系統 SHALL 確保 P1 事件在下一個 4 小時批次週期內（最長延遲 4 小時）發送 Email 通知。

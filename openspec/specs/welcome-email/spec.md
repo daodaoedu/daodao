@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 依來源管道寄送歡迎信
 Email 驗證成功後，系統 SHALL 依據用戶的 `referral_source` 欄位，將來源分為三個群組並寄送對應版本的歡迎信。系統 SHALL 透過查詢 `email_logs` 表確保每位用戶只收到一封歡迎信（冪等保護）。

@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 關注用戶
 用戶 SHALL 能夠單向關注其他用戶，無需對方同意。關注後，關注者可在關注清單中看到被關注者的動態。

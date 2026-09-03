@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: L0 歡迎信於註冊後立即發送
 系統 SHALL 在用戶完成 Email 驗證後立即觸發 L0 歡迎信，信件 CTA 根據 `user_source` 導向對應頁面。

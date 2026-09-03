@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 夥伴關係隱私橋接（Privacy Bridge）
 系統 SHALL 依據雙方的連結狀態，動態控制對「僅限夥伴」內容的存取權限。

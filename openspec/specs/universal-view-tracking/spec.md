@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 記錄瀏覽事件
 已登入使用者進入 practice 或 resource 詳情頁時，系統 SHALL 記錄一次瀏覽事件。同一使用者對同一內容，24 小時內重複進入 SHALL 只計算一次。
