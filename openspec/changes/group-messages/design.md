@@ -43,7 +43,7 @@
 
 **Non-Goals（設計層，proposal 之外）**
 - 不做全文檢索索引（pg_trgm / tsvector）；先 ILIKE，量大再加。
-- 不做訊息保留／清理 job；聊天室不套用 cohort 內容的 90 天 `gone` 規則，封存後唯讀且永久可讀（PM 2026-09-03）。
+- 不做訊息保留／清理 job；聊天室不套用 cohort 內容的 90 天 `gone` 規則，訊息永久可讀（PM 2026-09-03）。聊天室無封存行為（FR-MSG-034）。
 - 不把今日焦點訊息（`cohort_messages`）投影進群組時間軸。
 
 ## Decisions
@@ -62,7 +62,7 @@
 - **不建成員表**（見 D5：成員由 enrollment ∪ organization_members 推導）。
 - **引用回覆**用 `reply_to_message_id` 自參照 FK（`ON DELETE SET NULL` 只在硬刪時觸發；本設計軟刪，FK 保留，讀取時判斷 `deleted_at`）。
 - **置頂**用 `pinned_at` / `pinned_by_user_id` 欄位 + partial index，不另開表：一則訊息最多被置頂一次，「逆序列出」= `ORDER BY pinned_at DESC`。
-- **系統訊息**：`kind='system'`、`sender_user_id NULL`、`metadata = { event: 'member_joined' | 'member_left', userId, nickname }`，`body` 存 zh-TW 後備文字；前端優先用 `metadata` 做 i18n。
+- **系統訊息**：`kind='system'`、`sender_user_id NULL`、`metadata = { event: 'member_joined', userId, nickname }`，`body` 存 zh-TW 後備文字；前端優先用 `metadata` 做 i18n。僅有加入事件，不產生離開事件（FR-MSG-035）。
 - **日期分隔線與同作者群組**是前端由 `createdAt`（Asia/Taipei 日曆日）推導，不存資料。
 - **置頂 banner 收起**是 per-viewer UI 狀態：前端以 `getStorage(StorageEnum.ChatPinBannerDismissed)` 記 `{ [roomId]: lastSeenPinnedMessageId }`，最新置頂 id 變了就重新顯示（FR-MSG-019）。
 
@@ -122,7 +122,7 @@
 - 跨裝置只有游標同步（同帳號另一裝置標讀後，這裝置下次輪詢會歸零），沒有逐則已讀回條。
 - `chat_room_reads` 沒有列 = 全部未讀；回填後的舊 cohort 沒有歷史訊息所以不會爆量。
 
-### D5：權限 — 成員與 host 由 cohort 現有資料推導；結束後仍可聊，封存才唯讀
+### D5：權限 — 成員與 host 由 cohort 現有資料推導；聊天室永遠可寫
 
 **決策**（新 `chat-acl.service.ts` 的 `resolveRoomAccess(roomId, userId)`）：
 
@@ -133,18 +133,18 @@ enrollment = cohort_enrollments(cohort_id, user_id, status='joined')
 orgRole    = organization_members(organization_id, user_id).role
 isMember   = enrollment != null || orgRole != null
 isHost     = enrollment.role ∈ {owner, assistant} || orgRole != null
-contentState = cohort.status === 'archived' ? 'read_only' : 'writable'   // 結束日不影響；不用 getCohortContentState
+// 聊天室永遠 writable，不看 cohort.status（FR-MSG-034：無封存行為）
 ```
 
 - 非成員 → 403（不是 404，避免區分「不存在」與「無權」的資訊洩漏爭議留給 OQ）。
-- `read_only`（僅封存）→ 寫入端點（送出、編輯、刪除、按讚、置頂、已讀游標除外）409「本期已封存，聊天室目前為唯讀」；讀取照常。列表仍列出唯讀室（顯示「已封存」標籤）。已結束但未封存的期 `writable`，列表可加「已結束」資訊標籤但不限制操作。沒有 `gone` 狀態。
+- 聊天室無封存行為（FR-MSG-034）：不論期狀態為何，聊天室一律可讀可寫，不回 409。列表可加「已結束」資訊標籤但不限制操作。沒有 `gone` 狀態。
 - 不提供「離開聊天室」端點：成員身分只隨 enrollment（`/cohorts/:id/exit`、host 移除）變動，聊天室本身沒有獨立的退出動作。
 - 權限矩陣（FR-MSG-033）落在 service：編輯僅本人；刪除本人或 host；置頂／取消置頂僅 host；其餘成員皆可。系統訊息不可編輯／按讚／回覆／置頂，host 可刪。
 - 訊息的 `author.isHost` 每次列表計算：先取該室 host user id 集合（enrollment owner/assistant ∪ org members），再標記。
 
 **理由**：與 `requireCohortRole` 一致，讓「被移除即刻看不到」自動成立，不需要成員同步；組織成員即使沒 enrollment 也能進聊天室，符合「發起人自動成為 host」（FR-MSG-002、TP-MSG-003）。
 
-**FRD 依據與 PM 拍板**：TP-MSG-050「已結束的活動課程仍可查看歷史訊息」只保證可讀；PM 於 2026-09-03 拍板「結束後仍可聊」，因此結束日不改變可寫性，只有封存才唯讀，且不沿用 cohort 內容的 90 天 `gone` 下線。
+**FRD 依據**：FR-MSG-034「無封存行為」、TP-MSG-050「結束後仍可聊（writable）」。聊天室不看期的封存狀態，永遠可寫，不沿用 cohort 內容的 90 天 `gone` 下線。
 
 **捨棄**：*只認 enrollment*——組織成員多半沒 enrollment，host 會進不去。*只認 organization 成員為 host*——挑戰／未來的個人建活動會用 enrollment role owner；兩者都認才前後相容。
 
@@ -183,9 +183,10 @@ contentState = cohort.status === 'archived' ? 'read_only' : 'writable'   // 結�
 ```ts
 // src/constants/chat.ts
 CHAT_MESSAGE_KINDS = { TEXT: 'text', SYSTEM: 'system' }
-CHAT_SYSTEM_EVENTS = { MEMBER_JOINED: 'member_joined', MEMBER_LEFT: 'member_left' }
-CHAT_ROOM_CONTENT_STATES = { WRITABLE: 'writable', READ_ONLY: 'read_only' }   // read_only 僅限 archived
+CHAT_SYSTEM_EVENTS = { MEMBER_JOINED: 'member_joined' }   // 僅加入事件，不產生離開事件（FR-MSG-035）
 CHAT_MESSAGE_MAX_LENGTH = 2000, CHAT_PAGE_DEFAULT = 50, CHAT_PAGE_MAX = 100, CHAT_SEARCH_MAX = 200, CHAT_PRESENCE_TTL_SEC = 90
+
+// contentState 已移除：聊天室永遠 writable，無 read_only 狀態（FR-MSG-034）
 
 // chat-room.validators.ts
 chatAuthorSchema = { userId, nickname: string|null, avatar: string|null, isHost: boolean }
@@ -198,7 +199,7 @@ chatMessageSchema = {
 }
 chatRoomSummarySchema = {
   id, cohortId, name, iconLabel, colorSeed, organizationName,
-  contentState: 'writable'|'read_only', memberCount, unreadCount,
+  memberCount, unreadCount,
   lastMessage: { id, kind, bodyPreview, authorName: string|null, isMine: boolean, createdAt } | null,
   lastActivityAt: string
 }
@@ -222,15 +223,15 @@ chatSearchQuerySchema   = { q: z.string().trim().min(1).max(100) }
 | GET | `/api/v1/chat-rooms/{roomId}/members` | member | `chatMemberSchema[]` |
 | GET | `/api/v1/chat-rooms/{roomId}/messages` | member（`after` 模式順便寫 presence） | page 或 delta |
 | POST | `/api/v1/chat-rooms/{roomId}/messages` | member + writable + createLimiter | `chatMessageSchema`（201） |
-| PATCH | `/api/v1/chat-rooms/{roomId}/messages/{messageId}` | 本人 + writable | `chatMessageSchema` |
-| DELETE | `/api/v1/chat-rooms/{roomId}/messages/{messageId}` | 本人或 host + writable | 204 |
-| PUT / DELETE | `/api/v1/chat-rooms/{roomId}/messages/{messageId}/like` | member + writable | `{ likeCount, likedByMe }` |
-| PUT / DELETE | `/api/v1/chat-rooms/{roomId}/messages/{messageId}/pin` | host + writable | `chatMessageSchema` |
+| PATCH | `/api/v1/chat-rooms/{roomId}/messages/{messageId}` | 本人 | `chatMessageSchema` |
+| DELETE | `/api/v1/chat-rooms/{roomId}/messages/{messageId}` | 本人或 host | 204 |
+| PUT / DELETE | `/api/v1/chat-rooms/{roomId}/messages/{messageId}/like` | member | `{ likeCount, likedByMe }` |
+| PUT / DELETE | `/api/v1/chat-rooms/{roomId}/messages/{messageId}/pin` | host | `chatMessageSchema` |
 | GET | `/api/v1/chat-rooms/{roomId}/pins` | member | `chatMessageSchema[]`（`pinnedAt desc`） |
 | GET | `/api/v1/chat-rooms/{roomId}/messages/search?q=` | member | `chatSearchResponseSchema` |
-| PUT | `/api/v1/chat-rooms/{roomId}/read` | member（read_only 亦可） | `{ lastReadMessageId, unreadCount: 0 }` |
+| PUT | `/api/v1/chat-rooms/{roomId}/read` | member | `{ lastReadMessageId, unreadCount: 0 }` |
 
-錯誤碼：非成員 403；room 不存在／challenge／組織停權 404；唯讀（封存）寫入 409；引用不同室訊息或引用系統訊息 400；編輯他人 403；重複置頂／按讚冪等回 200。
+錯誤碼：非成員 403；room 不存在／challenge／組織停權 404；引用不同室訊息或引用系統訊息 400；編輯他人 403；重複置頂／按讚冪等回 200。
 
 ## 各子專案實作方式
 
@@ -239,7 +240,7 @@ chatSearchQuerySchema   = { q: z.string().trim().min(1).max(100) }
 **daodao-server**：
 - `src/constants/chat.ts`；`src/services/chat-acl.service.ts`（`resolveRoomAccess`、`listHostUserIds`）、`chat-room.service.ts`（`ensureRoom(tx?)`、`listMyRooms`、`getRoom`、`listMembers`、`markRead`、`appendSystemMessage`）、`chat-message.service.ts`（`listPage`、`listDelta`、`create`、`update`、`remove`、`like`/`unlike`、`pin`/`unpin`、`listPins`、`search`）、`chat-presence.service.ts`（`touch`、`getOnlineSet`，Redis 失敗吞掉並 log）。
 - `src/validators/chat-room.validators.ts`、`src/controllers/chat-room.controller.ts`、`src/routes/chat-room.routes.ts`（兩個 router：`meChatRoomRoutes`、`chatRoomRoutes`），`app.ts` 掛載並加進 `routes[]`。
-- hooks：`cohort.service.create`/`duplicate` 呼叫 `ensureRoom(tx, id, kind)`；`cohort-join.service.join` 在 `newlyJoined` 分支、`cohort-membership.service.exit`/`remove` 在 transaction 後呼叫 `appendSystemMessage`（try/catch）。
+- hooks：`cohort.service.create`/`duplicate` 呼叫 `ensureRoom(tx, id, kind)`；`cohort-join.service.join` 在 `newlyJoined` 分支呼叫 `appendSystemMessage`（try/catch，僅 member_joined——FR-MSG-035）。退出／移除不產生系統訊息。
 - 測試：`tests/unit/services/chat-*.test.ts`、`tests/integration/chat/chat-room.routes.test.ts`（supertest）。
 
 **daodao-f2e**：
@@ -295,7 +296,7 @@ BEGIN
             CONSTRAINT "fk_chat_messages_deleted_by" FOREIGN KEY ("deleted_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL
         );
         COMMENT ON COLUMN "chat_messages"."kind" IS 'text | system；值域由 daodao-server 常量管控';
-        COMMENT ON COLUMN "chat_messages"."metadata" IS '系統訊息事件：{ event: member_joined|member_left, userId, nickname }';
+        COMMENT ON COLUMN "chat_messages"."metadata" IS '系統訊息事件：{ event: member_joined, userId, nickname }';
         COMMENT ON COLUMN "chat_messages"."updated_at" IS '任何可見變動（編輯、刪除、置頂、按讚計數）都會更新，供增量輪詢 since 使用';
         CREATE INDEX "idx_chat_messages_room_id_id"    ON "chat_messages" ("room_id", "id");
         CREATE INDEX "idx_chat_messages_room_updated"  ON "chat_messages" ("room_id", "updated_at");
@@ -354,7 +355,7 @@ END $$;
 - [migration 回填與 server 部署時間差] → `ensureRoom` 在列表與存取時補建；順序仍應 storage → server。
 - [ILIKE 搜尋在大房間變慢] → 單室訊息量以千計時仍在毫秒級；超過再加 `pg_trgm` GIN index，不改 contract。
 - [f2e `types.ts` 需等 server 合入 dev 才同步] → f2e 先以 `chat-room.ts` 內的 zod schema 驗證（`useValidatedResponse` 慣例），types 同步後刪除擴充。
-- [封存後仍有人想發言] → 唯讀判斷集中在 `resolveRoomAccess` 一處，若日後放寬只改此處。
+- [封存後仍有人想發言] → 聊天室無封存行為（FR-MSG-034），永遠可寫，此風險不存在。
 
 ## Migration Plan
 
@@ -365,7 +366,7 @@ END $$;
 
 ## Open Questions（已於 2026-09-03 由 PM 拍板，見 Google Doc「待 PM 確認 — 群組訊息／建立系列與場次 開放問題」）
 
-- OQ-1 → **結束後仍可聊**。結束日不影響可寫性，只有封存唯讀；不套用 90 天下線。已反映到 D5、spec、tasks。
+- OQ-1 → **結束後仍可聊**，且聊天室無封存行為（FR-MSG-034），永遠可寫；不套用 90 天下線。已反映到 D5、spec、tasks。
 - OQ-2 → **系統訊息計入未讀**，有人加入時「訊息」入口亮 badge。PM 另補一條：**使用者無法自行離開聊天室**，成員身分只隨活動課程參與狀態變動（D5）。
 - OQ-3 → **403（無權限）**；challenge／停權組織 404 維持。
 - OQ-4 → **不做**學員頁入口；只要加入活動就自動進聊天室。optional task 3.12 移除。
