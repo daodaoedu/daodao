@@ -38,7 +38,7 @@
 
 #### Scenario: 退出後失去存取
 - **WHEN** 成員呼叫 `/api/v1/cohorts/{cohortId}/exit` 或被組織移除
-- **THEN** 後續對該聊天室任一端點回 403，列表不再列出該聊天室，且時間軸出現一則「離開」系統訊息
+- **THEN** 後續對該聊天室任一端點回 403，列表不再列出該聊天室
 
 #### Scenario: 非成員存取
 - **WHEN** 未加入該期、亦非該組織成員的登入使用者存取 `/api/v1/chat-rooms/{roomId}/*`
@@ -100,17 +100,17 @@
 - **WHEN** 置頂面板開啟中，使用者點擊成員按鈕
 - **THEN** 置頂面板關閉、成員面板開啟
 
-### Requirement: 期的生命週期決定聊天室可寫性
-聊天室 SHALL 依所屬期的狀態回傳 `contentState`：期 `status='archived'` 為 `read_only`，此時傳送、編輯、刪除、按讚、置頂等寫入操作 SHALL 回 409，讀取與已讀游標照常；其餘狀態（含已過結束日）皆為 `writable`。聊天室 SHALL NOT 套用活動課程內容的 90 天下線規則，訊息 SHALL 永久可讀。組織停權時其聊天室 SHALL 回 404。（TP-MSG-050：已結束仍可查看歷史訊息；PM 2026-09-03 拍板結束後仍可發言）
+### Requirement: 聊天室永遠可寫
+聊天室 SHALL 不依所屬期的封存或結束狀態限制寫入——無論期已結束、已封存或結束超過 90 天，聊天室一律 `writable`，傳送、編輯、刪除、按讚、置頂等操作皆正常。聊天室 SHALL NOT 套用活動課程內容的 90 天下線規則，訊息 SHALL 永久可讀。組織停權時其聊天室 SHALL 回 404。（FR-MSG-034：無封存行為；TP-MSG-050：結束後仍可聊）
 
-#### Scenario: 已結束但未封存的期
-- **WHEN** 今天（Asia/Taipei）晚於期的結束日，且期未封存
-- **THEN** 列表仍列出該室，`POST messages` 與 `GET messages` 皆正常，介面可顯示「已結束」資訊標籤但不限制操作
+#### Scenario: 已結束的期
+- **WHEN** 今天（Asia/Taipei）晚於期的結束日
+- **THEN** 列表仍列出該室，`POST messages` 與 `GET messages` 皆正常
 
 #### Scenario: 已封存的期
 - **WHEN** 期 `status='archived'`
-- **THEN** 列表仍列出該室並標示唯讀，`POST messages` 回 409，`GET messages` 正常
+- **THEN** 列表仍列出該室，`POST messages` 與 `GET messages` 皆正常，聊天室不受封存影響
 
 #### Scenario: 結束超過 90 天
-- **WHEN** 今天晚於結束日 + 90 天，期未封存
+- **WHEN** 今天晚於結束日 + 90 天
 - **THEN** 該室仍出現在列表且可讀可寫，不回 410
