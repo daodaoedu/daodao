@@ -1,0 +1,12 @@
+/* 島島阿學 Dao Dao — Radius tokens
+   Brand is built on the half-dome (semicircle). Corners are soft + generous. */
+:root {
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   14px;   /* default control / input */
+  --radius-lg:   20px;   /* cards */
+  --radius-xl:   28px;   /* feature cards / sheets */
+  --radius-2xl:  40px;
+  --radius-pill: 999px;  /* buttons, tags, chips */
+  --radius-dome: 999px 999px 0 0; /* half circle island (logo shape) */
+}
