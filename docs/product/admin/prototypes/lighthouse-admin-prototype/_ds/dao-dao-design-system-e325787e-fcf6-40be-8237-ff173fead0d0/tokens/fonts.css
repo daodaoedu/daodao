@@ -1,0 +1,7 @@
+/* 島島阿學 Dao Dao — Webfonts
+   NOTE: Font substitution. The brand wordmark uses a custom rounded monoline
+   Chinese face + a rounded geometric Latin. Nearest Google Fonts matches:
+   - Chinese UI/body: "Noto Sans TC" (Taiwan-standard, used across daodao.so)
+   - Rounded display / Latin: "Nunito" (friendly rounded geometric, ~DAO DAO wordmark)
+   Swap these @font-face/imports if official brand fonts are provided. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,600&family=DM+Mono:wght@400;500&display=swap');

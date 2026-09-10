@@ -1,0 +1,76 @@
+/* 島島阿學 Dao Dao — Color tokens */
+:root {
+  /* ---- Brand / primary ---- */
+  --dd-teal:        #16b9b3; /* primary brand — islands */
+  --dd-teal-600:    #0f9a95;
+  --dd-teal-700:    #0c7e7a;
+  --dd-yellow:      #f9e41c; /* spark / highlight island */
+  --dd-yellow-600:  #e6cf00;
+  --dd-orange:      #ffa10b; /* energy / accent island */
+  --dd-orange-600:  #e88a00;
+  --dd-slate:       #536166; /* wordmark / ink-soft */
+
+  /* ---- Supporting ---- */
+  --dd-cyan-pale:   #f3fdff; /* page wash */
+  --dd-gray-pale:   #f4f6f6; /* surface alt */
+  --dd-ink:         #0f3036; /* deep teal ink */
+  --dd-blue-light:  #99ecff; /* soft blue accent */
+
+  /* ---- Neutral ramp (cool, teal-leaning) ---- */
+  --dd-white:       #ffffff;
+  --dd-gray-50:     #f7fafb;
+  --dd-gray-100:    #eef3f4;
+  --dd-gray-200:    #e0e7e9;
+  --dd-gray-300:    #c8d3d6;
+  --dd-gray-400:    #9fb0b4;
+  --dd-gray-500:    #74878c;
+  --dd-gray-600:    #536166;
+  --dd-gray-700:    #3a474b;
+  --dd-gray-800:    #243034;
+  --dd-gray-900:    #0f3036;
+
+  /* ---- Semantic surfaces ---- */
+  --surface-page:    var(--dd-cyan-pale);
+  --surface-card:    var(--dd-white);
+  --surface-alt:     var(--dd-gray-pale);
+  --surface-sunken:  var(--dd-gray-100);
+  --surface-ink:     var(--dd-ink);
+  --surface-teal-soft: #e3f7f6;
+  --surface-yellow-soft: #fdf7c6;
+  --surface-orange-soft: #ffedd0;
+  --surface-blue-soft: #e6faff;
+
+  /* ---- Semantic text ---- */
+  --text-strong:   var(--dd-ink);
+  --text-body:     var(--dd-gray-700);
+  --text-muted:    var(--dd-gray-500);
+  --text-soft:     var(--dd-gray-400);
+  --text-on-brand: var(--dd-white);
+  --text-on-yellow: var(--dd-ink);
+  --text-link:     var(--dd-teal-700);
+
+  /* ---- Brand semantic ---- */
+  --brand:          var(--dd-teal);
+  --brand-hover:    var(--dd-teal-600);
+  --brand-active:   var(--dd-teal-700);
+  --accent:         var(--dd-orange);
+  --highlight:      var(--dd-yellow);
+
+  /* ---- Borders ---- */
+  --border-soft:   var(--dd-gray-200);
+  --border-base:   var(--dd-gray-300);
+  --border-brand:  var(--dd-teal);
+
+  /* ---- Status ---- */
+  --success:       #1fae87;
+  --success-soft:  #e2f6ef;
+  --warning:       var(--dd-orange);
+  --warning-soft:  var(--surface-orange-soft);
+  --danger:        #e5594e;
+  --danger-soft:   #fdeceb;
+  --info:          var(--dd-teal);
+  --info-soft:     var(--surface-teal-soft);
+
+  /* ---- Focus ---- */
+  --focus-ring:    color-mix(in srgb, var(--dd-teal) 45%, transparent);
+}
