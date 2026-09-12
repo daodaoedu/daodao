@@ -10,6 +10,7 @@ on:
       - '.claude/skills/code-review/**'
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
+      - '.github/workflows/branch-base-check.yml'
       - '.github/scripts/retrieve-context.sh'
       - '.github/scripts/test-retrieve-context.sh'
       - '.github/scripts/test-code-review-contract.sh'
@@ -47,10 +48,13 @@ jobs:
 
       - name: Sync hooks, settings, and workflows
         run: |
-          # Claude hooks + settings
-          mkdir -p target/.claude/hooks
+          # Claude hooks + settings + profiles
+          mkdir -p target/.claude/hooks/profiles
           cp .claude/hooks/*.sh target/.claude/hooks/
           chmod +x target/.claude/hooks/*.sh
+          if [ -d .claude/hooks/profiles ]; then
+            cp .claude/hooks/profiles/*.json target/.claude/hooks/profiles/
+          fi
 
           if [ -f target/.claude/settings.json ]; then
             jq -s '.[0] * .[1]' target/.claude/settings.json .claude/settings.json > target/.claude/settings.json.tmp
@@ -69,7 +73,7 @@ jobs:
 
           # Shared workflows
           mkdir -p target/.github/workflows
-          for wf in auto-pr-description.yml code-review.yml; do
+          for wf in auto-pr-description.yml code-review.yml branch-base-check.yml; do
             if [ -f ".github/workflows/$wf" ]; then
               cp ".github/workflows/$wf" "target/.github/workflows/$wf"
             fi

@@ -20,6 +20,14 @@
 - [ ] <phase 2 描述>
 - [ ] <phase 3 描述>
 
+## 驗收契約
+<!-- 從 FRD Test Points 或 issue 需求逐條轉化，每條必須可判定 PASS/FAIL -->
+<!-- verify 和 finish 的 spec auditor 都用這份逐條比對 -->
+- [ ] AC-1: <具體可驗證的條件>
+- [ ] AC-2: <...>
+- [ ] AC-3: 行動版（390px）版面不破版
+- [ ] AC-4: Console 無新增 error/warning
+
 ## 驗證
 <!-- verify 階段填寫，UI 任務必填；格式：狀態 檢查項（截圖檔名） -->
 - [ ] <檢查項 1>（evidence/<phase>-<checkpoint>.png）
