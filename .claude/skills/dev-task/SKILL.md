@@ -36,7 +36,7 @@ daodao/
 ### 1.1 收集素材
 
 1. `gh issue view <n>` 讀 issue（中央 issue 在 daodaoedu/daodao，鏡像 issue 在 sub-repo）
-2. 收集使用者提供的 FRD 路徑（`docs/product/`）、POC/Figma/Drive 連結
+2. 收集使用者提供的 FRD 路徑（`docs/product/`）、POC/Figma/Drive 連結；**POC 是 Google Drive 資料夾連結時，下載到本機**（見 [references/poc-download.md](references/poc-download.md)），verify 階段才有東西可以直接開來比對，不用每次現開 Drive
 3. **判定涉及哪些 repo** — 依 [references/repo-detection.md](references/repo-detection.md)：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）→ 每個 repo 附依據寫進 task.md；`repo:*` label 只當參考，查證結果為準
 4. 決定命名：
    - **任務資料夾**：`<issue#>-<slug>`（例：`150-home-layout`）— 帶編號方便查找
@@ -96,9 +96,24 @@ done
 cd "$TASK/<repo>" && pnpm install --ignore-workspace
 ```
 
-### 1.5 寫 task.md
+### 1.5 產出驗收契約
 
-用 [references/task-template.md](references/task-template.md) 模板寫 `$TASK/task.md`，把 issue、FRD、POC 連結、repos、phases 全部記進去。**之後任何 session 接手都從這個檔開始。**
+從 FRD 的 Test Points / 驗收條件（或 issue body 的需求條目）產出**編號驗收清單**，寫進 task.md 的 `## 驗收契約` 區塊。每條必須是可判定 PASS/FAIL 的具體斷言，不是模糊描述。
+
+```markdown
+## 驗收契約
+<!-- 從 FRD Test Points 或 issue 需求逐條轉化，verify 和 finish 時逐條比對 -->
+- [ ] AC-1: <具體可驗證的條件，例：「點擊『建立』後 API 回 201 且列表出現新項目」>
+- [ ] AC-2: <...>
+- [ ] AC-3: 行動版（390px）版面不破版
+- [ ] AC-4: Console 無新增 error/warning
+```
+
+FRD 沒有 Test Points 或 issue 過於簡略時：從需求自行推導合理的驗收條件，寫進去讓使用者過目。**沒有驗收契約就不開工**——Phase 3 verify 和 Phase 4 finish 的 spec auditor 都需要它。
+
+### 1.6 寫 task.md
+
+用 [references/task-template.md](references/task-template.md) 模板寫 `$TASK/task.md`，把 issue、FRD、POC 連結、repos、phases、**驗收契約**全部記進去。**之後任何 session 接手都從這個檔開始。**
 
 start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直接進入 Phase 2 開始實作，不要停下來建議使用者開新 session**。只有兩種情況才建議換 session 接手：使用者表明要平行開發（這個 session 要留著做別的 issue）、或本 session context 已經很重。
 
@@ -110,10 +125,11 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 2. 工作範圍鎖在自己的任務資料夾，**不碰 `projects/`、不碰其他 worktrees/**
 3. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
    1. **自行輕量驗證**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `pre-commit-check` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。這是 phase 級的快篩，完整驗收留給 verify 階段
-   2. 驗證過 → `pre-commit-check` → `format-commit` skill commit
-   3. 更新 task.md 的 checkbox 與 Status
-   4. 直接進下一個 phase
-   5. 只有驗證**失敗且修不掉**、或發現 scope 之外的問題時才停下來問使用者
+   2. **高風險變更掃描**：跑 `bash .claude/hooks/stop-quality-gate.sh` 看逐檔就緒清單和高風險分類（migration / API / auth / env / CI）。有高風險標記的 phase 在 task.md 備註區補記「⚠ 高風險：<分類>」
+   3. 驗證過 → `pre-commit-check` → `format-commit` skill commit
+   4. 更新 task.md 的 checkbox 與 Status
+   5. 直接進下一個 phase
+   6. 只有驗證**失敗且修不掉**、或發現 scope 之外的問題時才停下來問使用者
 4. **連續執行原則**：phase 邊界是繼續點，不是回報暫停點。**禁止**在 phase 完成後用「下一步：…要繼續嗎？」「要推的話說一聲」等句式收尾等指示——commit 完就開始下一個 phase。合法的停下來只有四種：
    - 全部 phase 完成 → 進 verify
    - 碰到 task.md 記載的待決事項**且該 phase 無法繞過它先行**（能先做別的就先做）
@@ -134,10 +150,12 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 2. **逐 phase 驗收** — 從 task.md 的 phases + FRD 驗收條件展開檢查清單，用瀏覽器實際走過每一條：
    - 首選 `claude-in-chrome` MCP（真實 Chrome、帶登入狀態）；不可用時 fallback `playwright` MCP
    - 對照 task.md 連結的 POC / Figma 設計稿比對版面
+   - **POC 並排比對**（`$TASK/poc/` 有 `.dc.html` 時必做）：起 POC 靜態 server、並排截圖、量測差異表，見 [references/poc-compare.md](references/poc-compare.md)
 3. **留證據** — 每個檢查點截圖存到 `$TASK/evidence/`，命名 `<phase>-<checkpoint>.png`
 4. **記錄結果** — task.md 新增「驗證」區塊：檢查清單 + 通過/失敗 + 截圖檔名
 5. **失敗處理** — 修復後重驗該項（沿用 pipeline 慣例：同一項失敗 2 次，停下來把現象整理給使用者判斷，不要無限重試）
-6. 全部通過 → task.md Status → `verified`，進入 finish
+6. **產出 Google 文件驗證報告**（必做）— 把「驗證」區塊 + evidence/ 截圖整理成一份 Google 文件（截圖嵌圖，不是留在本機資料夾），連結記進 task.md 最上方；操作細節與一次性 rclone 設定見 [references/verify-report.md](references/verify-report.md)
+7. 全部通過 → task.md Status → `verified`，進入 finish
 
 ## Phase 4: finish — 發 PR
 
@@ -146,8 +164,15 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 1. 確認全部 commit：`git status`
 2. 同步 dev：`git fetch origin dev && git rebase origin/dev`（衝突時列出檔案協助解決）
 3. 品質檢查：`pnpm run typecheck && pnpm run lint && pnpm test`
-4. Push 前跑 `code-review` skill
-5. Push（rebase 過需 force push 時先問使用者）
+4. **Clean-context spec audit** — spawn 一個**全新的 subagent**（不是 fork），只給它 `git diff origin/dev..HEAD` 的輸出和 task.md 的驗收契約（`## 驗收契約` 區塊）。**subagent 看不到開發對話，避免「我覺得有做」的幻覺**。Subagent 逐條標 PASS / FAIL / UNCERTAIN + file:line 證據。有 FAIL 的條目必須修完才繼續；UNCERTAIN 的條目由使用者判斷。Prompt 範例：
+   ```
+   你是 spec auditor。拿到一份 git diff 和驗收契約，逐條判定 PASS/FAIL/UNCERTAIN。
+   每條附 file:line 證據。不確定就標 UNCERTAIN，不要猜。不要看 diff 以外的脈絡。
+   驗收契約：<貼 task.md 的 AC 清單>
+   Diff：<貼 git diff 輸出>
+   ```
+5. Push 前跑 `code-review` skill
+6. Push（rebase 過需 force push 時先問使用者）
 6. 開 PR：
 
 ```bash
@@ -176,6 +201,7 @@ gh pr create --base dev \
 gh issue comment <n> --repo daodaoedu/<repo> --body "$(cat <<'EOF'
 ## ✅ 驗收完成，已發 PR
 - PR: <PR 連結>（跨 repo 時全部列出 + merge 順序）
+- 驗證報告（Google 文件，含截圖）: <verify 階段產出的 doc link>
 - 瀏覽器驗證：<通過項目摘要，對應 task.md 驗證區塊>
 - Known incomplete scope: <範圍外未處理的項目，沒有就寫 none>
 EOF
