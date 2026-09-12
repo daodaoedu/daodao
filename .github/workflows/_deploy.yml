@@ -1,45 +1,39 @@
 name: Reusable Deploy Pipeline
 
-# Shared CD pipeline for daodao sub-repos.
-# Covers: CI gate → Docker build → SSH deploy → Discord notify.
-# Deploy logic stays repo-specific (passed as a script path or inline).
+# Shared CD skeleton for daodao sub-repos.
+# Caller 負責 CI gate（workflow_call 自己的 ci.yml），
+# 這裡只管 Docker build → SSH deploy → Discord notify。
+#
+# 用法（caller 的 cd.yml）：
+#   jobs:
+#     ci:
+#       uses: ./.github/workflows/ci.yml
+#       secrets: inherit
+#     deploy:
+#       needs: ci
+#       uses: ./.github/workflows/_deploy.yml
+#       with:
+#         docker-image-name: daodao-admin-ui
+#         deploy-path: /root/daodao-admin-ui
+#       secrets: inherit
 
 on:
   workflow_call:
     inputs:
-      ci-workflow:
-        description: 'Path to CI workflow to call (e.g. ./.github/workflows/ci.yml)'
-        type: string
-        required: true
       docker-image-name:
         description: 'Docker Hub image name (e.g. daodao-admin-ui). Empty = skip Docker Hub build.'
         type: string
         required: false
         default: ''
-      deploy-host-secret:
-        description: 'Name of the secret holding the deploy host IP (e.g. LINODE_INSTANCE_IP)'
-        type: string
-        required: false
-        default: 'LINODE_INSTANCE_IP'
       deploy-path:
         description: 'Remote path on the deploy host (e.g. /root/daodao-server)'
         type: string
         required: true
       deploy-script:
-        description: 'Path to repo-specific deploy script (relative to repo root). Receives env vars: APP_ENV, IMAGE_TAG, COMMIT_SHA, BRANCH_NAME, DEPLOY_PATH, COMPOSE_FILE'
+        description: 'Path to repo-specific deploy script. Receives env vars: APP_ENV, IMAGE_TAG, COMMIT_SHA, BRANCH_NAME, DEPLOY_PATH, COMPOSE_FILE'
         type: string
         required: false
         default: ''
-      extra-branches:
-        description: 'JSON array of extra branches beyond main/dev (e.g. ["production"])'
-        type: string
-        required: false
-        default: '[]'
-      node-version:
-        description: 'Node.js version for build (0 = skip Node setup)'
-        type: number
-        required: false
-        default: 0
       timeout-minutes:
         description: 'Deploy job timeout'
         type: number
@@ -62,13 +56,6 @@ on:
         required: false
 
 jobs:
-  # ===== CI Gate =====
-  ci:
-    if: ${{ github.event_name == 'push' }}
-    uses: ${{ inputs.ci-workflow }}
-    secrets: inherit
-
-  # ===== Environment Detection =====
   detect-env:
     runs-on: ubuntu-latest
     outputs:
@@ -81,13 +68,8 @@ jobs:
         run: |
           REF="${{ github.ref }}"
           case "$REF" in
-            refs/heads/main)
+            refs/heads/main|refs/heads/production)
               echo "image-tag=prod" >> "$GITHUB_OUTPUT"
-              echo "app-env=prod" >> "$GITHUB_OUTPUT"
-              echo "compose-file=docker-compose.prod.yml" >> "$GITHUB_OUTPUT"
-              ;;
-            refs/heads/production)
-              echo "image-tag=production" >> "$GITHUB_OUTPUT"
               echo "app-env=prod" >> "$GITHUB_OUTPUT"
               echo "compose-file=docker-compose.prod.yml" >> "$GITHUB_OUTPUT"
               ;;
@@ -98,11 +80,10 @@ jobs:
               ;;
           esac
 
-  # ===== Docker Build + Push (optional) =====
   docker-build:
     runs-on: ubuntu-latest
-    needs: [ci, detect-env]
-    if: ${{ always() && (needs.ci.result == 'success' || needs.ci.result == 'skipped') && inputs.docker-image-name != '' }}
+    needs: [detect-env]
+    if: ${{ inputs.docker-image-name != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -129,15 +110,12 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ inputs.docker-image-name }}:${{ needs.detect-env.outputs.image-tag }}
           cache-to: type=inline
 
-  # ===== Deploy =====
   deploy:
     runs-on: ubuntu-latest
-    needs: [ci, detect-env, docker-build]
-    if: ${{ always() && (needs.ci.result == 'success' || needs.ci.result == 'skipped') && (needs.docker-build.result == 'success' || needs.docker-build.result == 'skipped') }}
+    needs: [detect-env, docker-build]
+    if: ${{ always() && (needs.docker-build.result == 'success' || needs.docker-build.result == 'skipped') }}
     environment: ${{ needs.detect-env.outputs.app-env == 'dev' && 'development' || 'production' }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
-    outputs:
-      result: ${{ steps.deploy.outcome }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -170,12 +148,11 @@ jobs:
           if [ -n "${{ inputs.deploy-script }}" ] && [ -f "${{ inputs.deploy-script }}" ]; then
             bash "${{ inputs.deploy-script }}"
           else
-            # Default deploy: SSH → git pull → docker compose up
             ssh -o StrictHostKeyChecking=no \
                 -o ServerAliveInterval=30 \
                 -o ServerAliveCountMax=3 \
                 -o ConnectTimeout=10 \
-                root@$LINODE_INSTANCE_IP bash -s << ENDSSH
+                root@$LINODE_INSTANCE_IP bash -s << 'ENDSSH'
               set -e
               echo "=== Deploy $APP_ENV to $DEPLOY_PATH ==="
 
@@ -205,13 +182,12 @@ jobs:
 
               docker image prune -f --filter "until=24h" || true
               echo "=== Deploy complete ==="
-            ENDSSH
+          ENDSSH
           fi
 
-  # ===== Discord Notify =====
   notify:
     runs-on: ubuntu-latest
-    needs: [ci, detect-env, deploy]
+    needs: [detect-env, deploy]
     if: always()
     steps:
       - name: Send Discord Notification
@@ -227,12 +203,9 @@ jobs:
           IMAGE_TAG="${{ needs.detect-env.outputs.image-tag }}"
           CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-          CI_STATUS="${{ needs.ci.result }}"
           DEPLOY_STATUS="${{ needs.deploy.result }}"
 
-          if [ "$CI_STATUS" = "failure" ]; then
-            COLOR=16711680; TITLE="❌ CI Failed"
-          elif [ "$DEPLOY_STATUS" = "failure" ]; then
+          if [ "$DEPLOY_STATUS" = "failure" ]; then
             COLOR=16711680; TITLE="❌ Deploy Failed ($IMAGE_TAG)"
           elif [ "$DEPLOY_STATUS" = "cancelled" ]; then
             COLOR=8421504; TITLE="⚠️ Deploy Cancelled"
