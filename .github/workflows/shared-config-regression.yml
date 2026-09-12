@@ -1,0 +1,29 @@
+name: Shared Config Regression
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/branch-base-check.yml'
+      - '.github/workflows/sync-claude-config.yml'
+      - '.github/workflows/shared-config-regression.yml'
+      - '.github/scripts/test-sync-claude-config-contract.sh'
+      - '.github/scripts/__tests__/*.test.cjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check shared workflow contracts
+        run: |
+          node --test .github/scripts/__tests__/*.test.cjs
+          bash .github/scripts/test-sync-claude-config-contract.sh

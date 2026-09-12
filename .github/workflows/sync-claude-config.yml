@@ -11,6 +11,10 @@ on:
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
       - '.github/workflows/branch-base-check.yml'
+      - '.github/workflows/sync-claude-config.yml'
+      - '.github/workflows/shared-config-regression.yml'
+      - '.github/scripts/test-sync-claude-config-contract.sh'
+      - '.github/scripts/__tests__/*.test.cjs'
       - '.github/scripts/retrieve-context.sh'
       - '.github/scripts/test-retrieve-context.sh'
       - '.github/scripts/test-code-review-contract.sh'
@@ -21,8 +25,28 @@ on:
     - cron: '0 1 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-shared-config
+  cancel-in-progress: false
+
 jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check shared workflow contracts
+        run: |
+          node --test .github/scripts/__tests__/*.test.cjs
+          bash .github/scripts/test-sync-claude-config-contract.sh
+
   sync:
+    needs: regression
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -110,7 +134,7 @@ jobs:
           DEFAULT=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name')
           echo "branch=$DEFAULT" >> $GITHUB_OUTPUT
 
-      - name: Create PR and merge
+      - name: Create PR for checks and review
         if: steps.diff.outputs.changed == 'true'
         working-directory: target
         env:
@@ -128,11 +152,7 @@ jobs:
           git push origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore: sync shared config" \
-            --body "Auto-synced from daodao. Updates hooks, settings, workflows, and trusted review scripts." \
+            --body "Auto-synced from daodao. Updates hooks, settings, workflows, and trusted review scripts. Merge after CI checks and review; this workflow does not merge PRs." \
             --base "$DEFAULT_BRANCH")
-          if gh pr merge "$PR_URL" --squash --admin --delete-branch; then
-            echo "✅ PR merged: $PR_URL"
-          else
-            echo "::error::Admin merge failed; inspect the gh error above: $PR_URL"
-            exit 1
-          fi
+          echo "PR awaiting checks and review: $PR_URL"
+          echo "- Shared config PR awaiting checks and review: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
