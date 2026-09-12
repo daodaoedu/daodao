@@ -64,7 +64,7 @@ jobs:
           fi
 
           # Shared skills
-          for skill in collect-pr-feedback code-review; do
+          for skill in collect-pr-feedback code-review format-commit pre-commit-check; do
             if [ -d ".claude/skills/$skill" ]; then
               mkdir -p "target/.claude/skills/$skill"
               cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
