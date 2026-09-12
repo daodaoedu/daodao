@@ -22,8 +22,13 @@ for path in \
   grep -Fq -- "- '$path'" "$WORKFLOW" || fail "push paths 未監聽 $path"
 done
 
-grep -Fq 'for skill in collect-pr-feedback code-review; do' "$WORKFLOW" \
-  || fail "sync workflow 未同步 code-review skill"
+sync_skills=$(sed -n 's/^[[:space:]]*for skill in \(.*\); do$/\1/p' "$WORKFLOW")
+for required_skill in collect-pr-feedback code-review; do
+  case " $sync_skills " in
+    *" $required_skill "*) ;;
+    *) fail "sync workflow 未同步 $required_skill skill" ;;
+  esac
+done
 
 for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh; do
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"
