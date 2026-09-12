@@ -1,15 +1,16 @@
 ---
 name: dev-task
-description: 以 issue 為單位的隔離平行開發流程。每個 issue 在 worktrees/<n>-<slug>/ 建立獨立 worktree（或 clone）+ task.md manifest，多個 session 可同時開發不同 issue 互不干擾。Use when starting development on a GitHub issue, running parallel multi-issue development, or resuming a task from worktrees/. Trigger words: 開發 issue、開工、dev-task、平行開發、接手任務、發 PR、任務收尾。取代已退役的 dev-branch-workflow。
+description: >-
+  以 issue 為單位的隔離平行開發流程。每個 issue 在 worktrees/編號-slug/ 建立獨立 worktree（或 clone）+ task.md manifest，多個 session 可同時開發不同 issue 互不干擾。Use when starting development on a GitHub issue, running parallel multi-issue development, or resuming a task from worktrees/. Trigger words: 開發 issue、開工、dev-task、平行開發、接手任務、發 PR、任務收尾。取代已退役的 dev-branch-workflow。
 ---
 
 # Dev Task — Issue 隔離開發流程
 
-一個 issue = 一個隔離資料夾 = 一個 session。`projects/` 下的 submodule 永遠停在 `dev`（乾淨、供整合與 pipeline 用），所有開發都在 `worktrees/` 進行。
+一個 issue = 一個隔離資料夾 = 一個 session。`projects/` 下的 submodule 作為建立 worktree 的來源，保留其目前分支、工作檔案與暫存區；所有任務開發都在 `worktrees/` 進行。來源不在 `dev` 或有未提交變更，不構成開工阻擋。
 
 ```
 daodao/
-├── projects/<repo>/              ← 永遠停在 dev，不在這裡開發
+├── projects/<repo>/              ← 保留既有狀態，僅作為 worktree 來源
 └── worktrees/                    ← gitignored
     └── <issue#>-<slug>/          ← 一個 issue 一個資料夾
         ├── task.md               ← 任務 manifest（唯一入口，接手先讀這個）
@@ -74,6 +75,9 @@ git worktree add "$TASK/<repo>" -b feat/<slug> origin/dev
 ```
 
 注意：
+- 明確從 `origin/dev` 建立任務分支，不使用來源工作目錄的 `HEAD`；有未合併任務依賴時，依「平行開發約定」指定依賴分支。
+- `fetch` 與 `worktree add` 會更新共用 Git metadata，但不改動來源工作檔案、暫存區或目前分支。不得為了開工在 `projects/` 執行 `checkout`、`switch`、`pull`、`reset`、`stash`、`clean`，或安裝依賴、自動修復檔案。
+- `fetch` 失敗時先處理錯誤，不得默默改用可能過期的 `origin/dev`。
 - 所有 repo 用**同一個 branch 名稱** `feat/<slug>`（fix 用 `fix/`）
 - git 禁止同一 branch 掛兩個 worktree——若報錯代表該 issue 已有人在做，停下來確認
 - 高風險 repo（`daodao-storage`、`daodao-infra`）依 pipeline 規範不自動開發，涉及時提醒使用者
@@ -122,7 +126,7 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 ## Phase 2: dev — 開發中
 
 1. **先讀 task.md** — 確認 scope、phases、目前狀態
-2. 工作範圍鎖在自己的任務資料夾，**不碰 `projects/`、不碰其他 worktrees/**
+2. 修改、安裝依賴、測試與 commit 的範圍鎖在自己的任務資料夾。`projects/` 僅允許唯讀查證、讀取環境檔複製至任務目錄，以及本流程所需的 Git metadata 操作；不變更其工作檔案、暫存區或目前分支，也不修改其他任務的 worktree。
 3. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
    1. **自行輕量驗證**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `pre-commit-check` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。這是 phase 級的快篩，完整驗收留給 verify 階段
    2. **高風險變更掃描**：跑 `bash .claude/hooks/stop-quality-gate.sh` 看逐檔就緒清單和高風險分類（migration / API / auth / env / CI）。有高風險標記的 phase 在 task.md 備註區補記「⚠ 高風險：<分類>」
@@ -221,7 +225,7 @@ EOF
 cd "$ROOT/projects/<repo>"
 git worktree remove "$TASK/<repo>"
 git branch -d feat/<slug>
-git fetch origin dev   # 讓 projects/ 的 dev 追上
+git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分支
 ```
 
 3. 刪任務資料夾：`rm -rf "$TASK"`（task.md 若有留存價值，先摘要進 issue comment）
@@ -248,5 +252,5 @@ git fetch origin dev   # 讓 projects/ 的 dev 追上
 
 1. 永遠從 `origin/dev` 開分支，PR 開回 `dev`
 2. 不在 monorepo 根目錄 commit submodule 指標變更（submodule 各自管理）
-3. `projects/` 發現不在 dev 或有髒變更 → 先停下來問使用者（可能是舊流程殘留）
+3. `projects/` 不在 `dev` 或有未提交變更時，保留原狀並從明確的 `origin/dev` 建立隔離 worktree，無需為此詢問。只有需要變更來源工作目錄、暫存區或目前分支，或發現同一任務已存在、開發範圍高度重疊時，才停下來確認。
 4. worktree add 失敗說 branch 已存在 → 該 issue 可能已在進行，`git worktree list` 查證
