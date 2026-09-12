@@ -35,13 +35,11 @@ grep -Fq 'git add -f .claude/ .github/workflows/ .github/scripts/' "$WORKFLOW" \
   || fail "commit scope 未包含 scripts"
 grep -Fq 'chore/sync-claude-config-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}' "$WORKFLOW" \
   || fail "同步 branch 名稱未使用唯一 run identity"
-grep -Fq 'gh pr merge "$PR_URL" --squash --admin --delete-branch' "$WORKFLOW" \
-  || fail "缺少立即 bot merge"
-if grep -Fq 'gh pr merge "$PR_URL" --squash --admin --delete-branch 2>/dev/null' "$WORKFLOW"; then
-  fail "admin merge 不得隱藏 gh 錯誤"
+if grep -Eq 'gh pr merge|--admin|--auto' "$WORKFLOW"; then
+  fail "同步不得在 required checks/approval 尚未完成時合併 PR"
 fi
-grep -Fq '::error::Admin merge failed; inspect the gh error above' "$WORKFLOW" \
-  || fail "同步失敗未讓 workflow 告警"
+grep -Fq 'PR awaiting checks and review: $PR_URL' "$WORKFLOW" \
+  || fail "同步必須清楚回報 PR 尚待檢查與 review"
 
 echo "✅ sync shared-config workflow contract tests passed"
 grep -Fq 'cp .github/review-knowledge/false-positives.jsonl' "$WORKFLOW" \

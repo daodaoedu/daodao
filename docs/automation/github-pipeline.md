@@ -190,9 +190,12 @@ open PR 交集排除，避免把自己誤判為 in-flight 衝突。diff、pack �
 
 首次合併時會執行 base branch 上既有的可信腳本版本；只有 base 完全沒有該腳本或腳本執行
 失敗時，CI 才會安全降級成 diff-only review。合併後的後續 PR 才會使用這次更新的 Context Pack。
-共享設定同步 Action 會為各 target repo 建立獨立 PR，並同步兩個 workflow、可信 Context Pack
-腳本與 regression contracts；由具 ruleset bypass 權限的同步 bot 合併，失敗時保留 GitHub CLI
-錯誤並讓 workflow 明確失敗，不會靜默留下待人工處理的 PR。
+共享設定同步 Action 先通過 branch policy 與同步契約回歸測試，再為各 target repo 的
+default branch 建立獨立 PR，同步三個 workflow、可信 Context Pack 腳本與 regression contracts。
+同步流程只開 PR，並在 run summary 列出待審連結；完成 CI checks 與 review 後依正常流程合併，
+不使用 ruleset bypass。未設定 required checks 的 repo 也不會因啟用 auto-merge 而立即合併。
+Branch Base Check 與同步使用相同的 repository default branch，因此 dev/main 專案均可接收
+普通 PR；release/hotfix 另可使用 main、production、prod 等 production 分支名稱。
 
 Fixture 覆蓋 TypeScript importer、JSX 呼叫模式、Python dotted module、current PR 排除，
 以及超過 pipe buffer 時仍保持 UTF-8 完整行截斷。
