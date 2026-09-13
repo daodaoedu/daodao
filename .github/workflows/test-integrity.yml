@@ -1,0 +1,31 @@
+name: Test integrity
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scanner regression fixtures
+        run: python3 -m unittest discover -s scripts/__tests__ -p '*integrity*.py'
+      - name: Inspect test changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          comparison_base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          review_args=()
+          if [[ -f .test-integrity-review.json ]]; then
+            review_args=(--review .test-integrity-review.json)
+          fi
+          python3 scripts/check-test-integrity.py --base "$comparison_base" --head "$HEAD_SHA" "${review_args[@]}"

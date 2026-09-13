@@ -67,22 +67,27 @@ commit 時必須依序執行：
 
 ## Merge 後流程
 
-PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾：歸檔 openspec change、更新 docs/product 的功能狀態、校準地圖文件。
+PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾：核對實際合併與驗收狀態、按適用範圍整理既有規劃 artifacts、更新 docs/product 與地圖；合併不等於部署或整體需求完成。
 
 ## 需求規劃流程
 
-收到新需求或想寫 PRD 時：
-1. 先執行 `.claude/skills/product-status-check/SKILL.md` 驗證功能是否早已上線
-2. 執行 `.claude/skills/prd-generation/SKILL.md` 產出 PRD（生成 → 補洞 → 優化）
-3. PRD 定稿後銜接 `.claude/skills/openspec-new-change/SKILL.md` 進入開發規劃
+### 開 Issue
+
+- 使用者說「開 issue」「開卡」「新增任務」時，先讀 `.claude/skills/gh-card/SKILL.md`；Codex 另有 `.codex/skills/gh-card/SKILL.md` 入口。
+- 中央／子 Issue 使用 `templates/development/` 共用模板；bug 通報依既有 `file-bug-issue` 流程。
+- 單純開卡預設 Todo；設定 Ready for Dev 與啟動自動化需在使用者要求範圍內。只修改 skill／草擬需求不建立遠端 Issue。
+
+收到想法、Issue、PRD／FRD、POC 或開發分支時：
+1. 執行 `.claude/skills/prd-generation/SKILL.md`，先描述 → AI 查核與起草 → AI 自審修訂 → 人審核 → 更新定稿；由其呼叫 `product-status-check` 區分實作、測試、部署與可用證據。
+2. 新需求統一一份 PRD，包含流程、規則與驗收；既有 FRD 及 FR／TP ID 沿用，不要求另寫 FRD。提出者不用填 repo、SHA 或負責人表。
+3. 依既有授權銜接開卡或目標 repo 的開發規劃。技術設計與執行證據由開發／驗收文件承接；確認需求不等於 Ready 或派工。
 
 ## Bug Issue 流程
 
-開發或 CI 過程中遇到無法立即修復的錯誤時：
-1. 執行 `.claude/skills/file-bug-issue/SKILL.md` skill
-2. 從對話上下文自動收集錯誤資訊（錯誤訊息、重現步驟、已嘗試的修復、相關檔案、環境）
-3. 詢問目標 repo
-4. 預覽 issue 內容，確認後建立帶 `bug` label 的 GitHub issue
+任何使用者遇到操作異常，或開發／CI 錯誤需追蹤時：
+1. 執行 `.claude/skills/file-bug-issue/SKILL.md`；Codex 入口為 `.codex/skills/file-bug-issue/SKILL.md`。
+2. 從描述整理位置、操作、實際／期待結果與證據，由 AI 起草、查核 codebase／分類／重複卡、自審修訂後交人審核，再補問關鍵問題，不要求通報者知道 repo 或根因。
+3. 預覽具體內容並沿用已授權範圍發布；只有草擬授權就保留本機草稿。未知資訊可記於 Todo，不把通報當作已重現或已修復。
 
 ## PR Feedback 流程
 
@@ -90,5 +95,9 @@ Push 並開 PR 後，使用者說「收集 feedback」或「看 PR review」時�
 1. 執行 `.claude/skills/collect-pr-feedback/SKILL.md` skill
 2. 收集 CI 狀態 + AI Code Review + Gemini Code Assist + 人類 reviewer 的 feedback
 3. 整理成總覽表格，分類為「必須修 / 建議修 / 可忽略」
-4. 詢問使用者要修正哪些
+4. AI 先查證 feedback，修正已授權範圍內可確定的問題並重驗；產品取捨、新增範圍或必要授權才交人決策
 5. 修正後走正常 commit → push 流程
+
+## 共用 AI 檢核與雙端入口
+
+需求到合併收尾均遵循 `docs/automation/ai-human-review-workflow.md`：AI 先查核、自審修訂，人審核成果與決策。完整入口表見 `docs/development-skills-and-workflow.md`；Claude 使用 `.claude/skills/`，Codex 同名 `.codex/skills/` 入口引用完整規則。工具及 hooks 必須以當前客戶端實際能力核對，不假稱自動執行。
