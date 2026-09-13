@@ -1,12 +1,6 @@
 name: Spec Audit Pack Regression
 on:
   pull_request:
-    paths:
-      - 'scripts/build-spec-audit.py'
-      - 'scripts/__tests__/test_spec_audit.py'
-      - '.github/workflows/spec-audit-regression.yml'
-      - '.claude/skills/dev-task/**'
-      - 'REVIEW.md'
   workflow_dispatch:
 permissions:
   contents: read

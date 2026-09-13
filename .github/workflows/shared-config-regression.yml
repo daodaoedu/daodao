@@ -2,12 +2,6 @@ name: Shared Config Regression
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/branch-base-check.yml'
-      - '.github/workflows/sync-claude-config.yml'
-      - '.github/workflows/shared-config-regression.yml'
-      - '.github/scripts/test-sync-claude-config-contract.sh'
-      - '.github/scripts/__tests__/*.test.cjs'
   workflow_dispatch:
 
 permissions:
@@ -23,6 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check required workflow triggers
+        run: |
+          python3 -m pip install PyYAML==6.0.2
+          python3 -m unittest discover -s scripts/__tests__ -p 'test_required_workflow_triggers.py' -v
+          python3 -m unittest discover -s scripts/__tests__ -p 'test_collect_gate_protection.py' -v
       - name: Check shared workflow contracts
         run: |
           node --test .github/scripts/__tests__/*.test.cjs
