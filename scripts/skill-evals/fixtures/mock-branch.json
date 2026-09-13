@@ -1,0 +1,39 @@
+{
+  "id": "mock-branch",
+  "prompt": "根據 prototype 分支與既有 FRD 整理 PRD 草稿。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "branch-local-storage",
+      "status": "observed",
+      "evidence": "prototype/app.ts:1"
+    },
+    {
+      "id": "production-persistence",
+      "status": "unknown",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [
+    "lighthouse:FR-ORG-01",
+    "lighthouse:TP-ORG-01"
+  ],
+  "required_claims": [
+    "branch-local-storage",
+    "production-persistence"
+  ],
+  "required_unresolved": [
+    "persistence-contract"
+  ],
+  "context": {
+    "prototype/app.ts": "localStorage.setItem(\"favorites\", JSON.stringify(items));",
+    "notes": "No deployment or runtime reproduction evidence supplied. Inspect available context; preserve unknowns.",
+    "existing-frd.md": "FR-ORG-01: organization favorites; TP-ORG-01: favorites can be found again. Document identity: lighthouse. Persistence contract not decided."
+  }
+}

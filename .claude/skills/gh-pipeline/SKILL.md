@@ -1,7 +1,10 @@
 ---
 name: gh-pipeline
-description: daodao Board→Issue→Plan→PR 自動化 pipeline 的 routine 行為規範（GitHub Projects 版）。Use when running Routine A/B/C, dispatching a central issue, implementing an auto issue, opening a pipeline PR, or writing pipeline comments. Triggered by keywords: routine, pipeline, auto issue, dispatch, board sync, handler, agentic phase. 取代已退役的 notion-pipeline。
+description: 查核並操作島島阿學 Board、Issue、PR 自動化 pipeline，適用 Routine A／B／C、dispatch 與 runner 除錯。
 ---
+
+先讀 [AI 檢核與人工審核共用流程](../../../docs/automation/ai-human-review-workflow.md)，依當前客戶端可用工具執行；先完成適用檢核與修訂，再交人審核決策。
+
 
 # gh-pipeline
 
