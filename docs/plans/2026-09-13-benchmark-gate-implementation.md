@@ -1,5 +1,7 @@
 # Benchmark gate 實作追蹤
 
+> 最新跨 repo 續作（2026-09-13）：f2e Mobile、admin-ui、worker、ai-backend、storage、infra 均已有隔離實作及本機驗證，尚未提交本批變更。詳細報告：`worktrees/benchmark-cross-repo/daodao/docs/plans/2026-09-13-cross-repo-gate-evidence.md`。下方各節保留當時快照；前次將已修復的 f2e Web CI 誤列待辦，已由最新 remote 查核更正。
+
 本輪落地工程 gate，並依後續「commit push」授權提交及推送至兩個獨立分支；保留原 shared dirty tree，未部署。研究文的全空白測試盤點已過時，完成狀態以本次實查為準。
 
 ## 本輪範圍
