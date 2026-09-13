@@ -1,15 +1,6 @@
 name: Skill eval scorer regression (offline)
 on:
   pull_request:
-    paths:
-      - '.claude/skills/**'
-      - '.codex/skills/**'
-      - 'AGENTS.md'
-      - 'templates/development/**'
-      - 'scripts/skill-evals/**'
-      - 'scripts/__tests__/skill-evals*'
-      - 'scripts/__tests__/test_skill_*.py'
-      - '.github/workflows/skill-evals.yml'
   workflow_dispatch:
 permissions:
   contents: read
