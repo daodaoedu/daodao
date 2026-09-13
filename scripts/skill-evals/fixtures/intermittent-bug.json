@@ -1,0 +1,35 @@
+{
+  "id": "intermittent-bug",
+  "prompt": "昨天送出沒反應，今天正常，幫我整理草稿。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "reported-failure",
+      "status": "observed",
+      "evidence": "user-report"
+    },
+    {
+      "id": "reproduced-failure",
+      "status": "unknown",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [],
+  "required_claims": [
+    "reported-failure",
+    "reproduced-failure"
+  ],
+  "required_unresolved": [
+    "reproduction-condition"
+  ],
+  "context": {
+    "prototype/app.ts": "",
+    "notes": "No deployment or runtime reproduction evidence supplied. Inspect available context; preserve unknowns."
+  }
+}

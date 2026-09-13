@@ -26,53 +26,52 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 
 ## 3. 工具選擇
 
+**一律使用 `playwright` MCP**（`mcp__playwright__*`），不使用 `claude-in-chrome` MCP。
+
 | 用途 | 工具 |
 |---|---|
-| 互動操作、看真實登入狀態、讀 console | `claude-in-chrome` MCP（先 `tabs_context_mcp`，開新 tab，勿重用舊 tab id） |
-| 存證據截圖到檔案 | `playwright` MCP 的 `playwright_screenshot`（`savePng` 存到 `$TASK/evidence/`） |
+| 導航、互動操作 | `playwright_navigate`、`playwright_click`、`playwright_fill` |
+| 截圖（存檔 + 視覺確認） | `playwright_screenshot`（`savePng` 存到 `$TASK/evidence/`） |
+| 讀取頁面文字 | `playwright_get_visible_text` |
+| 注入 JS（設 cookie、量測尺寸） | `playwright_evaluate` |
+| 讀 console | `playwright_console_logs` |
 | 對照設計稿 | Figma MCP `get_screenshot`（task.md 的 Figma 連結） |
 
-claude-in-chrome 不可用時全程用 playwright。注意：不要觸發 alert/confirm 對話框（會卡住 session）。
+注意：不要觸發 alert/confirm 對話框（會卡住 session）。
 
-**多任務競爭瀏覽器時：多開，不要排隊等**
-
-playwright MCP 是共用單一瀏覽器實例——兩個 session 同時用會互相把頁面導走、狀態互踩。發現被佔用（頁面莫名跳走、操作對象不是自己開的頁）時**不要等別人用完**，直接開自己的：
-
-1. **claude-in-chrome**：本來就該各自開新 tab（`tabs_create_mcp`），tab 之間互不干擾，優先用這條
-2. **自己起獨立 Playwright**：worktree 裡寫一支驗證 script 用專案的 playwright devDependency（沒有就 `npx playwright`）跑 headless 截圖，瀏覽器實例完全屬於自己：
-   ```bash
-   cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
-     http://localhost:<port>/<path> ../evidence/<phase>-<checkpoint>.png
-   ```
-   互動流程就寫小段 script（page.goto → click → screenshot），存 `$TASK/verify/` 重複使用
-3. 驗證用的瀏覽器歸驗證用，跑完就關，不佔著
+**多任務競爭瀏覽器時**：playwright MCP 是共用單一瀏覽器實例——兩個 session 同時用會互踩。發現被佔用時，寫一支獨立 Playwright script 用 `npx playwright` 跑 headless 截圖：
+```bash
+cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
+  http://localhost:<port>/<path> ../evidence/<phase>-<checkpoint>.png
+```
 
 ## 3a. 登入牆處理（碰到「要登入才能看」時，先自己解，不要直接丟回給使用者）
 
-依序嘗試，走到哪一層記進 task.md 備註：
+**daodao 現成配方（優先走這條）**：
 
-1. **沿用既有登入態**：`claude-in-chrome` 開的是使用者真實 Chrome——先直接開目標頁，localhost 可能本來就有活著的 session
-2. **找 dev 用登入後門**：`rg -i "dev.*login|test.*login|bypass|impersonate" <server worktree>/src`——很多專案有 dev-only 登入 route 或環境變數開關
-3. **自己鑄一個 session**：讀 server 的 auth 實作（`rg -i "cookie|session|jwt|token" src/`）搞清楚 session 機制，然後：
-   - session 存 DB → 用 `daodao-pg-dev` MCP 查一個測試使用者（沒有就依 idempotent SQL 原則 seed 一個），照 server 的寫法插一筆 session row
-   - JWT/簽名 cookie → 用 worktree `.env` 裡的 secret 照 server 的簽法鑄 token
-   - 再把 cookie 注入瀏覽器：playwright 直接設；claude-in-chrome 用 `javascript_tool` 寫 `document.cookie`（HttpOnly cookie 則改用 playwright）
-4. **直接打 auth API**：若有帳密/魔術連結等非 OAuth 途徑，curl 走完流程拿 Set-Cookie 再注入
-5. **以上全部不通**（純 OAuth、無後門、session 機制碰不了）才請使用者手動登入一次——並在 task.md 記「建議：server 加 dev-only 登入 route」讓下次不再卡
+1. **讀取 JWT**：`~/.claude/projects/-Users-xiaoxu-Projects-daodao/dev-jwt.txt`（使用者預存的 JWT，過期時請使用者更新）
+2. **確保 API 可達**：
+   - 本地 server 在跑（`curl -s localhost:4000/api/v1/challenges`）→ 直接用
+   - 沒跑 → 起 CORS 反向代理（見 memory `feedback-dev-login-jwt`），確認 `.env.local` 的 `NEXT_PUBLIC_API_URL=http://localhost:4000`
+3. **注入 auth 狀態**（用 `playwright_evaluate`，cookie 名稱是 `auth_token`）：
+   ```js
+   document.cookie = 'auth_token=<JWT>;path=/;max-age=86400';
+   localStorage.setItem('_userinfo', JSON.stringify({
+     id:"<users.external_id>", customId:null,
+     email:"<email>", name:"<name>", photoUrl:null,
+     roles:["SuperAdmin",...], permissions:[]
+   }));
+   ```
+   先在公開頁（如 `/zh-TW/challenges`）設定，再導航到需要登入的頁面。
 
-原則：**「無法替你操作 OAuth」不是終點**——OAuth 只是取得 session 的其中一條路，工程師有 DB 和 secret，永遠有別條路。
+**跨域注意**：f2e API client 用 `credentials: "include"`，cookie 必須跟 API 同域。本地 server（localhost:4000）天然同域沒問題；連 server-dev.daodao.so 時**必須**透過本地代理，不能直連——瀏覽器不會把 localhost cookie 帶給不同域的 API。
 
-**daodao 現成配方（2026-08 實測，走的是第 3 層）**：server 的 login/register 是 Google-only，web 端 auth 是 HttpOnly cookie `auth_token`（`src/utils/cookie-config.ts`），payload 見 `auth.controller.ts` 的 `jwtService.generateToken(payload)`。在 server worktree：
+**其他專案的通用步驟**（daodao 配方不適用時）：
 
-```bash
-OUT=$TASK/.auth_token node -e '
-const fs=require("fs"),jwt=require("jsonwebtoken");
-const env=Object.fromEntries(fs.readFileSync(".env","utf8").split("\n").filter(l=>/^[A-Z_]+=/.test(l)).map(l=>{const i=l.indexOf("=");return[l.slice(0,i),l.slice(i+1)]}));
-fs.writeFileSync(process.env.OUT, jwt.sign({id:2,_id:"<users.external_id>",username:"小許",isTemp:false,roles:[],permissions:[]}, env.JWT_SECRET, {expiresIn:"12h"}));'
-curl -s --cookie "auth_token=$(cat $TASK/.auth_token)" http://localhost:4000/api/v1/auth/me   # 應回 success:true
-```
-
-Playwright：`context.addCookies([{ name:"auth_token", value, domain:"localhost", path:"/", httpOnly:true }])`（`@playwright/test` 在 f2e apps/product 的 node_modules 裡，`node script.mjs` 直接 import `chromium` 即可）。使用者 id 2 是 dev DB 裡使用者本人的帳號。
+1. 找 dev 登入後門：`rg -i "dev.*login|test.*login|bypass|impersonate" <server>/src`
+2. 自己鑄 session：讀 auth 實作，用 `.env` 裡的 secret 簽 JWT，用 `playwright_evaluate` 注入 cookie
+3. 直接打 auth API：curl 走非 OAuth 途徑拿 Set-Cookie
+4. 以上全部不通才請使用者手動登入
 
 ## 4. 驗證迴圈
 
@@ -80,11 +79,17 @@ Playwright：`context.addCookies([{ name:"auth_token", value, domain:"localhost"
 
 1. 操作 → 觀察結果
 2. 截圖存 `$TASK/evidence/<phase>-<checkpoint>.png`
-3. 與 POC / Figma 比對（版面、間距、狀態）
+3. 與 POC / Figma 比對（版面、間距、狀態）——完整流程見 [poc-compare.md](poc-compare.md)（起 POC server、並排截圖、量測差異表、寫進驗證報告）。**涉及 padding / margin / gap / 寬高 / 對齊時，一律用量測數字比對，不能只憑截圖肉眼判斷**（人眼看螢幕截圖對這類數值極不可靠，尤其有 DPI 縮放或多螢幕環境時）。做法：先把 POC 逐項讀過列成清單（元素、間距值），不要事後憑印象回想；用 `javascript_tool` 對實作頁面注入 probe 讀 `getComputedStyle` 與 `getBoundingClientRect()`，能起本地 server 開 POC 檔案的話（`python3 -m http.server` 起 POC 所在資料夾，`file://` 常被瀏覽器擴充功能擋掉）就對 POC 也跑一次同樣的 probe，兩邊數字對不上才算沒過：
+   ```js
+   const el = document.querySelector('<selector>');
+   const cs = getComputedStyle(el);
+   JSON.stringify({ padding: cs.padding, gap: cs.gap, width: cs.width, rect: el.getBoundingClientRect() });
+   ```
+   截圖仍要留（存 evidence/）當證據，但**量測數字才是判斷依據**，不是截圖本身。
 4. 讀 console（`read_console_messages`，用 pattern 過濾）確認無新 error
 5. 記入 task.md「驗證」區塊：✅/❌ + 截圖檔名 + 備註
 
-**失敗**：修復 → 只重驗該項。同一項修 2 次仍失敗 → 停下來，把現象（截圖 + console + 重現步驟）整理給使用者判斷。
+**失敗**：修復 → 只重驗該項。同一項修 2 次仍失敗 → 停下來，把現象（截圖 + console + 重現步驟）整理給使用者判斷。同一類問題被使用者連續指正兩次以上，代表驗證方法本身有問題（通常是又用了肉眼截圖比對），不是再找一個漏網之魚就好——這是換成量測方法的訊號。
 
 ## 5. 純後端任務的替代驗證
 

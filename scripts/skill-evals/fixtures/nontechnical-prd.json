@@ -1,0 +1,35 @@
+{
+  "id": "nontechnical-prd",
+  "prompt": "希望收藏活動，回來後還能找到。只產草稿。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "current-favorites",
+      "status": "unknown",
+      "evidence": ""
+    },
+    {
+      "id": "persistent-favorites",
+      "status": "proposed",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [],
+  "required_claims": [
+    "current-favorites",
+    "persistent-favorites"
+  ],
+  "required_unresolved": [
+    "retention-scope"
+  ],
+  "context": {
+    "prototype/app.ts": "",
+    "notes": "No deployment or runtime reproduction evidence supplied. Inspect available context; preserve unknowns."
+  }
+}
