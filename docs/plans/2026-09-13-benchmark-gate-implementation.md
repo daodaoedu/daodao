@@ -1,6 +1,28 @@
 # Benchmark gate 實作追蹤
 
-> 最新跨 repo 續作（2026-09-13）：f2e Mobile、admin-ui、worker、ai-backend、storage、infra 均已有隔離實作及本機驗證，尚未提交本批變更。詳細報告：`worktrees/benchmark-cross-repo/daodao/docs/plans/2026-09-13-cross-repo-gate-evidence.md`。下方各節保留當時快照；前次將已修復的 f2e Web CI 誤列待辦，已由最新 remote 查核更正。
+> 最新核對（2026-09-13 UTC）：root #194／#195／#196、server #470／#472，以及其餘六個 repo 的 gate PR 均已合併，適用工程 CI 通過。下方明確標記的歷史快照不是目前發布狀態。詳細報告：[跨 repo 合併與驗證](2026-09-13-cross-repo-gate-evidence.md)。前次將已修復的 f2e Web CI 誤列待辦，已更正。
+
+## 目前狀態
+
+- Root [#194](https://github.com/daodaoedu/daodao/pull/194)、[#195](https://github.com/daodaoedu/daodao/pull/195)、[#196](https://github.com/daodaoedu/daodao/pull/196) 已合併；pack／scorer／integrity 的適用 checks 通過。Merge commits 分別為 `ffbf781b7b392fa36ca4ffe1148124e7122391a2`、`2068dd5be7cc680ba6494663638a4bb777e430aa`、`8875e20f88701d707e518a4ef22e48e6b135b7b6`。
+- Server [#470](https://github.com/daodaoedu/daodao-server/pull/470)、[#472](https://github.com/daodaoedu/daodao-server/pull/472) 已合併；test／workflow-tests／schema drift 通過。Merge commits 分別為 `d23a33d686ec0aa687ce2a8125b7b49af7060041`、`798795ec27573cfec5e2db0ef86b1dcd8f40be5f`。
+- #194／#470 的 AI Code Review 為 SKIPPED，不算 review 已執行；後續 #195／#472 為 SUCCESS。這些是 PR head 的檢查結果，不是現在所有 repo 的全量重驗或部署證據。
+- Claude／Codex native trace adapter 及離線 CI 已完成；隔離客戶端讀取 skill 與 Claude Write hook 阻擋已有證據。完整模型 baseline 仍未完成，Claude exact fixture 目前僅 1/4 案例、0/1 通過。
+- 六個 repo 的測試／CI 接入與 Infra 分支規則修正均已合併；新 benchmark checks 的遠端強制效果尚未驗收。既有 admin review、AI Format & Lint、storage PostgreSQL CI Test rulesets 仍存在，不能說所有保護均未啟用。
+
+## 待辦清單（目前）
+
+- [ ] 補齊新 benchmark required checks，保留既有保護，並用失敗 head 驗證無法合併。
+- [ ] 完整 Claude／Codex 需求、bug、開發與入口自動載入驗收；建立模型行為 baseline 與真正的行為回歸 CI。
+- [ ] 擴充 server 兩端點／15 tests 以外的 response contract、隱私與業務規則測試。
+- [ ] 擴充 storage 整條 migration chain 及 runner 的 migration_history／skip／checksum；目前只驗 migration 016 SQL。
+- [ ] 建立 PR feedback 自動修正迴圈，包含隔離執行、授權、重試上限、驗證證據及人工接手。
+- [ ] 建立監控異常去重、需求／bug 開卡、修復與部署驗收回饋流程。
+- [ ] 按產品範圍取得正式部署、真實 provider、目標客戶端與實際可用性證據。
+
+## 初輪歷史快照
+
+以下保留當時本機驗證與發布順序；「尚未」「未完成」等敘述僅描述該輪時間點，最新狀態及待辦以上方為準。
 
 本輪落地工程 gate，並依後續「commit push」授權提交及推送至兩個獨立分支；保留原 shared dirty tree，未部署。研究文的全空白測試盤點已過時，完成狀態以本次實查為準。
 
@@ -46,7 +68,7 @@
 
 提交前已做獨立審查，修正 scorer 對 trace 提問數的漏判並重驗。Server 全量 lint 通過（既有 warnings）、typecheck 與 5 項契約測試通過。此次操作未建立 PR 或合併；原工作區其他修改及子模組指標未納入提交。
 
-## 待辦清單（依建議順序）
+## 初輪待辦快照（非目前狀態）
 
 - [ ] 為 root／server 分支開 PR，執行適用遠端 CI、處理結果後依授權合併。
 - [ ] Claude／Codex 真實試跑需求、bug、開發驗收；確認入口載入、交接與 Claude hook 觸發。
@@ -58,7 +80,7 @@
 
 本次文件回填是上述已推送 commit 之後的本機更新，尚未另行提交或推送。
 
-## 續作更新（2026-09-13）
+## 續作歷史快照（2026-09-13，發布前）
 
 - [x] 已建立 root [PR #194](https://github.com/daodaoedu/daodao/pull/194) 與 server [PR #470](https://github.com/daodaoedu/daodao-server/pull/470)，兩者仍為 draft。
 - [x] 已推送 head 的適用遠端 CI 通過：root pack／scorer／integrity；server full test／workflow tests／schema drift。AI review 因 draft 跳過，沒有合併。
