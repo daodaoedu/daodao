@@ -1,66 +1,17 @@
-# Skill: notify-related-issue
+---
+name: notify-related-issue
+description: 依實際 PR 與驗收狀態草擬關聯 Issue 更新，僅在明確授權留言或關閉時發布並回讀。
+---
 
-手動 PR 關聯 issue 留言（對應 `daodao-f2e#945 → daodao#164` 場景）。解析 PR body 的 `Closes` / `daodaoedu/daodao#xx`，預覽後 `gh issue comment`，可選同時 close。
+# 更新關聯 Issue
 
-## 何時用
-- 手動 `git push` 後想在關聯 issue（如 `daodao#164`）回「已送 PR」或「已合併」
-- 不想等 `related-issue-notify.yml` 的 merge 觸發，想先手動通知
+先讀 [共用交接規則](../../../docs/automation/ai-human-review-workflow.md)。接受 PR URL／編號或當前分支，支援僅草稿；不得把一般開發授權當成發送留言的授權。
 
-## 用法
-```
-/notify-related-issue 945
-/notify-related-issue 945 --dry-run
-/notify-related-issue 945 --close --body "自訂文案"
-```
+1. 使用 `gh pr view` 取得真實 repo、URL、body、state、mergedAt、baseRefName、headRefOid。從 body 與已知任務記錄解析完整 owner/repo#number，短 `#N` 屬於 PR 所在 repo，不能一律轉成中央 repo。
+2. 讀取關聯 Issue 及既有 comments、父子關係、驗收報告。AI 比對是否同一需求、跨 repo 是否完成、是否已有相同版本／狀態通知；不要因 PR 合併就稱整體驗收完成。
+3. 起草繁體中文通知，列 PR URL、實際狀態、受驗版本、已確認結果與未驗證／未完成項。AI 先自審修訂，再展示目的 Issue 與具體 body。使用 [狀態模板](../../../templates/development/issue-status-comment.md) 的適用欄位，不捏造報告或部署證據。
+4. 僅在明確授權留言時使用 structured tool 或 `gh issue comment --repo <verified-repo> <number> --body-file <file>`。參數正確 shell quoting；body 保存真實換行。已有授權不再重問，dry-run 只存草稿。
+5. 回讀留言 URL 與內容。timeout 先查最新 comments，結果未知保留待查狀態；不得重送相同通知。部分成功保存已完成 URL，只補未完成目標。
+6. 關閉 Issue 需明確授權且符合該卡 Done 條件；子 PR 合併不自動關閉仍有跨 repo 或驗收缺口的中央卡。關閉後回讀狀態。更新 Board 也需在授權範圍內。
 
-## 步驟
-1. 解析 PR 關聯 issue
-   ```bash
-   PR=945
-   gh pr view $PR --json body --jq '.body' | grep -oE 'daodaoedu/daodao#[0-9]+|Closes #[0-9]+' | grep -oE '[0-9]+' | sort -u
-   ```
-   無匹配 → 提示請在 PR body 補 `Closes daodaoedu/daodao#164`
-
-2. 預覽
-   ```bash
-   REPO=daodao-f2e
-   SHA=$(git rev-parse --short HEAD)
-   echo "將留言到：daodao#164"
-   echo "文案：已修正（${REPO}#${PR} 已送審，commit ${SHA}）。"
-   ```
-
-3. 執行（需確認）
-   ```bash
-   for n in $ISSUES; do
-     gh issue comment $n --repo daodaoedu/daodao --body "已修正（daodao-f2e#${PR} 已送審，commit ${SHA}）。PR: https://github.com/daodaoedu/daodao-f2e/pull/${PR}"
-     # --close 時
-     # gh issue close $n --repo daodaoedu/daodao
-   done
-   ```
-
-4. 驗證
-   ```bash
-   gh issue view 164 --repo daodaoedu/daodao --json comments --jq '.comments[-1].body'
-   ```
-
-## 參數
-- `PR`：`daodao-f2e` 的 PR number（預設取當前分支 `gh pr view --json number`）
-- `--dry-run`：只印解析結果與文案，不發 `gh issue comment`
-- `--close`：留言後同時 `gh issue close`
-- `--body`：覆蓋預設文案
-- `--repo`：中央 repo，預設 `daodaoedu/daodao`
-
-## 權限
-- 本機需 `gh auth login`（`gh auth status`），`--repo daodaoedu/daodao` 需有 `issues:write`
-- 無需 Actions `GIT_HUB_ACCESS_TOKEN`，適合手動 PR
-
-## 與自動化的關係
-- 此 skill 為 **B（手動）**；對應 **A（合併自動）** 為 `.github/workflows/related-issue-notify.yml`（`on: pull_request: closed: merged` 同款正則，自動 `gh issue comment`）
-- 建議先用本 skill 試跑 `daodao#165`，確認文案後再升為 A
-
-## 範例
-```bash
-# 945 → 164，已在 PR body 含 Closes daodaoedu/daodao#164
-/notify-related-issue 945
-# 輸出：將留言到：164 → y → https://github.com/daodaoedu/daodao/issues/164#issuecomment-xxx
-```
+回報各目標的草稿或留言 URL、實際 Issue 狀態及未完成事項。原命令式 `--dry-run`／`--close`／`--body` 只表示使用者意圖，不宣稱本 skill 有可執行 CLI parser。

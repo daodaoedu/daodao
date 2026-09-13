@@ -1,106 +1,94 @@
 ---
 name: gh-card
-description: 在 daodaoedu/daodao 建立中央 feature issue 並掛上 org Planning board。Use when user says "開卡"、"開一張卡"、"新增任務"、"開 feature issue"、"記到 board"、"create card"。從對話或報告自動推斷欄位，互動確認後建立。取代已退役的 notion-card。
+description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片或指定子 Issue，套用共用模板與驗收欄位。使用於「開 issue」「開卡」「新增任務」「create issue」。Bug 通報轉 file-bug-issue；詢問或修改 skill 本身不建立遠端 Issue。
 ---
+
+先讀 [AI 檢核與人工審核共用流程](../../../docs/automation/ai-human-review-workflow.md)，依當前客戶端可用工具執行；先完成適用檢核與修訂，再交人審核決策。
+
 
 # gh-card
 
-在中央 repo `daodaoedu/daodao` 建立 feature issue，掛上 org Project「Planning」board。
+中央需求預設開在 `daodaoedu/daodao`，掛 [Planning board](https://github.com/orgs/daodaoedu/projects/10)（owner `daodaoedu`、number `10`）。使用者指定 repo 或只要草稿時依其範圍處理，不擅自建立中央卡或額外子卡。
 
-**Board**: https://github.com/orgs/daodaoedu/projects/10（project number `10`，owner `daodaoedu`）
+## 選入口與模板
 
-## 常數（board IDs）
+從本 SKILL 所在位置向上三層定位 daodao root，不依目前 shell cwd 猜 repo。
 
-| 項目 | 值 |
-|------|-----|
-| Project ID | `PVT_kwDOBTLl0c4Bgxef` |
-| Status field | `PVTSSF_lADOBTLl0c4Bgxefzhfvwto` |
-| Status: Todo | `f75ad846` |
-| Status: In Progress | `47fc9ee4` |
-| Status: Ready for Dev | `c9e0e5d5` |
-| Status: Done | `98236657` |
+- 中央 feature／工作卡：讀 [模板規則](../../../templates/development/README.md)與 [central-issue.md](../../../templates/development/central-issue.md)。
+- 明確要求拆子 Issue：另外讀 [subtask-issue.md](../../../templates/development/subtask-issue.md)，引用中央 AC；保留獨立行 `Parent: daodaoedu/daodao#N`。中央尚未建立時先存子卡草稿，取得實際號碼後再發布。
+- Bug／CI 錯誤通報：讀 [file-bug-issue](../file-bug-issue/SKILL.md)，保留錯誤原文與重現步驟。
+- 只問「有哪些模板／skill」：說明入口即可。只要 skill 修改或流程規劃：不建立 Issue。
 
----
+不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位；現行自動 mirror 格式以 `bin/pipeline/lib.ts` 為準。這個 skill 不取代 Routine A 的 dispatch，也不實作 reporter、lease 或新 merge gates。
 
-## 執行步驟
+## 1. 整理可開卡內容
 
-### Step 1：從 context 推斷欄位
+從對話、已讀文件與程式碼推斷 title、scope、repos、模式與以下欄位（repo 與工程資訊由工具辨認，不讓提出者填表）：
 
-從當前對話、報告、或使用者描述中自動推斷：
+- 目標、包含／不包含、穩定需求／驗收 ID 與前提、操作、預期結果（沿用 FR／TP／AC，多文件重複 ID 加文件 ID）。
+- PRD／既有 FRD、Issue 決策、POC、分支／PR、OpenSpec 或 AC snapshot 的連結與已知版本。
+- UI 截圖／POC 比對、真實 API 回讀／reload、語系、migration 等適用驗收要求。
+- 測試角色／環境、跨 repo 相依與 Done 定義。
 
-- **Title**：feature 名稱（中文為主，跟 board 上既有卡片同風格，如「實踐建立流程優化」）
-- **Body**：依 body 模板（見下）
-- **Status**：預設 `Todo`（安全；`Ready for Dev` 才會被 Routine A 撿走）
-- **Target repo(s)**：提到了哪些 sub-repo → `repo:<name>` label
-- **Scope**：根據複雜度估計 → `scope:XS|S|M|L` label
-- **Auto mode**：預設 plan-only（不用掛 label）；要全自動開 PR 掛 `auto:auto-pr`；不想被 pipeline 碰掛 `human-driving`
+新產品需求依 [prd-generation](../prd-generation/SKILL.md) 查核、起草及確認；已讀且確認的規格直接引用，不重做 PRD 或另產 FRD。先展示白話需求摘要，工程欄位放交接附錄；不要求填負責人表，指派沿用 GitHub Assignees。分支來源與目標實作版本分開記錄，不把 mock 當正式功能。需要讀 Google 文件時使用可用的 Google Drive skill／connector；僅有連結不代表已讀取內容。
 
-### Step 2：互動確認
+依模板產出完整 Markdown 到任務的 `notes/issue-drafts/`；沒有任務目錄時使用 root `.omc/plans/issue-drafts/`。使用不覆蓋現有檔案的名稱。存 title、target repo、labels、預定 Board status 與 body，發布結果另記同目錄。
 
-展示推斷結果，使用者可直接接受或修改：
+開卡與開工分開：
 
-```
-📋 新增卡片到 Planning board
+- 初始 Todo 可保留需求缺項，逐項填「待確認：原因／下一步」；不要因尚無 run、SHA、報告或預算觀測而拒絕建立需求卡。
+- 執行後才會產生的欄位填「尚未開始／尚未產生」；不能捏造 digest、quota、證據或完成狀態。
+- Ready 必須有可驗收目標、repo、所需需求／POC 基準與規格；純後端 POC 可 N/A 附理由。
+- 已有 OpenSpec 用獨立一行 `OpenSpec: <slug>`；沒有就刪除該行，不能填 `OpenSpec: n/a` 或保留 placeholder。S 人工可用 AC；自動化仍需有效 `tasks.md` 與未完成 task。
+- 預設 Status=`Todo`；人工作業加 `human-driving`。Scope 依實際複雜度判斷，不把所有工作一律當 M。
+- 自動化 plan-only／auto-pr 只在使用者要求時設定；storage／infra 維持 plan-only。
+- 憑證不可放 body；Google 文件／Drive 不因開卡而自動建立或公開分享。
 
-Title:        {推斷值}
-Status:       Todo ← 預設（改 "Ready for Dev" 才會進 pipeline）
-Labels:       {scope:M, repo:daodao-f2e, ...}
-Auto:         plan-only ← 預設（Ready for Dev 即派工）；auto:auto-pr = 全自動開 PR；human-driving = 退出 pipeline
-Body:         {摘要}
-```
+## 2. 唯讀 preflight 與授權
 
-### Step 3：建立 issue + 掛 board
+發布前查實際 repo、既有相關 Issues（含已關閉）與 label；相同中央卡／子任務已存在時回報或更新已授權的目標，不重複建立。
+
+Board ID、Status field／option IDs 由 live 查詢取得，不硬編碼舊值：
 
 ```bash
-# 1. 開中央 issue
-gh issue create -R daodaoedu/daodao --title "<title>" --body-file <body.md> \
-  --label "scope:M" --label "repo:daodao-f2e"   # 依確認結果
+gh repo view daodaoedu/daodao --json nameWithOwner
+gh label list --repo daodaoedu/daodao --limit 100
+gh project view 10 --owner daodaoedu --format json
+gh project field-list 10 --owner daodaoedu --format json
+```
 
-# 2. 掛上 board（回傳 item-id 供第 3 步用）
+展示具體 title、repo、labels、status、body 或本機草稿連結。若使用者已明確授權建立該範圍，沿用授權，不再多問一次；只有草擬／規劃授權時先保留草稿，尚未授權就不發布。缺少會改變目標的資訊才補問。
+
+設定 `Ready for Dev` 是啟動開發的操作，需要使用者原本就要求啟動，不能從「幫我開 issue」推論。檢查當下 `bin/pipeline/dispatch.ts`、`lib.ts`、workflow 與 pause/既有 dispatch 狀態；只在規格 gate 通過後才設 Ready。
+
+**現況落差（2026-09-12 local）**：文件規劃 `auto + Ready for Dev` 雙 gate，但當下 `dispatch.ts` 未檢查中央 `auto` label。不要把缺少 `auto` 當成不派工保證；未準備好維持 Todo，人工任務加 human-driving。不要承諾固定一小時內執行，應以實際 workflow／runner 為準。
+
+## 3. 發布與回讀
+
+使用 structured tool 參數或 `gh --body-file`，body 檔需真實換行；title/path/labels 當參數處理並正確 shell quoting，不把需求文字拼入 shell 程式。
+
+```text
+gh issue create --repo <已驗證 repo> --title <title> --body-file <body.md> --label <既有 label>
 gh project item-add 10 --owner daodaoedu --url <issue-url> --format json
-
-# 3. 設 Status（非 Todo 時才需要；Todo 可省略，新 item 預設無 Status，建議一律設定）
-gh project item-edit --project-id PVT_kwDOBTLl0c4Bgxef --id <item-id> \
-  --field-id PVTSSF_lADOBTLl0c4Bgxefzhfvwto --single-select-option-id f75ad846
+gh project item-edit --project-id <live project-id> --id <item-id> --field-id <live status-field-id> --single-select-option-id <live option-id>
+gh issue view <issue-url> --json number,url,title,body,labels,state
 ```
 
-### Step 4：回報
+範例是參數形狀，執行時替換已驗證值。預設明確設 Todo；使用者要求自動化時先完成 body／labels／規格檢查，最後才設 Ready。缺 label 不忽略錯誤；確認命名與權限後依已授權開卡範圍補建。
 
-- Issue URL + board 連結
-- 若 Status=`Ready for Dev`（且無 `human-driving`）→ 提示「下次 Routine A 執行時（最慢 1 小時）會自動 dispatch 到 sub-repo」
-- 若無 OpenSpec（issue body 沒有 `OpenSpec: <slug>` 註記，或 `openspec/changes/<slug>/tasks.md` 不存在／無未完成 task）→ 提示「改 Ready for Dev 後 Routine A 會標 `needs-spec`；只有 Acceptance Criteria 不夠，要進 pipeline 請先跑 `openspec-ff-change` 產最小 spec。人工開發（`human-driving` + `/dev-task`）則 AC 即可」
+Issue 建立成功但掛 Board／回填失敗：保存 URL、item ID 與待補步驟，僅重試未完成部分。建立請求 timeout 結果未知時先查是否已建立，再決定重送，避免重複卡。
 
----
+取得號碼後回填模板的自身 ref／中央 Parent；子卡建立也更新已授權中央卡的索引。回讀 body、labels 與 Board status，不能只看 create 的 exit code。
 
-## Body 模板
+## 4. 回報
 
-```markdown
-## Description
+回報 Issue URL、Board／實際狀態、模式、缺項與下一步；若部分失敗，清楚區分「Issue 已建立」與「Board 尚未同步」。
 
-{功能描述，2-5 句}
+預告交付欄位依 [issue-status-comment.md](../../../templates/development/issue-status-comment.md)：PR、驗收報告、截圖、API／POC 結果、未完成範圍。自動回寫器未部署時明講需由開發流程 finish 執行，開卡不代表已有全自動開發能力。
 
-## References
+## 呼叫例子
 
-- FRD: {Google Docs 連結，若有}
-- POC / 設計稿: {連結，若有}
-- OpenSpec: `openspec/changes/{slug}/`（若已有 spec，**必填**，Routine A 以此判斷 spec gate）
-
-## Acceptance Criteria
-
-- {條件 1}
-- {條件 2}
-```
-
----
-
-## 快速模式
-
-使用者一次給齊資訊（e.g.「開一張 S 卡，修 daodao-f2e 的 XXX，直接 ready for dev + auto-pr」）→ 填好欄位只確認一次。
-
-## 注意
-
-- Status 預設 `Todo`（安全），避免意外觸發 dispatch
-- Scope 預設 `M`（保守）
-- Auto mode 預設 plan-only；**Ready for Dev 即派工，掛 `human-driving` 的卡 Routine A 永遠不碰**
-- 高風險 repo（`daodao-storage`、`daodao-infra`）：建立時提示「此 repo 為高風險，pipeline 強制 plan-only」
-- Priority field 目前沒有 options，暫不設定
+- 「用 gh-card 根據這份 Google Doc 開需求 Issue，先放 Todo。」
+- 「用 gh-card 開一張本機開發卡，附 POC、AC 與後端串接驗收要求。」
+- 「用 gh-card 將中央 #N 拆成 server／f2e 子 Issue，沿用 AC。」
+- 「用 gh-card 只產生草稿，不發布。」

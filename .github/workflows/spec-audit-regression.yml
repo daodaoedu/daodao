@@ -1,0 +1,23 @@
+name: Spec Audit Pack Regression
+on:
+  pull_request:
+    paths:
+      - 'scripts/build-spec-audit.py'
+      - 'scripts/__tests__/test_spec_audit.py'
+      - '.github/workflows/spec-audit-regression.yml'
+      - '.claude/skills/dev-task/**'
+      - 'REVIEW.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pack-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s scripts/__tests__ -p 'test_spec_audit.py'

@@ -1,116 +1,17 @@
 ---
 name: publish-tasks
-description: Publish uncompleted OpenSpec tasks as GitHub issues with 'auto' label for remote agent automation. Use when the user wants to push tasks to GitHub for automated implementation.
-license: MIT
-metadata:
-  author: xiaoxu
-  version: "1.0"
+description: 將已確認開發計畫的未完成任務整理成 GitHub 子 Issue，先檢核與預覽，再依授權發布；自動派工需另驗證 pipeline 相容性。
 ---
 
-Publish uncompleted OpenSpec tasks as GitHub issues with the `auto` label, so remote agents can pick them up and implement automatically.
+# 發布開發任務
 
-**Input**: Optionally specify a change name and target repo URL. If omitted, prompt the user.
+先讀 [共用交接規則](../../../docs/automation/ai-human-review-workflow.md)。此流程用於已要求批次發布任務；單一需求卡使用 [gh-card](../gh-card/SKILL.md)。
 
-**Steps**
+1. 讀取指定計畫、PRD／既有 FRD、Issue 決策與必要技術設計；已有 OpenSpec 則讀其 tasks／proposal／design／specs，不要求為發布另建 OpenSpec。從來源自行辨認任務與目標 repo；多個候選且無法判斷時問任務範圍，不要求提出者先懂 repo。
+2. 只選未完成任務，按可獨立交付範圍、相依及子專案分組，沿用原任務與 FR／TP／AC ID。驗收引用具體行為，不能以「全部勾選／測試通過」取代產品驗收。
+3. AI 查核任務是否漏掉需求、重複或相互矛盾，檢查依賴、版本、repo 存取與 open／closed 重複卡；先修正可查明問題，產品取捨列待決策。規格不完整仍可依要求草擬 Todo，不啟動開發。
+4. 以 [子 Issue 模板](../../../templates/development/subtask-issue.md) 保存不覆蓋的本機草稿，附標題、repo、父卡、labels、status、原任務對照及檢核摘要。遠端 body 包含足夠上下文，不能只引用本機檔案。
+5. 依 [gh-card](../gh-card/SKILL.md) 的 preflight、授權、發布與回讀段落執行，不重新進入入口分流。已有授權直接處理範圍內任務；只有規劃授權就交草稿。逐張保存結果；建立 timeout 先查重，部分成功只補未完成操作。缺 label 不吞錯誤。
+6. 要求自動化時，先讀 [gh-pipeline](../gh-pipeline/SKILL.md) 並核對當下 parser、tasks 格式與 runner，輸出相容性結果；`auto`／Ready 可能觸發實作，僅在已授權啟動且條件滿足後設定。無相容 runner 時提供 Todo 草稿或已授權人工卡，不聲稱自動派工成功。
 
-1. **Select the change**
-
-   If a name is provided, use it. Otherwise:
-   - Run `openspec list --json` to get available changes
-   - Auto-select if only one active change exists
-   - If ambiguous, use **AskUserQuestion** to let the user select
-
-   Announce: "Publishing tasks from change: <name>"
-
-2. **Get target repo**
-
-   Ask the user which GitHub repo to publish to (e.g., `daodaoedu/daodao-server`).
-   Validate with `gh repo view <repo> --json name` to confirm access.
-
-3. **Ensure `auto` label exists**
-
-   ```bash
-   gh label create auto --repo <repo> --description "Auto-implementable by AI agent" --color 0E8A16 2>/dev/null || true
-   ```
-
-4. **Read tasks and context**
-
-   Read these files from `openspec/changes/<name>/`:
-   - `tasks.md` — the task list
-   - `proposal.md` — for context (Why, What Changes)
-   - `design.md` — for technical decisions (if exists)
-   - `specs/` — for detailed requirements (if exists)
-
-   Parse `tasks.md` to find all **uncompleted** tasks (lines matching `- [ ]`).
-
-5. **Group tasks into issues**
-
-   Group related tasks into logical issues. Rules:
-   - Tasks under the same `## section` header that target the same subproject should be ONE issue
-   - Each issue should be 2-8 hours of work (combine small tasks, split huge ones)
-   - Keep the hierarchical numbering (e.g., 4.1, 4.2, 4.3)
-
-6. **Preview before publishing**
-
-   Show the user a summary table:
-   ```
-   | # | Issue Title | Tasks | Subproject | Est. |
-   |---|------------|-------|------------|------|
-   | 1 | Quick Reactions API | 4.1-4.7 | server | 4h |
-   | 2 | Follow API | 6.1-6.8 | server | 4h |
-   ```
-
-   Use **AskUserQuestion** to confirm: "Create these issues? You can adjust before publishing."
-
-7. **Create issues**
-
-   For each issue, run:
-   ```bash
-   gh issue create --repo <repo> --title "<title>" --label "auto" --body "$(cat <<'EOF'
-   ## Context
-
-   **Change**: <change-name>
-   **Subproject**: <subproject>
-
-   ### Why
-   <excerpt from proposal.md — the Why section>
-
-   ## Tasks
-
-   <paste the specific task items from tasks.md, with checkbox format>
-
-   ## Technical Context
-
-   <relevant excerpts from design.md — decisions that affect these tasks>
-
-   ## Specs
-
-   <relevant spec content from specs/<capability>/spec.md if applicable>
-
-   ## Acceptance Criteria
-
-   - All tasks marked as completed
-   - Tests pass
-   - Code follows project conventions (see config.yaml context)
-
-   ---
-   *Auto-generated from OpenSpec change: <name>*
-   EOF
-   )"
-   ```
-
-8. **Report results**
-
-   Show created issues with links:
-   ```
-   Created 3 issues:
-   - #42 Quick Reactions API (tasks 4.1-4.7)
-   - #43 Follow API (tasks 6.1-6.8)
-   - #44 Connect API (tasks 7.1-7.6)
-   ```
-
-**Important notes**:
-- Never publish already-completed `[x]` tasks
-- Include enough context from proposal/design/specs that the remote agent can work independently
-- The remote agent has NO access to local files — the issue body must be self-contained
-- Use Traditional Chinese for issue content (matching project conventions)
+回報每張實際 URL／狀態、來源任務對照、未完成發布步驟與決策；卡片建立不等於任務完成。

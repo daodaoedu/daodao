@@ -1,0 +1,26 @@
+name: Skill eval scorer regression (offline)
+on:
+  pull_request:
+    paths:
+      - '.claude/skills/**'
+      - '.codex/skills/**'
+      - 'AGENTS.md'
+      - 'templates/development/**'
+      - 'scripts/skill-evals/**'
+      - 'scripts/__tests__/skill-evals*'
+      - '.github/workflows/skill-evals.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scorer-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify scorer controls and adversarial artifacts
+        run: python3 scripts/__tests__/skill-evals-test.py -v
+      - name: State evidence boundary
+        run: echo 'Offline scorer regression passed. No agent or paid API was executed; this is not a model behavioral pass rate.' >> "$GITHUB_STEP_SUMMARY"
