@@ -8,6 +8,7 @@ on:
       - 'templates/development/**'
       - 'scripts/skill-evals/**'
       - 'scripts/__tests__/skill-evals*'
+      - 'scripts/__tests__/test_skill_*.py'
       - '.github/workflows/skill-evals.yml'
   workflow_dispatch:
 permissions:
@@ -22,5 +23,7 @@ jobs:
           python-version: '3.12'
       - name: Verify scorer controls and adversarial artifacts
         run: python3 scripts/__tests__/skill-evals-test.py -v
+      - name: Verify client trace import and behavioral evidence aggregation
+        run: python3 -m unittest discover -s scripts/__tests__ -p 'test_skill_*.py' -v
       - name: State evidence boundary
         run: echo 'Offline scorer regression passed. No agent or paid API was executed; this is not a model behavioral pass rate.' >> "$GITHUB_STEP_SUMMARY"
