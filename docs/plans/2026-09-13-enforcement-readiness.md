@@ -1,6 +1,18 @@
 # Required-check 啟用前查核
 
-日期：2026-09-13。這是設定提案與前置修正，不是已啟用強制 gate 或已完成阻擋驗收。
+日期：2026-09-13。最新狀態：維護者批准後，root / server ruleset 已啟用並回讀確認；無 bypass 身分的阻擋驗收仍未完成。下方原始盤點及提案保留為啟用前快照。
+
+## 已批准啟用
+
+- Root main：[ruleset 23186104](https://github.com/daodaoedu/daodao/rules/23186104)，要求 test-integrity、pack-regression、scorer-regression、regression。
+- Server dev：[ruleset 23186106](https://github.com/daodaoedu/daodao-server/rules/23186106)，要求 test、workflow-tests、Compare SQL ↔ Prisma schemas。
+- 兩者 active、strict=true、GitHub Actions integration_id=15368；RepositoryRole 5 / always 保留管理員緊急 bypass。沒有新增其他 actor 或覆寫原有規則。
+- 於 2026-09-13 15:59 UTC 建立，GET rulesets 及 rules/branches 回讀確認適用分支。八 repo 前後 JSON 快照與 `verify-benchmark-activation.py` 比對通過：兩筆符合批准 payload，其他六 repo 及 classic protection 未變。
+- 本機證據：`worktrees/benchmark-protection-before-activation.json`、`worktrees/benchmark-protection-after-activation.json`、`worktrees/benchmark-{root,server}-ruleset.json`。不提交原始內部快照。
+- 非 bypass 驗收已於 2026-09-14 使用僅具 Write 權限的 `vincentxuwork` 完成；驗收後切回管理員帳號。沒有嘗試合併失敗內容。
+- 回復僅停用以上兩個新 ruleset，需在批准的回復範圍內執行；保留規則與快照，不刪除或變更其他 repo 規則。
+
+合併更新：[#197](https://github.com/daodaoedu/daodao/pull/197) 於 15:55:52 UTC 合併，merge SHA `3bca764dcc1fa0194e4ca9f28694967c3a848b6c`。PR head 的四個工程 gate（pack-regression、scorer-regression、regression、test-integrity）及其他 checks 通過。此更新不是合併後重跑、部署或遠端規則設定證據；以下規則清單仍是 15:51:18Z 的讀取快照。
 
 ## 遠端現況
 
@@ -49,6 +61,16 @@ Root 的兩個 workflow 仍共用 `Branch flow rules` 名稱。此提案不把�
 建議新增獨立 benchmark ruleset，限表列 integration branch，避免覆蓋既有審核、簽章、main 保護與 bypass 設定。設定來源綁 GitHub Actions；是否 strict up-to-date、是否允許管理員 bypass 均需維護者確認。建議 strict=true、沿用現有管理員緊急處理能力，但用無 bypass 身分驗收。沒有已授權驗收帳號時，停在設定讀回，不宣稱阻擋驗收完成。
 
 ## 啟用與回復驗收
+
+### 實際驗收結果（2026-09-14）
+
+| 情境 | 失敗／等待證據 | 修復後證據 | 結論 |
+| --- | --- | --- | --- |
+| Root required failure | [#198](https://github.com/daodaoedu/daodao/pull/198) head `4b54fe6` 的 test-integrity 失敗（[run](https://github.com/daodaoedu/daodao/actions/runs/34840615347)），GitHub 回報 `mergeStateStatus=BLOCKED` | 同 PR head `d01ccac` 四個 required contexts 全部通過，狀態 `CLEAN` | 失敗 head 被擋；新 head 不沿用舊綠燈，修復後解除 |
+| Server required failure | [#473](https://github.com/daodaoedu/daodao-server/pull/473) head `965316d` 的 workflow-tests 失敗（[run](https://github.com/daodaoedu/daodao-server/actions/runs/34840617136)），相依 test skipped，狀態 `BLOCKED` | 同 PR head `9db1fd2` 的 workflow-tests、test（[run](https://github.com/daodaoedu/daodao-server/actions/runs/34840702591)）及 schema drift 全部通過，狀態 `CLEAN` | 失敗與 pending required contexts 均維持阻擋；修復後解除 |
+| Root docs-only | [#199](https://github.com/daodaoedu/daodao/pull/199) head `4596e36` | test-integrity、pack-regression、scorer-regression、regression 全部出現並通過，狀態 `CLEAN` | 無 path-filter 永久 pending |
+
+三個 PR 均由非 bypass 帳號建立，驗收後關閉且未合併；分支保留作稽核證據。此次未驗證 base 在檢查完成後前進所觸發的 strict 更新行為，因為那會額外變更 integration branch；strict=true 已由 ruleset 及 effective branch rules 回讀確認。
 
 1. 維護者確認 repo / branch / contexts、strict 策略、bypass actor 與試驗 PR 授權；保存原始 ruleset 快照及版本。
 2. 先確認相關 workflow 已合併且最新 head checks 通過，再建立獨立 ruleset；讀回完整規則及適用分支。任何既有規則差異都中止，不能整份覆寫。
