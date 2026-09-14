@@ -1,6 +1,6 @@
 # Required-check 啟用前查核
 
-日期：2026-09-13。最新狀態：維護者批准後，root / server ruleset 已啟用並回讀確認；無 bypass 身分的阻擋驗收仍未完成。下方原始盤點及提案保留為啟用前快照。
+日期：2026-09-13，最後更新：2026-09-14。最新狀態：八個 repo 的 benchmark ruleset 已啟用並回讀確認，且均完成無 bypass 身分的失敗阻擋與修復驗收。下方原始盤點及提案保留為啟用前快照。
 
 ## 已批准啟用
 
@@ -10,7 +10,22 @@
 - 於 2026-09-13 15:59 UTC 建立，GET rulesets 及 rules/branches 回讀確認適用分支。八 repo 前後 JSON 快照與 `verify-benchmark-activation.py` 比對通過：兩筆符合批准 payload，其他六 repo 及 classic protection 未變。
 - 本機證據：`worktrees/benchmark-protection-before-activation.json`、`worktrees/benchmark-protection-after-activation.json`、`worktrees/benchmark-{root,server}-ruleset.json`。不提交原始內部快照。
 - 非 bypass 驗收已於 2026-09-14 使用僅具 Write 權限的 `vincentxuwork` 完成；驗收後切回管理員帳號。沒有嘗試合併失敗內容。
-- 回復僅停用以上兩個新 ruleset，需在批准的回復範圍內執行；保留規則與快照，不刪除或變更其他 repo 規則。
+- 緊急回復只停用本輪各 repo 的獨立 benchmark ruleset，需在批准的回復範圍內執行；保留既有 review、簽章與 required-check 規則，不整份覆寫 repository protection。
+
+## Sibling repo rollout 與驗收
+
+| Repo / branch | Ruleset | Required contexts | 非 bypass 驗收 |
+| --- | --- | --- | --- |
+| daodao-f2e / dev | `23312238` | TypeScript & Lint Check、test、workflow-tests | [#1007](https://github.com/daodaoedu/daodao-f2e/pull/1007)：`33d2fb5` FAILURE / BLOCKED；`09cbf3a` 三項成功，checks 完成後 CLEAN |
+| daodao-admin-ui / dev | `23304253` | Continuous Integration | [#145](https://github.com/daodaoedu/daodao-admin-ui/pull/145)：`8214d28` FAILURE / BLOCKED；`af3c18c` SUCCESS / CLEAN |
+| daodao-worker / main | `23304254` | TypeCheck | [#89](https://github.com/daodaoedu/daodao-worker/pull/89)：`56d201d` FAILURE / BLOCKED；`6491144` SUCCESS / CLEAN |
+| daodao-ai-backend / dev | `23304256` | Unit Tests | [#222](https://github.com/daodaoedu/daodao-ai-backend/pull/222)：`b2f0a6e` FAILURE / BLOCKED；`bb84ced` SUCCESS，仍由既有 code-owner 規則阻擋 |
+| daodao-storage / dev | `23304257` | Migration Upgrade & Constraints | [#241](https://github.com/daodaoedu/daodao-storage/pull/241)：`760e7a7` FAILURE / BLOCKED；`68a68ad` SUCCESS / CLEAN |
+| daodao-infra / main | `23310188` | Nginx configuration and gate regression | [#81](https://github.com/daodaoedu/daodao-infra/pull/81)：`feff9cd` FAILURE / BLOCKED；`33677ba` SUCCESS / CLEAN |
+
+上述 ruleset 均為 active、strict=true，required contexts 綁定 GitHub Actions integration_id `15368`，並保留 RepositoryRole 5 / always 的管理員緊急 bypass。各驗收 PR 均已關閉且未合併；臨時 direct Write 權限已移除。AI #222 的修復 head required checks 全綠，但既有 code-owner 規則仍獨立生效，因此不以整體 `CLEAN` 作為該 repo 的 required-check 成功條件。
+
+Infra 初次 [#79](https://github.com/daodaoedu/daodao-infra/pull/79) 驗收發現 main 基線的 branch-base regression expectation 過期；ruleset `23304260` 當場移除，沒有將主線留在永久紅燈。修復 [#80](https://github.com/daodaoedu/daodao-infra/pull/80) 合併為 `467afd1a88d3ba70e54c44aa02f6ca8e14a3b64c` 且 CI 全綠後，才建立 ruleset `23310188` 並由 #81 重新完成驗收。
 
 合併更新：[#197](https://github.com/daodaoedu/daodao/pull/197) 於 15:55:52 UTC 合併，merge SHA `3bca764dcc1fa0194e4ca9f28694967c3a848b6c`。PR head 的四個工程 gate（pack-regression、scorer-regression、regression、test-integrity）及其他 checks 通過。此更新不是合併後重跑、部署或遠端規則設定證據；以下規則清單仍是 15:51:18Z 的讀取快照。
 
