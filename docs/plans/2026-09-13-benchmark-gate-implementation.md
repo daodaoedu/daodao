@@ -17,7 +17,7 @@
 - [x] 經批准啟用 root main / server dev benchmark required checks（rulesets 23186104 / 23186106）；strict、Actions 來源與管理員 bypass 皆回讀確認，其餘六 repo 保護未變。
 - [x] 使用僅具 Write、無 bypass 的 `vincentxuwork` 驗證 root #198 / server #473：失敗 head 為 BLOCKED，修復新 head 全綠後 CLEAN；root docs-only #199 的四個 contexts 均回報成功。三個 PR 已關閉且未合併。
 - [x] 其餘六個 repo 已完成 rollout；admin #145、worker #89、AI #222、storage #241、infra #81、f2e #1007 均使用無 bypass 帳號驗證失敗 head 被阻擋及修復 head required contexts 成功。驗收 PR 全部關閉未合併，臨時 direct Write 已移除。
-- [ ] Base 前進後 strict 更新情境尚未用可丟棄 integration branch 變更實測；目前 strict=true 僅有 ruleset 與 effective branch rules 回讀證據。
+- [x] Root #204 已完成 strict base-advance 實測：初始 head `1f49f73` 全綠且 CLEAN；main 經一般全綠 PR #205 前進後轉為 BEHIND；更新分支產生 head `410cd4c` 並重跑四項 required checks，完成前 BLOCKED、全綠後 CLEAN。
 - [ ] 完整 Claude／Codex 需求、bug、開發與入口自動載入驗收；建立模型行為 baseline 與真正的行為回歸 CI。
 - [ ] 擴充 server 兩端點／15 tests 以外的 response contract、隱私與業務規則測試。
 - [ ] 擴充 storage 整條 migration chain 及 runner 的 migration_history／skip／checksum；目前只驗 migration 016 SQL。

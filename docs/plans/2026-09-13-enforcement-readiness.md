@@ -84,8 +84,9 @@ Root 的兩個 workflow 仍共用 `Branch flow rules` 名稱。此提案不把�
 | Root required failure | [#198](https://github.com/daodaoedu/daodao/pull/198) head `4b54fe6` 的 test-integrity 失敗（[run](https://github.com/daodaoedu/daodao/actions/runs/34840615347)），GitHub 回報 `mergeStateStatus=BLOCKED` | 同 PR head `d01ccac` 四個 required contexts 全部通過，狀態 `CLEAN` | 失敗 head 被擋；新 head 不沿用舊綠燈，修復後解除 |
 | Server required failure | [#473](https://github.com/daodaoedu/daodao-server/pull/473) head `965316d` 的 workflow-tests 失敗（[run](https://github.com/daodaoedu/daodao-server/actions/runs/34840617136)），相依 test skipped，狀態 `BLOCKED` | 同 PR head `9db1fd2` 的 workflow-tests、test（[run](https://github.com/daodaoedu/daodao-server/actions/runs/34840702591)）及 schema drift 全部通過，狀態 `CLEAN` | 失敗與 pending required contexts 均維持阻擋；修復後解除 |
 | Root docs-only | [#199](https://github.com/daodaoedu/daodao/pull/199) head `4596e36` | test-integrity、pack-regression、scorer-regression、regression 全部出現並通過，狀態 `CLEAN` | 無 path-filter 永久 pending |
+| Root strict base advance | [#204](https://github.com/daodaoedu/daodao/pull/204) head `1f49f73` 在 base `63620fb` 上四項 required contexts 成功且 `CLEAN`；[#205](https://github.com/daodaoedu/daodao/pull/205) 以一般 merge `c5d3e26` 推進 main 後，未修改的 #204 轉為 `BEHIND` | 將 main 合入候選分支產生 head `410cd4c`；required contexts 重新執行期間為 `BLOCKED`，四項成功後 `CLEAN` | strict policy 不接受落後 base 的舊綠燈；更新 head 後必須取得新結果 |
 
-三個 PR 均由非 bypass 帳號建立，驗收後關閉且未合併；分支保留作稽核證據。此次未驗證 base 在檢查完成後前進所觸發的 strict 更新行為，因為那會額外變更 integration branch；strict=true 已由 ruleset 及 effective branch rules 回讀確認。
+前三個初輪 PR 均由非 bypass 帳號建立，驗收後關閉且未合併；分支保留作稽核證據。當時尚未驗證的 base 前進情境，已由後續 #204 / #205 依下列程序完成。
 
 ### Strict base-advance 驗收程序
 
@@ -94,7 +95,7 @@ Root 的兩個 workflow 仍共用 `Branch flow rules` 名稱。此提案不把�
 3. 不修改候選 PR，回讀其 merge state 與 required checks，確認 strict policy 不接受落後於新 base 的既有成功結果。
 4. 將候選分支更新到新 base，確認 required contexts 對新 head 全部重新執行並成功後才恢復 `CLEAN`；最後關閉且不合併候選 PR。
 
-本次候選為 [root #204](https://github.com/daodaoedu/daodao/pull/204)：建立時 base `63620fb149c700d127e8d2e161db74bb8d0a9b6b`、head `1f49f73c2bcd7663fb742432d4fa300d3aad4a1a`，四個 required contexts 成功後回報 `CLEAN`。後續 base 推進與更新 head 的結果須另行回填，不能用本段程序描述代替實測證據。
+本次候選為 [root #204](https://github.com/daodaoedu/daodao/pull/204)：建立時 base `63620fb149c700d127e8d2e161db74bb8d0a9b6b`、head `1f49f73c2bcd7663fb742432d4fa300d3aad4a1a`，四個 required contexts 成功後回報 `CLEAN`。[#205](https://github.com/daodaoedu/daodao/pull/205) 以一般 merge commit `c5d3e264a1b62d7ef0a864993ff83e27fc260686` 推進 main 後，未修改的候選轉為 `BEHIND`。無 bypass 帳號將 main 合入候選分支，產生 head `410cd4c75f370c5f64b4bf845a53e4d105dad99b`；四個 required contexts 重新執行期間為 `BLOCKED`，全部成功後才恢復 `CLEAN`。#204 隨後關閉且未合併。
 
 1. 維護者確認 repo / branch / contexts、strict 策略、bypass actor 與試驗 PR 授權；保存原始 ruleset 快照及版本。
 2. 先確認相關 workflow 已合併且最新 head checks 通過，再建立獨立 ruleset；讀回完整規則及適用分支。任何既有規則差異都中止，不能整份覆寫。
