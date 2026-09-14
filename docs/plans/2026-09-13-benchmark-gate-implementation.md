@@ -1,6 +1,6 @@
 # Benchmark gate 實作追蹤
 
-> 最新核對（2026-09-13 UTC）：root #194／#195／#196、server #470／#472，以及其餘六個 repo 的 gate PR 均已合併，適用工程 CI 通過。下方明確標記的歷史快照不是目前發布狀態。詳細報告：[跨 repo 合併與驗證](2026-09-13-cross-repo-gate-evidence.md)。前次將已修復的 f2e Web CI 誤列待辦，已更正。
+> 最新核對（2026-09-14 UTC）：八個 repo 的 gate 實作 PR 均已合併；各 integration branch 的 benchmark required checks 已啟用，並以無 bypass 帳號完成失敗阻擋與新 head 修復驗收。下方明確標記的歷史快照不是目前發布狀態。詳細工程報告見[跨 repo 合併與驗證](2026-09-13-cross-repo-gate-evidence.md)，遠端規則與驗收見[啟用前查核](2026-09-13-enforcement-readiness.md)。
 
 ## 目前狀態
 
@@ -10,13 +10,14 @@
 - Server [#470](https://github.com/daodaoedu/daodao-server/pull/470)、[#472](https://github.com/daodaoedu/daodao-server/pull/472) 已合併；test／workflow-tests／schema drift 通過。Merge commits 分別為 `d23a33d686ec0aa687ce2a8125b7b49af7060041`、`798795ec27573cfec5e2db0ef86b1dcd8f40be5f`。
 - #194／#470 的 AI Code Review 為 SKIPPED，不算 review 已執行；後續 #195／#472 為 SUCCESS。這些是 PR head 的檢查結果，不是現在所有 repo 的全量重驗或部署證據。
 - Claude／Codex native trace adapter 及離線 CI 已完成；隔離客戶端讀取 skill 與 Claude Write hook 阻擋已有證據。完整模型 baseline 仍未完成，Claude exact fixture 目前僅 1/4 案例、0/1 通過。
-- 六個 repo 的測試／CI 接入與 Infra 分支規則修正均已合併；新 benchmark checks 的遠端強制效果尚未驗收。既有 admin review、AI Format & Lint、storage PostgreSQL CI Test rulesets 仍存在，不能說所有保護均未啟用。
+- 六個 sibling repo 的測試／CI 接入均已合併；連同 root／server，八個 repo 的新 benchmark checks 已完成遠端 ruleset 回讀與非 bypass 驗收。Infra 初次驗收揭露既有 branch-base 測試基線錯誤，先回滾 ruleset，再由 infra #80 修正後重新啟用及通過 #81 驗收。既有 admin review、AI Format & Lint、storage PostgreSQL CI Test rulesets 均保留。
 
 ## 待辦清單（目前）
 
 - [x] 經批准啟用 root main / server dev benchmark required checks（rulesets 23186104 / 23186106）；strict、Actions 來源與管理員 bypass 皆回讀確認，其餘六 repo 保護未變。
 - [x] 使用僅具 Write、無 bypass 的 `vincentxuwork` 驗證 root #198 / server #473：失敗 head 為 BLOCKED，修復新 head 全綠後 CLEAN；root docs-only #199 的四個 contexts 均回報成功。三個 PR 已關閉且未合併。
-- [ ] 其他 repo 新 benchmark required checks 尚未 rollout；base 前進後 strict 更新情境尚未用可丟棄 integration branch 變更實測。
+- [x] 其餘六個 repo 已完成 rollout；admin #145、worker #89、AI #222、storage #241、infra #81、f2e #1007 均使用無 bypass 帳號驗證失敗 head 被阻擋及修復 head required contexts 成功。驗收 PR 全部關閉未合併，臨時 direct Write 已移除。
+- [ ] Base 前進後 strict 更新情境尚未用可丟棄 integration branch 變更實測；目前 strict=true 僅有 ruleset 與 effective branch rules 回讀證據。
 - [ ] 完整 Claude／Codex 需求、bug、開發與入口自動載入驗收；建立模型行為 baseline 與真正的行為回歸 CI。
 - [ ] 擴充 server 兩端點／15 tests 以外的 response contract、隱私與業務規則測試。
 - [ ] 擴充 storage 整條 migration chain 及 runner 的 migration_history／skip／checksum；目前只驗 migration 016 SQL。
