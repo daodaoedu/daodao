@@ -4,6 +4,8 @@
 
 ## 目前狀態
 
+- Root [#197](https://github.com/daodaoedu/daodao/pull/197) 於 2026-09-13 15:55:52 UTC 合併為 `3bca764dcc1fa0194e4ca9f28694967c3a848b6c`。三個 PR workflow 路徑過濾修正、唯讀保護規則 collector 與啟用提案已合併；PR head 的 pack-regression、scorer-regression、regression、test-integrity 與其他 checks 全部通過。合併後另經維護者批准啟用並完成非 bypass 驗收，設定與回復證據見 [啟用前查核](2026-09-13-enforcement-readiness.md)。
+
 - Root [#194](https://github.com/daodaoedu/daodao/pull/194)、[#195](https://github.com/daodaoedu/daodao/pull/195)、[#196](https://github.com/daodaoedu/daodao/pull/196) 已合併；pack／scorer／integrity 的適用 checks 通過。Merge commits 分別為 `ffbf781b7b392fa36ca4ffe1148124e7122391a2`、`2068dd5be7cc680ba6494663638a4bb777e430aa`、`8875e20f88701d707e518a4ef22e48e6b135b7b6`。
 - Server [#470](https://github.com/daodaoedu/daodao-server/pull/470)、[#472](https://github.com/daodaoedu/daodao-server/pull/472) 已合併；test／workflow-tests／schema drift 通過。Merge commits 分別為 `d23a33d686ec0aa687ce2a8125b7b49af7060041`、`798795ec27573cfec5e2db0ef86b1dcd8f40be5f`。
 - #194／#470 的 AI Code Review 為 SKIPPED，不算 review 已執行；後續 #195／#472 為 SUCCESS。這些是 PR head 的檢查結果，不是現在所有 repo 的全量重驗或部署證據。
@@ -12,7 +14,9 @@
 
 ## 待辦清單（目前）
 
-- [ ] 補齊新 benchmark required checks，保留既有保護，並用失敗 head 驗證無法合併。
+- [x] 經批准啟用 root main / server dev benchmark required checks（rulesets 23186104 / 23186106）；strict、Actions 來源與管理員 bypass 皆回讀確認，其餘六 repo 保護未變。
+- [x] 使用僅具 Write、無 bypass 的 `vincentxuwork` 驗證 root #198 / server #473：失敗 head 為 BLOCKED，修復新 head 全綠後 CLEAN；root docs-only #199 的四個 contexts 均回報成功。三個 PR 已關閉且未合併。
+- [ ] 其他 repo 新 benchmark required checks 尚未 rollout；base 前進後 strict 更新情境尚未用可丟棄 integration branch 變更實測。
 - [ ] 完整 Claude／Codex 需求、bug、開發與入口自動載入驗收；建立模型行為 baseline 與真正的行為回歸 CI。
 - [ ] 擴充 server 兩端點／15 tests 以外的 response contract、隱私與業務規則測試。
 - [ ] 擴充 storage 整條 migration chain 及 runner 的 migration_history／skip／checksum；目前只驗 migration 016 SQL。
