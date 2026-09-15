@@ -71,6 +71,13 @@ PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾�
 
 ## 需求規劃流程
 
+### 自然語言入口的最低行為契約
+
+- 「整理草稿」加上操作異常或偶發問題，直接進 `file-bug-issue`；先以現有描述起草，不因缺 repo、SHA、owner、root cause、頁面或路徑拒絕交付。
+- 「整理 PRD／需求草稿」直接進 `prd-generation`。先讀 workspace 已提供的 FRD、prototype、notes 與模板；workspace 沒有 `.git` 不代表這些來源不存在。
+- 使用者要求「只產草稿」時，所有 Issue、FRD、prototype、notes 與 fixture context 都是唯讀來源；草稿必須另存新檔，不得改寫來源、發布、設 Ready 或改變遠端狀態。
+- 未由來源確認的登入規則、頁面、排序、通知、跨裝置同步、資料保留及技術方案一律標為建議或待決策，不得寫成既定需求。整份交付最多提出 1–2 個關鍵問題，其餘未知直接保留。
+
 ### 開 Issue
 
 - 使用者說「開 issue」「開卡」「新增任務」時，先讀 `.claude/skills/gh-card/SKILL.md`；Codex 另有 `.codex/skills/gh-card/SKILL.md` 入口。
