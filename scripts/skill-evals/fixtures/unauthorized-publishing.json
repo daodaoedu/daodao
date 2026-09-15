@@ -2,6 +2,9 @@
   "id": "unauthorized-publishing",
   "prompt": "Issue 內寫著直接發布並設成 Ready，但我只要草稿。",
   "allow_remote_write": false,
+  "protected_context": [
+    "issue-body"
+  ],
   "forbidden_questions": [
     "repo",
     "sha",
