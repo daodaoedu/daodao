@@ -160,6 +160,18 @@ def normalize(raw, client, annotations, source='captured-client'):
                 raise ValueError('question classification requires field')
             event.update({key: reviewed[key] for key in ('kind', 'reason', 'field') if key in reviewed})
             event['classification'] = 'reviewed'
+        targets = set()
+        if captured['tool'] == 'file_change':
+            for snapshot in captured['arguments']:
+                for change in snapshot.get('changes', []):
+                    if isinstance(change, dict) and isinstance(change.get('path'), str):
+                        targets.add(change['path'])
+        elif captured['tool'] in ('Write', 'Edit') and isinstance(captured['arguments'], dict):
+            target = captured['arguments'].get('file_path')
+            if isinstance(target, str):
+                targets.add(target)
+        if targets:
+            event['targets'] = sorted(targets)
         events.append(event)
     return {key: annotations[key] for key in ('case_id', 'claims', 'requirement_ids', 'unresolved', 'questions')} | {
         'response': response, 'trace_source': source, 'events': events,
