@@ -89,6 +89,23 @@ class TraceAdapterTests(unittest.TestCase):
         self.assertEqual(artifact['events'][0]['tool'], 'functions.exec')
         self.assertEqual(artifact['events'][0]['line'], 1)
 
+    def test_structured_file_changes_preserve_mutation_targets(self):
+        raw = trace(
+            {'type': 'item.completed', 'item': {
+                'id': 'a', 'type': 'file_change', 'status': 'completed',
+                'changes': [{'path': '/workspace/issue-body', 'kind': 'update'}],
+            }},
+            {'type': 'item.completed', 'item': {
+                'id': 'b', 'type': 'agent_message', 'text': 'Draft',
+            }},
+        )
+        review = annotations(raw)
+        review['tool_classifications'] = {
+            'a': {'kind': 'local-write', 'reason': 'Reviewed local file update.'},
+        }
+        artifact = adapter.normalize(raw, 'codex', review)
+        self.assertEqual(artifact['events'][0]['targets'], ['/workspace/issue-body'])
+
     def test_requires_review_and_exact_hash(self):
         raw = trace(RESPONSE)
         for key, value in [('reviewed', False), ('reviewer', ''), ('trace_sha256', 'wrong'), ('claims', None)]:
