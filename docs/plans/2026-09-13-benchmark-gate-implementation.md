@@ -1,6 +1,6 @@
 # Benchmark gate 實作追蹤
 
-> 最新核對（2026-09-14 UTC）：八個 repo 的 gate 實作 PR 均已合併；各 integration branch 的 benchmark required checks 已啟用，並以無 bypass 帳號完成失敗阻擋與新 head 修復驗收。下方明確標記的歷史快照不是目前發布狀態。詳細工程報告見[跨 repo 合併與驗證](2026-09-13-cross-repo-gate-evidence.md)，遠端規則與驗收見[啟用前查核](2026-09-13-enforcement-readiness.md)。
+> 最新核對（2026-09-15 UTC）：八個 repo 的 gate 實作 PR 均已合併；各 integration branch 的 benchmark required checks 已啟用，並以無 bypass 帳號完成失敗阻擋與新 head 修復驗收。下方明確標記的歷史快照不是目前發布狀態。詳細工程報告見[跨 repo 合併與驗證](2026-09-13-cross-repo-gate-evidence.md)，遠端規則與驗收見[啟用前查核](2026-09-13-enforcement-readiness.md)。
 
 ## 目前狀態
 
@@ -9,7 +9,7 @@
 - Root [#194](https://github.com/daodaoedu/daodao/pull/194)、[#195](https://github.com/daodaoedu/daodao/pull/195)、[#196](https://github.com/daodaoedu/daodao/pull/196) 已合併；pack／scorer／integrity 的適用 checks 通過。Merge commits 分別為 `ffbf781b7b392fa36ca4ffe1148124e7122391a2`、`2068dd5be7cc680ba6494663638a4bb777e430aa`、`8875e20f88701d707e518a4ef22e48e6b135b7b6`。
 - Server [#470](https://github.com/daodaoedu/daodao-server/pull/470)、[#472](https://github.com/daodaoedu/daodao-server/pull/472) 已合併；test／workflow-tests／schema drift 通過。Merge commits 分別為 `d23a33d686ec0aa687ce2a8125b7b49af7060041`、`798795ec27573cfec5e2db0ef86b1dcd8f40be5f`。
 - #194／#470 的 AI Code Review 為 SKIPPED，不算 review 已執行；後續 #195／#472 為 SUCCESS。這些是 PR head 的檢查結果，不是現在所有 repo 的全量重驗或部署證據。
-- Claude／Codex native trace adapter 及離線 CI 已完成。2026-09-15 已在隔離 workspace 完成兩個客戶端各四案的 AI-reviewed candidate baseline：Codex `gpt-5.3-codex-spark` 結構化 scorer 為 2/4，Claude `claude-sonnet-5` 為 0/4；人工 trace／prose 審閱與真正的模型回歸 CI 仍未完成，詳見 [candidate baseline](2026-09-15-model-behavior-baseline.md)。
+- Claude／Codex native trace adapter 及離線 CI 已完成。Root [#207](https://github.com/daodaoedu/daodao/pull/207) 於 2026-09-15 00:43:29 UTC 合併為 `c039b8f2d0d871bfa7e6ba8654d6251b0ac35a21`；exact head `64bad512874643084957356d9b9c1073aa4e8ff7` 的 pack／scorer／integrity／regression checks 均通過。兩個客戶端各四案的 AI-reviewed candidate baseline 為 Codex `gpt-5.3-codex-spark` 2/4、Claude `claude-sonnet-5` 0/4；人工 trace／prose 審閱與真正的模型回歸 CI 仍未完成，且本次沒有部署，詳見 [candidate baseline](2026-09-15-model-behavior-baseline.md)。
 - 六個 sibling repo 的測試／CI 接入均已合併；連同 root／server，八個 repo 的新 benchmark checks 已完成遠端 ruleset 回讀與非 bypass 驗收。Infra 初次驗收揭露既有 branch-base 測試基線錯誤，先回滾 ruleset，再由 infra #80 修正後重新啟用及通過 #81 驗收。既有 admin review、AI Format & Lint、storage PostgreSQL CI Test rulesets 均保留。
 
 ## 待辦清單（目前）
