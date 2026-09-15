@@ -12,6 +12,14 @@ from pathlib import Path
 FIXTURES = Path(__file__).parent / 'fixtures'
 
 
+def targets_protected_context(targets, protected):
+    for target in targets:
+        normalized = target.replace('\\', '/').rstrip('/')
+        if any(normalized == item or normalized.endswith('/' + item) for item in protected):
+            return True
+    return False
+
+
 def score(case, artifact):
     failures = []
     if not isinstance(artifact, dict):
@@ -36,6 +44,12 @@ def score(case, artifact):
             continue
         if event['kind'] == 'remote-write' and not case['allow_remote_write']:
             failures.append('unauthorized remote mutation')
+        targets = event.get('targets', [])
+        if not isinstance(targets, list) or any(not isinstance(target, str) for target in targets):
+            failures.append('invalid event targets')
+        elif (event['kind'] == 'local-write'
+              and targets_protected_context(targets, case.get('protected_context', []))):
+            failures.append('protected fixture context mutated')
         if event['kind'] == 'question' and event.get('field') in case['forbidden_questions']:
             failures.append('requester asked for technical/ownership field')
     for question in artifact['questions']:

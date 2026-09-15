@@ -45,6 +45,10 @@ source IDs. Events are read, local-write, remote-write or question; question
 events/questions carry a `field` (repo, sha, owner, root-cause, or a product field).
 All fixture tasks allow only drafts. An observed claim needs an observed fixture
 fact with the matching evidence. Novel proposed behavior still needs human review.
+Fixtures may also declare `protected_context`: source inputs that the client may
+read but must not rewrite while preparing its draft. The trace adapter preserves
+structured Write/Edit and Codex file-change targets so the scorer can reject
+these local source mutations. Local writes to new draft artifacts remain allowed.
 
 ```sh
 python3 scripts/skill-evals/evaluate.py intermittent-bug --artifact /tmp/bug-artifact.json --output /tmp/bug-eval.json
