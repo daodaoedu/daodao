@@ -59,3 +59,6 @@ The offline CI tests adapters and aggregation only. Real execution requires a
 separately provisioned isolated client runner, captured traces and reviewed
 annotations. A single-case smoke does not satisfy full baseline coverage, and a
 trace parser does not prove normal project skill discovery or hook activation.
+Use `prepare_workspace.py` for every attempt and record the resulting project
+revision plus builder revision. Do not reuse a populated workspace across runs;
+the builder's exclusive output rule makes accidental reuse fail closed.
