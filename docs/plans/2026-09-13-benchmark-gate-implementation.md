@@ -10,6 +10,7 @@
 - Server [#470](https://github.com/daodaoedu/daodao-server/pull/470)、[#472](https://github.com/daodaoedu/daodao-server/pull/472) 已合併；test／workflow-tests／schema drift 通過。Merge commits 分別為 `d23a33d686ec0aa687ce2a8125b7b49af7060041`、`798795ec27573cfec5e2db0ef86b1dcd8f40be5f`。
 - #194／#470 的 AI Code Review 為 SKIPPED，不算 review 已執行；後續 #195／#472 為 SUCCESS。這些是 PR head 的檢查結果，不是現在所有 repo 的全量重驗或部署證據。
 - Claude／Codex native trace adapter 及離線 CI 已完成。Root [#207](https://github.com/daodaoedu/daodao/pull/207) 於 2026-09-15 00:43:29 UTC 合併為 `c039b8f2d0d871bfa7e6ba8654d6251b0ac35a21`；exact head `64bad512874643084957356d9b9c1073aa4e8ff7` 的 pack／scorer／integrity／regression checks 均通過。兩個客戶端各四案的 AI-reviewed candidate baseline 為 Codex `gpt-5.3-codex-spark` 2/4、Claude `claude-sonnet-5` 0/4；人工 trace／prose 審閱與真正的模型回歸 CI 仍未完成，且本次沒有部署，詳見 [candidate baseline](2026-09-15-model-behavior-baseline.md)。
+- Root [#209](https://github.com/daodaoedu/daodao/pull/209) 於 2026-09-15 10:46:19 UTC 合併為 `8759f0bd493cf24280e37edb6c232d59cc957dbc`；exact head `dc31937b57e68af5037ab9649b8028556ad1b4d9` 的 required checks 全部通過。此 PR 補 requester-facing 契約、Claude 入口與 [human review packet](2026-09-15-model-behavior-human-review-packet.md)，沒有部署 model runner，也未把 AI review 轉稱人工核准。
 - 六個 sibling repo 的測試／CI 接入均已合併；連同 root／server，八個 repo 的新 benchmark checks 已完成遠端 ruleset 回讀與非 bypass 驗收。Infra 初次驗收揭露既有 branch-base 測試基線錯誤，先回滾 ruleset，再由 infra #80 修正後重新啟用及通過 #81 驗收。既有 admin review、AI Format & Lint、storage PostgreSQL CI Test rulesets 均保留。
 
 ## 待辦清單（目前）
@@ -18,7 +19,7 @@
 - [x] 使用僅具 Write、無 bypass 的 `vincentxuwork` 驗證 root #198 / server #473：失敗 head 為 BLOCKED，修復新 head 全綠後 CLEAN；root docs-only #199 的四個 contexts 均回報成功。三個 PR 已關閉且未合併。
 - [x] 其餘六個 repo 已完成 rollout；admin #145、worker #89、AI #222、storage #241、infra #81、f2e #1007 均使用無 bypass 帳號驗證失敗 head 被阻擋及修復 head required contexts 成功。驗收 PR 全部關閉未合併，臨時 direct Write 已移除。
 - [x] Root #204 已完成 strict base-advance 實測：初始 head `1f49f73` 全綠且 CLEAN；main 經一般全綠 PR #205 前進後轉為 BEHIND；更新分支產生 head `410cd4c` 並重跑四項 required checks，完成前 BLOCKED、全綠後 CLEAN。
-- [ ] Claude／Codex 四案 candidate baseline 已產生且完成 AI annotation；逐案 prose 判定與修正建議已整理成 [human review packet](2026-09-15-model-behavior-human-review-packet.md)，仍待維護者核准。第一批修正已補自然語言路由、來源唯讀、context-first 與產品規格防臆測契約；pre-commit diagnostic 顯示 Claude 入口載入仍不足，Codex 指定模型則被目前帳號拒絕。第二輪 paired comparison 與真正的行為回歸 CI 尚未完成。
+- [ ] Claude／Codex 四案 candidate baseline 已產生且完成 AI annotation；逐案 prose 判定與修正建議已整理成 [human review packet](2026-09-15-model-behavior-human-review-packet.md)，仍待維護者核准。第一批修正已補自然語言路由、來源唯讀、context-first 與產品規格防臆測契約；後續新增 fail-closed 最小 workspace builder，排除整份 repo 複製造成的 context 淹沒。Claude `2.1.271` 最小 workspace diagnostic 仍未實際呼叫 `Skill`，Codex pinned model 被目前帳號拒絕；第二輪 paired comparison 與真正的行為回歸 CI 尚未完成。
 - [ ] 擴充 server 兩端點／15 tests 以外的 response contract、隱私與業務規則測試。
 - [ ] 擴充 storage 整條 migration chain 及 runner 的 migration_history／skip／checksum；目前只驗 migration 016 SQL。
 - [ ] 建立 PR feedback 自動修正迴圈，包含隔離執行、授權、重試上限、驗證證據及人工接手。
