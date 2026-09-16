@@ -22,6 +22,31 @@ including failed operations, not just successful calls. Review normalization
 against the raw transcript; a model-authored summary is not a trusted trace.
 Store raw traces locally with secrets removed; do not commit authenticated logs.
 
+Build the throwaway workspace with the fail-closed allowlist builder instead of
+copying the entire repository. It includes only project instructions, the four
+requester-facing skill entrypoints and their local dependencies, templates, and
+the fixture `context`; it does not copy the fixture JSON, prompt, rubric, `.git`,
+unrelated product files, caches, or credentials. The output path must not exist:
+
+```sh
+python3 scripts/skill-evals/prepare_workspace.py \
+  --repo-root "$PWD" \
+  --fixture scripts/skill-evals/fixtures/mock-branch.json \
+  --output /private/evidence/mock-branch/workspace
+```
+
+The builder rejects absolute or parent-relative context paths, instruction-file
+collisions, symlinked required project inputs, missing dependencies, non-string
+context, and output reuse. It prepares files only; client sandboxing, network
+denial, timeouts, trace capture, version checks, and private evidence retention
+remain runner responsibilities.
+
+Claude runners that evaluate project-skill discovery must include the `Skill`
+tool in their restricted allowlist in addition to the required file tools.
+Merely allowing `Skill`, finding `SKILL.md`, or loading `CLAUDE.md` is not evidence
+that the client invoked the applicable skill; retain the tool trace and report
+discovery and behavioral outcomes separately.
+
 Artifact shape:
 
 ```json
