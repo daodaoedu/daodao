@@ -20,7 +20,7 @@
 - [x] 其餘六個 repo 已完成 rollout；admin #145、worker #89、AI #222、storage #241、infra #81、f2e #1007 均使用無 bypass 帳號驗證失敗 head 被阻擋及修復 head required contexts 成功。驗收 PR 全部關閉未合併，臨時 direct Write 已移除。
 - [x] Root #204 已完成 strict base-advance 實測：初始 head `1f49f73` 全綠且 CLEAN；main 經一般全綠 PR #205 前進後轉為 BEHIND；更新分支產生 head `410cd4c` 並重跑四項 required checks，完成前 BLOCKED、全綠後 CLEAN。
 - [ ] Claude／Codex 四案 candidate baseline 已產生且完成 AI annotation；逐案 prose 判定與修正建議已整理成 [human review packet](2026-09-15-model-behavior-human-review-packet.md)，仍待維護者核准。第一批修正已補自然語言路由、來源唯讀、context-first 與產品規格防臆測契約；後續新增 fail-closed 最小 workspace builder，排除整份 repo 複製造成的 context 淹沒。Claude `2.1.271` 最小 workspace diagnostic 仍未實際呼叫 `Skill`，Codex pinned model 被目前帳號拒絕；第二輪 paired comparison 與真正的行為回歸 CI 尚未完成。
-- [ ] 擴充 server 兩端點／15 tests 以外的 response contract、隱私與業務規則測試。
+- [ ] 擴充 server response contract 測試。（進行中：user 12 + auth 10 + cohort-join 15 = 37 tests，server PR [#474](https://github.com/daodaoedu/daodao-server/pull/474) pending；同時修正 birthDay PII 外洩與 email batch flaky test。待擴充：practice/space/connection 等 Tier 2 API，42 route files 仍為零）
 - [ ] 擴充 storage 整條 migration chain 及 runner 的 migration_history／skip／checksum；目前只驗 migration 016 SQL。
 - [ ] 建立 PR feedback 自動修正迴圈，包含隔離執行、授權、重試上限、驗證證據及人工接手。
 - [ ] 建立監控異常去重、需求／bug 開卡、修復與部署驗收回饋流程。
