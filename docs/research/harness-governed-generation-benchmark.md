@@ -2,6 +2,9 @@
 
 > 2026-09-13 實作更新：本文保留研究與當時盤點；部分「完全不存在」已不能作為目前狀態。新增 REVIEW 規則、決策輸入 audit pack、測試完整性 scanner／Claude hook、離線 eval scorer CI，以及 server 兩端點 wire contract 試點。詳見 [實作追蹤與驗證限制](../plans/2026-09-13-benchmark-gate-implementation.md)。整體 benchmark 尚未完成：模型行為回歸、全 repo gate 覆蓋、自動修正及監控閉環仍待做；不得據此刪除尚無 gate 覆蓋的約束。
 
+> 2026-09-18 狀態檢查點：§6.4 優先順序 #1（REVIEW.md + 架構規則）、#2（spec auditor 接 decisions.md）、#4（hook 保護 feedback loop）已落地並合併（root PR #194/#195/#197，server #470/#472）。跨 repo gate rollout 完成（f2e #1005、admin-ui #144、worker #86、ai-backend #221 均已合併）。Branch protection enforcement 已啟用（root + server ruleset active, strict=true）。Required-check 驗收完成（#198/#199/#473 closed with evidence, #202/#203/#205/#206 merged）。OpenSpec 三件套已退役（相關 skill 全數刪除）。
+>
+> 仍未完成：response schema 測試擴充（§7.4 最大缺口，已從 cohort-join 15 tests 擴充至 37 tests，覆蓋 user + auth，PR #474 pending；其餘 42 route files 仍為零）；模型行為 baseline（eval scorer CI ready，fixture 0/1 pass）；business rule 集中化；invariant 測試；PR 自動修正迴圈；監控閉環。契約測試同時發現 birthDay/birthDate 欄位名不一致的 PII 外洩（已修正）。下一步：擴充 practice/space/connection 等 Tier 2 API 的 response schema 測試。
 
 > 2026-09-13 — 根據外部四模型實驗數據、[AI-Native SDLC Playbook](https://quidproquo.cc/series/ai-native-sdlc-playbook/) 系列文章、以及 Stripe/Spotify/Coinbase/Ramp 的內部 coding agent 實踐，整理出 AI 輔助開發流程的通用設計原則，並以 daodao 專案為具體案例。
 >
