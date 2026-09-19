@@ -9,7 +9,15 @@
 
 | 文件 | 說明 |
 |---|---|
+| [github-issue-management.md](github-issue-management.md) | **Issue 管理規範**：需求／bug 欄位、labels、Board 狀態、父子與 PR 關聯、關閉時機及現有自動化落差 |
+| [development-workflow-diagrams.md](development-workflow-diagrams.md) | **Mermaid 圖解入口**：目前完成度、Issue／PR 文件分工、雙入口開發、驗收與回寫，以及導入順序 |
+| [issue-to-acceptance-workflow.md](issue-to-acceptance-workflow.md) | **目標流程提案**：Issue／Google Docs／Drive、雙入口開發、瀏覽器與後端驗收、merge gate、Issue 自動回寫 |
+| [agent-budget-policy.md](agent-budget-policy.md) | Claude Code／Codex 訂閱與 Workers AI 分工、預算保留、限額與失敗處理提案 |
+| [開發文件模板](../../templates/development/README.md) | 可複用的中央／子 Issue、需求文件、驗收報告、PR 與狀態回寫格式 |
 | [github-pipeline.md](github-pipeline.md) | **新架構總覽**（mermaid 流程圖 + 角色分工 + label 體系） |
+| [github-actions-design-review.md](github-actions-design-review.md) | GitHub Actions 現況審查、風險證據與雙訂閱 agent 導入 gate |
+| [dual-subscription-agents-prd.md](dual-subscription-agents-prd.md) | Claude Code + Codex 訂閱雙 agent 自動化 PRD |
+| [dual-subscription-development-workflow.md](dual-subscription-development-workflow.md) | 雙訂閱 agent 的 v2 開發流程、Harness、Runner、Artifact 與分階段落地規劃 |
 | [routine-a-prompt.md](routine-a-prompt.md) | Routine A：Board → Sub-repo Dispatch（**Actions script** 運維手冊） |
 | [routine-b-prompt-v2.md](routine-b-prompt-v2.md) | Routine B：Dispatch + PR patrol（**Claude cloud routine** prompt） |
 | [routine-c-prompt.md](routine-c-prompt.md) | Routine C：Merged PR → Board Done（**Actions script** 運維手冊） |
@@ -31,6 +39,8 @@ sub-repo 鏡像 issue，Routine B 接力 plan、code、開 PR 直到送上人類
 Routine C 把 merge 結果回寫 board。
 
 **兩道閘門**：board `Status=Ready for Dev` + 中央 issue `auto` label 都滿足才 dispatch。
+
+現況校正（2026-09-12 local）：以上是文件政策；當下 `bin/pipeline/dispatch.ts` 未檢查中央 `auto` label，仍需補實作。未準備好保持 Todo，人工任務加 `human-driving`，不能以未加 `auto` 保證不派工。
 
 **Spec gate**：中央 issue 需註記 `OpenSpec: openspec/changes/{slug}/`，否則標 `needs-spec` 退回。
 
