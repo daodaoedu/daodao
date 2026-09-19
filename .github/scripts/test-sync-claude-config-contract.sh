@@ -37,6 +37,12 @@ for script in retrieve-context.sh test-retrieve-context.sh test-code-review-cont
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"
 done
 grep -Fq "pr-evidence-gate.yml" "$WORKFLOW" || fail "sync workflow 未同步 pr-evidence-gate.yml（PR 驗證證據 CI 閘門）"
+# node fixture 只複製 sync workflow，auto-pr-description 不在時略過這條（真實 repo／CI 一定有）
+AUTO_PR_WORKFLOW="$SCRIPT_DIR/../workflows/auto-pr-description.yml"
+if [ -f "$AUTO_PR_WORKFLOW" ]; then
+  grep -Fq "grep -q '^## 驗證證據'" "$AUTO_PR_WORKFLOW" \
+    || fail "auto-pr-description.yml 必須在 body 已含「## 驗證證據」時跳過，否則會覆寫 dev-task 寫好的證據"
+fi
 
 grep -Fq 'git status --porcelain -- .claude .github/workflows .github/scripts' "$WORKFLOW" \
   || fail "變更偵測未涵蓋 untracked scripts"
