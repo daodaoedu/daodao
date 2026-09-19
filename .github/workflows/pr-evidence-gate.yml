@@ -1,0 +1,37 @@
+name: PR Evidence Gate
+
+# 每個 PR 都跑（required check 不可用 on.paths）。本 workflow 由 daodaoedu/daodao 的
+# sync-claude-config 同步到各 sub-repo；規則本體在 .github/scripts/check-pr-evidence.sh。
+#
+# 檢查 PR body「## 驗證證據」：驗證報告連結 + 核心旅程矩陣（正常列 + 錯誤路徑列，全 ✅），
+# 或「核心旅程不適用：<原因>」。#171→#188 的教訓：畫面驗過不等於使用者能完成任務。
+#
+# 模式：repo variable PR_EVIDENCE_GATE_MODE = warn（預設，advisory）| block。
+# 依 ADR-0001 先 warn 累積 ledger 數據，再升 block 並加入 ruleset required checks。
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  evidence:
+    name: PR evidence（驗證報告 + 核心旅程）
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gate script
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/check-pr-evidence.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Check PR body evidence section
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          MODE: ${{ vars.PR_EVIDENCE_GATE_MODE || 'warn' }}
+        run: bash .github/scripts/check-pr-evidence.sh

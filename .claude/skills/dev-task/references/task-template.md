@@ -43,9 +43,25 @@
 
 ## 驗證
 <!-- verify 階段填寫，UI 任務必填；格式：狀態 檢查項（截圖檔名） -->
+- 驗證報告: <Google 文件連結，verify 步驟 6 產出>
 - [ ] <檢查項 1>（evidence/<phase>-<checkpoint>.png）
 - [ ] console 無新增 error
 - [ ] 行動版寬度版面正常
+
+### 核心旅程矩陣
+<!-- 每條會寫入資料的旅程至少一列「正常」+ 一列「錯誤路徑」；實際欄要有攔到的 HTTP 狀態碼；規則見 references/journey-matrix.md -->
+<!-- 沒有寫入路徑時刪掉表格，改寫一行：核心旅程不適用：<具體原因> -->
+| ID | 旅程 | 類型 | 輸入 | FE 規則來源 | BE 規則來源 | 預期結果 | 實際 | 證據 |
+|---|---|---|---|---|---|---|---|---|
+| J-01 | <建立 X> | 正常 | <實際輸入值，含中文／大寫／空白等真實資料> | <file:line 或 —> | <file:line> | <狀態碼 + 畫面結果> | ⬜ | evidence/verify-j01.png |
+| J-02 | <建立 X> | 錯誤路徑 | <server 會拒絕的輸入> | <file:line 或 —> | <file:line> | <狀態碼 + 畫面顯示的訊息，輸入保留> | ⬜ | evidence/verify-j02.png |
+
+## Deferred items
+<!-- 本次刻意不做、或驗證中發現但範圍外的項目。發 PR 前每一項都要有子 issue 連結，格式：
+     - 驗證紅框取代 toast：#201
+     - 模版獨立開始日：（待開卡：需 PM 拍板是否進 Phase B）
+     沒有就留 - none -->
+- none
 
 ## Status
 <planning | implementing | verified | in-review | merged>
@@ -62,4 +78,6 @@
 - **Phases 從已確認的 Issue／PRD／既有 FRD 拆**，一個 phase 是一個可獨立 commit 的邏輯單元
 - 相對日期一律轉絕對日期
 - 「備註」記的是**接手的人需要知道、但 code 看不出來**的事：為什麼選 A 不選 B、哪些 edge case 刻意不做、依賴哪個還沒 merge 的 PR
+- 「核心旅程矩陣」是 verify 的必填產物：⬜ 代表未驗，發 PR 時不能有 ⬜／❌；填法與輸入目錄見 [journey-matrix.md](journey-matrix.md)
+- 「Deferred items」不是備忘錄，是**要離開這台機器的東西**：task.md 會被刪，只有開成子 issue 的項目才會回到 board 上
 - 每完成一個 phase 立即更新 checkbox——task.md 是斷線重連的唯一依據
