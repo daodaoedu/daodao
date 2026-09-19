@@ -49,7 +49,7 @@ else
   else
     printf '%s\n' "$section" | grep -qE 'https?://' \
       || problems+=("「## 驗證證據」沒有驗證報告連結（https://…）")
-    rows=$(printf '%s\n' "$section" | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' | LC_ALL=C grep -vE '<([^>|]*[^ -~][^>|]*|file:line)>' || true)
+    rows=$(printf '%s\n' "$section" | sed -E 's/^[[:space:]]+//' | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' | LC_ALL=C grep -vE '<([^>|]*[^ -~][^>|]*|file:line)>' || true)
     if [ -z "$rows" ]; then
       problems+=("「## 驗證證據」沒有核心旅程矩陣列（| J-01 | 旅程 | 正常／錯誤路徑 | 輸入 | 預期 | 實際 |）")
     else
