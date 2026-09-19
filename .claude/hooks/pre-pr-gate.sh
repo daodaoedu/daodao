@@ -17,6 +17,14 @@ set -euo pipefail
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$HOOKS_DIR/lib.sh"
 
+# jq 不在時不能默默放行：粗略比對 payload，看起來是在發 PR 就擋下並說明原因（fail closed）
+if ! jq --version >/dev/null 2>&1; then
+  if printf '%s' "${CLAUDE_TOOL_INPUT:-}" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create'; then
+    echo "❌ pre-pr-gate 需要 jq 解析工具輸入，但找不到 jq；閘門無法判斷就不放行（brew install jq / apt install jq）" >&2
+    exit 2
+  fi
+  exit 0
+fi
 cmd=$(echo "${CLAUDE_TOOL_INPUT:-}" | jq -r '.command // empty' 2>/dev/null || true)
 [ -z "$cmd" ] && exit 0
 echo "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+create([[:space:]]|$)' || exit 0
@@ -100,8 +108,12 @@ if [ "$has_poc" = 1 ] && [ "$is_ui_repo" = 1 ]; then
   cov="$task_dir/notes/poc-compare/coverage.json"
   cov_missing=""
   if [ -s "$cov" ]; then
-    cov_missing=$(jq -r '.missing | join(", ")' "$cov" 2>/dev/null || echo "")
-    [ -z "$cov_missing" ] || ok=0
+    # jq 解析失敗或沒有 missing 陣列 → 不能當成「沒有缺漏」，明確標記並擋下（AI review #225 抓到的 fail-open）
+    if cov_missing=$(jq -er '.missing | if type == "array" then join(", ") else error("missing 不是陣列") end' "$cov" 2>/dev/null); then
+      [ -z "$cov_missing" ] || ok=0
+    else
+      cov_missing="(coverage.json 無法解析或缺 missing 陣列，請重跑 poc-report.py)"; ok=0
+    fi
   else
     cov_missing="(沒有 coverage.json，請跑 poc-report.py)"; ok=0
   fi
@@ -182,7 +194,11 @@ fi
 
 # --- 閘門 5：PR body 要帶「## 驗證證據」（CI pr-evidence-gate 讀的就是這段）---
 body_text=""
-body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)[^[:space:];&|]+' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)//' | tr -d '"'"'" || true)
+# 先抓引號包住的路徑（可含空白），再抓裸路徑
+body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)"[^"]+"' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)"//; s/"$//' || true)
+[ -n "$body_file" ] || body_file=$(echo "$cmd" | grep -oE -- "(--body-file|-F)([[:space:]]+|=)'[^']+'" | head -1 | sed -E "s/^(--body-file|-F)([[:space:]]+|=)'//; s/'\$//" || true)
+[ -n "$body_file" ] || body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)[^[:space:];&|]+' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)//' || true)
+body_file_note=""
 if [ -n "$body_file" ]; then
   # 指令字串裡的 $TASK／${TASK}／$ROOT 不會被展開，hook 自己代入
   body_file=$(printf '%s' "$body_file" | sed -e "s|\${TASK}|$task_dir|g" -e "s|\$TASK|$task_dir|g" -e "s|\${ROOT}|${task_dir%/worktrees/*}|g" -e "s|\$ROOT|${task_dir%/worktrees/*}|g" -e "s|^~|$HOME|")
@@ -190,14 +206,17 @@ if [ -n "$body_file" ]; then
     candidate="${base}${body_file}"
     if [ -f "$candidate" ]; then body_text=$(cat "$candidate"); break; fi
   done
-  [ -n "$body_text" ] || body_text="$cmd"   # heredoc 寫檔在同一指令裡：內容還在 cmd 字串中
+  if [ -z "$body_text" ]; then
+    body_text="$cmd"   # heredoc 寫檔在同一指令裡：內容還在 cmd 字串中
+    body_file_note="（--body-file 指向的檔案找不到：${body_file}；改讀指令字串）"
+  fi
 else
   body_text="$cmd"                          # --body "..." 或 heredoc：內容就在指令裡
 fi
 evidence_section=$(printf '%s\n' "$body_text" | awk '/^## 驗證證據/{f=1; next} f && /^## /{exit} f')
 if ! printf '%s\n' "$body_text" | grep -q '^## 驗證證據'; then
-  gate_fail "pr-body-evidence-missing" "$task_md" "$(cat <<'EOF'
-❌ PR body 缺「## 驗證證據」區塊。需要：驗證報告連結 + 核心旅程矩陣摘要（或 task.md 那行「核心旅程不適用：<原因>」）。
+  gate_fail "pr-body-evidence-missing" "$task_md" "$(cat <<EOF
+❌ PR body 缺「## 驗證證據」區塊${body_file_note}。需要：驗證報告連結 + 核心旅程矩陣摘要（或 task.md 那行「核心旅程不適用：<原因>」）。
    用 --body-file <notes/pr-body-<repo>.md>，範本見 dev-task SKILL.md Phase 4 步驟 6。
 EOF
 )"

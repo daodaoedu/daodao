@@ -208,6 +208,50 @@ else
   echo "⚠️  node 或 python3 不可用，略過閘門 6 案例"
 fi
 
+# 9b. --body-file 路徑含空白（引號包住）也要讀得到
+t=$(make_task daodao-server "$(task_md verified "$GOOD_MATRIX" '- none')")
+mkdir -p "$t/notes/my dir"
+printf '%s\n' "$GOOD_BODY" > "$t/notes/my dir/body.md"
+code=$(run_hook "$t/daodao-server" "cd $t/daodao-server && gh pr create --base dev --title t --body-file \"$t/notes/my dir/body.md\"")
+expect_pass "--body-file 路徑含空白" "$code"
+# 找不到檔案時訊息要說出嘗試的路徑
+code=$(run_hook "$t/daodao-server" "cd $t/daodao-server && gh pr create --base dev --title t --body-file $t/notes/nope.md")
+expect_block "--body-file 檔案不存在" "$code" "指向的檔案找不到"
+
+# 9c. POC 閘門：coverage.json 壞掉不能當成沒有缺漏（fail closed）
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+### POC 比對
+| x |
+POC 差異決策已確認" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+mkdir -p "$t/poc" "$t/notes/poc-compare"; : > "$t/poc/x.dc.html"; echo report > "$t/notes/poc-compare/report.md"
+echo '{"missing":[]}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_pass "POC coverage 無缺漏" "$code"
+echo 'not json' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage.json 壞掉" "$code" "無法解析"
+echo '{"foo":1}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage.json 缺 missing" "$code" "無法解析"
+echo '{"missing":["modal"]}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage 有缺漏" "$code" "目前缺：modal"
+
+# 9d. jq 不在時對 gh pr create 一律擋下（fail closed），非發 PR 指令照常放行
+# run_hook 自己也用 jq 組 payload，所以先用真 jq 組好，再用壞掉的 jq shim 跑 hook
+SHIM="$SANDBOX/shim"; mkdir -p "$SHIM"; printf '#!/bin/sh\nexit 1\n' > "$SHIM/jq"; chmod +x "$SHIM/jq"
+run_hook_nojq() {  # $1=cwd $2=指令
+  local input code=0
+  input=$(jq -cn --arg c "$2" '{command: $c}')
+  PATH="$SHIM:$PATH" CLAUDE_TOOL_INPUT="$input" CLAUDE_WORKING_DIRECTORY="$1" bash "$HOOK" >/dev/null 2>"$ERR_FILE" || code=$?
+  echo "$code"
+}
+code=$(run_hook_nojq "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "沒有 jq 時發 PR 被擋" "$code" "找不到 jq"
+code=$(run_hook_nojq "$t/daodao-f2e" "git status")
+expect_pass "沒有 jq 時非發 PR 指令放行" "$code"
+
 # 11. 逃生口留痕放行
 t=$(make_task daodao-f2e "$(task_md implementing '' '- 沒開卡的項目')")
 printf '## Summary\nx\n' > "$t/notes/body.md"
