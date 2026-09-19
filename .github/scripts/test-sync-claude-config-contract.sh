@@ -37,6 +37,19 @@ for script in retrieve-context.sh test-retrieve-context.sh test-code-review-cont
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"
 done
 grep -Fq "pr-evidence-gate.yml" "$WORKFLOW" || fail "sync workflow 未同步 pr-evidence-gate.yml（PR 驗證證據 CI 閘門）"
+# 同步 PR 不做 AI review、evidence gate 不得 checkout PR 程式碼（node fixture 沒有這些檔時略過）
+CODE_REVIEW_WORKFLOW="$SCRIPT_DIR/../workflows/code-review.yml"
+if [ -f "$CODE_REVIEW_WORKFLOW" ]; then
+  grep -Fq "startsWith(github.head_ref, 'chore/sync-claude-config-')" "$CODE_REVIEW_WORKFLOW" \
+    || fail "code-review.yml 必須跳過 chore/sync-claude-config-* 同步 PR"
+fi
+EVIDENCE_WORKFLOW="$SCRIPT_DIR/../workflows/pr-evidence-gate.yml"
+if [ -f "$EVIDENCE_WORKFLOW" ]; then
+  grep -Fq "pull_request_target" "$EVIDENCE_WORKFLOW" || fail "pr-evidence-gate.yml 必須用 pull_request_target 從預設分支執行"
+  if grep -Eq "uses:[[:space:]]*actions/checkout" "$EVIDENCE_WORKFLOW"; then
+    fail "pr-evidence-gate.yml 不得 checkout（pull_request_target 下會被 SonarCloud S7631 標記，且有執行 PR 程式碼的風險）"
+  fi
+fi
 # node fixture 只複製 sync workflow，auto-pr-description 不在時略過這條（真實 repo／CI 一定有）
 AUTO_PR_WORKFLOW="$SCRIPT_DIR/../workflows/auto-pr-description.yml"
 if [ -f "$AUTO_PR_WORKFLOW" ]; then
