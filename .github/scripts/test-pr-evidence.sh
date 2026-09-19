@@ -81,6 +81,10 @@ UNPAIRED='## 驗證證據
 | J-02 | 刪除場次 | 錯誤路徑 | 非擁有者 | 403 | ✅ 403 |'
 code=$(run "$UNPAIRED"); expect_fail "旅程未成對" "$code" "旅程「建立場次」缺「錯誤路徑」列"
 
+# 表格帶前導空白也要讀得到
+INDENTED=$(printf '%s\n' "$GOOD" | sed -E 's/^\|/  |/')
+code=$(run "$INDENTED"); expect_pass "表格帶前導空白" "$code"
+
 # 真實輸入含 <script> 不算模板佔位列
 XSS="$GOOD
 | J-03 | 建立場次 | 錯誤路徑 | 名稱 <script>alert(1)</script> | 400 | ✅ 400 |"

@@ -161,6 +161,13 @@ expect_block "旅程未成對" "$code" "旅程「建立場次」缺「錯誤路�
 [[ "$(last_err)" == *"旅程「刪除場次」缺「正常」列"* ]] || fail "未成對訊息應同時點名刪除場次：$(last_err)"
 printf '✅ %s\n' "未成對訊息點名每條旅程"
 
+# 6f. 表格縮排（例如放在清單項目底下）不能被當成沒有矩陣列
+INDENTED=$(printf '%s\n' "$GOOD_MATRIX" | sed -E 's/^\|/  |/')
+t=$(make_task daodao-f2e "$(task_md verified "$INDENTED" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_pass "矩陣表格帶前導空白" "$code"
+
 # 7. 不適用聲明（有原因）→ 放行；沒原因 → 擋
 t=$(make_task daodao-f2e "$(task_md verified '核心旅程不適用：純 CSS 對齊，diff 未碰任何 form／mutation／controller' '- none')")
 printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"

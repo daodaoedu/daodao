@@ -141,7 +141,7 @@ if grep -qE '^核心旅程不適用[：:]' "$task_md"; then
   log_gate_event "pr-journey-matrix-na" "$task_md" "pass:$na_reason" "dev-task"
 else
   matrix_rows=$(section_body "$task_md" '^### 核心旅程矩陣' '^(#|##|###) ' \
-    | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' || true)
+    | sed -E 's/^[[:space:]]+//' | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' || true)
   # 模板佔位列不算已填：<…> 裡含非 ASCII（<建立 X>、<輸入>）或 <file:line>；真實輸入如 <script> 不受影響
   matrix_rows=$(echo "$matrix_rows" | LC_ALL=C grep -vE '<([^>|]*[^ -~][^>|]*|file:line)>' || true)
   problems=""
