@@ -22,10 +22,12 @@ cmd=$(echo "${CLAUDE_TOOL_INPUT:-}" | jq -r '.command // empty' 2>/dev/null || t
 echo "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+create([[:space:]]|$)' || exit 0
 
 cwd="${CLAUDE_WORKING_DIRECTORY:-$(pwd)}"
-# 從 cwd 或指令裡的 cd 路徑找任務資料夾 worktrees/<n>-<slug>/
+# 從 cwd、指令裡的 cd 路徑、或指令中任何含 /worktrees/<n>-<slug> 的路徑找任務資料夾。
+# 引號要剝掉（cd "/a/worktrees/1-x/repo" 會連引號一起抓到，task.md 就找不到、整組閘門被繞過）。
 task_dir=""
-cd_paths=$(echo "$cmd" | grep -oE 'cd[[:space:]]+[^[:space:];&|]+' | awk '{print $2}' || true)
-for candidate in "$cwd" $cd_paths; do
+cd_paths=$(echo "$cmd" | grep -oE 'cd[[:space:]]+[^[:space:];&|]+' | awk '{print $2}' | tr -d "\"'" || true)
+wt_paths=$(echo "$cmd" | tr "\"'" '  ' | grep -oE '[^[:space:];&|]*/worktrees/[^/[:space:];&|]+' || true)
+for candidate in "$cwd" $cd_paths $wt_paths; do
   case "$candidate" in
     */worktrees/*)
       task_dir="${candidate%%/worktrees/*}/worktrees/$(echo "${candidate#*/worktrees/}" | cut -d/ -f1)"
@@ -39,11 +41,16 @@ task_md="$task_dir/task.md"
 
 # 目標 repo：cd 路徑或 cwd 中 worktrees/<task>/<repo>
 repo_dir=""
-for candidate in "$cwd" $cd_paths; do
+for candidate in "$cwd" $cd_paths $wt_paths; do
   case "$candidate" in
     "$task_dir"/*) repo_dir=$(basename "$(echo "${candidate#"$task_dir"/}" | cut -d/ -f1)"); break ;;
   esac
 done
+# cd "$TASK/<repo>" 這種未展開的變數路徑抓不到 repo：退而從任務資料夾裡找唯一的 repo 目錄
+if [ -z "$repo_dir" ]; then
+  repo_candidates=$(find "$task_dir" -mindepth 1 -maxdepth 1 -type d -name 'daodao-*' 2>/dev/null | wc -l | tr -d ' ')
+  [ "$repo_candidates" = 1 ] && repo_dir=$(basename "$(find "$task_dir" -mindepth 1 -maxdepth 1 -type d -name 'daodao-*')")
+fi
 is_ui_repo=0
 case "$repo_dir" in daodao-f2e|daodao-admin-ui) is_ui_repo=1 ;; esac
 
@@ -121,18 +128,23 @@ if grep -qE '^核心旅程不適用[：:]' "$task_md"; then
   fi
   log_gate_event "pr-journey-matrix-na" "$task_md" "pass:$na_reason" "dev-task"
 else
-  matrix_rows=$(section_body "$task_md" '^### 核心旅程矩陣' '^#{1,3} ' \
+  matrix_rows=$(section_body "$task_md" '^### 核心旅程矩陣' '^(#|##|###) ' \
     | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' || true)
-  # 模板佔位列（<建立 X>）不算已填
-  matrix_rows=$(echo "$matrix_rows" | grep -v '<' || true)
+  # 模板佔位列不算已填：<…> 裡含非 ASCII（<建立 X>、<輸入>）或 <file:line>；真實輸入如 <script> 不受影響
+  matrix_rows=$(echo "$matrix_rows" | LC_ALL=C grep -vE '<([^>|]*[^ -~][^>|]*|file:line)>' || true)
   problems=""
   if ! grep -q '^### 核心旅程矩陣' "$task_md"; then
     problems="task.md 沒有「### 核心旅程矩陣」區塊"
   elif [ -z "$matrix_rows" ]; then
     problems="矩陣沒有任何已填的旅程列（模板佔位列不算）"
   else
-    echo "$matrix_rows" | grep -q '正常' || problems="缺「正常」列（真實輸入送出成功）"
-    echo "$matrix_rows" | grep -q '錯誤路徑' || problems="${problems:+${problems}；}缺「錯誤路徑」列（server 會拒絕的輸入，訊息顯示、輸入保留）"
+    # 每條旅程（第 2 欄）都要同時有「正常」與「錯誤路徑」（第 3 欄）——只有建立成功＋刪除失敗不算
+    pair_problems=$(echo "$matrix_rows" | awk -F'|' '
+      { j=$3; t=$4; gsub(/^[ \t]+|[ \t]+$/, "", j); gsub(/^[ \t]+|[ \t]+$/, "", t)
+        if (j == "") next
+        seen[j]=1; if (t ~ /正常/) ok[j]=1; if (t ~ /錯誤路徑/) err[j]=1 }
+      END { for (j in seen) { if (!ok[j]) printf "旅程「%s」缺「正常」列（真實輸入送出成功）；", j; if (!err[j]) printf "旅程「%s」缺「錯誤路徑」列（server 會拒絕的輸入，訊息顯示、輸入保留）；", j } }')
+    [ -z "$pair_problems" ] || problems="$pair_problems"
     if echo "$matrix_rows" | grep -qE '⬜|❌'; then
       problems="${problems:+${problems}；}有 ⬜／❌ 列（未驗或未過）"
     fi
@@ -172,6 +184,8 @@ fi
 body_text=""
 body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)[^[:space:];&|]+' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)//' | tr -d '"'"'" || true)
 if [ -n "$body_file" ]; then
+  # 指令字串裡的 $TASK／${TASK}／$ROOT 不會被展開，hook 自己代入
+  body_file=$(printf '%s' "$body_file" | sed -e "s|\${TASK}|$task_dir|g" -e "s|\$TASK|$task_dir|g" -e "s|\${ROOT}|${task_dir%/worktrees/*}|g" -e "s|\$ROOT|${task_dir%/worktrees/*}|g" -e "s|^~|$HOME|")
   for base in "" "$cwd/" "$task_dir/"; do
     candidate="${base}${body_file}"
     if [ -f "$candidate" ]; then body_text=$(cat "$candidate"); break; fi
@@ -193,9 +207,18 @@ elif ! printf '%s\n' "$evidence_section" | grep -qE 'https?://|核心旅程不�
 fi
 
 # --- 閘門 6：前端手寫驗證規則要能編譯、要對得到 server 規則（#188 根因）---
-parity_script="$HOOKS_DIR/../../scripts/check-validation-parity.py"
-if [ "$is_ui_repo" = 1 ] && [ -f "$parity_script" ] && [ -d "$task_dir/$repo_dir" ] && command -v python3 >/dev/null 2>&1; then
-  parity_json=$(python3 "$parity_script" --repo "$task_dir/$repo_dir" --base origin/dev --task-md "$task_md" --json 2>/dev/null || true)
+# 腳本住在 monorepo root；sub-repo 同步來的 hook 從任務資料夾往上找 root（<root>/worktrees/<task>），不依賴 HOOKS_DIR 位置
+parity_script=""
+for candidate in "${task_dir%/worktrees/*}/scripts/check-validation-parity.py" "$HOOKS_DIR/../../scripts/check-validation-parity.py"; do
+  [ -f "$candidate" ] && { parity_script="$candidate"; break; }
+done
+if [ "$is_ui_repo" = 1 ] && [ -d "$task_dir/$repo_dir" ]; then
+  if [ -z "$parity_script" ] || ! command -v python3 >/dev/null 2>&1; then
+    echo "⚠️  找不到 scripts/check-validation-parity.py 或 python3，前端驗證規則對齊未檢查（記錄為 pr-fe-parity-unavailable）" >&2
+    log_gate_event "pr-fe-parity-unavailable" "$task_dir/$repo_dir" "warn" "dev-task"
+  else
+  # base 由腳本自動判斷（remote HEAD → origin/dev → origin/main），不寫死 origin/dev
+  parity_json=$(python3 "$parity_script" --repo "$task_dir/$repo_dir" --base auto --task-md "$task_md" --json 2>/dev/null || true)
   if [ -n "$parity_json" ]; then
     invalid=$(echo "$parity_json" | jq -r '.counts.INVALID // 0' 2>/dev/null || echo 0)
     unmatched=$(echo "$parity_json" | jq -r '.counts.UNMATCHED // 0' 2>/dev/null || echo 0)
@@ -212,6 +235,7 @@ EOF
       echo "⚠️  前端有 $unmatched 條手寫驗證規則在 openapi.json 找不到對應（可能前後端擋的不一樣）。請在核心旅程矩陣填 BE 規則來源並用錯誤輸入實測；明細：python3 scripts/check-validation-parity.py --repo $task_dir/$repo_dir --task-md $task_md" >&2
       log_gate_event "pr-fe-rule-unmatched" "$task_dir/$repo_dir" "warn" "dev-task"
     fi
+  fi
   fi
 fi
 

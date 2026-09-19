@@ -8,9 +8,13 @@ name: PR Evidence Gate
 #
 # 模式：repo variable PR_EVIDENCE_GATE_MODE = warn（預設，advisory）| block。
 # 依 ADR-0001 先 warn 累積 ledger 數據，再升 block 並加入 ruleset required checks。
+#
+# 安全：與 branch-guard.yml 相同，用 pull_request_target 從預設分支 checkout 受信任的腳本，
+# 絕不 checkout 或執行 PR head 的程式碼——否則 PR 改一行 check-pr-evidence.sh 成 exit 0 就能過 required check。
+# PR body 與 label 只從 event payload 讀，屬資料不屬指令。
 on:
-  pull_request:
-    types: [opened, edited, reopened, synchronize]
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, labeled, unlabeled]
 
 permissions: {}
 
@@ -18,14 +22,16 @@ jobs:
   evidence:
     name: PR evidence（驗證報告 + 核心旅程）
     runs-on: ubuntu-latest
+    permissions:
+      # 只為了讀取預設分支上的受信任腳本
+      contents: read
     steps:
-      - name: Checkout gate script
+      - name: Checkout trusted default branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 1
           persist-credentials: false
-          sparse-checkout: |
-            .github/scripts/check-pr-evidence.sh
-          sparse-checkout-cone-mode: false
 
       - name: Check PR body evidence section
         env:

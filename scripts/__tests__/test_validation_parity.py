@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -44,6 +45,24 @@ class ExtractRulesTest(unittest.TestCase):
         self.assertEqual(rules[0].source, "")
 
 
+class JsStringDecodeTest(unittest.TestCase):
+    def test_const_source_escapes_become_runtime_string(self):
+        # 原始碼 "[a-z0-9\\-]+" 在執行期是 [a-z0-9\-]+（跳脫的連字號，v flag 可編譯）
+        rules = mod.extract_rules('const P = "[a-z0-9\\\\-]+";\n<input pattern={P} />', "d.tsx")
+        html = [r for r in rules if r.kind == "html-pattern"]
+        self.assertEqual(html[0].source, "[a-z0-9\\-]+")
+        out = mod.compile_with_node([html[0].source])
+        self.assertEqual(out[html[0].source], "")
+
+    def test_jsx_attribute_string_is_not_decoded(self):
+        rules = mod.extract_rules('<input pattern="\\d{4}" />', "e.tsx")
+        self.assertEqual(rules[0].source, "\\d{4}")
+
+    def test_inline_js_expression_string_is_decoded(self):
+        rules = mod.extract_rules('<input pattern={"\\\\d{4}"} />', "f.tsx")
+        self.assertEqual(rules[0].source, "\\d{4}")
+
+
 class NormalizeTest(unittest.TestCase):
     def test_anchor_and_noncapturing_group_are_ignored(self):
         self.assertEqual(mod.normalize(SLUG_OPENAPI), mod.normalize("[a-z0-9]+(-[a-z0-9]+)*"))
@@ -75,10 +94,44 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(documented.status, "DOCUMENTED")
         self.assertEqual(unmatched.status, "UNMATCHED")
 
+    def test_case_insensitive_flag_is_not_a_match(self):
+        # /^[a-z]+$/i 放行大寫，server 的 ^[a-z]+$ 會 400：文字相同也不能算 MATCH
+        rules = mod.extract_rules("const R = /^[a-z]+$/i;\nconst S = /^[a-z]+$/;", "g.ts")
+        self.assertEqual([r.flags for r in rules], ["i", ""])
+        mod.classify(rules, {"^[a-z]+$"}, "", {})
+        self.assertEqual([r.status for r in rules], ["UNMATCHED", "MATCH"])
+        self.assertIn("i flag", rules[0].detail)
+
     def test_without_node_html_patterns_are_unchecked(self):
         r = mod.Rule("a.tsx", 1, "html-pattern", "[a-z0-9-]+")
         mod.classify([r], set(), "", None)
         self.assertEqual(r.status, "UNCHECKED")
+
+
+class ResolveBaseTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="parity-base-"))
+        run = lambda *a: subprocess.run(["git", "-C", str(self.tmp), *a], check=True, capture_output=True)
+        run("init", "-q")
+        (self.tmp / "a.txt").write_text("x")
+        run("add", "-A")
+        run("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "base")
+        self.run_git = run
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_explicit_base_is_kept(self):
+        self.assertEqual(mod.resolve_base(self.tmp, "origin/release"), "origin/release")
+
+    def test_auto_falls_back_to_main_when_dev_is_missing(self):
+        self.run_git("update-ref", "refs/remotes/origin/main", "HEAD")
+        self.assertEqual(mod.resolve_base(self.tmp, "auto"), "origin/main")
+
+    def test_auto_prefers_dev_over_main(self):
+        self.run_git("update-ref", "refs/remotes/origin/main", "HEAD")
+        self.run_git("update-ref", "refs/remotes/origin/dev", "HEAD")
+        self.assertEqual(mod.resolve_base(self.tmp, "auto"), "origin/dev")
 
 
 class NodeCompileTest(unittest.TestCase):

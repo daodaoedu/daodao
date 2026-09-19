@@ -123,6 +123,44 @@ printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_block "矩陣只有模板佔位列" "$code" "模板佔位列不算"
 
+# 6b. 真實輸入含 <script>（XSS 錯誤路徑）不能被當成模板佔位列
+XSS_MATRIX="$GOOD_MATRIX
+| J-03 | 建立場次 | 錯誤路徑 | 名稱 \`<script>alert(1)</script>\` | — | cohort.schema.ts:50 | 400 或轉義顯示 | ✅ 400 | evidence/verify-j03.png |"
+t=$(make_task daodao-f2e "$(task_md verified "$XSS_MATRIX" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_pass "真實輸入含 <script> 不算佔位列" "$code"
+
+# 6c. --body-file 用未展開的 \$TASK 變數：hook 自己代入任務資料夾
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/pr-body-daodao-f2e.md"
+code=$(run_hook "$t/daodao-f2e" "cd $t/daodao-f2e && gh pr create --base dev --title t --body-file \"\$TASK/notes/pr-body-daodao-f2e.md\"")
+expect_pass "--body-file 帶未展開的 \$TASK" "$code"
+
+# 6d. cd 路徑帶引號：不能因為引號讓 task.md 找不到而整組閘門被繞過
+t=$(make_task daodao-f2e "$(task_md implementing "$GOOD_MATRIX" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$SANDBOX/elsewhere" "cd \"$t/daodao-f2e\" && gh pr create --base dev --title t --body-file \"$t/notes/body.md\"")
+expect_block "cd 路徑帶雙引號仍會攔" "$code" "verify 階段沒跑完"
+code=$(run_hook "$SANDBOX/elsewhere" "cd '$t/daodao-f2e' && gh pr create --base dev --title t --body-file '$t/notes/body.md'")
+expect_block "cd 路徑帶單引號仍會攔" "$code" "verify 階段沒跑完"
+# cd 用未展開變數，但指令其他地方有 worktrees 路徑 → 仍找得到任務
+code=$(run_hook "$SANDBOX/elsewhere" "cd \"\$TASK/daodao-f2e\" && gh pr create --base dev --title t --body-file $t/notes/body.md")
+expect_block "cd 未展開變數但 body-file 帶 worktrees 路徑" "$code" "verify 階段沒跑完"
+
+# 6e. 每條旅程都要成對：建立只有正常、刪除只有錯誤路徑 → 擋
+UNPAIRED='### 核心旅程矩陣
+| ID | 旅程 | 類型 | 輸入 | FE 規則來源 | BE 規則來源 | 預期結果 | 實際 | 證據 |
+|---|---|---|---|---|---|---|---|---|
+| J-01 | 建立場次 | 正常 | slug `2026-summer` | a.tsx:1 | b.ts:2 | 201 | ✅ 201 | evidence/verify-j01.png |
+| J-02 | 刪除場次 | 錯誤路徑 | 非擁有者 | — | c.ts:9 | 403 訊息顯示 | ✅ 403 | evidence/verify-j02.png |'
+t=$(make_task daodao-f2e "$(task_md verified "$UNPAIRED" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "旅程未成對" "$code" "旅程「建立場次」缺「錯誤路徑」列"
+[[ "$(last_err)" == *"旅程「刪除場次」缺「正常」列"* ]] || fail "未成對訊息應同時點名刪除場次：$(last_err)"
+printf '✅ %s\n' "未成對訊息點名每條旅程"
+
 # 7. 不適用聲明（有原因）→ 放行；沒原因 → 擋
 t=$(make_task daodao-f2e "$(task_md verified '核心旅程不適用：純 CSS 對齊，diff 未碰任何 form／mutation／controller' '- none')")
 printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"

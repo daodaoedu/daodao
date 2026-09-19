@@ -44,6 +44,26 @@ STRING_CONST = re.compile(r"""\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=
 ANCHORED_REGEX = re.compile(r"/(\^(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\n\[])*\$)/([a-z]*)")
 
 
+_JS_SIMPLE_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", "b": "\b", "f": "\f", "v": "\v", "0": "\0"}
+
+
+def decode_js_string(source: str) -> str:
+    """把 JS 字串字面值的原始碼文字還原成執行期字串（"[a-z\\\\-]+" → [a-z\\-]+）。
+    只處理 JS 字串常數與 pattern={"..."}；JSX 屬性 pattern="..." 不做轉義處理（那不是 JS 字串）。"""
+
+    def repl(m: re.Match[str]) -> str:
+        esc = m.group(1)
+        if esc.startswith("u{"):
+            return chr(int(esc[2:-1], 16))
+        if esc[0] == "u":
+            return chr(int(esc[1:], 16))
+        if esc[0] == "x":
+            return chr(int(esc[1:], 16))
+        return _JS_SIMPLE_ESCAPES.get(esc, esc)
+
+    return re.sub(r"\\(u\{[0-9a-fA-F]+\}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)", repl, source, flags=re.S)
+
+
 @dataclass
 class Rule:
     file: str
@@ -51,6 +71,7 @@ class Rule:
     kind: str  # html-pattern | regex-literal
     source: str  # 規則原文（HTML pattern 字串或 regex source）
     name: str = ""  # 常數名（有的話）
+    flags: str = ""  # regex 字面值的 flags（i 會改變語意）
     status: str = "UNCHECKED"  # INVALID | MATCH | DOCUMENTED | UNMATCHED | UNCHECKED
     detail: str = ""
     matched_openapi: str = ""
@@ -90,20 +111,24 @@ def extract_rules(text: str, file: str) -> list[Rule]:
     rules: list[Rule] = []
     consts: dict[str, str] = {}
     for m in STRING_CONST.finditer(text):
-        consts[m.group(1)] = m.group(2) if m.group(2) is not None else m.group(3)
+        consts[m.group(1)] = decode_js_string(m.group(2) if m.group(2) is not None else m.group(3))
 
     for m in HTML_PATTERN_ATTR.finditer(text):
-        literal = next((g for g in m.groups()[:4] if g is not None), None)
+        # group 1/2：JSX 屬性字串（不轉義）；group 3/4：pattern={"..."} 的 JS 字串（要轉義）
+        literal = next((g for g in m.groups()[:2] if g is not None), None)
+        if literal is None:
+            js_literal = next((g for g in m.groups()[2:4] if g is not None), None)
+            literal = decode_js_string(js_literal) if js_literal is not None else None
         name = m.group(5) or ""
         if literal is None and name:
             if name not in consts:
-                rules.append(Rule(file, line_of(text, m.start()), "html-pattern", "", name, "UNCHECKED",
-                                  f"pattern={{{name}}} 的常數不在同檔，無法解析"))
+                rules.append(Rule(file, line_of(text, m.start()), "html-pattern", "", name=name, status="UNCHECKED",
+                                  detail=f"pattern={{{name}}} 的常數不在同檔，無法解析"))
                 continue
             literal = consts[name]
         if literal is None:
             continue
-        rules.append(Rule(file, line_of(text, m.start()), "html-pattern", literal, name))
+        rules.append(Rule(file, line_of(text, m.start()), "html-pattern", literal, name=name))
 
     for m in ANCHORED_REGEX.finditer(text):
         src = m.group(1)
@@ -111,7 +136,8 @@ def extract_rules(text: str, file: str) -> list[Rule]:
         line_start = text.rfind("\n", 0, m.start()) + 1
         head = text[line_start:m.start()]
         cm = re.search(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*$", head)
-        rules.append(Rule(file, line_of(text, m.start()), "regex-literal", src, cm.group(1) if cm else ""))
+        rules.append(Rule(file, line_of(text, m.start()), "regex-literal", src,
+                          name=cm.group(1) if cm else "", flags=m.group(2)))
     return rules
 
 
@@ -174,7 +200,12 @@ def classify(rules: list[Rule], openapi_patterns: set[str], task_md_text: str,
                 r.detail = f"瀏覽器（v flag）拒絕此 pattern，會整個忽略前端驗證：{err}"
                 continue
         key = normalize(r.source)
-        if key in normalized_openapi:
+        if key in normalized_openapi and "i" in r.flags:
+            r.status = "UNMATCHED"
+            r.matched_openapi = normalized_openapi[key]
+            r.detail = (f"文字同 openapi `{normalized_openapi[key]}` 但前端帶 i flag（不分大小寫）、server 分大小寫："
+                        "大寫輸入前端放行、server 400")
+        elif key in normalized_openapi:
             r.status = "MATCH"
             r.matched_openapi = normalized_openapi[key]
         elif task_md_text and (r.source in task_md_text or key in task_md_text):
@@ -185,7 +216,29 @@ def classify(rules: list[Rule], openapi_patterns: set[str], task_md_text: str,
             r.detail = "openapi.json 找不到同一條規則：前端擋的和後端擋的可能不一樣，請在核心旅程矩陣填 BE 規則來源並用錯誤輸入實測"
 
 
+def resolve_base(repo: Path, base: str) -> str:
+    """`auto`：remote HEAD → origin/dev → origin/main，取第一個存在的；不寫死 origin/dev（daodao-worker 等 repo 預設是 main）。"""
+    if base != "auto":
+        return base
+    candidates: list[str] = []
+    try:
+        head = subprocess.run(["git", "-C", str(repo), "symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"],
+                              capture_output=True, text=True, check=False).stdout.strip()
+        if head:
+            candidates.append(head)
+    except OSError:
+        pass
+    candidates += ["origin/dev", "origin/main"]
+    for c in candidates:
+        ok = subprocess.run(["git", "-C", str(repo), "rev-parse", "--verify", "-q", f"{c}^{{commit}}"],
+                            capture_output=True, text=True, check=False).returncode == 0
+        if ok:
+            return c
+    return "origin/dev"
+
+
 def changed_files(repo: Path, base: str) -> list[Path]:
+    base = resolve_base(repo, base)
     cmds = [
         ["git", "-C", str(repo), "diff", "--name-only", f"{base}...HEAD"],
         ["git", "-C", str(repo), "diff", "--name-only", "HEAD"],
@@ -289,7 +342,7 @@ def render(report: Report) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repo", required=True, help="前端 repo／worktree 路徑")
-    ap.add_argument("--base", default="origin/dev", help="比對基準（預設 origin/dev）")
+    ap.add_argument("--base", default="auto", help="比對基準；auto = remote HEAD → origin/dev → origin/main（預設）")
     ap.add_argument("--openapi", help="openapi.json 路徑（預設自動尋找）")
     ap.add_argument("--task-md", help="task.md 路徑；矩陣已記錄的規則視為 DOCUMENTED")
     ap.add_argument("--files", nargs="*", help="指定檔案（略過 git diff）")

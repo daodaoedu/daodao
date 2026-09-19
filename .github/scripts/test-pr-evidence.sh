@@ -68,6 +68,30 @@ expect_pass "不適用聲明有原因" "$code"
 code=$(run "$(printf '## 驗證證據\n核心旅程不適用：\n')")
 expect_fail "不適用聲明沒原因" "$code" "沒有具體原因"
 
+# 實際欄空白／未填（沒有 ✅）不能過：CI 是繞過本機 hook 時的最後一道
+BLANK=$(printf '%s\n' "$GOOD" | sed 's/✅ 400/未填/')
+code=$(run "$BLANK"); expect_fail "實際欄未填" "$code" "缺 ✅"
+
+# 每條旅程都要成對
+UNPAIRED='## 驗證證據
+- 驗證報告: https://docs.google.com/document/d/abc/edit
+| ID | 旅程 | 類型 | 輸入 | 預期結果 | 實際 |
+|---|---|---|---|---|---|
+| J-01 | 建立場次 | 正常 | slug 2026-summer | 201 | ✅ 201 |
+| J-02 | 刪除場次 | 錯誤路徑 | 非擁有者 | 403 | ✅ 403 |'
+code=$(run "$UNPAIRED"); expect_fail "旅程未成對" "$code" "旅程「建立場次」缺「錯誤路徑」列"
+
+# 真實輸入含 <script> 不算模板佔位列
+XSS="$GOOD
+| J-03 | 建立場次 | 錯誤路徑 | 名稱 <script>alert(1)</script> | 400 | ✅ 400 |"
+code=$(run "$XSS"); expect_pass "含 <script> 的真實輸入列" "$code"
+ONLY_PLACEHOLDER='## 驗證證據
+- 驗證報告: https://docs.google.com/document/d/abc/edit
+| ID | 旅程 | 類型 | 輸入 | 預期結果 | 實際 |
+|---|---|---|---|---|---|
+| J-01 | <建立 X> | 正常 | <輸入> | <結果> | ⬜ |'
+code=$(run "$ONLY_PLACEHOLDER"); expect_fail "只有模板佔位列" "$code" "沒有核心旅程矩陣列"
+
 # 表格列在區塊之外不算（區塊只到下一個 ## 為止）
 OUTSIDE='## 驗證證據
 - 驗證報告: https://docs.google.com/document/d/abc/edit
