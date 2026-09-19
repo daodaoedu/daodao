@@ -191,11 +191,11 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 
 ```bash
 cat > "$TASK/notes/pr-body-<repo>.md" <<'EOF'
-## Summary
-...
+## Why is this necessary?
+- <對應 issue 的問題與需求背景；Closes #<n> 或鏡像 issue 連結、需求基準、既有開發規劃連結放這裡>
 
-## Related
-- Closes #<n>（或鏡像 issue 連結）／需求基準／既有開發規劃連結
+## How does it address?
+- <實作要點，含跨 repo merge 順序>
 
 ## 驗證證據
 - 驗證報告: [Task <n> 驗證報告](<Google 文件 url>)
@@ -217,6 +217,7 @@ gh pr create --base dev \
 - **base 永遠是 `dev`**（main 只收 dev/hotfix/release）
 - PR body 引用 issue（`Closes #<n>` 或鏡像 issue 連結）
 - **PR body 必須有「## 驗證證據」區塊**：驗證報告連結 + 核心旅程矩陣（證據欄可省）。沒有寫入路徑的任務把 task.md 那行 `核心旅程不適用：<原因>` 原樣放進來。sub-repo CI 的 `pr-evidence-gate` 會讀這段（目前 advisory，累積數據後升 required check）；本機 `pre-pr-gate.sh` 也會擋。body 一律用 `--body-file`，不要 `--body "..."`（會產生字面 `\n`）
+- body 沿用 Why／How 格式：`auto-pr-description` workflow 在 PR 開啟時會用 Workers AI 重寫沒有這兩段的 body；它看到「## 驗證證據」會跳過，但 Why／How 仍是全 repo 的 PR 格式
 - 跨 repo 時在各 PR body 互相引用並標注 merge 順序：
 
 ```
