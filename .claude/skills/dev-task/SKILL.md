@@ -174,7 +174,7 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 
 ## Phase 4: finish — 發 PR
 
-前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `.claude/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。
+前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `.claude/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。hook 本身需要 `jq`（缺了會 fail closed 擋下 `gh pr create` 並提示安裝）、`python3` 與 `node`（parity 檢查，缺了只 warn）。
 
 0. **Deferred items 先開卡再發 PR**：把 task.md「## Deferred items」與驗證中發現的範圍外問題整理成清單，依 `publish-tasks` skill 在既有授權範圍內開成子 issue（父卡＝本任務 issue），每一項後面補 `#<n>`；沒有開卡授權的項目寫 `（待開卡：<原因>）`，並在 issue comment 的 Known incomplete scope 原樣列出，讓人決定。**task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失**——#171 的「驗證紅框取代 toast」就是這樣變成 #188 的第二個根因
 
