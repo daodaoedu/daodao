@@ -49,13 +49,20 @@ else
   else
     printf '%s\n' "$section" | grep -qE 'https?://' \
       || problems+=("「## 驗證證據」沒有驗證報告連結（https://…）")
-    rows=$(printf '%s\n' "$section" | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' | grep -v '<' || true)
+    rows=$(printf '%s\n' "$section" | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' | LC_ALL=C grep -vE '<([^>|]*[^ -~][^>|]*|file:line)>' || true)
     if [ -z "$rows" ]; then
       problems+=("「## 驗證證據」沒有核心旅程矩陣列（| J-01 | 旅程 | 正常／錯誤路徑 | 輸入 | 預期 | 實際 |）")
     else
-      printf '%s\n' "$rows" | grep -q '正常' || problems+=("核心旅程缺「正常」列")
-      printf '%s\n' "$rows" | grep -q '錯誤路徑' || problems+=("核心旅程缺「錯誤路徑」列（server 拒絕的輸入、訊息顯示、輸入保留）")
       printf '%s\n' "$rows" | grep -qE '⬜|❌' && problems+=("核心旅程有 ⬜／❌ 列，未驗或未過")
+      unverified=$(printf '%s\n' "$rows" | grep -v '✅' || true)
+      [ -z "$unverified" ] || problems+=("核心旅程有列缺 ✅（實際欄要有攔到的狀態碼）：$(printf '%s' "$unverified" | head -1)")
+      # 每條旅程（第 2 欄）都要同時有「正常」與「錯誤路徑」（第 3 欄）
+      pair_problems=$(printf '%s\n' "$rows" | awk -F'|' '
+        { j=$3; t=$4; gsub(/^[ \t]+|[ \t]+$/, "", j); gsub(/^[ \t]+|[ \t]+$/, "", t)
+          if (j == "") next
+          seen[j]=1; if (t ~ /正常/) ok[j]=1; if (t ~ /錯誤路徑/) err[j]=1 }
+        END { for (j in seen) { if (!ok[j]) printf "旅程「%s」缺「正常」列；", j; if (!err[j]) printf "旅程「%s」缺「錯誤路徑」列（server 拒絕的輸入、訊息顯示、輸入保留）；", j } }')
+      [ -z "$pair_problems" ] || problems+=("$pair_problems")
     fi
   fi
 fi
