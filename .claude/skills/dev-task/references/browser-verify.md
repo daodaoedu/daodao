@@ -22,7 +22,7 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 3. 基本盤（每次都驗）：
    - console 無新增 error
    - 改動頁面在桌機 + 行動版寬度（390px）下版面正常
-   - 主要互動路徑可完整走通（點擊、輸入、送出）
+4. **核心旅程矩陣**（有寫入路徑就必填，見 [journey-matrix.md](journey-matrix.md)）：任務碰到的每條「建立／編輯／刪除／送出」旅程，至少一列用真實輸入送出成功、一列用 server 會拒絕的輸入送出失敗。「點擊、輸入、送出可走通」不是驗收條件——**用什麼輸入送出、server 回了什麼、畫面顯示了什麼**才是。沒有寫入路徑時寫一行 `核心旅程不適用：<原因>`。
 
 ## 3. 工具選擇
 
@@ -87,7 +87,8 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
    ```
    截圖仍要留（存 evidence/）當證據，但**量測數字才是判斷依據**，不是截圖本身。
 4. 讀 console（`read_console_messages`，用 pattern 過濾）確認無新 error
-5. 記入 task.md「驗證」區塊：✅/❌ + 截圖檔名 + 備註
+5. **旅程列（矩陣 J-xx）多做兩件事**：送出前先掛 `playwright_expect_response`（對 API path），送出後用 `playwright_assert_response` 讀 status 與 body，把狀態碼寫進「實際」欄；錯誤路徑要再確認三件事——server 訊息有顯示在畫面上、和 response body 的 message 一致、使用者輸入沒被清掉（React 19 form action 完成後會 reset 表單，#188 就是這樣把欄位清空的）。靠 toast 一閃而過的訊息要截到圖，截不到就用 `playwright_get_visible_text` 抓文字存進備註
+6. 記入 task.md「驗證」區塊：✅/❌ + 截圖檔名 + 備註；旅程列記在「### 核心旅程矩陣」表格
 
 **失敗**：修復 → 只重驗該項。同一項修 2 次仍失敗 → 停下來，把現象（截圖 + console + 重現步驟）整理給使用者判斷。同一類問題被使用者連續指正兩次以上，代表驗證方法本身有問題（通常是又用了肉眼截圖比對），不是再找一個漏網之魚就好——這是換成量測方法的訊號。
 
@@ -95,7 +96,7 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
 
 無 UI 變更時跳過瀏覽器，改為：
 
-- 新/改 API：curl 實際打一輪（正常 + 邊界 + 錯誤輸入），記 request/response 到 task.md
+- 新/改 API：curl 實際打一輪（正常 + 邊界 + 錯誤輸入），記 request/response 到 task.md；同樣填「### 核心旅程矩陣」，FE 規則來源欄寫 `—`，證據欄放 `-w '%{http_code}'` 的輸出檔（`evidence/verify-jNN.txt`）。錯誤路徑的 response body 要有可給前端顯示的欄位級訊息，不能只回通用字串
 - migration：在本地 DB 跑過 + rollback 測試（psql，遵守 idempotent 原則）
 - 有整合測試就跑整合測試
 

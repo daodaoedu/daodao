@@ -18,6 +18,9 @@ for path in \
   ".github/scripts/test-retrieve-context.sh" \
   ".github/scripts/test-code-review-contract.sh" \
   ".github/scripts/review-knowledge.cjs" \
+  ".github/workflows/pr-evidence-gate.yml" \
+  ".github/scripts/check-pr-evidence.sh" \
+  ".github/scripts/test-pr-evidence.sh" \
   ".github/review-knowledge/**"; do
   grep -Fq -- "- '$path'" "$WORKFLOW" || fail "push paths 未監聽 $path"
 done
@@ -30,9 +33,16 @@ for required_skill in collect-pr-feedback code-review; do
   esac
 done
 
-for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh; do
+for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh check-pr-evidence.sh test-pr-evidence.sh; do
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"
 done
+grep -Fq "pr-evidence-gate.yml" "$WORKFLOW" || fail "sync workflow 未同步 pr-evidence-gate.yml（PR 驗證證據 CI 閘門）"
+# node fixture 只複製 sync workflow，auto-pr-description 不在時略過這條（真實 repo／CI 一定有）
+AUTO_PR_WORKFLOW="$SCRIPT_DIR/../workflows/auto-pr-description.yml"
+if [ -f "$AUTO_PR_WORKFLOW" ]; then
+  grep -Fq "grep -q '^## 驗證證據'" "$AUTO_PR_WORKFLOW" \
+    || fail "auto-pr-description.yml 必須在 body 已含「## 驗證證據」時跳過，否則會覆寫 dev-task 寫好的證據"
+fi
 
 grep -Fq 'git status --porcelain -- .claude .github/workflows .github/scripts' "$WORKFLOW" \
   || fail "變更偵測未涵蓋 untracked scripts"
