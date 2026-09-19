@@ -36,7 +36,7 @@ rclone config create gdrive drive scope=drive.file token='<上一步印出的 to
      -d '{"role":"reader","type":"anyone"}'
    ```
    這步把截圖從「僅上傳者本人」改成「知道連結的人都能看」（不會被搜尋索引，但連結外流就能被任何人開）——Google 文件轉檔伺服器要嵌入圖片必須能公開抓取到，沒有更窄的做法。**內容若明顯敏感（正式環境真實個資、機密商業資料）先跟使用者確認要不要做這步**；一般 dev 環境截圖預設可以直接做。
-4. **產生 HTML 內容**：依 task.md 的「驗證」區塊逐項轉成 `<h3>檢查點</h3><p>描述</p><p><img src="https://drive.google.com/uc?export=view&id=<檔案ID>" width="480"></p>`，純文字生成、不含任何圖片位元組，所以就算轉出上百張截圖的內容也只有幾十 KB。
+4. **產生 HTML 內容**：依 task.md 的「驗證」區塊逐項轉成 `<h3>檢查點</h3><p>描述</p><p><img src="https://drive.google.com/uc?export=view&id=<檔案ID>" width="480"></p>`，純文字生成、不含任何圖片位元組，所以就算轉出上百張截圖的內容也只有幾十 KB。**核心旅程矩陣整表轉成 `<table>` 放在最前面**（ID、旅程、類型、輸入、預期、實際狀態碼），每列旅程的截圖跟在表後；讀報告的人第一眼要看到「使用者能不能完成任務」，不是版面像不像。
 5. **建立文件**：HTML 小（< 20KB）時可呼叫 Google Drive MCP 的 `create_file`（`title` 用 `Task <n> 驗證報告`，`textContent` 放 HTML，`contentMimeType: text/html`，會自動轉成 Google 文件）。HTML 大（並排截圖多、附量測表）時不要經 MCP，改用 rclone 的 token 直接打 Drive API multipart 上傳並轉檔，全程不經對話 context：
    ```bash
    rclone lsd gdrive: >/dev/null   # 讓 token 刷新
