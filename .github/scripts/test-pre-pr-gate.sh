@@ -148,6 +148,12 @@ expect_block "cd 路徑帶單引號仍會攔" "$code" "verify 階段沒跑完"
 code=$(run_hook "$SANDBOX/elsewhere" "cd \"\$TASK/daodao-f2e\" && gh pr create --base dev --title t --body-file $t/notes/body.md")
 expect_block "cd 未展開變數但 body-file 帶 worktrees 路徑" "$code" "verify 階段沒跑完"
 
+# 6d2. cd 與路徑之間多個空白或 Tab：awk 預設欄位切割本來就吃得下，仍要攔
+code=$(run_hook "$SANDBOX/elsewhere" "cd    $t/daodao-f2e && gh pr create --base dev --title t --body-file $t/notes/body.md")
+expect_block "cd 後多個空白仍會攔" "$code" "verify 階段沒跑完"
+code=$(run_hook "$SANDBOX/elsewhere" "$(printf 'cd\t%s && gh pr create --base dev --title t --body-file %s' "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "cd 後 Tab 仍會攔" "$code" "verify 階段沒跑完"
+
 # 6e. 每條旅程都要成對：建立只有正常、刪除只有錯誤路徑 → 擋
 UNPAIRED='### 核心旅程矩陣
 | ID | 旅程 | 類型 | 輸入 | FE 規則來源 | BE 規則來源 | 預期結果 | 實際 | 證據 |
