@@ -52,7 +52,7 @@ git submodule update --remote
 | Skill | 用途 |
 |-------|------|
 | `/openspec-*` | 需求 → 規格 → 任務（L/M 功能必要；S 卡進 pipeline 用 `ff-change`） |
-| `/gh-card` | 開中央 issue 掛 Planning board；label 決定 plan-only / auto-pr / human-driving |
+| `/gh-card` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$gh-card` 或明確讀取 skill |
 | `/dev-task` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
 | `/post-merge-wrapup` | merge 後歸檔 openspec、更新 docs/product 狀態 |
 | `/format-commit` | 結構化 commit message（Why / How） |
@@ -63,7 +63,9 @@ git submodule update --remote
 | `/publish-tasks` | Routine A 的手動版：OpenSpec tasks → sub-repo issues + auto label |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
-詳細開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / OpenSpec / issue AC）見其 Phase 1.5，自動化 pipeline 見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
+快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / OpenSpec / issue AC）見其 Phase 1.5，自動化 pipeline 見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
+
+新增的[Issue → 開發 → 驗收 → 合併流程提案](docs/automation/issue-to-acceptance-workflow.md)涵蓋 Google Docs／Drive、人工與自動入口、Issue 回寫；另有[額度分配政策](docs/automation/agent-budget-policy.md)與[可複用文件模板](templates/development/README.md)。這些是待導入設計，不代表自動化已啟用。
 
 ### AI Code Review 誤判知識庫
 
