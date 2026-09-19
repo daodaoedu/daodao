@@ -47,7 +47,21 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
 
 ## 3a. 登入牆處理（碰到「要登入才能看」時，先自己解，不要直接丟回給使用者）
 
-**daodao 現成配方（優先走這條）**：
+**daodao 現成配方 A：dev-login 端點（部署後冒煙、要「全新帳號」時優先走這條）**
+
+`POST /api/v1/auth/dev-login`（[daodao#230](https://github.com/daodaoedu/daodao/issues/230)）只在 server-dev 掛載，需要 `DEV_LOGIN_SECRET`（放在 `~/.claude/projects/-Users-xiaoxu-Projects-daodao/dev-login-secret.txt`，缺了請使用者從 GitHub environment secret 抄一份；不進 repo、不貼對話）：
+
+```bash
+SECRET=$(cat ~/.claude/projects/-Users-xiaoxu-Projects-daodao/dev-login-secret.txt)
+# temp：模擬「剛 Google 登入、尚未註冊」的新用戶 → 可直接跑 onboarding；同 email 重複呼叫回同一個 temp user
+curl -s -X POST https://server-dev.daodao.so/api/v1/auth/dev-login   -H "content-type: application/json" -H "x-dev-login-secret: $SECRET"   -d '{"email":"qa+<task>@daodao.so","mode":"temp","name":"冒煙 QA"}'
+# user：以既有 email 取得正式用戶身份
+curl -s ... -d '{"email":"<既有 email>","mode":"user"}'
+```
+
+回應 `data.token` 就是 `auth_token` cookie 的值，後續注入方式同下方步驟 3；`mode=user` 找不到 email 回 404，secret 錯回 401，prod 沒有這條路由（404）。每個任務用獨立 email（`qa+<issue#>@daodao.so`），冒煙完把 `temp_users`／註冊出來的 `users` 清掉。
+
+**daodao 現成配方 B：預存 JWT（既有使用者、本機 dev server）**：
 
 1. **讀取 JWT**：`~/.claude/projects/-Users-xiaoxu-Projects-daodao/dev-jwt.txt`（使用者預存的 JWT，過期時請使用者更新）
 2. **確保 API 可達**：
