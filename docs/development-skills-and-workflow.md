@@ -1,6 +1,6 @@
 # Skills 與開發流程
 
-更新：2026-09-13。本文件是入口導覽；細節以各 skill、AGENTS 與當下程式為準。共用規則見 [AI 檢核與人工審核](automation/ai-human-review-workflow.md)。
+更新：2026-09-19。本文件是入口導覽；細節以各 skill、AGENTS 與當下程式為準。共用規則見 [AI 檢核與人工審核](automation/ai-human-review-workflow.md)。
 
 ## 使用方式
 
@@ -12,11 +12,11 @@
 | Bug | file-bug-issue | 整理現象、查現況與重複卡、區分事實與推測 | 問題描述與預期行為 |
 | 開卡／拆任務 | gh-card、publish-tasks | 同版需求到任務對照、相依、查重與發布預覽 | 工作範圍與尚未授權的發布／啟動 |
 | 開發 | dev-task | 隔離工作目錄、技術規劃、實作、適用測試與自審修正 | 未決產品行為及必要例外 |
-| 驗收 | dev-task verify | 逐原 FR／TP／AC 驗證、POC 差異及真實 API 證據 | 結果與未解差異是否可接受 |
+| 驗收 | dev-task verify | 逐原 FR／TP／AC 驗證、POC 差異、核心旅程矩陣（含錯誤路徑 HTTP 碼）、Google 文件報告 | 結果、POC 差異決策與未解差異是否可接受 |
 | 提交 | pre-commit-check、format-commit | 依實際變更檢查、修正、產生 commit 範圍與訊息 | 按 AGENTS 確認具體提交 |
 | 審查 | code-review、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
 | 通知 | notify-related-issue | 核對 PR／Issue 狀態、草擬有證據的更新、查重 | 尚未授權的留言／關閉操作 |
-| 合併收尾 | post-merge-wrapup、dev-task cleanup | 核實 merged 與驗收、文件校準、清理前檢查 | 未決完成範圍及必要清理授權 |
+| 合併收尾 | post-merge-wrapup、dev-task cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
 | 自動化 | gh-pipeline | 核對實際 parser、workflow、runner 與 dry-run | 已準備好的派工操作 |
 
 ## Claude 與 Codex
@@ -30,6 +30,10 @@ Claude hooks 不自動等同 Codex gates；Codex 須主動執行相同檢查並�
 新需求只維護一份 PRD，既有 FRD 不必改名。保留 FR／TP／AC ID，多文件同 ID 加文件 ID；需求定稿後保存可回溯版本。task.md 是任務狀態入口及同版驗收投影，技術文件描述實作決策，報告記錄證據，不另發明驗收條件。
 
 小變更可用已確認 Issue 驗收條件；大型變更補必要技術設計與任務，不固定要求另一份 FRD。現有 OpenSpec artifacts 可沿用；本流程不依賴 OpenSpec skills；其他環境是否仍有安裝，以當下 inventory 為準。自動 pipeline 仍可能要求 OpenSpec marker 和 tasks.md，啟動前檢查實際相容性，不能因人工流程簡化就宣稱 runner 支援任意 PRD。
+
+## 閘門（2026-09-19 起）
+
+發 PR 由 `.claude/hooks/pre-pr-gate.sh` 攔：Status 未 `verified`、POC 比對缺、核心旅程矩陣缺或有 ⬜／❌、Deferred item 無子 issue、PR body 無「## 驗證證據」、前端手寫 `pattern` 編不過。CI 側 `pr-evidence-gate` 讀同一段（advisory，可升 block）。規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`；各階段細節見 `docs/workflow.md` Phase 3、6–8。跨 repo 子 PR 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關。
 
 ## 工作區與完成界線
 
