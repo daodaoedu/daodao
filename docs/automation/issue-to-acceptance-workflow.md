@@ -48,7 +48,7 @@ Issue 欄位、labels、Board 狀態與關聯設定見 [GitHub Issue 管理規�
 | Issue 自動派工 | `bin/pipeline/dispatch.ts` 已檢查 OpenSpec、`human-driving` 等條件 | 保留 Routine A，接 v2 router |
 | 本機隔離開發 | `.claude/skills/dev-task/SKILL.md` 定義 worktree 與驗收流程 | 抽出雙 host 共用執行契約 |
 | POC 比對與 Google 報告 | `dev-task/references/` 有 browser、poc-compare、verify-report 草案；部分未追蹤／未提交 | 加入版本綁定、證據留存、權限與 CI 重驗 |
-| Board 收尾 | `bin/pipeline/board-sync.ts` 在所有 mirrors closed 後標 Done，中央 Issue 仍開啟 | 改成明確區分 merged、deployed、accepted |
+| Board 收尾 | Routine C（`board-sync.ts`）已於 2026-09-20 退役；改由 `/post-merge-wrapup` 依 dev 冒煙結果呼叫 `bin/pipeline/board.ts` 移 Done／Need Fix | merged／deployed／accepted 已由「merged 留 Review、冒煙過才 Done」區分；部署證據仍待納入 |
 | 雙訂閱 harness | v2 仍為規劃，`bin/agent/` 尚不存在 | 分階段實作，不把設計命令當可用指令 |
 | 翻譯與 migration | 本機 hooks 與各 repo CI 能力不一致 | 將可確定規則改為共同 CLI 與 required checks |
 
