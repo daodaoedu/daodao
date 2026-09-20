@@ -69,6 +69,10 @@ commit 時必須依序執行：
 
 PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾：核對實際合併與驗收狀態、按適用範圍整理既有規劃 artifacts、更新 docs/product 與地圖；合併不等於部署或整體需求完成。
 
+## Planning Board 狀態
+
+中央卡在 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) 的 Status 由流程各步驟負責移，不靠 GitHub 內建 workflow（它們認不出 sub-repo 的 `Refs` PR）：gh-card → `Todo`；dev-task start → `In Progress`；dev-task finish（PR 開了）→ `Review`；post-merge-wrapup 冒煙通過 → `Done`、失敗 → `Need Fix`。一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`，`board.ts audit` 找落差；細節見 `.claude/skills/gh-pipeline/SKILL.md`。
+
 ## 需求規劃流程
 
 ### 開 Issue

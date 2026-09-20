@@ -51,8 +51,15 @@ daodao/
 
 ### 1.1a 防撞檢查（建 worktree 前必做）
 
-1. **人工開工標記**：任務對應中央卡（daodaoedu/daodao）時，手動開工前加 **`human-driving`** label（`gh issue edit <n> --repo daodaoedu/daodao --add-label human-driving`）；cleanup 時再移除。
-   - 自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 label 現在只用來在 board 上辨識「有人在做」，不再是防派工閘門
+1. **人工開工標記 + board 移 In Progress**：任務對應中央卡（daodaoedu/daodao）時，建 worktree 前執行：
+
+   ```bash
+   pnpm -s tsx bin/pipeline/board.ts set <n> wip --add-label human-driving
+   ```
+
+   一行同時把 Planning board 卡片移到 `In Progress`（不在 board 會先加入）、掛 `human-driving` label，並回讀確認。從 `Need Fix`（驗收退回）接手的卡同樣用這行。
+   - 自動派工 Routine A／B 已於 2026-09-20 退役（#241），`human-driving` 現在只用來在 board 上辨識「有人在做」，不再是防派工閘門
+   - 不要手動 `gh project item-edit`：board 的六欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 [gh-pipeline](../gh-pipeline/SKILL.md)
    - 不要跟 `human-coding` 混淆：那是 Routine B 時代 sub-repo 鏡像 issue 的移交標記，已不再使用
 2. **跟其他任務防撞**：對每個目標 repo 檢查 in-flight 工作：
    - `git worktree list`（在 `projects/<repo>` 內）→ 已有任務在做同一個 repo 時，比對雙方 scope 是否碰同一片檔案
@@ -249,7 +256,13 @@ EOF
 ```
 
    - 鏡像 issue（sub-repo）：comment 開在鏡像 issue 上
-   - 中央 issue（daodaoedu/daodao）：comment 之外，若卡在 Planning board 上，merge 後的 board 回寫由 Routine C 自動處理，不用手動改 Status
+   - 中央 issue（daodaoedu/daodao）：comment 之後把 board 卡移到 `Review`（PR 開了、等 review／merge／驗收）：
+
+     ```bash
+     pnpm -s tsx bin/pipeline/board.ts set <n> review
+     ```
+
+     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 也只認 `auto` label，所以這一步不做就沒有人會移卡
 9. 之後用 `collect-pr-feedback` skill 收集回饋修正
 
 ## Phase 5: cleanup — merge 後收尾
@@ -266,10 +279,9 @@ git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分
 ```
 
 3. 刪任務資料夾：`rm -rf "$TASK"`（刪之前確認核心旅程矩陣與 dev 冒煙結果已在 issue comment；task.md 其他有留存價值的內容先摘要進 comment）
-4. 開工時加過 `human-driving` label 的：移除它
-5. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）
-6. clone 模式的任務：確認無未 push commit 後 `rm -rf`
-7. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
+4. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）；board 卡的 `Done`／`Need Fix` 與 `human-driving` 移除由該 skill 依冒煙結果執行，這裡不要提前移 Done
+5. clone 模式的任務：確認無未 push commit 後 `rm -rf`
+6. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
 
 ## 平行開發約定
 
