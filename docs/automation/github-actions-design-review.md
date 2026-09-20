@@ -325,7 +325,7 @@ Fallback、推論或規劃內容不得當成上述 live proof。
 ### Phase 0 — Security prerequisites
 
 - [ ] 修正 `gh.ts` 所有 shell string composition。
-- [ ] 驗證並安全傳遞 `pipeline-board-sync` inputs。
+- [x] ~~驗證並安全傳遞 `pipeline-board-sync` inputs~~ — 2026-09-20 整支 workflow 退役刪除（PR #253），F-03 不再適用。
 - [ ] 拆分 `product-status-drift` 的 PR fixture 與 trusted live scan。
 - [ ] 啟用 `main` ruleset、required checks 與禁止直接 push。
 - [ ] Actions default permission 改為 read。
