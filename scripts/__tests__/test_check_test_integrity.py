@@ -72,6 +72,31 @@ class IntegrityTests(unittest.TestCase):
             target.write_text('@pytest.mark.' + 'skip(reason="later")\ndef test_example():\n    assert 1 == 1\n')
             self.assertEqual(run().returncode, 1)
 
+    def test_stale_receipt_ignored_when_nothing_was_removed(self):
+        """回條被 commit 進 repo 後會留在後續每張 PR；沒刪測試時不該因為它對不上就擋下來。"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args):
+                return subprocess.check_output(['git', *args], cwd=root, text=True, stderr=subprocess.DEVNULL)
+            git('init')
+            git('config', 'user.email', 'fixture@example.invalid')
+            git('config', 'user.name', 'Fixture')
+            (root / 'test_example.py').write_text('def test_example():\n    assert 1 == 1\n')
+            git('add', '.')
+            git('commit', '-m', 'fixture baseline')
+            # 上一張 PR 留下的回條：base 與 digest 都對不上這次
+            receipt = root / '.test-integrity-review.json'
+            receipt.write_text(json.dumps({'base': 'deadbeef', 'test_diff_sha256': 'stale',
+                                           'reviewer': 'human', 'reason': '上一張 PR 的核可',
+                                           'evidence': 'previous PR'}))
+            # 這次只加測試，沒有刪任何斷言
+            (root / 'test_new.py').write_text('def test_new():\n    assert True\n')
+            git('add', '.')
+            result = subprocess.run([sys.executable, str(MODULE), '--base', 'HEAD',
+                                     '--review', str(receipt)], cwd=root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout)['status'], 'pass')
+
 
 if __name__ == '__main__':
     unittest.main()

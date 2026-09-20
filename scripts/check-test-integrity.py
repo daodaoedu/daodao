@@ -70,13 +70,17 @@ def main():
         diff = git('diff', '--no-ext-diff', '--no-textconv', '--no-renames', '--unified=3', *refs, '--', *paths) if paths else ''
         digest = hashlib.sha256(diff.encode()).hexdigest()
         findings = scan(diff)
+        removals = any(f['kind'] == 'removed-test-or-assertion' for f in findings)
         reviewed = False
         if args.review:
             reviewed = valid_review(json.loads(args.review.read_text()), base, digest)
-            if not reviewed:
+            # 回條是「某一次刪測試」的核可，會被 commit 進 repo 而留在後續每張 PR 的工作目錄。
+            # 只有在這次 diff 真的刪了測試／斷言時，回條對不上才算問題；否則它與本次無關，忽略即可。
+            # （2026-09-20：#253 的回條留在 main，讓之後每張 PR 的 test-integrity 都以 exit 3 失敗。）
+            if removals and not reviewed:
                 raise ValueError('Review receipt is incomplete or does not match this base and test diff')
         blocked = any(f['kind'] == 'disabled-or-focused' for f in findings)
-        needs_review = any(f['kind'] == 'removed-test-or-assertion' for f in findings) and not reviewed
+        needs_review = removals and not reviewed
         print(json.dumps({'base': base, 'test_diff_sha256': digest, 'findings': findings,
                           'review_receipt_matches': reviewed, 'review_required': needs_review,
                           'status': 'blocked' if blocked else 'review-required' if needs_review else 'pass'}, ensure_ascii=False, indent=2))
