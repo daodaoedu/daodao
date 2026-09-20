@@ -138,6 +138,35 @@ node "$ROOT/.claude/skills/dev-task/references/layout-probe.mjs" \
 - `--out` 用絕對路徑；產出的 md 有 route 表，另有真實 id 的補跑結果要合併進 task.md 同一張表
 - diff 完全沒碰頁面／版面（只改 i18n 字串、純 hook 邏輯）時，在 task.md「## 驗證」寫一行 `版面探針不適用：<具體原因>`
 
+## 4b. 版面 rect 對照（零視覺差異的 refactor 必跑）
+
+抽共用元件、換 className、搬 DOM 這類「不該改變任何版面」的任務，**layout-probe 不夠**——它只看有沒有溢出，不看版面有沒有變。用 `rect-probe.mjs` 在改前改後各量一次，再用 `rect-diff.py` 比對：
+
+```bash
+# routes.json：[{ "path": "/zh-TW/settings", "auth": "user" }, ...]
+#   auth = "user"（既有使用者 token）／"temp"（dev-login mode=temp 的新用戶）／"none"（不帶 cookie）
+#   onboarding、verify-email/pending 這類頁面對已註冊使用者會被導走，要用對應身分才量得到目標頁
+
+# 改前：worktree 剛建好、還沒編輯時量（或用 git checkout <base> -- <src> 暫時還原，量完還原回 HEAD）
+node "$ROOT/.claude/skills/dev-task/references/rect-probe.mjs" \
+  --out "$TASK/evidence/baseline-rects.json" --base http://localhost:3001 \
+  --routes-file "$TASK/notes/routes.json" --cookie-file-user "$TASK/notes/tok.txt" \
+  --cookie-domain localhost --head "$(git rev-parse HEAD)" --label "改前"
+
+# 改後：同一份 routes.json
+node "$ROOT/.claude/skills/dev-task/references/rect-probe.mjs" \
+  --out "$TASK/evidence/after-rects.json" ... --label "改後"
+
+python3 "$ROOT/.claude/skills/dev-task/references/rect-diff.py" \
+  "$TASK/evidence/baseline-rects.json" "$TASK/evidence/after-rects.json" \
+  > "$TASK/evidence/ac03-rect-diff.md"     # 有差異時 exit 1
+```
+
+- 量的是：`scrollWidth`、wrapper（`main` 的父層，沒有 `main` 時取最外層帶 min-height 的捲動容器）的 rect 與 position／zIndex／overflow／minHeight／width／backgroundColor、wrapper **每個直接子元素**的 tag／rect／position、`main` 的 rect 與 maxWidth／padding／margin
+- className 字串允許不同（twMerge 會重排），computed 值必須完全相同——這是 daodao#240 抽 `PageShell` 時證明「15 頁零視覺差異」的方法
+- `--head` 把 commit 寫進輸出，讓證據自我綁定；改前的量測記得用 base 的 SHA
+- 產出的差異表整段貼進 task.md「## 驗證」底下，和版面探針表並列
+
 ## 4. 驗證迴圈
 
 對清單每一項：
