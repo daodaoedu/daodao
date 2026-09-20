@@ -3,7 +3,7 @@
 //   1. 登入牆   — 導頁後 pathname 落在 /auth/、/login、/signin → 這張截圖不是證據（#166 的 bug-report 截圖就是登入頁）
 //   2. 橫向溢出 — document.documentElement.scrollWidth > innerWidth（#233：settings 用 w-screen 疊在 md:pl-[132px] 上，每頁多 132px）
 //   3. 出界元素 — main／[role=dialog]／aside 內可見元素 right > innerWidth 或 left < 0
-// 從 cwd 的 node_modules 找 playwright（在 $TASK/daodao-f2e 或 daodao-admin-ui 底下跑）。
+// 從 cwd 的 node_modules 找 playwright／@playwright/test（f2e 在 $TASK/daodao-f2e/apps/product 底下跑，admin-ui 在 repo 根）。
 //
 // 用法：
 //   node <daodao-root>/.claude/skills/dev-task/references/layout-probe.mjs \
@@ -43,7 +43,7 @@ for (const mod of ["playwright", "@playwright/test", "playwright-core"]) {
   try { ({ chromium } = require(mod)); break; } catch {}
 }
 if (!chromium) {
-  console.error("cwd 的 node_modules 找不到 playwright／@playwright/test，請在 f2e 或 admin-ui worktree 底下跑");
+  console.error("cwd 的 node_modules 找不到 playwright／@playwright/test：f2e 請在 apps/product 底下跑，admin-ui 在 repo 根");
   process.exit(2);
 }
 

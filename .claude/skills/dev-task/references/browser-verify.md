@@ -95,20 +95,22 @@ curl -s ... -d '{"email":"<既有 email>","mode":"user"}'
 肉眼看截圖抓不到「整頁多 132px、右邊被 overflow-hidden 切掉」這種問題（#233：settings 十五頁 `w-screen` 疊在 layout 的 `md:pl-[132px]` 上，2026-03 進來、2026-09 才被使用者發現），所以量：
 
 ```bash
-cd "$TASK/daodao-f2e"    # 或 daodao-admin-ui；腳本從 cwd 的 node_modules 找 playwright
+cd "$TASK/daodao-f2e/apps/product"    # admin-ui 則是 repo 根；腳本從 cwd 的 node_modules 找 @playwright/test，f2e 只裝在 apps/product
 TOKEN=$(curl -s -X POST https://server-dev.daodao.so/api/v1/auth/dev-login ... | jq -r .data.token)   # 見 §3a 配方 A
-node "$(git -C "$TASK/.." rev-parse --show-toplevel)/.claude/skills/dev-task/references/layout-probe.mjs" \
+node "$ROOT/.claude/skills/dev-task/references/layout-probe.mjs" \
   --base http://localhost:3001 \
   --routes /zh-TW/settings,/zh-TW/settings/bug-report \
   --cookie "auth_token=$TOKEN" --cookie-domain localhost \
-  --out ../evidence/verify-layout-probe
+  --out "$TASK/evidence/verify-layout-probe"
 ```
 
 - 預設寬度 390／1024／1440（`--widths` 可改）；每組量三件事：落在登入牆 → ❌、`scrollWidth > innerWidth` → ❌ 並印出最寬元素、`main`／`[role=dialog]`／`aside` 內元素超出 viewport → ❌
 - 產出 `verify-layout-probe.md`（「### 版面探針」表，整段貼進 task.md「## 驗證」底下）、`.json`、每組一張截圖
 - 有 ❌：修掉重跑，不能自行放過；表裡留 ❌ 發 PR 會被擋
 - `--routes` 要列**任務碰到的每條 route**，包含新開的頁、改了共用 layout／元件時所有掛在它底下的頁（#166 改了 sidebar，settings 全部子頁都算）
-- 本機 dev server 連 server-dev 時 cookie 跨域問題同 §3a：先起 CORS 代理，`--cookie-domain localhost`
+- 本機 dev server 連 server-dev 時 cookie 跨域問題同 §3a：先起 CORS 代理（`.cjs` 副檔名——monorepo 根 package.json 是 `"type": "module"`，`.js` 會被當 ESM 炸 `require is not defined`），`--cookie-domain localhost`
+- 拿不到 `[id]` 動態 route 的真實 id 時，先打 `GET /api/v1/auth/me` 取 `data.user.id`；空 id 會落在別的頁，探針表的「落點」欄要對得上 route
+- `--out` 用絕對路徑；產出的 md 有 route 表，另有真實 id 的補跑結果要合併進 task.md 同一張表
 - diff 完全沒碰頁面／版面（只改 i18n 字串、純 hook 邏輯）時，在 task.md「## 驗證」寫一行 `版面探針不適用：<具體原因>`
 
 ## 4. 驗證迴圈
