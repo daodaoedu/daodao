@@ -1,0 +1,52 @@
+[
+  {
+    "id": 23310188,
+    "name": "Benchmark required checks",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "daodaoedu/daodao-infra",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "refs/heads/main"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Nginx configuration and gate regression",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec5GYsG0zgFjr2w",
+    "created_at": "2026-09-14T21:52:03.071+08:00",
+    "updated_at": "2026-09-14T21:52:03.133+08:00",
+    "bypass_actors": [
+      {
+        "actor_id": 5,
+        "actor_type": "RepositoryRole",
+        "bypass_mode": "always"
+      }
+    ],
+    "current_user_can_bypass": "always",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/daodaoedu/daodao-infra/rulesets/23310188"
+      },
+      "html": {
+        "href": "https://github.com/daodaoedu/daodao-infra/rules/23310188"
+      }
+    }
+  }
+]
