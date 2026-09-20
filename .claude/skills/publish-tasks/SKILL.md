@@ -14,6 +14,6 @@ description: 將已確認開發計畫的未完成任務整理成 GitHub 子 Issu
 3. AI 查核任務是否漏掉需求、重複或相互矛盾，檢查依賴、版本、repo 存取與 open／closed 重複卡；先修正可查明問題，產品取捨列待決策。規格不完整仍可依要求草擬 Todo，不啟動開發。
 4. 以 [子 Issue 模板](../../../templates/development/subtask-issue.md) 保存不覆蓋的本機草稿，附標題、repo、父卡、labels、status、原任務對照及檢核摘要。遠端 body 包含足夠上下文，不能只引用本機檔案。
 5. 依 [gh-card](../gh-card/SKILL.md) 的 preflight、授權、發布與回讀段落執行，不重新進入入口分流。已有授權直接處理範圍內任務；只有規劃授權就交草稿。逐張保存結果；建立 timeout 先查重，部分成功只補未完成操作。缺 label 不吞錯誤。
-6. 自動派工 Routine A／B 已於 2026-09-20 退役（#241）：發布的子 issue 不會被任何 runner 接手，一律由人工 `/dev-task` 開工；不要加 `auto`／`auto:*` labels，也不聲稱自動派工。子 issue body 保留 `Parent: daodaoedu/daodao#N` 行，讓 Routine C（見 [gh-pipeline](../gh-pipeline/SKILL.md)）在 PR merge 後回寫 board。
+6. 自動派工 Routine A／B 已於 2026-09-20 退役（#241）：發布的子 issue 不會被任何 runner 接手，一律由人工 `/dev-task` 開工；不要加 `auto`／`auto:*` labels，也不聲稱自動派工。子 issue body 保留 `Parent: daodaoedu/daodao#N` 行供反查中央卡（Routine C 已退役，不再機器解析；見 [gh-pipeline](../gh-pipeline/SKILL.md)）在 PR merge 後回寫 board。
 
 回報每張實際 URL／狀態、來源任務對照、未完成發布步驟與決策；卡片建立不等於任務完成。

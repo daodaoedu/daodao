@@ -57,6 +57,13 @@ jobs:
           token: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
           path: daodao-storage
           ref: main
+      - name: Checkout daodao-worker
+        uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-worker
+          token: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          path: daodao-worker
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5

@@ -40,6 +40,17 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
    全部 ✅ 才能在 docs/product 標「已驗收」。任一 ❌ → 走 `file-bug-issue` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。冒煙工具或環境不可用時記「未冒煙：<原因>」，同樣不算可用。
 
+5. **回寫 Planning board**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
+
+   ```bash
+   # 全部 ✅：移 Done、拔開工標記；board 內建「Auto-close issue」workflow 會順手 close 中央 issue
+   pnpm -s tsx bin/pipeline/board.ts set <n> done --remove-label human-driving
+   # 任一 ❌ 或未冒煙：驗收退回
+   pnpm -s tsx bin/pipeline/board.ts set <n> needfix
+   ```
+
+   `Need Fix` 的卡由下一次 `/dev-task` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才 Done；部分 merged 留 Review 並在 comment 寫明剩哪些。
+
 ## 3. 更新適用文件與歸檔
 
 1. 在可存取的 daodao `docs/product` 找對應需求與 roadmap，按證據更新「已合併／已測試／已部署／已驗收」等適用狀態，附日期與 PR／run／驗收來源；沒有部署證據不寫已上線。
@@ -52,5 +63,5 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 - 檢查文件間狀態一致性、來源連結、FR／TP 對應、未完成項目及 diff；按變更執行適用文件檢查。
 - 報告每項「已完成／未驗證／待決策／不適用」、實際修改文件及證據。人只需審閱修訂與產品／發布決策，不必重新手動搜尋合併證據。
 - 報告第一行寫明「已合併／已部署／dev 冒煙通過」三個事實各自的狀態；三者不齊不寫「功能完成」。
-- 本機文件修訂不等於 commit、push、部署、關閉 Issue 或修改 Project 狀態。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。
+- 本機文件修訂不等於 commit、push、部署或關閉 Issue。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。Board 回寫（§2.5 第 5 步）是本 skill 的標準輸出，不另外要授權，但只依冒煙結果移卡，不因「merged」就移 Done。
 - 遠端動作如已授權，執行後讀回確認；部分失敗保留成功項目與待處理項目，避免重複操作。

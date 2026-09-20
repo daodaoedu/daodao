@@ -1,6 +1,6 @@
 # 島島阿學：Issue 到開發、驗收與合併的共用流程
 
-> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役，`dispatch.ts` 已刪除，`needs-spec` label 不再使用；下文「保留 Routine A、接 v2 router」等為目標提案，現行只有人工 `/dev-task` 與 Routine C 回寫。
+> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役，`dispatch.ts` 已刪除，`needs-spec` label 不再使用；下文「保留 Routine A、接 v2 router」等為目標提案，現行只有人工 `/dev-task`，board 由 skill 呼叫 `bin/pipeline/board.ts` 回寫（Routine C 亦已退役）。
 
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
