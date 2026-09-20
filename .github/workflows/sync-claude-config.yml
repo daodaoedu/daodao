@@ -173,44 +173,44 @@ jobs:
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "Shared config PR created: $PR_URL"
 
-      - name: Wait for required checks, then merge
+      - name: Merge now, or queue auto-merge until checks pass
         if: steps.diff.outputs.changed == 'true'
         working-directory: target
-        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
           PR_URL: ${{ steps.create-pr.outputs.pr_url }}
-          DEFAULT_BRANCH: ${{ steps.default-branch.outputs.branch }}
         run: |
-          # 內容是 daodao main 已 review 過的共享檔案，八個 repo 各再 review 一次只會卡住同步（2026-09-20 admin-ui／storage／ai-backend
-          # 三張同步 PR 被 REVIEW_REQUIRED 擋住，人工 --admin 才合得進去）。這裡只放行「required checks 全綠」的 PR：
-          # 紅燈或 30 分鐘沒等到就留 PR、job 失敗，不硬合。
-          REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-          # 剛開 PR 時 check run 可能還沒註冊，先等 rollup 出現
-          for _ in $(seq 1 18); do
-            n=$(gh pr view "$PR_URL" --json statusCheckRollup -q '.statusCheckRollup | length' 2>/dev/null || echo 0)
-            [ "${n:-0}" -gt 0 ] && break
-            sleep 10
-          done
-          REQUIRED=$(gh api "repos/${REPO}/rules/branches/${DEFAULT_BRANCH}"             --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context] | length' 2>/dev/null || echo 0)
-          if [ "${REQUIRED:-0}" -gt 0 ]; then
-            echo "waiting for ${REQUIRED} required check(s)"
-            gh pr checks "$PR_URL" --required --watch --fail-fast
-          else
-            # 沒設 required checks 的 repo：等全部 check 完成（永不回報的外部 check 由 timeout-minutes 兜底）
-            echo "no required checks on ${DEFAULT_BRANCH}; waiting for all checks"
-            gh pr checks "$PR_URL" --watch --fail-fast
+          # 內容是 daodao main 已 review 過的共享檔案，八個 repo 各再 review 一次只會卡住同步；
+          # 但「不 review」不等於「不驗」——合併與否交給 GitHub 依各 repo 的 ruleset required checks 決定。
+          #
+          # 2026-09-20 改成 auto-merge：原本在這裡輪詢 `gh pr checks --watch`，需要 PAT 有 Checks: read，
+          # fine-grained token 沒給就整天以 "Resource not accessible by personal access token" 失敗
+          # （六張同步 PR 因此堆積）。auto-merge 由 GitHub 自己判斷 required checks，紅燈不會合，也不需要這個權限。
+          #
+          # 先試一般 merge：checks 已全綠時直接合完收工。失敗（多半是 checks 還在跑）才掛 auto-merge，
+          # 這個順序讓整段完全不需要讀 checks 狀態。
+          if gh pr merge "$PR_URL" --squash --delete-branch 2>/tmp/merge-err; then
+            echo "Shared config PR merged: $PR_URL"
+            echo "- Shared config PR merged: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
-          # 2026-09-20 起各 repo 的 ruleset 移除了 admin bypass（bypass_actors 清空），--admin 不再能繞過任何規則，
-          # 只會讓這一步以難懂的錯誤收場；同時所有 pull_request 規則都改成 approvals=0，本來就不需要繞 review。
-          # checks 已在上面確認全綠，這裡用一般 merge；真的被擋就讓 job 紅，由下一步回報給人。
-          gh pr merge "$PR_URL" --squash --delete-branch
-          echo "Shared config PR merged after required checks: $PR_URL"
-          echo "- Shared config PR merged after required checks: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/merge-err
+          PR_ID=$(gh pr view "$PR_URL" --json id -q .id)
+          gh api graphql -f query='
+            mutation($pr: ID!) {
+              enablePullRequestAutoMerge(input: {pullRequestId: $pr, mergeMethod: SQUASH}) {
+                pullRequest { number }
+              }
+            }' -f pr="$PR_ID"
+          echo "Auto-merge queued; GitHub will merge once required checks pass: $PR_URL"
+          echo "- Auto-merge queued (merges when required checks pass): $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+          # 佇列後不再等待：checks 紅就不會合，PR 會留著。逾時未合由 session-start 的
+          # 「同步 PR 卡住」提醒與每週 cron 的 stale-sync-prs job 抓出來，不靠這支 job 紅燈當訊號
+          # （2026-09-20 的教訓：job 紅了一整天也沒人看）。
 
-      - name: Report unmerged sync PR
+      - name: Report unqueued sync PR
         if: failure() && steps.create-pr.outputs.pr_url != ''
         env:
           PR_URL: ${{ steps.create-pr.outputs.pr_url }}
         run: |
-          echo "- ⚠️ Shared config PR NOT merged (checks failed or timed out), needs a human: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ⚠️ Shared config PR neither merged nor queued for auto-merge, needs a human: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
