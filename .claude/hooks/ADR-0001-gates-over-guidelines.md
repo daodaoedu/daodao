@@ -21,6 +21,8 @@ Block（exit 2，拒絕編輯）只用於**高信心、低誤報**的規則：
 - `pr-deferred-unlinked`（同上）：task.md「## Deferred items」有項目沒有子 issue `#n` 也沒寫「待開卡：<原因>」就擋 — #171 的「驗證紅框取代 toast」只留在 comment，變成 #188 的第二個根因
 - `pr-body-evidence-missing`（同上）：PR body 缺「## 驗證證據」或裡面沒有報告連結／不適用聲明就擋；CI 版 `pr-evidence-gate.yml` 讀同一段，涵蓋 Codex／手動 gh／pipeline runner
 - `pr-fe-pattern-invalid`（同上，f2e／admin-ui）：`scripts/check-validation-parity.py` 用 node 以 v flag 編譯手寫 HTML `pattern`，編不過就擋 — #188 根因 `[a-z0-9-]+` 被瀏覽器整個忽略；`UNMATCHED`（openapi 找不到同文規則）先 warn 記 `pr-fe-rule-unmatched`
+- `pr-verify-unchecked`（同上）：task.md「## 驗證」還有 `- [ ]` 未勾項目（無「豁免：」）或「需要手動驗證」表就擋 — 2026-09-20 #166→#233 的教訓：6 個 settings 頁面寫「需 Google OAuth 登入」照樣發 PR、merge，evidence 截圖是登入牆；dev-login（#230）已可用，「要登入」不再是理由
+- `pr-layout-probe-missing`（同上，f2e／admin-ui）：task.md 缺「### 版面探針」表、表空、或有 ❌ 就擋；「版面探針不適用：<具體原因>」放行並記 `pr-layout-probe-na` — #233：settings 十五頁 `w-screen` 疊在 `md:pl-[132px]` 上每頁多 132px，肉眼截圖六個月沒人看出，`layout-probe.mjs` 一行 `scrollWidth` 抓到
 - 以上 dev-task 閘門共用逃生口 `DEV_TASK_SKIP_GATE="<原因>"`（`DEV_TASK_SKIP_POC_GATE` 相容），一律留痕
 
 ### CI 側閘門
