@@ -46,7 +46,7 @@ pnpm -s tsx bin/pipeline/board.ts audit [--json] [--stale-days 3]
 
 - status 接受別名：`todo` / `ready` / `wip`／`in-progress` / `review` / `needfix` / `done`（大小寫、`-`、`_`、空白互通）
 - `set` 不在 board 會先 `item-add`；改完回讀 Status，不一致直接 exit 1
-- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR（跨 repo cross-reference）、labels 比對，列出：Done 但 issue open、issue closed 卻卡在 Todo／In Progress、Todo 有 open PR、sub-repo PR 全 merged 卻 N 天沒移 Review、Review 沒 PR、死 label、Done 仍掛 `human-driving`。中央 repo 的 docs PR 不算實作，不觸發 merged 規則。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
+- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 沒 PR、死 label、Done 仍掛 `human-driving`。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`）才算實作；只在 body 提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
 - 不要用 `gh project item-list` 批次查：它每次拉全部欄位，跑十幾次就撞 Projects rate limit（2026-09-20 實測）；`board.ts` 走精簡 GraphQL（`listBoardItemsLite`、`findBoardItemForIssue`）
 - GraphQL 額度是**使用者 PAT 共用的 5000/hr**，Actions 裡的 Sync Shared Config 也用同一顆；大批操作前先 `gh api rate_limit --jq .resources.graphql`
 

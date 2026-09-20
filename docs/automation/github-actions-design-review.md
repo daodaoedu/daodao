@@ -12,7 +12,7 @@
 >
 > 基準 commit：`f249705af7b2359b1b3b4cb297d28b748ccc1a93`（審查時 local `HEAD` = `origin/main`）
 >
-> 關聯文件：[GitHub Pipeline](github-pipeline.md)、[雙訂閱 Agents PRD](dual-subscription-agents-prd.md)
+> 關聯文件：[GitHub Pipeline（已封存）](../archive/automation/github-pipeline.md)、[雙訂閱 Agents PRD](dual-subscription-agents-prd.md)
 
 ## 1. Executive Summary
 

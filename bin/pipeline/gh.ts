@@ -127,7 +127,7 @@ export interface IssueLinks {
   state: "OPEN" | "CLOSED";
   updatedAt: string;
   labels: string[];
-  prs: Array<{ ref: string; state: "open" | "merged" | "closed" }>;
+  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
 }
 
 /** One GraphQL round-trip per 50 issues: state, labels, and cross-referenced PRs. */
@@ -158,19 +158,23 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         timelineItems: { nodes: Array<{ source?: PRNode; subject?: PRNode }> };
       };
       if (!node) continue;
-      const prs = new Map<string, "open" | "merged" | "closed">();
+      const prs = new Map<string, { state: "open" | "merged" | "closed"; linked: boolean }>();
       for (const t of node.timelineItems.nodes) {
-        const pr = t.source ?? t.subject;
+        // ConnectedEvent = a real GitHub link (closing keyword / Development panel);
+        // CrossReferencedEvent = only a mention in some body.
+        const linked = t.subject !== undefined;
+        const pr = t.subject ?? t.source;
         if (!pr || pr.__typename !== "PullRequest") continue;
         const ref = `${pr.repository.name}#${pr.number}`;
-        prs.set(ref, pr.merged ? "merged" : pr.state === "OPEN" ? "open" : "closed");
+        const state = pr.merged ? "merged" : pr.state === "OPEN" ? "open" : "closed";
+        prs.set(ref, { state, linked: linked || (prs.get(ref)?.linked ?? false) });
       }
       result.set(node.number, {
         number: node.number,
         state: node.state,
         updatedAt: node.updatedAt,
         labels: node.labels.nodes.map((l) => l.name),
-        prs: Array.from(prs, ([ref, state]) => ({ ref, state })),
+        prs: Array.from(prs, ([ref, v]) => ({ ref, ...v })),
       });
     }
   }

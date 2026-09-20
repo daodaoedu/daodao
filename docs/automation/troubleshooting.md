@@ -24,7 +24,7 @@
 | merge 了但卡沒動 | 正常——已無 cron | 跑 `post-merge-wrapup`，它依 dev 冒煙結果 `board.ts set <n> done`／`needfix` |
 | `set` 回讀失敗 exit 1 | `gh api rate_limit --jq .resources.graphql`；PAT 額度 5000/hr 與 Actions 的 Sync Shared Config 共用 | 等 reset 再跑；大批操作前先看額度 |
 | board 操作 403 | PAT 缺 `project` scope | 重發 PAT（`repo` + `project`） |
-| 有人開 PR 但卡在 Todo | sub-repo PR 用 `Refs`，內建 workflow 認不到 | `board.ts set <n> wip` |
+| 有人開 PR 但卡在 Todo／In Progress | sub-repo PR 用 `Refs`，內建 workflow 認不到 | `board.ts set <n> review`（PR 開了就是 Review） |
 | 卡 close 了卻在 Todo／In Progress | 內建 `Item closed → Done` 沒觸發 | `board.ts set <n> done` |
 | 不知道哪些卡不對 | — | `board.ts audit`（列八類落差） |
 
