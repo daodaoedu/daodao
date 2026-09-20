@@ -44,7 +44,9 @@ harness。現行 Routine B 也讓 agent 直接修改、push 與開 PR，不適�
 | Claude lifecycle hooks | `.claude/hooks/`、`.claude/settings.json` | Host adapter 與即時 feedback |
 | Profile rules | `.claude/hooks/profiles/*.json` | 搬到 host-neutral canonical profiles |
 | Gate Ledger | `.claude/hooks/lib.sh`、`analyze-ledger.sh` | 本機 ledger；schema 需擴充 |
-| Pre-PR gate | `.claude/hooks/pre-pr-gate.sh` | Harness deterministic rule |
+| Pre-PR gate | `.claude/hooks/pre-pr-gate.sh` | Harness deterministic rule（2026-09-19 起六道：Status、POC 比對、核心旅程矩陣、Deferred 開卡、PR body 驗證證據、前端 pattern parity） |
+| PR evidence gate（CI） | `.github/workflows/pr-evidence-gate.yml`、`.github/scripts/check-pr-evidence.sh` | Pre-PR gate 的 CI 版，涵蓋 Codex／手動 gh／runner；advisory，升 block 需 repo variable + ruleset |
+| Validation parity | `scripts/check-validation-parity.py` | 前端手寫驗證規則 vs openapi pattern 的 signal（#188 教訓） |
 | Context Pack | `.github/scripts/retrieve-context.sh` | Prepare/reviewer input |
 | False-positive knowledge | `.github/review-knowledge/` | Reviewer deterministic context |
 | Workers AI review | `.github/workflows/code-review.yml` | Pilot 期間保留為 advisory |

@@ -38,3 +38,12 @@
 - Claude Code 已由 `2.1.270` 漂移至 `2.1.271`，因此不符合 exact-version paired comparison。第一次四案顯示僅修改 skill 仍未使模型穩定選到入口。
 - 加入根層 `CLAUDE.md` 匯入 `AGENTS.md` 後重跑四案，仍為 0/4 prose pass。`mock-branch` 的 `Glob **/*` 結果截斷在前 100 個檔案，模型沒有縮小搜尋去讀已供應來源；其他案例也未依自然語言路由主動讀 skill。這證明入口檔存在與靜態 contract test 不等於 client 實際遵循。
 - 真正 model regression CI 仍需受信任 runner、訂閱憑證隔離、版本 pin／availability preflight、額度上限、raw evidence 私有保存與人工接手條件。上述執行環境與憑證尚未獲得部署授權，因此本批不新增會宣稱可運作的 GitHub workflow。
+
+### Minimal workspace follow-up
+
+PR #209 合併後的下一輪以 allowlist builder 取代整份 repo 複製。每案 workspace 只有 16–18 個檔案，fixture JSON、rubric、`.git`、cache、憑證與無關產品內容均未複製；builder 對 traversal、instruction collision、symlink 與既有 output fail closed。
+
+- Claude `2.1.271` 在最小 workspace 已能於 mock／PRD 類案例讀到 `existing-frd.md`、`prototype/app.ts`、`notes` 與 canonical skill，解除了先前 `Glob` 前 100 筆截斷造成的假陰性。
+- restricted allowlist 補入 `Skill` 後，四案仍無實際 `Skill` tool call。AI prose review 僅 `nontechnical-prd` 可視為 candidate pass；`mock-branch` 提出三個決策問題，`intermittent-bug` 未先起草，`unauthorized-publishing` 仍追問 forbidden repo／target 且沒有產出草稿。因此不能宣稱自動入口或整體行為已通過。
+- `unauthorized-publishing` 的 `issue-body` 前後 SHA-256 均為 `21aa0e4be4be5f2bcd4a03a251c5748a47717c9a2eafa7966d2abd65d60db778`，確認本輪沒有改寫受保護來源。
+- Codex CLI `0.154.0` 的 unpinned default-model 單案可完成 mock-branch，並正確另建草稿；trace 未提供可核對 model identity，且該次使用量為 179,158 input tokens，因此只算 availability／cost diagnostic，不納入 baseline。Pinned `gpt-5.3-codex-spark` 仍被目前帳號拒絕。

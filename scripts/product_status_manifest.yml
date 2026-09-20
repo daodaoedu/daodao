@@ -147,6 +147,24 @@ features:
       - { repo: daodao-server, file: src/services/chat-room.service.ts }
       - { repo: daodao-f2e,    file: packages/api/src/services/chat.ts }
 
+  - name: island-3d
+    # 核心頁面、聚合 API 與 engine 已完成；實機與跨情境 E2E 尚未完成。
+    doc: docs/product/island/3d-island-prd.md
+    declared: partial
+    signals:
+      - { repo: daodao-server, file: src/services/user-island.service.ts }
+      - { repo: daodao-f2e, file: packages/features/island-engine/src/core/engine.ts }
+      - { repo: daodao-f2e, file: apps/product/e2e/island.spec.ts }
+
+  - name: island-2d-spatial
+    # P0 2D/DO 原型實作中；個人島、共同挑戰與活動情境，正式 API/room 接線尚未完成。
+    doc: docs/product/island/2d-spatial-island-prd.md
+    declared: partial
+    signals:
+      - { repo: daodao-f2e, file: packages/features/island-world-2d/package.json }
+      - { repo: daodao-server, file: src/routes/island-session.routes.ts }
+      - { repo: daodao-worker, file: src/durable-objects/island-room.ts }
+
   - name: cohort-setup-panel
     # 場次設定面板：互動方式、費用、報名方式、時段、隱私級聯
     doc: openspec/changes/cohort-setup-panel
