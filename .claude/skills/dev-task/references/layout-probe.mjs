@@ -60,6 +60,12 @@ for (const width of widths) {
     try {
       await page.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });
       await page.waitForTimeout(800);
+      // dev server 首次編譯該頁時 auth 還沒 resolve，會先被丟到登入頁；重載一次就正常。
+      // 真的沒有有效 cookie 的話重載後仍然停在登入頁，照樣標 ❌。
+      if (isLoginWall(new URL(page.url()).pathname, route)) {
+        await page.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });
+        await page.waitForTimeout(2000);
+      }
       const r = await page.evaluate((clipSrc) => {
         const isClipped = new Function("return " + clipSrc)();
         const vw = innerWidth;

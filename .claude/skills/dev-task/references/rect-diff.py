@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-"""AC-03：改前／改後 rect 與 computedStyle 逐 route 逐元素比對。className 字串允許不同（twMerge 重排），
-其餘（rect、computedStyle、子元素數量與順序、scrollWidth）必須完全相同。"""
+"""改前／改後 rect 與 computedStyle 逐 route 逐元素比對（零視覺差異的驗收）。
+
+className 字串允許不同（twMerge 會重排，`w-screen`→`w-full` 本來就是預期中的改動），
+其餘——scrollWidth、wrapper 與 main 的 rect 與 computedStyle、wrapper 每個直接子元素的
+tag／rect／position——必須完全相同。有任何差異就 exit 1。
+"""
 import json, sys
 
 a = json.load(open(sys.argv[1]))
@@ -19,6 +23,12 @@ for key in rows_a:
     if ra["scrollWidth"] != rb["scrollWidth"]:
         d.append(f"scrollWidth {ra['scrollWidth']} → {rb['scrollWidth']}")
     for part in ("wrapper", "main"):
+        # 有些頁面沒有 <main>（loading／error 分支），兩邊都沒有才算一致
+        if ra[part] is None and rb[part] is None:
+            continue
+        if (ra[part] is None) != (rb[part] is None):
+            d.append(f"{part} 只有一邊存在")
+            continue
         if ra[part]["rect"] != rb[part]["rect"]:
             d.append(f"{part}.rect {ra[part]['rect']} → {rb[part]['rect']}")
         if ra[part]["style"] != rb[part]["style"]:
