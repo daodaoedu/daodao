@@ -201,8 +201,10 @@ jobs:
             echo "no required checks on ${DEFAULT_BRANCH}; waiting for all checks"
             gh pr checks "$PR_URL" --watch --fail-fast
           fi
-          # --admin：跨過 ruleset 的 PR review 要求（PAT 擁有者為 admin）；checks 已在上面確認全綠，不會合紅燈
-          gh pr merge "$PR_URL" --squash --delete-branch --admin
+          # 2026-09-20 起各 repo 的 ruleset 移除了 admin bypass（bypass_actors 清空），--admin 不再能繞過任何規則，
+          # 只會讓這一步以難懂的錯誤收場；同時所有 pull_request 規則都改成 approvals=0，本來就不需要繞 review。
+          # checks 已在上面確認全綠，這裡用一般 merge；真的被擋就讓 job 紅，由下一步回報給人。
+          gh pr merge "$PR_URL" --squash --delete-branch
           echo "Shared config PR merged after required checks: $PR_URL"
           echo "- Shared config PR merged after required checks: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
 

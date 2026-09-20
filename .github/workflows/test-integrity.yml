@@ -25,7 +25,15 @@ jobs:
         run: |
           comparison_base=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
           review_args=()
+          # 回條是一次性的：只在它正好對應這次比較基準時才套用。
+          # 對應的 PR 一旦 merge，base 就對不上了；此時忽略它（而不是 exit 3），
+          # 否則沒人記得刪檔就會擋住之後每一支 PR。真的刪了測試仍會走 review-required。
           if [[ -f .test-integrity-review.json ]]; then
-            review_args=(--review .test-integrity-review.json)
+            receipt_base=$(python3 -c "import json,sys;print(json.load(open('.test-integrity-review.json')).get('base',''))" 2>/dev/null || true)
+            if [[ "$receipt_base" == "$comparison_base" ]]; then
+              review_args=(--review .test-integrity-review.json)
+            else
+              echo "::notice::忽略過期的 .test-integrity-review.json（回條 base=${receipt_base:-<無>}，本次 base=$comparison_base）"
+            fi
           fi
           python3 scripts/check-test-integrity.py --base "$comparison_base" --head "$HEAD_SHA" "${review_args[@]}"

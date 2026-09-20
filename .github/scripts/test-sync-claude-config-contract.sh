@@ -69,8 +69,11 @@ grep -Fq 'gh pr checks "$PR_URL" --required --watch --fail-fast' "$WORKFLOW" \
   || fail "同步 merge 前必須等 required checks（gh pr checks --required --watch --fail-fast）"
 MERGE_STEP=$(awk '/- name: Wait for required checks, then merge/{f=1} f && /- name: Report unmerged sync PR/{exit} f' "$WORKFLOW")
 [ -n "$MERGE_STEP" ] || fail "缺少「Wait for required checks, then merge」step"
-printf '%s\n' "$MERGE_STEP" | grep -Fq 'gh pr merge "$PR_URL" --squash --delete-branch --admin' \
+printf '%s\n' "$MERGE_STEP" | grep -Fq 'gh pr merge "$PR_URL" --squash --delete-branch' \
   || fail "同步 merge 必須是 squash 且在等 checks 的同一 step 內"
+# ruleset 已移除 admin bypass，--admin 繞不過任何規則，只會讓失敗訊息變難懂（註解裡提到不算）
+printf '%s\n' "$MERGE_STEP" | grep -v '^[[:space:]]*#' | grep -Fq 'gh pr merge "$PR_URL" --squash --delete-branch --admin' \
+  && fail "同步 merge 不得使用 --admin（ruleset 已無 bypass actor）"
 CHECKS_LINE=$(printf '%s\n' "$MERGE_STEP" | grep -n 'gh pr checks "$PR_URL"' | head -1 | cut -d: -f1)
 MERGE_LINE=$(printf '%s\n' "$MERGE_STEP" | grep -n 'gh pr merge "$PR_URL"' | cut -d: -f1)
 [ "$CHECKS_LINE" -lt "$MERGE_LINE" ] || fail "gh pr merge 必須在 gh pr checks 之後"
