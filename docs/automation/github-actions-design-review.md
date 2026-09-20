@@ -240,6 +240,8 @@ Live 查詢時，多個 sub-repository 同時存在 2–3 張 open sync PR，證
 
 建議使用每個 target repo 固定 sync branch 並 upsert PR，或明確 supersede／關閉舊 PR。
 
+**2026-09-20 處置**：workflow 新增「Supersede older open sync PRs」step，開新 PR 前關閉同 repo 所有 open 的 `chore/sync-claude-config-*` PR 並留言指向新 run；加上 required checks 過了就自動 merge，正常情況不會再有 open sync PR 堆積。
+
 ### F-12 — Medium：共用萬用 PAT 與 action supply-chain 風險
 
 `GIT_HUB_ACCESS_TOKEN` 同時用於 Project 寫入、跨 repo read、review metrics 與 production clone；
@@ -272,7 +274,7 @@ absolute path、`../` 或 repository symlink。
 - `code-review.yml` 從 base SHA 取得 trusted context/knowledge scripts，不執行 head branch 版本。
 - AI review prompt 明確把 diff/context 視為不可信資料，輸出也有結構驗證。
 - Code review 已有 per-PR concurrency，並以 head SHA marker 避免舊結果冒充最新 review。
-- Shared config sync 先跑 regression contracts，只開 PR、不自動 merge。
+- Shared config sync 先跑 regression contracts、開 PR；2026-09-20 起等目標 repo required checks 全綠後自動 squash merge（`--admin` 只跨過 review 要求，不跨過 checks），紅燈或 30 分鐘超時就留 PR 給人。
 - Routine A/C 的規則邏輯已有 Vitest 覆蓋。
 
 上述控制可以沿用，但「prompt 有防注入文字」與「格式驗證」不能取代 credential isolation、

@@ -63,11 +63,27 @@ grep -Fq 'git add -f .claude/ .github/workflows/ .github/scripts/' "$WORKFLOW" \
   || fail "commit scope 未包含 scripts"
 grep -Fq 'chore/sync-claude-config-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}' "$WORKFLOW" \
   || fail "同步 branch 名稱未使用唯一 run identity"
-if grep -Eq 'gh pr merge|--admin|--auto' "$WORKFLOW"; then
-  fail "同步不得在 required checks/approval 尚未完成時合併 PR"
+# 2026-09-20 起同步 PR 在 required checks 全綠後自動 merge（內容是 daodao main 已 review 過的機器複製）：
+# merge 必須在 `gh pr checks --watch --fail-fast` 之後、同一個 step 內，且只能 squash；不得無條件 merge
+grep -Fq 'gh pr checks "$PR_URL" --required --watch --fail-fast' "$WORKFLOW" \
+  || fail "同步 merge 前必須等 required checks（gh pr checks --required --watch --fail-fast）"
+MERGE_STEP=$(awk '/- name: Wait for required checks, then merge/{f=1} f && /- name: Report unmerged sync PR/{exit} f' "$WORKFLOW")
+[ -n "$MERGE_STEP" ] || fail "缺少「Wait for required checks, then merge」step"
+printf '%s\n' "$MERGE_STEP" | grep -Fq 'gh pr merge "$PR_URL" --squash --delete-branch --admin' \
+  || fail "同步 merge 必須是 squash 且在等 checks 的同一 step 內"
+CHECKS_LINE=$(printf '%s\n' "$MERGE_STEP" | grep -n 'gh pr checks "$PR_URL"' | head -1 | cut -d: -f1)
+MERGE_LINE=$(printf '%s\n' "$MERGE_STEP" | grep -n 'gh pr merge "$PR_URL"' | cut -d: -f1)
+[ "$CHECKS_LINE" -lt "$MERGE_LINE" ] || fail "gh pr merge 必須在 gh pr checks 之後"
+printf '%s\n' "$MERGE_STEP" | grep -Fq 'timeout-minutes:' || fail "merge step 必須有 timeout-minutes 兜底永不回報的 check"
+# 工作流其他地方不得出現無條件 merge（例如在 create 步驟直接合）
+OTHER=$(awk '/- name: Wait for required checks, then merge/{f=1} /- name: Report unmerged sync PR/{f=0} !f' "$WORKFLOW")
+if printf '%s\n' "$OTHER" | grep -Eq 'gh pr merge|--auto'; then
+  fail "gh pr merge 只允許出現在等完 checks 的 merge step"
 fi
-grep -Fq 'PR awaiting checks and review: $PR_URL' "$WORKFLOW" \
-  || fail "同步必須清楚回報 PR 尚待檢查與 review"
+grep -Fq 'Shared config PR merged after required checks: $PR_URL' "$WORKFLOW" \
+  || fail "同步必須清楚回報 PR 已在 checks 通過後 merge"
+grep -Fq 'Supersede older open sync PRs' "$WORKFLOW" \
+  || fail "同步必須關閉被取代的舊 sync PR（design-review F-11）"
 
 echo "✅ sync shared-config workflow contract tests passed"
 grep -Fq 'cp .github/review-knowledge/false-positives.jsonl' "$WORKFLOW" \
