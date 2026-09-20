@@ -6,8 +6,6 @@
 schemaVersion: 1
 templateVersion: 1
 
-OpenSpec: <slug>
-
 ## 結論與索引
 
 - 開發結論：<完成／部分完成／阻塞>；人工驗收：<待處理／通過／退回>

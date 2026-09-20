@@ -5,8 +5,6 @@
 schemaVersion: 1
 templateVersion: 1
 
-OpenSpec: <slug>
-
 - 中央 Issue：<owner/repo#N + URL>
 - 子 Issue：<owner/repo#N + URL；避免自動關閉中央卡>
 - 本 PR 負責 AC／不包含範圍：<AC IDs／內容>

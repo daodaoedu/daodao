@@ -9,6 +9,8 @@ metadata:
   generatedBy: "1.3.0"
 ---
 
+> DEPRECATED（2026-09-20）：OpenSpec 已退役，此 skill 不再使用。
+
 Fast-forward through artifact creation - generate everything needed to start implementation in one go.
 
 **Input**: The user's request should include a change name (kebab-case) OR a description of what they want to build.

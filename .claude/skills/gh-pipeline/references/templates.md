@@ -1,5 +1,7 @@
 # Pipeline Templates（GitHub Projects 版）
 
+> 註（2026-09-20）：OpenSpec 已退役，舊 change 封存於 `docs/archive/openspec/`；下文提及 OpenSpec change／`OpenSpec:` 註記／`tasks.md` 之處已不適用，規格以 `docs/product/` 與 Issue 驗收契約為準。`bin/pipeline/lib.ts` 的 Spec gate 仍會讀 `OpenSpec:` 行與 `openspec/changes/<slug>/tasks.md`（目錄已不存在，會一律退回 `needs-spec`），待程式端另行調整。
+
 ## issue-body（sub-repo 鏡像 issue，由 Routine A 建立）
 
 ```markdown
@@ -8,7 +10,7 @@
 
 ## Description
 
-{任務描述，來自 openspec tasks 分組}
+{任務描述，來自中央 issue 的任務分組}
 
 ## Tasks
 
@@ -44,7 +46,7 @@ Parent: daodaoedu/daodao#{central_issue_num}
 
 - Issue body 缺 `OpenSpec: openspec/changes/{slug}/` 註記，或該目錄不存在 tasks.md
 
-請先產 spec（`prd-generation` → `openspec-ff-change`），在 body 補上 OpenSpec 註記後移除 `needs-spec` label，下輪 Routine A 會重新處理。
+請先補齊規格（`prd-generation`，OpenSpec 已退役、`openspec-ff-change` 不再使用），確認 body 的驗收契約完整後移除 `needs-spec` label，下輪 Routine A 會重新處理。
 ```
 
 ## dispatched comment（中央 issue，由 Routine A 留言）

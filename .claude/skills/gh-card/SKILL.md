@@ -28,20 +28,20 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 從對話、已讀文件與程式碼推斷 title、scope、repos、模式與以下欄位（repo 與工程資訊由工具辨認，不讓提出者填表）：
 
 - 目標、包含／不包含、穩定需求／驗收 ID 與前提、操作、預期結果（沿用 FR／TP／AC，多文件重複 ID 加文件 ID）。
-- PRD／既有 FRD、Issue 決策、POC、分支／PR、OpenSpec 或 AC snapshot 的連結與已知版本。
+- PRD／既有 FRD、Issue 決策、POC、分支／PR、AC snapshot 的連結與已知版本。
 - UI 截圖／POC 比對、真實 API 回讀／reload、語系、migration 等適用驗收要求。
 - 測試角色／環境、跨 repo 相依與 Done 定義。
 
 新產品需求依 [prd-generation](../prd-generation/SKILL.md) 查核、起草及確認；已讀且確認的規格直接引用，不重做 PRD 或另產 FRD。先展示白話需求摘要，工程欄位放交接附錄；不要求填負責人表，指派沿用 GitHub Assignees。分支來源與目標實作版本分開記錄，不把 mock 當正式功能。需要讀 Google 文件時使用可用的 Google Drive skill／connector；僅有連結不代表已讀取內容。
 
-依模板產出完整 Markdown 到任務的 `notes/issue-drafts/`；沒有任務目錄時使用 root `.omc/plans/issue-drafts/`。使用不覆蓋現有檔案的名稱。存 title、target repo、labels、預定 Board status 與 body，發布結果另記同目錄。
+依模板產出完整 Markdown 到任務的 `notes/issue-drafts/`；沒有任務目錄時使用 root `docs/plans/issue-drafts/`。使用不覆蓋現有檔案的名稱。存 title、target repo、labels、預定 Board status 與 body，發布結果另記同目錄。
 
 開卡與開工分開：
 
 - 初始 Todo 可保留需求缺項，逐項填「待確認：原因／下一步」；不要因尚無 run、SHA、報告或預算觀測而拒絕建立需求卡。
 - 執行後才會產生的欄位填「尚未開始／尚未產生」；不能捏造 digest、quota、證據或完成狀態。
 - Ready 必須有可驗收目標、repo、所需需求／POC 基準與規格；純後端 POC 可 N/A 附理由。
-- 已有 OpenSpec 用獨立一行 `OpenSpec: <slug>`；沒有就刪除該行，不能填 `OpenSpec: n/a` 或保留 placeholder。S 人工可用 AC；自動化仍需有效 `tasks.md` 與未完成 task。
+- Acceptance snapshot 直接填本卡驗收契約（沿用 FR／TP／AC ID）；OpenSpec 已於 2026-09-20 退役，不再要求 `OpenSpec:` 行或 `tasks.md`。
 - 預設 Status=`Todo`；人工作業加 `human-driving`。Scope 依實際複雜度判斷，不把所有工作一律當 M。
 - 自動化 plan-only／auto-pr 只在使用者要求時設定；storage／infra 維持 plan-only。
 - 憑證不可放 body；Google 文件／Drive 不因開卡而自動建立或公開分享。

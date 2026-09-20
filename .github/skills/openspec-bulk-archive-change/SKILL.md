@@ -9,6 +9,8 @@ metadata:
   generatedBy: "1.3.0"
 ---
 
+> DEPRECATED（2026-09-20）：OpenSpec 已退役，此 skill 不再使用。
+
 Archive multiple completed changes in a single operation.
 
 This skill allows you to batch-archive changes, handling spec conflicts intelligently by checking the codebase to determine what's actually implemented.

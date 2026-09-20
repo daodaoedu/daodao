@@ -9,6 +9,8 @@ metadata:
   generatedBy: "1.3.0"
 ---
 
+> DEPRECATED（2026-09-20）：OpenSpec 已退役，此 skill 不再使用。
+
 Guide the user through their first complete OpenSpec workflow cycle. This is a teaching experience—you'll do real work in their codebase while explaining each step.
 
 ---
