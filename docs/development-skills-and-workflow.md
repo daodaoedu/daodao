@@ -33,7 +33,7 @@ Claude hooks 不自動等同 Codex gates；Codex 須主動執行相同檢查並�
 
 ## 閘門（2026-09-19 起）
 
-發 PR 由 `.claude/hooks/pre-pr-gate.sh` 攔：Status 未 `verified`、POC 比對缺、核心旅程矩陣缺或有 ⬜／❌、Deferred item 無子 issue、PR body 無「## 驗證證據」、前端手寫 `pattern` 編不過。CI 側 `pr-evidence-gate` 讀同一段（advisory，可升 block）。規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`；各階段細節見 `docs/workflow.md` Phase 3、6–8。跨 repo 子 PR 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關。
+發 PR 由 `.claude/hooks/pre-pr-gate.sh` 攔：Status 未 `verified`、POC 比對缺、核心旅程矩陣缺或有 ⬜／❌、Deferred item 無子 issue、PR body 無「## 驗證證據」、前端手寫 `pattern` 編不過、「## 驗證」留未勾項目或「需要手動驗證」清單、UI repo 缺全 ✅ 的「### 版面探針」表（`references/layout-probe.mjs`）。CI 側 `pr-evidence-gate` 讀同一段（advisory，可升 block）。規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`；各階段細節見 `docs/workflow.md` Phase 3、6–8。跨 repo 子 PR 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關。
 
 ## 工作區與完成界線
 

@@ -47,6 +47,13 @@
 - [ ] <檢查項 1>（evidence/<phase>-<checkpoint>.png）
 - [ ] console 無新增 error
 - [ ] 行動版寬度版面正常
+<!-- 每一項發 PR 前都要打勾；使用者明確放過的寫「（豁免：<原因>）」。不要另開「需要手動驗證」清單——需登入的頁面用 dev-login 驗 -->
+
+### 版面探針
+<!-- UI 任務必填：layout-probe.mjs 產出的表整段貼進來（references/browser-verify.md §4a）；全 ✅ 才能發 PR -->
+<!-- diff 沒碰任何頁面／版面時刪掉表格，改寫一行：版面探針不適用：<具體原因> -->
+| 寬度 | route | 落點 | scrollWidth / viewport | 結果 | 問題 | 截圖 |
+|---|---|---|---|---|---|---|
 
 ### 核心旅程矩陣
 <!-- 每條會寫入資料的旅程至少一列「正常」+ 一列「錯誤路徑」；實際欄要有攔到的 HTTP 狀態碼；規則見 references/journey-matrix.md -->
