@@ -32,7 +32,7 @@ Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
 **Board 常數**：Project ID `PVT_kwDOBTLl0c4Bgxef`；Status field `PVTSSF_lADOBTLl0c4Bgxefzhfvwto`（Todo `f75ad846` / Ready for Dev `c9e0e5d5` / In Progress `47fc9ee4` / Review `f25bace1` / Need Fix `bb831d2b` / Done `98236657`），程式碼在 `bin/pipeline/types.ts`（`BOARD.statusOptions`、`STATUS_ALIASES`、`DEAD_LABELS`）。
 
-**GitHub 內建 workflow（board 設定頁，API 只讀得到名稱）**：`Item added → Todo`、`Item closed → Done`、`Auto-close issue`（設 Done 就 close issue）、`Pull request linked / merged`、`Auto-add (sub-)issues` 七個都開著。它們只認**同 repo** 用 closing keyword 連結的 PR；sub-repo PR 依 `docs/workflow.md` 用 `Refs`，所以不會自動移卡——這就是 2026-09-20 前卡片全堆在 In Progress 的原因。「Pull request merged」的目標欄位若是 Done 會跟「merged 留 Review」衝突，請在 board 設定頁確認改成 Review。
+**GitHub 內建 workflow（board 設定頁，API 只讀得到名稱）**：`Item added → Todo`、`Item closed → Done`、`Auto-close issue`（設 Done 就 close issue）、`Pull request linked / merged`、`Auto-add (sub-)issues` 七個都開著。它們只認**同 repo** 用 closing keyword 連結的 PR；sub-repo PR 依 `docs/workflow.md` 用 `Refs`，所以不會自動移卡——這就是 2026-09-20 前卡片全堆在 In Progress 的原因。各 workflow 目標欄位（2026-09-20 於設定頁確認）：Item added → Todo、PR linked → In Progress、**PR merged → Review**（原本是 Done，同日改掉以配合「merged 留 Review」）、Item closed → Done。這些只影響同 repo PR，仍以 skill 的 `board.ts set` 為準。
 
 **Labels 現況**：`human-driving` 是人工開工標記（dev-task start 掛、post-merge-wrapup 移 Done 時拔）。`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched`／`spec-pending`／`human-coding`／`manual` 等派工 labels **不再使用**（label 本身保留不刪；2026-09-20 已從活躍卡片整批移除，`audit` 會把殘留當「死 label」列出）。
 
