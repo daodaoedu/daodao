@@ -1,6 +1,6 @@
 # Claude Code + Codex 訂閱雙 Agent 開發流程規劃 v2
 
-> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役（含 OpenSpec gate、mirror issue、`needs-spec` 退回），pipeline 只剩 Routine C；下文以 Routine A／B 為前提的段落屬提案，不是現行狀態。
+> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役（含 OpenSpec gate、mirror issue、`needs-spec` 退回），Routine C 亦於同日退役（PR #253），已無任何 cron；下文以三個 routine 為前提的段落（含元件對照表與檢查清單）屬提案，不是現行狀態。board 狀態現由各 skill 呼叫 `bin/pipeline/board.ts`。
 
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
@@ -736,7 +736,7 @@ Runner-only、不得 commit 的內容：
 ### Phase 0 — Security Baseline
 
 - [ ] 修正 `bin/pipeline/gh.ts` shell string injection。
-- [ ] 驗證 `pipeline-board-sync` manual input。
+- [x] ~~驗證 `pipeline-board-sync` manual input~~ — 2026-09-20 整支 workflow 退役刪除（PR #253），不再適用。
 - [ ] 拆分 `product-status-drift` PR fixture/trusted live job。
 - [ ] 啟用 main ruleset與 required checks。
 - [ ] Actions default permission改 read。
