@@ -1,0 +1,7 @@
+{
+  "base": "02daec91d1822824c0de6449f819de20152dfe56",
+  "test_diff_sha256": "b46566a328c8884750ca22d91a29f9d96ac189dcccc9d0c1edcda46d16bc72dc",
+  "reviewer": "vincentxuu",
+  "reason": "Routine A／B 與 OpenSpec 退役（#241）：被刪的測試對應已刪除的模組 dispatch.ts／openspec-headless.ts／review-evals.ts／不存在的 pipeline-status.ts；lib.test.ts 只移除派工函式測試並補 Routine C 函式測試，無既有斷言被弱化。2026-09-20 使用者於對話中確認。",
+  "evidence": "https://github.com/daodaoedu/daodao/pull/243 、 https://github.com/daodaoedu/daodao/issues/241"
+}

@@ -21,7 +21,7 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 - Bug／CI 錯誤通報：讀 [file-bug-issue](../file-bug-issue/SKILL.md)，保留錯誤原文與重現步驟。
 - 只問「有哪些模板／skill」：說明入口即可。只要 skill 修改或流程規劃：不建立 Issue。
 
-不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位；現行自動 mirror 格式以 `bin/pipeline/lib.ts` 為準。這個 skill 不取代 Routine A 的 dispatch，也不實作 reporter、lease 或新 merge gates。
+不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位。自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 skill 只開卡，不派工，也不實作 reporter、lease 或新 merge gates；子 issue 保留 `Parent: daodaoedu/daodao#N` 行供 Routine C 回寫。
 
 ## 1. 整理可開卡內容
 
@@ -61,9 +61,9 @@ gh project field-list 10 --owner daodaoedu --format json
 
 展示具體 title、repo、labels、status、body 或本機草稿連結。若使用者已明確授權建立該範圍，沿用授權，不再多問一次；只有草擬／規劃授權時先保留草稿，尚未授權就不發布。缺少會改變目標的資訊才補問。
 
-設定 `Ready for Dev` 是啟動開發的操作，需要使用者原本就要求啟動，不能從「幫我開 issue」推論。檢查當下 `bin/pipeline/dispatch.ts`、`lib.ts`、workflow 與 pause/既有 dispatch 狀態；只在規格 gate 通過後才設 Ready。
+設定 `Ready for Dev` 是管理狀態變更，需要使用者原本就要求，不能從「幫我開 issue」推論；它不會觸發任何自動化（Routine A／B 已退役），只在規格、AC 與授權齊備後才設 Ready。
 
-**現況落差（2026-09-12 local）**：文件規劃 `auto + Ready for Dev` 雙 gate，但當下 `dispatch.ts` 未檢查中央 `auto` label。不要把缺少 `auto` 當成不派工保證；未準備好維持 Todo，人工任務加 human-driving。不要承諾固定一小時內執行，應以實際 workflow／runner 為準。
+**Labels 現況（2026-09-20）**：`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched` 不再使用（保留不刪），不要加到新卡；人工任務加 `human-driving` 作為 board 上的開工標記。未準備好維持 Todo。
 
 ## 3. 發布與回讀
 

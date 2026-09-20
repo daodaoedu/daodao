@@ -1,124 +1,85 @@
 ---
 name: gh-pipeline
-description: 查核並操作島島阿學 Board、Issue、PR 自動化 pipeline，適用 Routine A／B／C、dispatch 與 runner 除錯。
+description: 查核並操作島島阿學 Planning Board 回寫 pipeline（Routine C：merged PR → Board Done），含 board-sync dry-run 與除錯。
 ---
 
 先讀 [AI 檢核與人工審核共用流程](../../../docs/automation/ai-human-review-workflow.md)，依當前客戶端可用工具執行；先完成適用檢核與修訂，再交人審核決策。
 
-
 # gh-pipeline
 
-> 註（2026-09-20）：OpenSpec 已退役，舊 change 封存於 `docs/archive/openspec/`；下文提及 OpenSpec change／`OpenSpec:` 註記／`tasks.md` 之處已不適用，規格以 `docs/product/` 與 Issue 驗收契約為準。`bin/pipeline/lib.ts` 的 Spec gate 仍會讀 `OpenSpec:` 行與 `openspec/changes/<slug>/tasks.md`（目錄已不存在，會一律退回 `needs-spec`），待程式端另行調整。
-
-daodao 自動化 pipeline 行為規範。Routine A/C 是純 script（GitHub Actions 執行）；
-只有 Routine B（agentic 實作）由 Claude cloud routine 執行，執行前必須載入此 skill。
+> **退役註記（2026-09-20，#241）**：自動派工 Routine A（Board → Sub-repo Dispatch，`bin/pipeline/dispatch.ts` + `pipeline-dispatch.yml`）與 Routine B（Claude cloud 實作）已整批退役；OpenSpec 已於 #237 退役，Routine A 的 spec gate 失去輸入後只會把卡退回，Routine B 從未穩定跑通。所有開發改走人工 [dev-task](../dev-task/SKILL.md)。舊 prompt、agentic flow 與 issue／PR 模板封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。本 skill 現在只描述仍在跑的 **Routine C**。
 
 Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
 **任務管理層**（source of truth）：
 - 中央 issues：https://github.com/daodaoedu/daodao/issues（feature 卡，product 視角）
 - Org board：https://github.com/orgs/daodaoedu/projects/10「Planning」
-- Status 流：`Todo`（待規劃）→ `Ready for Dev`（spec 完成、可 dispatch）→ `In Progress`（已 dispatch / 開發中）→ `Done`
+- Status 流：`Todo`（待規劃）→ `Ready for Dev`（規格與授權齊備；**不再觸發派工**）→ `In Progress`（人工 `/dev-task` 開工）→ `Done`
 
-**Board 常數**：Project ID `PVT_kwDOBTLl0c4Bgxef`；Status field `PVTSSF_lADOBTLl0c4Bgxefzhfvwto`（Todo `f75ad846` / In Progress `47fc9ee4` / Ready for Dev `c9e0e5d5` / Done `98236657`）
+**Board 常數**：Project ID `PVT_kwDOBTLl0c4Bgxef`；Status field `PVTSSF_lADOBTLl0c4Bgxefzhfvwto`（Todo `f75ad846` / In Progress `47fc9ee4` / Ready for Dev `c9e0e5d5` / Done `98236657`），程式碼在 `bin/pipeline/types.ts`。
 
-**雙軌 issue**：中央 issue 管「要做什麼」；Routine A dispatch 時在目標 sub-repo 開**鏡像 issue**（掛為中央 issue 的 sub-issue）給 agent 實作，PR 開在 sub-repo。
-
----
-
-## Routine A（Board → Sub-repo Dispatch）— **由 GitHub Actions 執行，非 Claude**
-
-實作：`bin/pipeline/dispatch.ts`（純 script，`--dry-run` 支援），由
-`.github/workflows/pipeline-dispatch.yml` 每小時執行。Claude 只在手動情境介入
-（debug、或使用者要求手動 dispatch 時直接跑 `pnpm tsx bin/pipeline/dispatch.ts --dry-run` 先看）。
-
-Script 行為（判斷邏輯在 `bin/pipeline/lib.ts`，有 vitest 測試）：
-1. `.automation-paused` 存在 → exit 0
-2. 掃 board `Status=Ready for Dev`，issue 需無 `dispatched`/`needs-spec`/`human-driving`、state open（Ready for Dev 即派工；`human-driving` 是退出閥）
-3. **Spec gate**：body 的 `OpenSpec: <slug>` 註記 + `openspec/changes/<slug>/tasks.md` 存在，否則標 `needs-spec` + comment
-4. **規則化拆卡**：tasks.md 每個 `## section` 一張鏡像 issue；target repo 依「section 標題 → task 內文提及的 sub-repo 名稱 → 卡片唯一 `repo:*` label」判定，判不出 → `needs-spec` 退回
-5. 鏡像 issue 掛 sub-issue、中央卡 `dispatched` + comment、board → In Progress；每輪最多 3 張卡
-6. 冪等：以鏡像 title + body 的 `Parent:` 反查去重，部分失敗不標 `dispatched`，下輪續跑
-
-高風險 repo（`daodao-storage` / `daodao-infra`）：鏡像 issue 一律 `auto:plan-only`，不論中央卡 label。
-執行模式：中央卡有 `auto:auto-pr` → 鏡像 issue 直接開 code PR；否則一律 plan-only。
-
----
-
-## Routine B（Dispatch + PR patrol）
-
-與 Notion 時代邏輯相同，僅資料來源不變（sub-repo auto issues 本來就是輸入）：
-
-```
-階段 0：cd monorepo root；確認 .automation-paused 不存在
-階段 1：pnpm tsx bin/routine-dispatch/spec-merged-scan.ts
-        成功 → 更新 state-store.json:last_scan_at；失敗 → 跳過 timestamp 更新，繼續
-階段 2：對 8 個 sub-repo 掃 auto issue（每輪實際操作最多 5 個）
-        gh issue list --repo daodaoedu/<repo> --label auto --state open --json number,labels --limit 10
-        對每個 issue：bash bin/routine-dispatch/main.sh <repo> <issue-num>
-階段 3：PR patrol（verbatim 保留既有 trig_01KATY 邏輯）
-```
-
-Sub-repos: `daodao-server / daodao-f2e / daodao-ai-backend / daodao-storage / daodao-admin-ui / daodao-infra / daodao-mcp / daodao-worker`
-高風險（`storage / infra`）：state.ts 規則 0 強制 plan-only，不論 issue label
+**Labels 現況**：`human-driving` 仍是人工開工標記（`/dev-task` start 自動掛）。`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched`／`spec-pending` 等派工 labels **不再使用**（label 本身保留不刪，僅供歷史卡片辨識）。
 
 ---
 
 ## Routine C（PR merged → Board Done）— **由 GitHub Actions 執行，非 Claude**
 
-實作：`bin/pipeline/board-sync.ts`（`--dry-run` / `--hours <n>` 支援），由
-`.github/workflows/pipeline-board-sync.yml` 每小時執行。
+| 元件 | 位置 |
+|---|---|
+| Workflow | `.github/workflows/pipeline-board-sync.yml`（每小時 `:37` UTC + `workflow_dispatch`，inputs `dry_run`／`hours`） |
+| 入口 | `bin/pipeline/board-sync.ts`（`--dry-run` / `--hours <n>`，預設 48） |
+| 純函式 | `bin/pipeline/lib.ts`：`parseParentIssue`、`parseClosingIssues`、`buildProgressComment`、`buildAllDoneComment`（vitest：`bin/pipeline/__tests__/lib.test.ts`） |
+| gh 包裝 | `bin/pipeline/gh.ts`（board item-list／item-edit、issue view／comment／close、merged PR list） |
+| Secret | `GIT_HUB_ACCESS_TOKEN`（PAT，需 `repo` + `project` scope；Actions 內建 token 摸不到 org project） |
 
-Script 行為：
-1. `.automation-paused` 存在 → exit 0
-2. 掃 lookback 內各 sub-repo merged 的 `auto` PR，依 body 的 `Closes #n` 補關鏡像 issue
-3. 從鏡像 issue body 的 `Parent: daodaoedu/daodao#<n>` 反查中央卡：
-   - 全部鏡像 closed → `✅ 全部完成` comment + board → `Done`；**不自動 close 中央 issue**（留給 product 驗收）
-   - 尚有 open → `⏳ {done}/{total}` 進度 comment（同日同進度去重）
+### 行為
 
----
+1. `.automation-paused` 存在於 repo root → exit 0
+2. 掃 8 個 sub-repo lookback 內 merged 且帶 `auto` label 的 PR，依 body 的 `Closes／Fixes／Resolves #n` 補關同 repo 的子 issue
+3. 從子 issue body 的 `Parent: daodaoedu/daodao#<n>` 反查中央卡（跨 repo 搜尋 + 精確比對）
+4. 中央卡所有子 issue closed → `✅ 所有 sub-repo 任務完成` comment + board Status → `Done`；**不自動 close 中央 issue**（留給 product 驗收）
+5. 尚有 open → `⏳ Sub-repo 進度：{done}/{total}` comment（同日同進度去重）
 
-## Agentic Implementation（Handler 呼叫 Claude 時）
+注意：跨 repo 子 PR 依 `docs/workflow.md` 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關；Routine C 只對仍用 `auto` label + `Closes #n` 的 PR 生效，目前多為保底。
 
-執行前讀取：
-- 鏡像 issue body（Description + Acceptance Criteria + Parent 連結）
-- ADR：`docs/adr/`（grep 關鍵字）
-- 確認 branch 為 `auto/{issue_num}-{slug}`
+### 手動操作與 dry-run
 
-依 scope 執行流程 → 見 `references/agentic-flows.md`
+```bash
+# 本機 dry-run（需 gh 已登入且 token 有 project scope）
+pnpm tsx bin/pipeline/board-sync.ts --dry-run
 
-PR body 模板 → 見 `references/templates.md#pr-body`
+# 拉長 lookback 補歷史
+pnpm tsx bin/pipeline/board-sync.ts --dry-run --hours 168
 
----
+# 從 GitHub 手動觸發
+gh workflow run pipeline-board-sync.yml -R daodaoedu/daodao -f dry_run=true -f hours=48
 
-## Issue Comment 語句
+# 看 run log
+gh run list -R daodaoedu/daodao --workflow pipeline-board-sync.yml --limit 5
+gh run view <run-id> -R daodaoedu/daodao --log
 
-留言時直接套用 → 見 `references/templates.md#comments`
-
----
-
-## Commit 規範
-
+# 純函式測試（不要跑裸 pnpm test，會掃到 worktrees/）
+pnpm exec vitest run bin/pipeline
 ```
-{type}({area}): {description}
 
-Co-Authored-By: daodao-pipeline <noreply@daodaoedu.github.com>
-```
+### 除錯快查
 
-type: `feat` / `fix` / `test` / `plan` / `chore`
-**不使用** `format-commit` skill（那是互動式的）
+| 症狀 | 檢查 |
+|---|---|
+| merge 了但中央卡沒動 | PR 有 `auto` label 嗎？body 有 `Closes #n` 嗎？子 issue body 的 `Parent:` 行格式對嗎（`parseParentIssue`） |
+| board 沒移 Done | 中央卡是否還有 open 的子 issue（看 sub-issues 或 `⏳` comment） |
+| board 操作 403 | `GIT_HUB_ACCESS_TOKEN` 缺 `project` scope |
+| run 直接 exit 0 沒任何輸出 | repo root 有 `.automation-paused` |
+| board item-edit 失敗 | 留 comment 註記「board 未更新，需手動拖卡」，其餘工作繼續 |
+
+緊急停止：repo root 放 `.automation-paused` 檔案，Routine C 直接退出（下一輪 cron ≤ 65 分鐘內生效）。
 
 ---
 
-## 錯誤處理快查
+## 本 skill 不做的事
 
-| 情況 | 處置 |
-|------|------|
-| token 超 cap | 加 `human-coding` label，留 comment，exit |
-| 偵測到 `human-driving` | 呼叫 `handoff.sh`，不繼續 |
-| verification 2 次失敗 | 加 `human-coding`，留 comment，exit |
-| tool 被 blocklist 擋 | log BLOCKED，exit 3 |
-| openspec-headless exit 2 | 留 comment 說明缺什麼，exit |
-| board item-edit 失敗 | 留 comment 註記「board 未更新，需手動拖卡」，繼續其他工作 |
+- 不派工、不開鏡像 issue、不在雲端實作——這些能力已退役，需要時另開卡重新設計。
+- 不修改 labels 集合、不刪舊 label。
+- `Ready for Dev` 只是管理狀態，設定它需在使用者要求範圍內，不代表任何自動化會接手。
 
-詳細架構 → `docs/automation/github-pipeline.md`
+詳細架構 → `docs/automation/github-pipeline.md`；運維手冊 → `docs/automation/routine-c-prompt.md`。

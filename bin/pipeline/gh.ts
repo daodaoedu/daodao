@@ -88,34 +88,6 @@ export function getIssue(repo: string, num: number): IssueDetail | null {
   }
 }
 
-export function createIssue(
-  repo: string,
-  title: string,
-  body: string,
-  labels: string[]
-): string | null {
-  const labelArgs = labels.map((l) => `--label "${l}"`).join(" ");
-  const tmpFile = join(tmpdir(), `pipeline-${Date.now()}-${Math.random().toString(36).slice(2)}.md`);
-  try {
-    writeFileSync(tmpFile, body, "utf-8");
-    return sh(
-      `gh issue create --repo ${OWNER}/${repo} --title "${title.replace(/"/g, '\\"')}" ` +
-        `--body-file "${tmpFile}" ${labelArgs}`
-    );
-  } catch (err: unknown) {
-    const stderr = (err as { stderr?: Buffer })?.stderr?.toString?.() ?? String(err);
-    warn("gh", `issue create failed in ${repo}: ${stderr}`);
-    return null;
-  } finally {
-    try { unlinkSync(tmpFile); } catch { /* ignore */ }
-  }
-}
-
-export function addLabels(repo: string, num: number, labels: string[]): void {
-  const args = labels.map((l) => `--add-label "${l}"`).join(" ");
-  sh(`gh issue edit ${num} --repo ${OWNER}/${repo} ${args}`);
-}
-
 export function commentIssue(repo: string, num: number, body: string): void {
   const tmpFile = join(tmpdir(), `pipeline-comment-${Date.now()}.md`);
   try {
@@ -143,22 +115,6 @@ export function getIssueComments(
     return JSON.parse(output) as Array<{ body: string; createdAt: string }>;
   } catch {
     return [];
-  }
-}
-
-/** Best-effort: attach mirror issue as a native sub-issue of the central issue. */
-export function addSubIssue(parentNodeId: string, childNodeId: string): boolean {
-  try {
-    sh(
-      `gh api graphql -H "GraphQL-Features: sub_issues" ` +
-        `-f query='mutation($p: ID!, $c: ID!) { addSubIssue(input: {issueId: $p, subIssueId: $c}) { issue { id } } }' ` +
-        `-f p='${parentNodeId}' -f c='${childNodeId}'`
-    );
-    return true;
-  } catch (err: unknown) {
-    const stderr = (err as { stderr?: Buffer })?.stderr?.toString?.() ?? String(err);
-    warn("gh", `addSubIssue failed: ${stderr}`);
-    return false;
   }
 }
 
