@@ -1,7 +1,8 @@
 # Pipeline Weekly Evals
 
-> AI review 接受率區塊由
-> [review-evals.yml](../../.github/workflows/review-evals.yml) 每週執行
+> **已停更（2026-09-20）**：`review-evals.yml` 於 #237 刪除、`bin/pipeline/review-evals.ts` 於 #241 刪除；本檔為最後一次週報快照，數字不再更新。以下為原說明。
+>
+> AI review 接受率區塊原由 `review-evals.yml` 每週執行
 > `pnpm tsx bin/pipeline/review-evals.ts` 更新，commit 含 `[skip ci]`。
 > Cross-repo fine-grained PAT 只需在目標 repos 開啟 `Contents: read`、
 > `Issues: read` 與 `Pull requests: read`；workflow 的 `GITHUB_TOKEN`

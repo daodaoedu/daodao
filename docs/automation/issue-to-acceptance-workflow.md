@@ -1,5 +1,7 @@
 # 島島阿學：Issue 到開發、驗收與合併的共用流程
 
+> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役，`dispatch.ts` 已刪除，`needs-spec` label 不再使用；下文「保留 Routine A、接 v2 router」等為目標提案，現行只有人工 `/dev-task` 與 Routine C 回寫。
+
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
 > 日期：2026-09-12。狀態：Draft／可供定案的流程提案，尚未實作自動化。
@@ -54,7 +56,7 @@ Issue 欄位、labels、Board 狀態與關聯設定見 [GitHub Issue 管理規�
 
 本次另核對的 CI 缺口：
 
-- 開卡 skill 後續查核：`bin/pipeline/dispatch.ts` 尚未實作中央 `auto` label 檢查；本文雙 gate 是目標政策，未補齊前 Todo／human-driving 才是開卡時採用的防派工方式。
+- 開卡 skill 後續查核（2026-09-20 更新）：自動派工已退役，`bin/pipeline/dispatch.ts` 已刪除；本文雙 gate 是歷史目標政策，現行開卡預設 Todo、人工任務加 human-driving。
 
 - `daodao-f2e/.github/workflows/linode-ci.yml`、`mobile-ci.yml` 與 `daodao-server/.github/workflows/continuous-integration.yml` 有背景命令後裸 `wait`；個別命令失敗可能未傳遞到總結果，需優先修復。
 - `daodao-f2e/.github/workflows/update-i18n.yml` 是手動更新，且 script／locale 路徑與目前 checkout 不符，不能作翻譯 gate。
