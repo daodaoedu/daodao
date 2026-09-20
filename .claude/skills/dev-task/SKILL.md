@@ -165,16 +165,18 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
      1. probe 表必須涵蓋 [poc-probe-checklist](references/poc-probe-checklist.md) 的全部類別（遮罩、按鈕各變體、modal 高度／捲動、input、表格、膠囊…），不能只挑「骨架」量
      2. 量完**逐組並排截圖用眼睛看一遍**（用可用的圖片檢視工具），把肉眼可見但 probe 沒抓到的差異補進差異表——#189 的遮罩深淺、ghost vs 外框鈕、modal 內捲，都是 probe 表漏掉、截圖一眼就看得出的
      3. 差異表裡沒有「設計系統」這個免死金牌：每一條 ❌ 不是修掉，就是列進「### POC 差異決策」附上差異證據、建議與影響交使用者審核；用當前可用提問工具或直接提問；使用者確認後在 task.md 寫一行 `POC 差異決策已確認`（發 PR 閘門會檢查）。「用 @daodao/ui 元件」與「尺寸／顏色對齊原型」不衝突——元件照用，數值用 className 對齊
+   - **登入牆不是證據、也不是跳過理由**：導頁後落在 `/auth/*` 的截圖等於這頁沒驗過（#166 的 `verify-bug-report.png` 就是登入頁）。需要登入的頁面走 [browser-verify.md §3a](references/browser-verify.md) 的 dev-login 配方；task.md 不得留「需要手動驗證（需登入）」清單發 PR——每項不是驗掉，就是使用者明確豁免並記「（豁免：<原因>）」，發 PR 閘門 `pr-verify-unchecked` 會檢查
+   - **版面探針**（UI repo 必做，發 PR 閘門 `pr-layout-probe-missing` 會檢查）：對任務碰到的每條 route，在 390／1024／1440 三個寬度跑 `references/layout-probe.mjs`，量登入牆、`scrollWidth > innerWidth` 橫向溢出、`main` 內出界元素；產出的「### 版面探針」表貼進 task.md「## 驗證」底下，有 ❌ 先修再重跑。**這一步是 #233 的直接對策：settings 十五頁 `w-screen` 疊在 `md:pl-[132px]` 上、每頁多 132px，肉眼看截圖六個月沒人發現，一行 `scrollWidth` 就抓到。** diff 沒碰任何頁面／版面時寫一行 `版面探針不適用：<具體原因>`
 3. **核心旅程矩陣**（有任何寫入路徑就必做，發 PR 閘門會檢查）— 依 [references/journey-matrix.md](references/journey-matrix.md) 把任務碰到的每條「建立／編輯／刪除／送出」旅程列成表：每條至少一列真實輸入成功、一列 server 拒絕的輸入失敗；「實際」欄要有攔到的 HTTP 狀態碼；FE／BE 規則來源要寫 `檔案:行號`，前端手寫的驗證規則對不到 server 規則就是缺口、先修再驗。**這一步是 #188 的直接對策：畫面像 POC 不等於使用者能建立場次。** 沒有寫入路徑的任務寫一行 `核心旅程不適用：<具體原因>`
 4. **留證據** — 每個檢查點截圖存到 `$TASK/evidence/`，命名 `<phase>-<checkpoint>.png`；旅程列命名 `verify-jNN.png`
 5. **記錄結果** — task.md 新增「驗證」區塊：檢查清單 + 通過/失敗 + 截圖檔名 + 核心旅程矩陣
 6. **失敗處理** — 修復後重驗該項（沿用 pipeline 慣例：同一項失敗 2 次，停止重複相同嘗試；整理已查核原因、證據與阻塞，能繼續查明的技術問題由 AI 調查，不要交人猜根因或無限重試）
 7. **產出 Google 文件驗證報告**（必做）— 把「驗證」區塊 + 核心旅程矩陣 + evidence/ 截圖整理成一份 Google 文件（截圖嵌圖，不是留在本機資料夾），連結記進 task.md「驗證」區塊第一行；操作細節與一次性 rclone 設定見 [references/verify-report.md](references/verify-report.md)
-8. 全部通過 → task.md Status → `verified`，進入 finish
+8. 全部通過 → task.md Status → `verified`，進入 finish。「全部」包含：「## 驗證」沒有任何 `- [ ]` 未勾項目、沒有「需要手動驗證」清單、「### 版面探針」全 ✅
 
 ## Phase 4: finish — 發 PR
 
-前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `.claude/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。hook 本身需要 `jq`（缺了會 fail closed 擋下 `gh pr create` 並提示安裝）、`python3` 與 `node`（parity 檢查，缺了只 warn）。
+前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `.claude/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則、「## 驗證」無未勾項目／「需要手動驗證」清單、UI repo 有全 ✅ 的「### 版面探針」表）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。hook 本身需要 `jq`（缺了會 fail closed 擋下 `gh pr create` 並提示安裝）、`python3` 與 `node`（parity 檢查，缺了只 warn）。
 
 0. **Deferred items 先開卡再發 PR**：把 task.md「## Deferred items」與驗證中發現的範圍外問題整理成清單，依 `publish-tasks` skill 在既有授權範圍內開成子 issue（父卡＝本任務 issue），每一項後面補 `#<n>`；沒有開卡授權的項目寫 `（待開卡：<原因>）`，並在 issue comment 的 Known incomplete scope 原樣列出，讓人決定。**task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失**——#171 的「驗證紅框取代 toast」就是這樣變成 #188 的第二個根因
 
