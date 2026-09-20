@@ -137,8 +137,21 @@ jobs:
           DEFAULT=$(gh repo view --json defaultBranchRef -q '.defaultBranchRef.name')
           echo "branch=$DEFAULT" >> $GITHUB_OUTPUT
 
-      - name: Create PR for checks and review
+      - name: Supersede older open sync PRs
         if: steps.diff.outputs.changed == 'true'
+        working-directory: target
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
+        run: |
+          # 每次同步都是「目前 daodao main vs 目標 base」的完整差異，新 PR 一定涵蓋舊 PR 還沒合的內容；
+          # 舊的留著只會堆積（design-review F-11：infra／mcp 曾同時掛三張），直接關掉並留言指向新 run
+          gh pr list --state open --search 'head:chore/sync-claude-config-' --json number,headRefName             --jq '.[] | select(.headRefName | startswith("chore/sync-claude-config-")) | .number'           | while read -r n; do
+              gh pr close "$n" --delete-branch                 --comment "由較新的同步 run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} 取代（新 PR 含本 PR 全部未合內容），自動關閉。"                 && echo "closed superseded sync PR #$n"
+            done
+
+      - name: Create PR for checks
+        if: steps.diff.outputs.changed == 'true'
+        id: create-pr
         working-directory: target
         env:
           GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
@@ -155,7 +168,47 @@ jobs:
           git push origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore: sync shared config" \
-            --body "Auto-synced from daodao. Updates hooks, settings, workflows, and trusted review scripts. Merge after CI checks and review; this workflow does not merge PRs." \
+            --body "Auto-synced from daodao main ${GITHUB_SHA} (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}). Updates hooks, settings, workflows, and trusted review scripts. Content is a machine copy of files already reviewed and merged in daodao; this PR is merged automatically once the target repo's required checks pass." \
             --base "$DEFAULT_BRANCH")
-          echo "PR awaiting checks and review: $PR_URL"
-          echo "- Shared config PR awaiting checks and review: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          echo "Shared config PR created: $PR_URL"
+
+      - name: Wait for required checks, then merge
+        if: steps.diff.outputs.changed == 'true'
+        working-directory: target
+        timeout-minutes: 30
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
+          PR_URL: ${{ steps.create-pr.outputs.pr_url }}
+          DEFAULT_BRANCH: ${{ steps.default-branch.outputs.branch }}
+        run: |
+          # 內容是 daodao main 已 review 過的共享檔案，八個 repo 各再 review 一次只會卡住同步（2026-09-20 admin-ui／storage／ai-backend
+          # 三張同步 PR 被 REVIEW_REQUIRED 擋住，人工 --admin 才合得進去）。這裡只放行「required checks 全綠」的 PR：
+          # 紅燈或 30 分鐘沒等到就留 PR、job 失敗，不硬合。
+          REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+          # 剛開 PR 時 check run 可能還沒註冊，先等 rollup 出現
+          for _ in $(seq 1 18); do
+            n=$(gh pr view "$PR_URL" --json statusCheckRollup -q '.statusCheckRollup | length' 2>/dev/null || echo 0)
+            [ "${n:-0}" -gt 0 ] && break
+            sleep 10
+          done
+          REQUIRED=$(gh api "repos/${REPO}/rules/branches/${DEFAULT_BRANCH}"             --jq '[.[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context] | length' 2>/dev/null || echo 0)
+          if [ "${REQUIRED:-0}" -gt 0 ]; then
+            echo "waiting for ${REQUIRED} required check(s)"
+            gh pr checks "$PR_URL" --required --watch --fail-fast
+          else
+            # 沒設 required checks 的 repo：等全部 check 完成（永不回報的外部 check 由 timeout-minutes 兜底）
+            echo "no required checks on ${DEFAULT_BRANCH}; waiting for all checks"
+            gh pr checks "$PR_URL" --watch --fail-fast
+          fi
+          # --admin：跨過 ruleset 的 PR review 要求（PAT 擁有者為 admin）；checks 已在上面確認全綠，不會合紅燈
+          gh pr merge "$PR_URL" --squash --delete-branch --admin
+          echo "Shared config PR merged after required checks: $PR_URL"
+          echo "- Shared config PR merged after required checks: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report unmerged sync PR
+        if: failure() && steps.create-pr.outputs.pr_url != ''
+        env:
+          PR_URL: ${{ steps.create-pr.outputs.pr_url }}
+        run: |
+          echo "- ⚠️ Shared config PR NOT merged (checks failed or timed out), needs a human: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
