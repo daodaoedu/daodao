@@ -56,9 +56,12 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 |---|---|---|
 | `Todo` | 已開卡，尚未開始；可保留需求缺項 | open |
 | `Ready for Dev` | 規格、AC、責任 repo 與執行授權齊備；管理狀態，不觸發自動化 | open |
-| `In Progress` | 已開始實作；驗收退回後開始修正 | open |
-| `Review` | 開發完成，待 review、人工驗收、合併或部署確認；摘要寫明具體階段 | open |
-| `Done` | 全部必要 repo 達到契約的合併、產品驗收與部署／smoke 條件；無部署需求依事先定義的替代條件 | 完成證據回寫後 close |
+| `In Progress` | 已開始實作（`/dev-task` start）；`Need Fix` 開修時也移回這裡 | open |
+| `Review` | PR 已開（`/dev-task` finish）；merged 後仍留此欄，直到 post-merge-wrapup 冒煙通過 | open |
+| `Need Fix` | post-merge-wrapup 的 dev 冒煙任一 ❌ 或未冒煙：驗收退回、待修 | open |
+| `Done` | 全部必要 repo 合併 + dev 冒煙通過（post-merge-wrapup 設定）；無部署需求依事先定義的替代條件 | board 內建「Auto-close issue」workflow 隨 Done 自動 close |
+
+移卡一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`（六欄 option id 與別名在 `bin/pipeline/types.ts`），`board.ts audit` 定期列出 Status 與 issue／PR／labels 的落差；操作手冊見 [gh-pipeline](../../.claude/skills/gh-pipeline/SKILL.md)。Board 另開著七個 GitHub 內建 workflow（Item added → Todo、Item closed → Done、Auto-close issue、PR linked／merged、Auto-add），但只對**同 repo** closing-keyword 連結的 PR 生效，sub-repo `Refs` 不會觸發，不能依賴它們移卡。
 
 目前沒有獨立的 Blocked、待部署或 Cancelled Status。處理方式如下：
 
@@ -113,8 +116,9 @@ Parent: daodaoedu/daodao#123
 | 現況 | 管理方式／待實作 |
 |---|---|
 | 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/publish-tasks`；要恢復自動派工需另開卡重新設計 |
-| Board 有 Review，但 `types.ts` 的 Status mapping 未含 Review | 目前人工設定；待補程式映射及轉移 |
-| Routine C 子卡全 closed 即設中央 Done | 人工核對並校正過早 Done；待改成合併＋驗收＋部署條件 |
+| `types.ts` 已含六欄（含 Review／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、gh-card 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
+| Routine C 子卡全 closed 即設中央 Done | 只對 `auto` label PR 生效，人工流程幾乎不會觸發；人工核對並校正過早 Done；待改成合併＋驗收＋部署條件 |
+| 內建「Pull request merged」workflow 目標欄位未知 | API 讀不到；到 board 設定頁確認為 Review，避免中央 repo PR merge 直接 Done + auto-close |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；待補一致性檢查 |
 | PR parser 只認同 repo closing refs | 部署後關卡流程先人工回寫；待支援一般關聯與延後完成 |
 | 可靠回寫、共用任務鎖與完整驗收 gates 仍為目標設計 | 依共用流程分階段落地與演練，文件存在不等於自動化已完成 |
