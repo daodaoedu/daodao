@@ -1,8 +1,8 @@
 # docs/automation — 自動化 Pipeline 文件索引
 
-> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+> **退役註記（2026-09-20，#241）**：自動派工 Routine A／B 已退役，pipeline 只剩 Routine C（merged PR → Board Done）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
 
-這個目錄包含 **GitHub Board → Issue → Plan → PR** 自動化 pipeline 的操作與維護文件。
+這個目錄包含 **GitHub Board／Issue／PR** 自動化與開發流程的操作與維護文件。
 
 > 2026-08 起任務管理層由 Notion DB 遷移到 GitHub org Project「Planning」+
 > daodaoedu/daodao 中央 issues，Notion 完全退場。
@@ -16,18 +16,15 @@
 | [issue-to-acceptance-workflow.md](issue-to-acceptance-workflow.md) | **目標流程提案**：Issue／Google Docs／Drive、雙入口開發、瀏覽器與後端驗收、merge gate、Issue 自動回寫 |
 | [agent-budget-policy.md](agent-budget-policy.md) | Claude Code／Codex 訂閱與 Workers AI 分工、預算保留、限額與失敗處理提案 |
 | [開發文件模板](../../templates/development/README.md) | 可複用的中央／子 Issue、需求文件、驗收報告、PR 與狀態回寫格式 |
-| [github-pipeline.md](github-pipeline.md) | **新架構總覽**（mermaid 流程圖 + 角色分工 + label 體系） |
-| [github-actions-design-review.md](github-actions-design-review.md) | GitHub Actions 現況審查、風險證據與雙訂閱 agent 導入 gate |
-| [dual-subscription-agents-prd.md](dual-subscription-agents-prd.md) | Claude Code + Codex 訂閱雙 agent 自動化 PRD |
-| [dual-subscription-development-workflow.md](dual-subscription-development-workflow.md) | 雙訂閱 agent 的 v2 開發流程、Harness、Runner、Artifact 與分階段落地規劃 |
-| [routine-a-prompt.md](routine-a-prompt.md) | Routine A：Board → Sub-repo Dispatch（**Actions script** 運維手冊） |
-| [routine-b-prompt-v2.md](routine-b-prompt-v2.md) | Routine B：Dispatch + PR patrol（**Claude cloud routine** prompt） |
-| [routine-c-prompt.md](routine-c-prompt.md) | Routine C：Merged PR → Board Done（**Actions script** 運維手冊） |
-| [troubleshooting.md](troubleshooting.md) | 常見 failure modes、log 位置、人工介入定義 |
-| [manual-issue-to-routine.md](manual-issue-to-routine.md) | 人類手寫 issue 反向丟給 routine 的 step-by-step 指南 |
-| [pipeline-status.md](pipeline-status.md) | Pipeline 即時狀態（自動產生） |
-| [evals.md](evals.md) | Weekly 評估指標（自動產生） |
-| [spec-drafter-spike.md](spec-drafter-spike.md) | Actions + Workers AI 自動起草最小 OpenSpec 的 spike 結果與正式化建議 |
+| [github-pipeline.md](github-pipeline.md) | **Pipeline 現況總覽**（Routine C 流程圖 + label 現況 + 已退役元件） |
+| [github-actions-design-review.md](github-actions-design-review.md) | GitHub Actions 現況審查、風險證據與雙訂閱 agent 導入 gate（2026-09 審查快照；Routine A／review-evals 段落已退役） |
+| [dual-subscription-agents-prd.md](dual-subscription-agents-prd.md) | Claude Code + Codex 訂閱雙 agent 自動化 PRD（提案；所依賴的 Routine A／B 已退役，導入前需重新設計 dispatch） |
+| [dual-subscription-development-workflow.md](dual-subscription-development-workflow.md) | 雙訂閱 agent 的 v2 開發流程、Harness、Runner、Artifact 與分階段落地規劃（提案；Routine A／B 已退役） |
+| [routine-c-prompt.md](routine-c-prompt.md) | Routine C：Merged PR → Board Done（**Actions script** 運維手冊，唯一仍在跑的 routine） |
+| [troubleshooting.md](troubleshooting.md) | Routine C 除錯、kill switch、人工介入定義 |
+| [pipeline-status.md](pipeline-status.md) | Pipeline 狀態查法（原自動產生報表已退役） |
+| [evals.md](evals.md) | Weekly 評估指標（歷史快照；`review-evals` 週報已停） |
+| [../archive/automation/](../archive/automation/README.md) | 已退役：Routine A／B 運維手冊與 prompt、manual-issue-to-routine、spec-drafter spike、gh-pipeline agentic flows／templates |
 | [review-false-positive-research.md](review-false-positive-research.md) | AI code review 誤判：知識庫解不了的三個問題的文獻對照與落地順序（#168／#169） |
 | [../../.github/review-knowledge/README.md](../../.github/review-knowledge/README.md) | 誤判知識庫：樣態 A–F、記錄方式、本機 skill 與 CI 共用機制 |
 | [architecture.md](architecture.md) | ⚠️ 舊版 Notion pipeline 架構（僅供考古） |
@@ -36,18 +33,13 @@
 
 Product 在中央 repo [daodaoedu/daodao](https://github.com/daodaoedu/daodao/issues)
 開 feature issue 並掛上 [Planning board](https://github.com/orgs/daodaoedu/projects/10)。
-卡片標記 `Status=Ready for Dev` + `auto` label 後，Routine A 自動 dispatch 成
-sub-repo 鏡像 issue，Routine B 接力 plan、code、開 PR 直到送上人類 review，
-Routine C 把 merge 結果回寫 board。
+開發由人工 `/dev-task` 在隔離 worktree 進行（start 時自動掛 `human-driving`），
+PR 合併後 Routine C 把結果回寫 board（子 issue 全關 → Status Done，中央 issue 留給 product 驗收後手動 close）。
 
-**兩道閘門**：board `Status=Ready for Dev` + 中央 issue `auto` label 都滿足才 dispatch。
-
-現況校正（2026-09-12 local）：以上是文件政策；當下 `bin/pipeline/dispatch.ts` 未檢查中央 `auto` label，仍需補實作。未準備好保持 Todo，人工任務加 `human-driving`，不能以未加 `auto` 保證不派工。
-
-**Spec gate**：中央 issue 需註記 `OpenSpec: openspec/changes/{slug}/`，否則標 `needs-spec` 退回。
+**沒有自動派工**：`Ready for Dev` 只是管理狀態；`auto`／`auto:*`／`needs-spec`／`dispatched` 等 labels 不再使用（保留不刪）。
 
 **8 個 sub-repo**：`daodao-server`、`daodao-f2e`、`daodao-ai-backend`、`daodao-storage`、`daodao-admin-ui`、`daodao-infra`、`daodao-mcp`、`daodao-worker`。
 
-**高風險 repo**：`daodao-storage`（SQL migration）與 `daodao-infra`（IaC）強制 plan-only，永遠不自動開 PR。
+**高風險 repo**：`daodao-storage`（SQL migration）與 `daodao-infra`（IaC）一律人工開發。
 
 詳見 [github-pipeline.md](github-pipeline.md)。

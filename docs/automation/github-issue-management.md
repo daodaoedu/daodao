@@ -1,9 +1,9 @@
 # GitHub Issue 管理規範
 
-> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+> **退役註記（2026-09-20，#241）**：自動派工 Routine A／B 已退役，pipeline 只剩 Routine C（merged PR → Board Done）；OpenSpec 已於 #237 退役。本文已改寫為人工管理現況：`auto`／`auto:*`／`needs-spec`／`dispatched` 等派工 labels 不再使用（保留不刪），`human-driving` 仍是人工開工標記。
 
-> 日期：2026-09-12。適用於一般需求、bug 與跨 repo 任務的人工管理；自動化落差另列於本文末。
-> 遠端現況依本次對話的 GitHub CLI 唯讀查詢：中央 repo labels、Planning #10 fields；程式依本機 `bin/pipeline/`。子 repo labels、既有卡片關聯與 runner 行為未逐一驗證。本文件不會修改遠端設定。
+> 日期：2026-09-12，2026-09-20 依 #241 更新。適用於一般需求、bug 與跨 repo 任務的人工管理；Routine C 落差另列於本文末。
+> 遠端現況依 GitHub CLI 唯讀查詢：中央 repo labels、Planning #10 fields；程式依本機 `bin/pipeline/`。子 repo labels、既有卡片關聯未逐一驗證。本文件不會修改遠端設定。
 
 搭配[共用開發流程](issue-to-acceptance-workflow.md)、[Bug 流程圖](development-workflow-diagrams.md)及[模板索引](../../templates/development/README.md)使用。本文集中定義 Issue 欄位、labels、狀態與關聯；驗收與額度規則沿用共用流程。
 
@@ -16,13 +16,13 @@
 | Bug／CI 錯誤 | 依 [file-bug-issue](../../.claude/skills/file-bug-issue/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
 | 同 repo 小任務 | 可直接以一張 Issue 關聯 PR，不為形式另拆子卡 |
 
-一般開卡使用 [gh-card](../../.claude/skills/gh-card/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 或啟動自動化需有對應授權。
+一般開卡使用 [gh-card](../../.claude/skills/gh-card/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
 
 開卡時填目標與範圍、責任 repo／負責人、可驗收 AC、相依任務及 Done 條件。需求缺項填「待確認：原因／責任人／下一步」，執行後才產生的 SHA、run、PR、報告填「尚未開始／尚未產生」。不要為了開卡捏造版本或證據。
 
 Bug 另外填錯誤原文、預期與實際行為、重現步驟、發生環境與版本、相關檔案及已嘗試方案；修復 AC 涵蓋原情境與受影響行為。邏輯 bug 先用失敗的 regression test 重現，再修復；純 UI layout／CSS 以可重現操作和修復前後瀏覽器證據驗證。不放憑證或個資。
 
-Ready 前凍結適用規格／AC 與 POC 基準，確認驗收者及執行授權。自動入口須有有效 OpenSpec 與未完成 task；S 人工任務可依共用流程使用 AC 快照。沒有 OpenSpec 時刪除 `OpenSpec:` 行，不填 `n/a` 假 slug。
+Ready 前凍結適用規格／AC 與 POC 基準，確認驗收者及執行授權。L/M 需定稿 PRD，S 可依共用流程使用 AC 快照；body 不再寫 `OpenSpec:` 行。
 
 ## 2. Labels：分類、範圍與執行控制
 
@@ -33,21 +33,18 @@ Ready 前凍結適用規格／AC 與 POC 基準，確認驗收者及執行授權
 | `bug` | Bug／CI 錯誤通報 | 開卡者；工作類型 |
 | `enhancement` | 新功能或功能改善 | 開卡者；工作類型 |
 | `documentation` | 文件工作；必要時可與 bug 並用 | 開卡者；工作類型 |
-| `repo:<子 repo 名稱>` | 中央卡標示涉及 repo，可複選 | 開卡者；派工亦可能用於目標判定 |
+| `repo:<子 repo 名稱>` | 中央卡標示涉及 repo，可複選 | 開卡者；board 篩選與人工判斷責任 repo |
 | `scope:XS`／`scope:S`／`scope:M`／`scope:L` | 選一個規模；程式未指定時預設 M | 開卡者；不是優先順序 |
-| `human-driving` | 本機／人工開發 | 執行者；dispatcher 會跳過 |
-| `auto` | 已授權自動化的政策標記 | maintainer；目前中央 dispatcher 尚未檢查此 label |
-| `auto:plan-only` | 只規劃 | maintainer；未選 auto-pr 時程式也預設 plan-only |
-| `auto:auto-pr` | 自動化 PR 模式，與 plan-only 擇一 | maintainer；storage／infra 仍強制 plan-only |
-| `needs-spec` | 規格 gate 未過 | 流程設定；補齊並核對後移除才可能重試 |
-| `dispatched` | 已建立派工結果 | 流程維護；重試前先核對既有 mirrors，不任意移除 |
+| `human-driving` | 本機／人工開發 | 執行者（`/dev-task` start 自動掛）；人工開工標記 |
+| `auto`、`auto:plan-only`、`auto:auto-pr` | **不再使用**（Routine A／B 已退役） | label 保留不刪；不要再加到新卡 |
+| `needs-spec`、`dispatched` | **不再使用**（原 Routine A 產出） | label 保留不刪；舊卡片仍可能帶有，清理與否不影響流程 |
 | `duplicate`／`invalid`／`wontfix` | 重複、無效或決定不處理 | maintainer；附原因與相關 Issue |
 
-`repo:*` 目前包含 server、f2e、ai-backend、storage、admin-ui、infra、mcp、worker 八個 `daodao-` 子 repo。多個 repo label 不能代替 OpenSpec 各 section 的責任分配；程式無法判定時會阻擋派工。
+`repo:*` 目前包含 server、f2e、ai-backend、storage、admin-ui、infra、mcp、worker 八個 `daodao-` 子 repo，供 board 篩選與人工判斷責任 repo。
 
-中央另有 `manual`、`human-coding` 等既有 labels，但它們不是目前 `dispatch.ts` 的人工退出 gate。不要拿它們替代 `human-driving`；本規範不刪除既有 labels。
+中央另有 `manual`、`human-coding` 等 Routine B 時代 labels，同樣不再使用；不要拿它們替代 `human-driving`；本規範不刪除既有 labels。
 
-**目前不能靠不加 `auto` 防止派工。** 未準備好保持 Todo；人工任務加 `human-driving`。此 label 只證明 dispatcher 不再接單，不代表已執行中的 writer 已停止；接手前仍需確認原執行停止與成果交接。
+沒有自動派工後，未準備好的卡保持 Todo 即可；人工任務加 `human-driving` 以便在 board 上辨識。
 
 Priority 是 Board 欄位，與 scope 分開。查詢確認欄位存在，但未列出選項；填寫前查實際可選值。尚無適合選項時先在 body 記錄影響程度、處理順序與理由，不宣稱已有 P0–P3，也不自動新增 priority labels。
 
@@ -58,7 +55,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | Board Status | 進入條件 | Issue state |
 |---|---|---|
 | `Todo` | 已開卡，尚未開始；可保留需求缺項 | open |
-| `Ready for Dev` | 規格、AC、責任 repo 與執行授權齊備；自動任務另過 OpenSpec gate | open |
+| `Ready for Dev` | 規格、AC、責任 repo 與執行授權齊備；管理狀態，不觸發自動化 | open |
 | `In Progress` | 已開始實作；驗收退回後開始修正 | open |
 | `Review` | 開發完成，待 review、人工驗收、合併或部署確認；摘要寫明具體階段 | open |
 | `Done` | 全部必要 repo 達到契約的合併、產品驗收與部署／smoke 條件；無部署需求依事先定義的替代條件 | 完成證據回寫後 close |
@@ -77,7 +74,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | 關係 | 必須記錄 | GitHub 操作與限制 |
 |---|---|---|
 | 中央 → 子 Issue | 中央交付表列 repo、子卡 URL、PR、版本與進度 | 在已授權拆卡範圍建立原生 sub-issue 關係；核對 Board 的 Parent issue／Sub-issues progress |
-| 子 Issue → 中央 | 獨立一行 `Parent: daodaoedu/daodao#123`，並引用中央 AC IDs | 現有 pipeline 解析此文字；原生父子關係不能代替它 |
+| 子 Issue → 中央 | 獨立一行 `Parent: daodaoedu/daodao#123`，並引用中央 AC IDs | Routine C（`lib.ts parseParentIssue`）解析此文字反查中央卡；原生父子關係不能代替它 |
 | Issue → PR | Issue 交付表與 PR body 雙向記錄 URL、負責 AC、受驗 SHA | 一般參照可供追蹤；不保證自動填入 Linked pull requests 欄位 |
 | 子卡 → 相依子卡 | 完整 `owner/repo#N`／URL、阻塞原因、API／schema 前提及部署順序 | 可加原生相依關係輔助，但現有 pipeline 不據此自動排程 |
 | Bug → 原功能 | 原需求 Issue、相關 PR 與發生版本 | 只有屬於同一中央交付目標才設 Parent；一般關聯寫參照即可 |
@@ -105,24 +102,19 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | 關聯 | Body 引用原功能；若無中央父任務，不填假 Parent | 建立子卡後回填交付表並設定原生父子關係 |
 | 完成 | 回歸驗證、review、適用部署確認後 close | 所有必要子交付符合中央 AC 才 Done／close |
 
-子卡 body 的機器辨識行示例：
+子卡 body 的機器辨識行示例（Routine C 反查中央卡用）：
 
 ```text
-OpenSpec: fix-learning-progress
-
 Parent: daodaoedu/daodao#123
 ```
-
-只有真實 OpenSpec 存在才保留第一行。人工無 OpenSpec 任務依前述規則刪除它。
 
 ## 6. 已知自動化落差與落地檢查
 
 | 現況 | 管理方式／待實作 |
 |---|---|
-| dispatcher 未檢查中央 `auto` | Todo／human-driving 防新派工；待補雙 gate |
+| 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/publish-tasks`；要恢復自動派工需另開卡重新設計 |
 | Board 有 Review，但 `types.ts` 的 Status mapping 未含 Review | 目前人工設定；待補程式映射及轉移 |
 | Routine C 子卡全 closed 即設中央 Done | 人工核對並校正過早 Done；待改成合併＋驗收＋部署條件 |
-| mirror labels 只產 `auto`、mode、scope | bug／repo 等不保證被傳遞；發布後核對，待定分類同步政策 |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；待補一致性檢查 |
 | PR parser 只認同 repo closing refs | 部署後關卡流程先人工回寫；待支援一般關聯與延後完成 |
 | 可靠回寫、共用任務鎖與完整驗收 gates 仍為目標設計 | 依共用流程分階段落地與演練，文件存在不等於自動化已完成 |

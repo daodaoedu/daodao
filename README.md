@@ -58,10 +58,10 @@ git submodule update --remote
 | `/code-review` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
 | `/collect-pr-feedback` | 收集 PR 上所有 review 回饋（含收割 `/fp` 回覆進誤判知識庫） |
 | `/file-bug-issue` | 無法立即修復的 bug 開成 GitHub issue |
-| `/publish-tasks` | Routine A 的手動版：計畫未完成任務 → sub-repo issues + auto label |
+| `/publish-tasks` | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布；自動派工已退役） |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
-快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，自動化 pipeline 見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
+快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，自動化 pipeline（只剩 Routine C：merged PR → Board Done）見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
 
 新增的[Issue → 開發 → 驗收 → 合併流程提案](docs/automation/issue-to-acceptance-workflow.md)涵蓋 Google Docs／Drive、人工與自動入口、Issue 回寫；另有[額度分配政策](docs/automation/agent-budget-policy.md)與[可複用文件模板](templates/development/README.md)。這些是待導入設計，不代表自動化已啟用。
 

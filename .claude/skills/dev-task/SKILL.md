@@ -51,9 +51,9 @@ daodao/
 
 ### 1.1a 防撞檢查（建 worktree 前必做）
 
-1. **跟 pipeline 防撞**：任務對應中央卡（daodaoedu/daodao）時，手動開工前必須加 **`human-driving`** label（`gh issue edit <n> --repo daodaoedu/daodao --add-label human-driving`）；cleanup 時再移除。
-   - 依據：`bin/pipeline/dispatch.ts:91` 的閘門只認 `dispatched` / `needs-spec` / `human-driving`——828b902 起 auto label 閘門已移除，**卡片一到 Ready for Dev 就會被派工**，human-driving 是唯一的人工退場機制
-   - 不要跟 `human-coding` 混淆：那是 sub-repo 鏡像 issue 的「機器做不動、移交人類」標記，dispatch.ts 不認它，掛了也擋不住派工
+1. **人工開工標記**：任務對應中央卡（daodaoedu/daodao）時，手動開工前加 **`human-driving`** label（`gh issue edit <n> --repo daodaoedu/daodao --add-label human-driving`）；cleanup 時再移除。
+   - 自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 label 現在只用來在 board 上辨識「有人在做」，不再是防派工閘門
+   - 不要跟 `human-coding` 混淆：那是 Routine B 時代 sub-repo 鏡像 issue 的移交標記，已不再使用
 2. **跟其他任務防撞**：對每個目標 repo 檢查 in-flight 工作：
    - `git worktree list`（在 `projects/<repo>` 內）→ 已有任務在做同一個 repo 時，比對雙方 scope 是否碰同一片檔案
    - `gh pr list --repo daodaoedu/<repo> --base dev --state open` → 有 open PR 改到同區域時，在 task.md 備註標注，實作時避開或先等它 merge
@@ -282,7 +282,7 @@ git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分
 - DB/docker 是全機共享——migration 類任務一次只做一個
 - 兩個任務要同時跑 dev server：後開的用 clone 模式或設 port offset
 - **issue 之間有依賴**（B 需要 A 未 merge 的 code）：B 的 worktree 從 A 的分支開（`git worktree add ... -b feat/<B-slug> feat/<A-slug>`），PR base 先設 A 的分支並在 body 標注依賴；A merge 後 B rebase 回 dev、base 改回 dev。task.md 記清楚依賴鏈
-- 並行數量甜蜜點是 2–3 個（本機留給需要瀏覽器驗證/人工判斷的 M/L 任務；XS/S 雜項標 `auto` 走 pipeline 讓 Routine B 雲端做，不佔本機）
+- 並行數量甜蜜點是 2–3 個（Routine B 雲端實作已退役，XS/S 雜項也走本機 dev-task；優先把本機時間留給需要瀏覽器驗證/人工判斷的 M/L 任務）
 - **rebase 政策**：別的 PR merge 了不用立刻 rebase——只在「發 PR 前」和「輪到自己 merge 前有 conflict」兩個時機 rebase，避免連鎖 rebase 稅
 
 ## 注意事項

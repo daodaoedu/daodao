@@ -1,6 +1,6 @@
 ---
 name: publish-tasks
-description: "將已確認開發計畫的未完成任務整理成 GitHub 子 Issue，先檢核與預覽，再依授權發布；自動派工需另驗證 pipeline 相容性。"
+description: "將已確認開發計畫的未完成任務整理成 GitHub 子 Issue，先檢核與預覽，再依授權發布；發布後由人工 dev-task 開工（自動派工已退役）。"
 ---
 
 # publish-tasks（Codex 入口）

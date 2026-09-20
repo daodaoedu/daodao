@@ -1,5 +1,7 @@
 # AI Code Review 誤判：未解問題的解法調研
 
+> 註（2026-09-20，#241）：`review-evals.yml`／`review-evals.ts` 週報已刪除，下文「收割進 review-evals 週報」的落地項需另找載體。
+
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
 > 2026-08-29。接續 [`.github/review-knowledge/README.md`](../../.github/review-knowledge/README.md) 建立的誤判知識庫。

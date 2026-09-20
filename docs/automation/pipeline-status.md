@@ -1,192 +1,23 @@
 # Pipeline Status
 
-> Generated at 2026-05-15T09:14:20.812Z
-> Last scan: _unknown_
-> Last dispatch: _unknown_
+> **退役註記（2026-09-20，#241）**：本檔原由 `bin/pipeline-status.ts` 自動產生（Notion 同步、Routine A／B 派工與 spec PR 狀態）。產生器與 Routine A／B 已退役，舊報表不再更新；最後一版快照可從 git 歷史取得。
 
-## Pending sync
-_Issues in Notion marked Ready for Dev but not yet synced to GitHub._
+現行 pipeline 只剩 **Routine C**（merged PR → Board Done），狀態直接查 GitHub：
 
-> ℹ️ Notion API data requires NOTION_API_KEY env var. Run with NOTION_API_KEY set for live data.
+```bash
+# 最近幾次 board-sync run（成功／失敗、時間）
+gh run list -R daodaoedu/daodao --workflow pipeline-board-sync.yml --limit 5
 
-## daodao-server
+# 看某次 run 的 log（[board-sync] 前綴）
+gh run view <run-id> -R daodaoedu/daodao --log
 
-### Synced issues (auto label)
-_none_
+# 本機 dry-run 看目前會動哪些卡
+pnpm tsx bin/pipeline/board-sync.ts --dry-run --hours 168
 
+# Planning board 現況
+gh project item-list 10 --owner daodaoedu --format json --limit 200
+```
 
-### Pending plan
-_none_
+kill switch：repo root 有 `.automation-paused` 時 Routine C 直接退出。
 
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-f2e
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-ai-backend
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-storage
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-admin-ui
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-infra
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-mcp
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## daodao-worker
-
-### Synced issues (auto label)
-_none_
-
-
-### Pending plan
-_none_
-
-
-### Spec in review (spec-pending)
-_none_
-
-
-### Spec merged — awaiting code PR
-_none_
-
-
-### Code PR open
-_none_
-
-
-## Recent routine failures
-
-| Issue | Tokens used |
-|---|---|
-| daodao-f2e#20 | 800,001 |
+詳見 [routine-c-prompt.md](routine-c-prompt.md) 與 [github-pipeline.md](github-pipeline.md)。

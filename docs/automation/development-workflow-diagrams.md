@@ -1,5 +1,7 @@
 # 島島阿學開發流程圖解
 
+> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役，pipeline 只剩 Routine C（merged PR → Board Done）；下文提到 Routine A 派工、`dispatch.ts`、雙 gate 之處為歷史規劃，現行以人工 `/dev-task` 為準。
+
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
 > 日期：2026-09-12。定位：以 Mermaid 說明目前成果、目標流程與待實作範圍。
@@ -109,7 +111,7 @@ flowchart TD
 
 私有 repo 的自動流程沿用雙 provider review；本機可採獨立 reviewer session 或人類 reviewer。Codex 訂閱 CI 的公開 repo 限制與 runner 設計見[雙訂閱 v2](dual-subscription-development-workflow.md)，不能把同一自動入口無條件套到所有 repos。
 
-**現況提醒：** `dispatch.ts` 尚未檢查中央 `auto` label；圖中的雙 gate 是目標政策。未準備好保持 Todo，人工任務加 `human-driving`。共用任務鎖與上述 required checks 也尚未完整實作。
+**現況提醒（2026-09-20 更新）：** 自動派工已退役（`dispatch.ts` 已刪除），圖中的雙 gate 與派工屬歷史目標政策；未準備好保持 Todo，人工任務加 `human-driving`。共用任務鎖與上述 required checks 也尚未完整實作。
 
 ## 4. Bug 通報與修復流程
 
