@@ -1,3 +1,7 @@
+> **部分已移除（2026-09-20）** — 下述「in-app 進度提示（右下角懸浮組件）」「階梯式 Email 導流序列 A–E」「獎勵 Badge」依 [daodaoedu/daodao#218](https://github.com/daodaoedu/daodao/issues/218) 移除，已合併並部署 dev。
+> 仍有效：註冊流程本身（三步表單、註冊閘門、動態 flow）、L0 歡迎信（改為 email 驗證完成或 Apple 註冊後直接寄出，不再經任務序列佇列）、「未完成個人資料填寫限制」的設定頁提示。
+> 相關 PR：[daodao-server#490](https://github.com/daodaoedu/daodao-server/pull/490)、[daodao-f2e#1015](https://github.com/daodaoedu/daodao-f2e/pull/1015)、[daodao-admin-ui#154](https://github.com/daodaoedu/daodao-admin-ui/pull/154)。
+
 ## **Overview**
 
 本流程的核心目標是引導用戶完成「第一次實踐 」的建立。無論用戶是從測驗進入、從工具進入、還是直接註冊，我們都必須在引導結束前，讓他們擁有一份可執行的、具備個人意義的行動草稿。
@@ -29,7 +33,7 @@ Onboarding 必須服務於以下三種路徑：
 
 ## **Features and Functionalities**
 
-### **in-app 進度提示**
+### ~~**in-app 進度提示**~~（2026-09-20 移除，#218）
 
 * **位置：** 畫面右下角懸浮組件 (Floating Widget)。  
 * **顯示邏輯：**  
@@ -39,7 +43,7 @@ Onboarding 必須服務於以下三種路徑：
 
 * **行為策略：** 以 to-do list 方式顯示，已完成任務需「自動」被勾選，並提示完成後獲得 badge
 
-###  **階梯式 Email 導流序列**
+###  ~~**階梯式 Email 導流序列**~~（2026-09-20 移除 A–E，L0 歡迎信保留並改直接寄送，#218）
 
 **原則：** 文字簡潔、低壓、CTA 直接導向特定頁面。完成 Step N 才會觸發 Step N+1 的郵件。以下L1, L2….並非代表順序，不同來源使用者的順序，除L0外，皆會不同。
 
@@ -55,7 +59,7 @@ Onboarding 必須服務於以下三種路徑：
 
 **E \[留言\]:** 提醒使用者在「靈感」留言
 
-### **獎勵 Badge**
+### ~~**獎勵 Badge**~~（2026-09-20 移除，#218）
 
 當使用者完成所有 onbarding tasks 時，獎勵使用者一個限量 early user badge 
 
