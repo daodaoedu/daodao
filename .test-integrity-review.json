@@ -1,7 +1,0 @@
-{
-  "base": "26e58e976a24c3d569d519880c8a13b11deab0b1",
-  "test_diff_sha256": "6f9724ab015384e8225d31e6b266773c1f9a7d421af7677b36791d3e618cc53f",
-  "reviewer": "vincentxuu",
-  "reason": "Routine C 退役：被刪的 bin/pipeline/__tests__/lib.test.ts 只測已刪除的 board-sync.ts 用函式（parseParentIssue／parseClosingIssues／comment builders）；同 PR 新增 board.test.ts（8 例）覆蓋保留下來的 auditCards／resolveStatus，並依 code review 補上 null status、五欄 closed-issue、linked vs mention、open PR 建議四組斷言，無既有斷言被弱化。2026-09-20 使用者於對話中確認退役與刪檔。",
-  "evidence": "docs/plans/actions-audit-2026-09-20.md 、 https://github.com/daodaoedu/daodao/issues/241"
-}
