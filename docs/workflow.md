@@ -357,9 +357,9 @@ daodao/
 |---|---|---|
 | 「開發 issue #141」 | **start** | 建立任務 |
 | 「接手 worktrees/141-…」或已在該資料夾內 | **dev** | 逐 phase 實作 |
-| 「驗證」或全部 phase 完成 | **verify** | 對 FRD Test Points 總驗收 |
-| 「發 PR」 | **finish** | rebase、品質檢查、code review、開 PR、回寫 issue |
-| 「merge 了」 | **cleanup** | 移除 worktree、label，歸檔 |
+| 「驗證」或全部 phase 完成 | **verify** | 對驗收契約總驗收 + 核心旅程矩陣 + Google 文件報告 |
+| 「發 PR」 | **finish** | rebase、品質檢查、spec audit、code review、過 pre-pr 閘門、開 PR、回寫 issue |
+| 「merge 了」 | **cleanup** | dev 冒煙 → 移除 worktree、label，歸檔 |
 
 #### start — 建立任務
 
@@ -375,10 +375,11 @@ daodao/
 
 跨 repo 順序固定 **storage（migration）→ server（API）→ ai-backend → f2e**。每完成一個 phase 的預設動作序列，不問「要 commit 還是先看效果」：
 
-1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看；API → curl；migration / script / skill → 依 `pre-commit-check` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」
-2. 驗證過 → `/pre-commit-check` → `/format-commit`
-3. 更新 `task.md` 的 checkbox 與 Status
-4. 直接進下一個 phase；定期 `git push -u origin feat/<slug>`
+1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看；API → curl；migration / script / skill → 依 `pre-commit-check` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」。碰到 form／mutation／controller／DTO 的 phase 要**真的送出一次**：一筆真實輸入成功、一筆 server 會拒絕的輸入失敗且訊息顯示——先把核心旅程矩陣的列開出來
+2. 跑 `bash .claude/hooks/stop-quality-gate.sh` 看高風險分類（migration / API / auth / env / CI），有標記的在 task.md 記「⚠ 高風險：<分類>」
+3. 驗證過 → `/pre-commit-check` → `/format-commit`
+4. 更新 `task.md` 的 checkbox 與 Status
+5. 直接進下一個 phase；定期 `git push -u origin feat/<slug>`
 
 只有四種情況停下來：全部 phase 完成（進 verify）、碰到 task.md 記載的待決事項且無法繞過、驗證失敗 2 次修不掉、使用者喊停。phase 邊界是繼續點，不是回報暫停點。
 
@@ -386,31 +387,51 @@ daodao/
 
 有 UI 變更的任務必須通過；純後端改跑 API 驗證後直接 finish。
 
-- 從 FRD Test Points 展開檢查清單，用瀏覽器（`claude-in-chrome` 或 Playwright 腳本）逐條走過，含窄螢幕（375px）、無障礙、反面條件
-- 每個檢查點截圖到 `evidence/`；task.md 新增「驗證」區塊記通過／失敗／未做
+- 從 task.md 的驗收契約（PRD／FRD Test Points／AC）展開檢查清單，用瀏覽器（`claude-in-chrome` 或 Playwright 腳本）逐條走過，含窄螢幕（375px）、無障礙、反面條件
+- **POC 並排比對**（有可互動 HTML 原型時必做）：用 `getComputedStyle` 量測產出差異表，每條 ❌ 不是修掉就是列進「### POC 差異決策」交使用者裁決，確認後 task.md 寫 `POC 差異決策已確認`。沒有「設計系統」這個免死金牌
+- **核心旅程矩陣**（有任何寫入路徑就必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗，「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `.claude/skills/dev-task/references/journey-matrix.md`
+- 每個檢查點截圖到 `evidence/`；task.md 新增「驗證」區塊記通過／失敗／未做 + 矩陣
+- **產出 Google 文件驗證報告**（必做）：截圖嵌圖，連結記進 task.md「驗證」區塊第一行；截圖只留在本機或對話裡等於沒發
 - 同一項失敗 2 次 → 停下來整理現象給使用者
 - 全部通過 → Status `verified`
 
 #### finish — 發 PR
 
+前置：task.md Status = `verified`。**Deferred items 先開卡再發 PR**——task.md「## Deferred items」每項要有子 issue `#n` 或 `（待開卡：<原因>）`；task.md 在 cleanup 會被刪，只留在 comment 的「之後再做」等於消失（#171 → #188 的第二個根因）。
+
 對每個有變更的 repo：
 
 1. `git fetch origin dev && git rebase origin/dev`（衝突時列出檔案；openapi 生成物用官方腳本重產）
 2. `typecheck && lint && test`；既有紅測試用 origin/dev 乾淨 worktree 對照確認非本任務造成
-3. `/code-review`（四引擎＋誤判知識庫，見 Phase 5）
-4. push → `gh pr create --base dev`；跨 repo 時各 PR body 互相引用並標 merge 順序
-5. task.md Status → `in-review`，記 PR 連結
-6. **回寫 issue**：`gh issue comment` 列 PR、驗證摘要、Known incomplete scope
+3. **Clean-context spec audit**：`scripts/build-spec-audit.py` 產 audit pack，spawn 不帶開發對話的獨立 subagent 逐 FR／TP／AC 標 PASS / FAIL / UNCERTAIN；FAIL 先修
+4. `/code-review`（四引擎＋誤判知識庫，見 Phase 5）
+5. push → `gh pr create --base dev --body-file …`；跨 repo 時各 PR body 互相引用並標 merge 順序。**子 PR 只用 `Refs daodaoedu/daodao#<n>`，不用 `Closes`**——`Closes` 會在第一支 PR merge 時就關掉中央卡、board 也跟著 Done，其他 repo 的 PR 還沒合就被當完成（#190 的教訓：f2e 先合、server 懸置一週，dev onboarding 卡死）
+6. task.md Status → `in-review`，記 PR 連結
+7. **回寫 issue**：`gh issue comment` 列 PR、驗證報告連結、核心旅程摘要、「尚未在 dev 冒煙」、Known incomplete scope
+
+**pre-pr 閘門**（`.claude/hooks/pre-pr-gate.sh`，攔 `gh pr create`；Codex 或未裝 hook 時由 agent 主動做同等檢查）：
+
+| 閘門 | 擋什麼 |
+|---|---|
+| `pr-status-not-verified` | task.md Status 不是 `verified` |
+| `pr-poc-compare-missing` | 有可互動原型卻缺比對報告／差異決策確認行 |
+| `pr-journey-matrix-missing` | 核心旅程矩陣缺、沒有錯誤路徑列、或有 ⬜／❌ |
+| `pr-deferred-unlinked` | Deferred item 沒子 issue 也沒「待開卡」 |
+| `pr-body-evidence-missing` | PR body 缺「## 驗證證據」（報告連結或不適用聲明） |
+| `pr-fe-pattern-invalid` | 前端手寫 HTML `pattern` 編不過（#188 根因） |
+
+逃生口 `DEV_TASK_SKIP_GATE="<原因>"`，一律留痕到 gate ledger。完整規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`。
 
 注意：sub-repo 的 Auto PR Description workflow 會在 opened 時覆寫標題與內文，開完 PR 等它跑完再 `gh pr edit` 還原。
 
 #### cleanup — merge 後收尾
 
-1. 確認所有 PR merged
-2. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（task.md 有留存價值先摘要進 issue comment）
-3. 移除 `human-driving`
-4. `/post-merge-wrapup`：`/openspec-archive-change` 歸檔、更新 `docs/product` 功能狀態；Routine C 自動把 board 卡改 Done
-5. `ls worktrees/` 掃其他已 merge 未收尾的任務
+1. 確認**所有 repo** 的 PR merged（跨 repo 少一支就不算）
+2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境（app-dev + server-dev）重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `file-bug-issue` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
+3. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪）
+4. 移除 `human-driving`
+5. `/post-merge-wrapup`：更新 `docs/product` 功能狀態；Routine C 自動把 board 卡改 Done
+6. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
 ### 3.2 平行開發約定
 
@@ -548,10 +569,11 @@ PR opened / updated
   ├── 1. Auto PR Description — 自動產生 PR 標題和描述
   ├── 2. AI Code Review — Cloudflare Workers AI 審查 diff
   ├── 3. Gemini Code Assist — Google AI 審查
-  └── 4. CI — lint + typecheck + test + build
+  ├── 4. CI — lint + typecheck + test + build
+  └── 5. PR evidence gate — 讀 PR body「## 驗證證據」（目前 advisory，repo variable `PR_EVIDENCE_GATE_MODE=block` 升為阻擋）
 ```
 
-這四道是平行跑的，通常在 2-5 分鐘內全部完成。
+前四道是平行跑的，通常在 2-5 分鐘內全部完成。第 5 道由 `sync-claude-config` 同步到各 sub-repo，是本機 `pre-pr-gate.sh` 的 CI 版，涵蓋 Codex／手動 gh／pipeline runner 開的 PR。
 
 ### 6.2 Auto PR Description
 
@@ -664,6 +686,7 @@ CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有�
 - CI 全部通過（lint + typecheck + test + build）
 - AI Code Review 無 🔴 High 嚴重度問題
 - 人類 reviewer approved（如果有指定 reviewer 的話）
+- **跨 repo 依 PR body 標的順序合併**（storage → server → ai-backend → f2e），不要先合前端；前端一合就會打尚未部署的 API
 
 ### 7.2 CD 自動部署
 
@@ -690,22 +713,27 @@ merge 不是終點。少了收尾，worktree 會堆積、openspec change 會堆�
 
 PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
-1. 確認所有 PR merged（`gh pr view`）
-2. 每個 repo：`git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`
-3. `rm -rf worktrees/<n>-<slug>`（task.md 有留存價值先摘要進 issue comment）
-4. 移除中央 issue 的 `human-driving` label
-5. 接 `/post-merge-wrapup`
-6. `ls worktrees/` 掃其他已 merge 未收尾的任務
+1. 確認所有 repo 的 PR merged（`gh pr view`）
+2. **dev 冒煙**（有寫入路徑必做）：CD 跑到該 revision 後，用核心旅程矩陣在 dev 重跑，結果回寫 issue comment；沒過不往下
+3. 每個 repo：`git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`
+4. `rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 issue comment 才刪）
+5. 移除中央 issue 的 `human-driving` label
+6. 接 `/post-merge-wrapup`
+7. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
 ### 8.2 `/post-merge-wrapup`
 
-1. 歸檔 openspec change：`/openspec-archive-change <slug>`（artifacts 保留在 `openspec/changes/archive/` 作歷史紀錄）
-2. 更新 `docs/product/<功能>/` 的狀態標示為「已上線（日期）」——不可跳過，這是根治「文件說規劃中、程式碼已上線」的關鍵
-3. 校準地圖文件（codebase-map、system-map）若本次變更動到結構
+1. 核對合併範圍與證據：程式實作／測試／部署／目標環境操作各自要有證據；未執行就記未驗證
+2. 目標環境冒煙（同 8.1 步驟 2），表格格式 `## 🔥 dev 冒煙（<環境>，revision <sha>，<日期>）`；全部 ✅ 才能在 docs/product 標「已驗收」
+3. 更新 `docs/product/<功能>/` 的狀態標示（已合併／已測試／已部署／已驗收，附日期與 PR／run）——不可跳過，這是根治「文件說規劃中、程式碼已上線」的關鍵；沒有部署證據不寫已上線
+4. 校準地圖文件（codebase-map、system-map）若本次變更動到結構
+5. 有 openspec change 的歸檔到 `openspec/changes/archive/`（本流程不再依賴 OpenSpec skills）
 
 ### 8.3 Board 與 issue
 
 Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Status 改 **Done** 並留言；**不自動 close**，留給 product 驗收後手動關。人工開發（`human-driving`）的卡 Routine C 一樣會回寫。
+
+中央卡由 post-merge-wrapup 冒煙通過後才手動 close；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish）。
 
 驗收若發現與 FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差重跑 OpenSpec。
 

@@ -1,7 +1,8 @@
 # 我的島嶼 3D — 可走動的學習世界 PRD
 
-> 狀態：規劃中（spec 定稿，未實作）
+> 狀態：部分完成、待完整驗收（2026-09-12 依程式碼重新校準）
 > 日期：2026-07-18
+> 現況補充：3D engine、島嶼頁、islandData API、隱私過濾、群島導航與主要互動已實作；手機實機效能、正式人格角色、Playwright 煙霧測試與全情境驗收仍未完成。產品正評估改走 2D spatial island，見 [2d-spatial-island-prd.md](./2d-spatial-island-prd.md)。
 > 靈感來源：Threads vibe coding 案例（@nekogato 森林探索、@annatt00 森林速食派對）——用 three.js + 免費 3D 素材快速做出可走動的網頁場景
 > 相關文件：[island/prd.md](./prd.md)（我的小島完整版藍圖）、[buddy/ember-design.md](../buddy/ember-design.md)（營火視覺語彙）、[prd/learning-ecosystem.md](../prd/learning-ecosystem.md)（E5 + 指標戒律）
 

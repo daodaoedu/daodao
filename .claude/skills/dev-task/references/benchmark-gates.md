@@ -37,6 +37,25 @@ git diff <explicit-base> -- openapi.json openapi.yaml
 
 HTTP contract 需測實際序列化 JSON、完整 envelope 與欄位型別；內部 Date schema 不等同 wire schema。權限／私密欄位另對 raw response 做 negative assertions，不依賴 Zod 預設 strip unknown。修正後跑對應 endpoint 與相鄰回歸測試。
 
+## 驗證規則對齊 signal（f2e／admin-ui 碰到表單或輸入驗證時）
+
+前端手寫的驗證規則和 server 的規則沒有共用來源，#188 就是前端 HTML `pattern` 無效被瀏覽器忽略、server 又擋另一套規則。在前端 worktree 執行：
+
+```text
+python3 <daodao-root>/scripts/check-validation-parity.py --repo <absolute-f2e> --base origin/dev --task-md <task.md>
+```
+
+腳本抓變更檔裡的 HTML `pattern=` 屬性與 `/^…$/` 錨定 regex 常數，用 node 以 v flag 編譯（瀏覽器對 `pattern` 屬性的行為），再對照 `packages/api/openapi.json`（或 server worktree 的 `openapi.json`）裡的所有 `pattern`：
+
+| 狀態 | 意思 | 處理 |
+|---|---|---|
+| INVALID | 瀏覽器會拒絕這個 pattern，前端驗證整個失效 | 必修；`pre-pr-gate` 會擋 |
+| UNMATCHED | openapi 找不到同一條規則 | 在核心旅程矩陣填 BE 規則來源（`檔案:行號`）並用錯誤輸入實測；規則對不上就修前端 |
+| DOCUMENTED | openapi 沒有，但 task.md 已列來源 | 確認矩陣有錯誤路徑列 |
+| MATCH | 文字一致 | 仍要在矩陣用真實／錯誤輸入送出驗證 |
+
+規則來源優先序：server zod → `openapi.json` 的 `pattern`／`minLength`／`enum` → 前端引用；前端不得自創第二套規則。openapi 沒帶 `pattern` 的欄位，先在 server schema 補 `.regex()` 讓生成器帶出來，再讓前端跟。腳本只看正則文字，長度、enum、跨欄位規則仍靠矩陣的錯誤路徑列實測。
+
 ## 證據交接
 
 結果加入 task.md 驗證欄；需要的檢查未執行就保留未驗證。spec audit 按 [spec-audit.md](spec-audit.md) 納入決策與約束。根 repo CI 只檢查本 repo，不能宣稱子 repo 或 Claude／Codex 自動 hooks 已同步。
