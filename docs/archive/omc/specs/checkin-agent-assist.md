@@ -66,4 +66,4 @@
 - [ ] 觸發 asana-product-request（產品任務）
 - [ ] 觸發 notion-dev-request（開發需求單）
 
-相關既有規格：`openspec/changes/encouragement-messages/`（3c 可銜接）、`docs/product/practice/主題實踐覆盤 .md`（3b 里程碑卡片與覆盤置頂的定位區隔）、`openspec/changes/practice-journey-export/`（小結作為匯出素材）。
+相關既有規格：`docs/archive/openspec/changes/encouragement-messages/`（3c 可銜接）、`docs/product/practice/主題實踐覆盤 .md`（3b 里程碑卡片與覆盤置頂的定位區隔）、`docs/archive/openspec/changes/practice-journey-export/`（小結作為匯出素材）。

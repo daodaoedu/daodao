@@ -19,7 +19,7 @@
 
 ## 工程交接：來源與衍生資料
 
-PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 snapshot 是執行基準，工程文件引用它，不另訂需求。使用 OpenSpec 的既有流程可引用其 snapshot；run manifest 與可核對事件是執行狀態來源。Issue、PR、Google 驗收報告與 `task.md` 都是閱讀投影，不另訂 AC。手動使用時從同一快照複製欄位並核對；將來生成器應取代這項人工同步，目前尚未實作。
+PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 snapshot 是執行基準，工程文件引用它，不另訂需求。run manifest 與可核對事件是執行狀態來源。Issue、PR、Google 驗收報告與 `task.md` 都是閱讀投影，不另訂 AC。手動使用時從同一快照複製欄位並核對；將來生成器應取代這項人工同步，目前尚未實作。
 
 需求與 POC 均保存 ID、版本或 modified time、匯出快照位置與 digest。所有受驗 repo 保存完整 base/head SHA；改動 SHA、base、規格或 POC 時重建 acceptance key，重新驗證受影響項目與簽核，不只替換報告上的 SHA。
 
@@ -31,7 +31,7 @@ PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 sna
 - 必填：中央 Issue ref、AC ID、契約版本／digest、執行與報告狀態（依階段補充）；開始執行後還需 run ID、版本 SHA map、證據索引與額度結果。
 - AC 是驗收條件的統稱，沿用穩定 `FR-*`／`TP-*`／`AC-*`，多文件同 ID 以文件 ID 限定；子 Issue 只引用中央 AC，不另編同義條件。結果限 `pass / fail / blocked / not-run / n/a`，pass 必須附本版本證據。
 - 不適用填 `n/a：<理由、適用範圍、判定人／依據>`。required AC 不可自行改 N/A；純後端 POC 等不適用範圍應在 Ready 前確認。沒有未完成項目明寫 `none`。
-- `OpenSpec: <slug>` 保留半形冒號、單獨一行，將 `<slug>` 換成真實 change slug；勿換成 Google URL。S 人工任務若不用 OpenSpec，刪掉此行並填 acceptance snapshot，不能讓 `n/a` 被 parser 當 slug。此例外不代表現有自動派工已支援無 OpenSpec。
+- Acceptance snapshot 直接填本卡驗收契約（路徑／URL 與契約版本）。OpenSpec 已於 2026-09-20 退役，模板不再有 `OpenSpec: <slug>` 行。
 - 額度不可推估成已確認餘額；記錄 `available / exhausted / unknown / not-checked`、觀測時間、錯誤／下一步。用盡或 review 不可用填 blocked，保留成果，不預設付費 API fallback。
 - 簽核記錄具權限的人、時間、acceptance key 與 GitHub record URL。文件自由文字、agent 勾選及 Google 評論不等同 merge 授權。
 - Google Docs 可直接貼上內容；Drive 預設指定驗收群組。不可填 token、cookie、密碼、真實個資；截圖與 payload 去敏。報告發布後核對驗收者能讀取。
@@ -42,4 +42,4 @@ PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 sna
 
 ## 與既有 auto 範本的關係
 
-[issue-template-auto.md](../issue-template-auto.md) 保留既有 Notion／Routine A 管理欄位與 marker；本目錄不替換它，也不假設目前 pipeline 已解析新欄位。導入前另做相容性改造與測試，不能盲改 `notion-id`、managed marker、Target Repo 或派工格式。現有 OpenSpec parser 在 `bin/pipeline/lib.ts`；Ready／`auto` 操作仍依流程提案及受審核政策。
+[issue-template-auto.md](../issue-template-auto.md) 保留既有 Notion／Routine A 管理欄位與 marker；本目錄不替換它，也不假設目前 pipeline 已解析新欄位。導入前另做相容性改造與測試，不能盲改 `notion-id`、managed marker、Target Repo 或派工格式。`bin/pipeline/lib.ts` 的 Spec gate 仍解析 `OpenSpec:` 行（OpenSpec 已退役，待程式端調整）；Ready／`auto` 操作仍依流程提案及受審核政策。

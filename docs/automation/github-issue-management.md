@@ -1,5 +1,7 @@
 # GitHub Issue 管理規範
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 日期：2026-09-12。適用於一般需求、bug 與跨 repo 任務的人工管理；自動化落差另列於本文末。
 > 遠端現況依本次對話的 GitHub CLI 唯讀查詢：中央 repo labels、Planning #10 fields；程式依本機 `bin/pipeline/`。子 repo labels、既有卡片關聯與 runner 行為未逐一驗證。本文件不會修改遠端設定。
 

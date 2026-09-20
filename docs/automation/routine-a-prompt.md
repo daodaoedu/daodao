@@ -1,5 +1,7 @@
 # Routine A — Board → Sub-repo Dispatch（Actions script 運維手冊）
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 2026-08 二次改版：Routine A 不再由 Claude 執行，改為 GitHub Actions 跑純 script。
 > Notion 版（notion-sync）與 cloud routine 版皆已退役，見 git 歷史。
 

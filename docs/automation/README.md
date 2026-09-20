@@ -1,5 +1,7 @@
 # docs/automation — 自動化 Pipeline 文件索引
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 這個目錄包含 **GitHub Board → Issue → Plan → PR** 自動化 pipeline 的操作與維護文件。
 
 > 2026-08 起任務管理層由 Notion DB 遷移到 GitHub org Project「Planning」+

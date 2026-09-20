@@ -6,15 +6,13 @@
 schemaVersion: 1
 templateVersion: 1
 
-OpenSpec: <slug>
-
 ## 任務索引與責任
 
 - 中央 Issue：<owner/repo#N + URL；建立後回填>
 - 任務指派：<沿用 GitHub Assignees；未指派不阻擋 Todo>
 - Google 需求文件：<URL、文件 ID、modified time>
 - 核准需求快照：<artifact URL、版本、SHA-256 spec digest、核准人與時間>
-- Acceptance snapshot：<路徑／URL、契約版本；OpenSpec 或 S 人工任務 AC 快照>
+- Acceptance snapshot：<直接填本卡驗收契約：路徑／URL、契約版本>
 - POC：<來源 URL、ID／版本、快照 URL、SHA-256 POC digest；不適用附理由>
 - Drive 任務資料夾／驗收群組：<URL／群組>
 

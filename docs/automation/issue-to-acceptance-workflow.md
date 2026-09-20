@@ -1,5 +1,7 @@
 # 島島阿學：Issue 到開發、驗收與合併的共用流程
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 日期：2026-09-12。狀態：Draft／可供定案的流程提案，尚未實作自動化。
 > 本文承接[雙訂閱 v2](dual-subscription-development-workflow.md)，補足 Google Docs／Drive、人工入口、產品驗收與 Issue 回寫契約。
 > 本文的命令介面、check 名稱、欄位與狀態皆為目標設計，除「現況」明列者外，不代表已部署。

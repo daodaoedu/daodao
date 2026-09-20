@@ -1,5 +1,7 @@
 # AI Code Review 誤判：未解問題的解法調研
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 2026-08-29。接續 [`.github/review-knowledge/README.md`](../../.github/review-knowledge/README.md) 建立的誤判知識庫。
 > 知識庫解決了 C／D 類（自承看不到、假設性風險）與「同錯不二犯」；本文整理**它解不了的三個問題**在文獻與開源專案裡的對應解法，以及落地順序。
 

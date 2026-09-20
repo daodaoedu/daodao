@@ -1,5 +1,7 @@
 # Agentic Implementation Flows
 
+> 註（2026-09-20）：OpenSpec 已退役，舊 change 封存於 `docs/archive/openspec/`；下文提及 OpenSpec change／`OpenSpec:` 註記／`tasks.md` 之處已不適用，規格以 `docs/product/` 與 Issue 驗收契約為準。`bin/pipeline/lib.ts` 的 Spec gate 仍會讀 `OpenSpec:` 行與 `openspec/changes/<slug>/tasks.md`（目錄已不存在，會一律退回 `needs-spec`），待程式端另行調整。
+
 ## Step 0（所有 scope 共用）— Context Pack
 
 實作前與開 PR 前各跑一次確定性檢索，把 diff 外的脈絡放到自己眼前
@@ -73,9 +75,9 @@ GH_REPO=daodaoedu/<repo> bash .github/scripts/retrieve-context.sh origin/dev HEA
 ```
 目標：寫 spec PR，不寫任何 production code。
 
-1. 依 OpenSpec 慣例在 openspec/changes/<slug>/ 撰寫 proposal / design / specs / tasks.md
+1. OpenSpec 已於 2026-09-20 退役，不再於 openspec/changes/ 撰寫 change；依 issue 驗收契約與 docs/product/ 規格整理 proposal / design / 任務清單
    （舊 bin/openspec-headless.ts 與 m.sh 已退役，由 Routine B 直接撰寫）
-2. 若 issue 資訊不足以寫出 tasks.md → 在 issue 留 comment 說明缺什麼資訊，exit
+2. 若 issue 資訊不足以寫出任務清單 → 在 issue 留 comment 說明缺什麼資訊，exit
 3. PR body 套用 M spec PR 模板
 4. 加 spec-pending label（含 PR 與 issue，見 routine-b-prompt-v2.md 步驟 2.3）
 ```
@@ -85,8 +87,8 @@ GH_REPO=daodaoedu/<repo> bash .github/scripts/retrieve-context.sh origin/dev HEA
 ```
 目標：依 spec 實作，不偏離 spec。
 
-1. 讀 openspec/changes/{change_id}/ 全部檔案
-2. 依 tasks.md 逐一 TDD 實作
+1. 讀 Phase 1 spec PR 的全部內容與 issue 驗收契約
+2. 依任務清單逐一 TDD 實作
 3. 每個 task 一個 commit pair（test + code）
 4. 不超出 spec 範圍；若發現 spec 不足 → 在 PR body 的 Implementation Notes 說明
 5. PR body 套用 M code PR 模板，reference spec PR 號碼
