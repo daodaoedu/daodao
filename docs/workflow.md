@@ -1,6 +1,6 @@
 # 島島阿學開發工作流程
 
-> 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日 #241 退役自動派工 Routine A／B，pipeline 只剩 Routine C（merged PR → Board Done），所有開發走人工 `/dev-task`。
+> 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日退役自動派工 Routine A／B（#241）與 merge 回寫 Routine C；board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回，所有開發走人工 `/dev-task`。
 
 ## 簡介
 
@@ -61,7 +61,7 @@ flowchart TD
     F -. 無法修復的 bug .-> Y["/file-bug-issue skill<br/>開 GitHub Issue 追蹤"]
     Q -. 無法修復的 bug .-> Y
 
-    P --> Z["Routine C<br/>merged PR → Board Done"]
+    P --> Z["/post-merge-wrapup<br/>冒煙過 → board Done"]
 ```
 
 ---
@@ -242,7 +242,7 @@ docs/troubleshooting/
 | 誰寫 | PM 描述，`/prd-generation` 查核起草，人審核定稿 | `/gh-card` 從對話與已定稿 PRD 推斷 |
 | 回答什麼 | 要做什麼、為什麼、流程、規則、驗收條件（FR／TP／AC） | 現在做到哪、誰在做、本卡驗收契約（Acceptance snapshot） |
 | 位置 | `docs/product/<功能>/` | daodaoedu/daodao issue + Planning board |
-| 誰消費 | `/gh-card` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start、Routine C 回寫 |
+| 誰消費 | `/gh-card` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start／finish、`/post-merge-wrapup` 的 board 回寫 |
 
 ### 判定表
 
@@ -307,7 +307,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 ## Phase 2.5：開卡（gh-card）
 
-規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求、Routine C 在 merge 後回寫 Done。
+規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Done／Need Fix。
 
 ```
 /gh-card（從對話推斷欄位，互動確認一次）
@@ -422,7 +422,7 @@ daodao/
 2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境（app-dev + server-dev）重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `file-bug-issue` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
 3. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪）
 4. 移除 `human-driving`
-5. `/post-merge-wrapup`：更新 `docs/product` 功能狀態；Routine C 自動把 board 卡改 Done
+5. `/post-merge-wrapup`：dev 冒煙、更新 `docs/product` 功能狀態；依冒煙結果 `board.ts set <n> done`（內建 workflow 順手 close issue）或 `needfix`
 6. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
 ### 3.2 平行開發約定
@@ -735,9 +735,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 ### 8.3 Board 與 issue
 
-Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Status 改 **Done** 並留言；**不自動 close**，留給 product 驗收後手動關。人工開發（`human-driving`）的卡 Routine C 一樣會回寫。
-
-中央卡由 post-merge-wrapup 冒煙通過後才手動 close；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish）。
+board 六欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Done（內建「Auto-close issue」workflow 順手 close 中央卡）、失敗 → Need Fix。沒有 cron；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 sub-repo 的 `Refs`。六欄語意見 [gh-pipeline skill](../.claude/skills/gh-pipeline/SKILL.md)。
 
 驗收若發現與 PRD／FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差用 `/prd-generation` 重新定稿再開卡。
 
@@ -814,42 +812,40 @@ Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Stat
 | **CD** | GitHub Actions + Docker | 自動部署到 Linode / Cloudflare |
 | **同步** | sync-claude-config workflow | 共用設定從 daodao repo 同步到子專案；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
 | **收尾** | post-merge-wrapup skill | 核對合併／驗收／部署證據、dev 冒煙、更新 docs/product 狀態 |
-| **自動化** | Routine C | merged PR → 關子 issue → Board Done（每小時；Routine A／B 已於 2026-09-20 退役，見 Phase 9） |
+| **board 回寫** | `bin/pipeline/board.ts` | gh-card／dev-task／post-merge-wrapup 各自移卡；`audit` 找落差（Routine A／B／C 已於 2026-09-20 退役，見 Phase 9） |
 | **自動化** | /publish-tasks skill | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布，不觸發自動化） |
 | **Bug 追蹤** | /file-bug-issue skill | 無法立即修復的 bug 開成 GitHub issue |
 | **記錄** | /post skill → quidproquo.cc | 踩坑經驗記錄與知識分享 |
 
 ---
 
-## Phase 9：自動化 Pipeline（Routine C）
+## Phase 9：自動化 Pipeline（已退役）
 
-Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for Dev 之後**的工作交給三個每小時跑的 routine；2026-09-20（#241）起自動派工 Routine A／B 退役，只剩 Routine C 做 merge 後的 board 回寫。
+Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for Dev 之後**的工作交給三個每小時跑的 routine；2026-09-20 起全部退役：Routine A／B（#241）因 OpenSpec 退役失去輸入、從未穩定跑通；Routine C 只認 `auto` label PR，退役後 259 次 run 全是 no-op，還每小時吃共用 PAT 額度（稽核見 [docs/plans/actions-audit-2026-09-20.md](plans/actions-audit-2026-09-20.md)）。
 
-> 完整架構、label 現況、運維手冊見 [docs/automation/github-pipeline.md](automation/github-pipeline.md)；退役文件見 [docs/archive/automation/](archive/automation/README.md)。
+> 退役文件見 [docs/archive/automation/](archive/automation/README.md)；現行 board 操作見 [gh-pipeline skill](../.claude/skills/gh-pipeline/SKILL.md)。
 
 ### 9.1 Routine 清單
 
 | Routine | 載體 | 狀態 |
 |---|---|---|
-| **A** Board → Dispatch | GitHub Actions script（`bin/pipeline/dispatch.ts`） | **已退役**：OpenSpec 退役後 spec gate 失去輸入，只會把 Ready for Dev 卡退回 `needs-spec`；程式與 workflow 已刪除 |
+| **A** Board → Dispatch | GitHub Actions script（`bin/pipeline/dispatch.ts`） | **已退役**：OpenSpec 退役後 spec gate 失去輸入；程式與 workflow 已刪除 |
 | **B** Dispatch + PR Patrol | Claude cloud routine | **已退役**：依賴 Routine A 的鏡像 issue，從未穩定跑通 |
-| **C** Merge → Done | GitHub Actions script（`bin/pipeline/board-sync.ts`） | 運作中：掃 48h 內 merged 的 `auto` PR，由子 issue 的 `Parent:` 反查中央卡；部分完成留言 n/m，全部完成 Status → Done（不自動 close，留 product 驗收） |
+| **C** Merge → Done | GitHub Actions script（`bin/pipeline/board-sync.ts`） | **已退役**：輸入為零、全是 no-op；由 skill 呼叫 `bin/pipeline/board.ts` 取代 |
 
 ### 9.2 人類在流程裡的位置
 
 ```
-寫 PRD（/prd-generation 定稿）→ /gh-card 開卡（Todo）
+寫 PRD（/prd-generation 定稿）→ /gh-card 開卡（board Todo）
         ↓ 人工確認規格 OK
-   Status → Ready for Dev            ← 管理狀態，不會觸發任何自動化
-        ↓ /dev-task start（掛 human-driving、開 worktree）
-   人工／AI 協作實作 → verify → 發 PR
+   Status → Ready for Dev            ← 管理狀態，選用
+        ↓ /dev-task start（board In Progress + human-driving、開 worktree）
+   人工／AI 協作實作 → verify → 發 PR（board Review）
         ↓ 人工
-   review + merge                    ← 品質最後把關
-        ↓ Routine C（≤1h，僅對帶 auto label + Closes #n 的 PR）
-   board Done → product 驗收 → 手動 close
+   review + merge                    ← 品質最後把關；卡留 Review
+        ↓ /post-merge-wrapup dev 冒煙
+   ✅ board Done（issue 自動 close）／❌ board Need Fix → 下次 /dev-task start 移回 In Progress
 ```
-
-跨 repo 子 PR 依 Phase 8 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關；Routine C 目前多為保底。
 
 ### 9.3 手動版
 

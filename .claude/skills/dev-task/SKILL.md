@@ -262,7 +262,7 @@ EOF
      pnpm -s tsx bin/pipeline/board.ts set <n> review
      ```
 
-     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 也只認 `auto` label，所以這一步不做就沒有人會移卡
+     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
 9. 之後用 `collect-pr-feedback` skill 收集回饋修正
 
 ## Phase 5: cleanup — merge 後收尾

@@ -42,4 +42,4 @@ PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 sna
 
 ## 與既有 auto 範本的關係
 
-[issue-template-auto.md](../issue-template-auto.md) 保留既有 Notion／Routine A 管理欄位與 marker；本目錄不替換它，也不假設目前 pipeline 已解析新欄位。導入前另做相容性改造與測試，不能盲改 `notion-id`、managed marker、Target Repo 或派工格式。自動派工 Routine A／B 已於 2026-09-20 退役（#241），`bin/pipeline/lib.ts` 只剩 Routine C 用的 `Parent:`／closing-keyword parser；`auto` label 不再使用，Ready 只是管理狀態。
+[issue-template-auto.md](../issue-template-auto.md) 保留既有 Notion／Routine A 管理欄位與 marker；本目錄不替換它，也不假設目前 pipeline 已解析新欄位。導入前另做相容性改造與測試，不能盲改 `notion-id`、managed marker、Target Repo 或派工格式。自動派工 Routine A／B 與 merge 回寫 Routine C 皆已於 2026-09-20 退役，`bin/pipeline/` 只剩人工 `board.ts`；`Parent:` 行改為人與 AI 反查中央卡用。
