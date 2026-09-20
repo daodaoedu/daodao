@@ -56,13 +56,35 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
 
 ```bash
 SECRET=$(cat ~/.claude/projects/-Users-xiaoxu-Projects-daodao/dev-login-secret.txt)
+QA=$(cat ~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt)   # 使用者指定的 QA 信箱；缺檔就問使用者要，不要自己編地址
+QA_ADDR="${QA%@*}+qa<issue#>@${QA#*@}"                                    # 例：name+qa218@gmail.com
 # temp：模擬「剛 Google 登入、尚未註冊」的新用戶 → 可直接跑 onboarding；同 email 重複呼叫回同一個 temp user
-curl -s -X POST https://server-dev.daodao.so/api/v1/auth/dev-login   -H "content-type: application/json" -H "x-dev-login-secret: $SECRET"   -d '{"email":"qa+<task>@daodao.so","mode":"temp","name":"冒煙 QA"}'
-# user：以既有 email 取得正式用戶身份
+curl -s -X POST https://server-dev.daodao.so/api/v1/auth/dev-login \
+  -H "content-type: application/json" -H "x-dev-login-secret: $SECRET" \
+  -d "{\"email\":\"$QA_ADDR\",\"mode\":\"temp\",\"name\":\"冒煙 QA\"}"
+# user：以既有 email 取得正式用戶身份（不會觸發任何信件，能用就優先用這條）
 curl -s ... -d '{"email":"<既有 email>","mode":"user"}'
 ```
 
-回應 `data.token` 就是 `auth_token` cookie 的值，後續注入方式同下方步驟 3；`mode=user` 找不到 email 回 404，secret 錯回 401，prod 沒有這條路由（404）。每個任務用獨立 email（`qa+<issue#>@daodao.so`），冒煙完把 `temp_users`／註冊出來的 `users` 清掉。
+回應 `data.token` 就是 `auth_token` cookie 的值，後續注入方式同下方步驟 3；`mode=user` 找不到 email 回 404，secret 錯回 401，prod 沒有這條路由（404）。
+
+**⚠️ 測試帳號的 email 只能用使用者指定的 QA 信箱**（`~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt`，一個任務一個 plus 別名 `<base>+qa<issue#>@<domain>`）。server-dev 走真 SMTP，**不存在的地址會產生退信灌進維運信箱**——2026-09-20 #218 冒煙用了 `qa+…@daodao.so`（該網域沒有 `qa@` 本體），寄出的 7 封驗證信／歡迎信／實踐信全部退信到使用者 Gmail。本機 server 沒設 SMTP 不會寄，所以「本機驗過」不代表 dev 安全。qa-email.txt 不存在就問使用者要，不要自己編地址、也不要用 `@example.com`（一樣會退信）。
+
+不需要驗「註冊／寄信」本身時，優先 `mode=user` 登入既有帳號，完全不觸發信件鏈；只是想確認某封信有沒有寄出，用 superadmin token 查 `GET /api/v1/admin/email/history?limit=50`（看 `recipientEmail`／`emailType`／`status`），不必真的寄。
+
+**冒煙完必做清理**（否則排程信會持續寄到 QA 信箱）：
+
+```bash
+# 1) 退訂（該用戶 token）
+curl -s -X PUT "$B/api/v1/users/me" -H "Authorization: Bearer $T" -F "isSubscribeEmail=false"
+# 2) 停用帳號（superadmin token；吃 external_id UUID，不是 internalId）
+curl -s -X PUT "$B/api/v1/admin/users/${EXT}/status" -H "Authorization: Bearer $A" \
+  -H 'content-type: application/json' -d '{"isActive":false}'
+# 3) 刪掉冒煙建立的實踐（留著會一直寄實踐提醒信）
+curl -s -X DELETE "$B/api/v1/practices/${PID}" -H "Authorization: Bearer $T"
+```
+
+（zsh 裡 `$EXT/status` 會被當數學運算炸掉，一律寫 `${EXT}/status`。）
 
 **daodao 現成配方 B：預存 JWT（既有使用者、本機 dev server）**：
 
