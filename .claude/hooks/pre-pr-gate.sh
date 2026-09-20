@@ -301,7 +301,7 @@ $(printf '%s\n' "$probe_rows" | grep '❌' | cut -c1-160 | sed 's/^/   /')"
     if [ -n "$probe_problem" ]; then
       gate_fail "pr-layout-probe-missing" "$task_md" "$(cat <<EOF
 ❌ 版面探針沒過：$probe_problem
-   在 $task_dir/$repo_dir/apps/product（f2e）或 $task_dir/$repo_dir（admin-ui）底下跑：
+   在 ${task_dir}/${repo_dir}/apps/product（f2e）或 ${task_dir}/${repo_dir}（admin-ui）底下跑：
      node <daodao-root>/.claude/skills/dev-task/references/layout-probe.mjs --base http://localhost:<port> \\
        --routes <任務碰到的每條 route> --cookie "auth_token=<dev-login token>" --out $task_dir/evidence/verify-layout-probe
    把產出的 verify-layout-probe.md 貼進 task.md「## 驗證」底下；❌ 先修再重跑。
