@@ -2,6 +2,7 @@
 
 > 2026-08 二次改版：Routine C 不再由 Claude 執行，改為 GitHub Actions 跑純 script。
 > Notion 版（bin/routine-c/sync-done.ts）與 cloud routine 版皆已退役。
+> 2026-09-20（#241）：Routine A／B 已退役，Routine C 是 pipeline 唯一仍在跑的 routine；行為不變。
 
 ## 組成
 
@@ -9,7 +10,7 @@
 |---|---|
 | Workflow | `.github/workflows/pipeline-board-sync.yml`（每小時 `:37` UTC + `workflow_dispatch`） |
 | 入口 | `bin/pipeline/board-sync.ts`（`--dry-run` / `--hours <n>`，預設 48） |
-| 共用邏輯 | `bin/pipeline/lib.ts` / `bin/pipeline/gh.ts` |
+| 共用邏輯 | `bin/pipeline/lib.ts`（`parseParentIssue`、`parseClosingIssues`、`buildProgressComment`、`buildAllDoneComment`）/ `bin/pipeline/gh.ts` / `bin/pipeline/types.ts` |
 | Secret | `GIT_HUB_ACCESS_TOKEN`（PAT，需 `repo` + `project` scope） |
 
 ## 行為摘要

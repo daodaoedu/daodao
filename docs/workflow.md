@@ -1,6 +1,6 @@
 # 島島阿學開發工作流程
 
-> 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。
+> 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日 #241 退役自動派工 Routine A／B，pipeline 只剩 Routine C（merged PR → Board Done），所有開發走人工 `/dev-task`。
 
 ## 簡介
 
@@ -61,9 +61,7 @@ flowchart TD
     F -. 無法修復的 bug .-> Y["/file-bug-issue skill<br/>開 GitHub Issue 追蹤"]
     Q -. 無法修復的 bug .-> Y
 
-    E2 -. "auto:auto-pr（spec gate 待改，目前停用）" .-> W["Routine A/B<br/>派工到 sub-repo、雲端實作"]
-    W --> X["自動實作 → 開 PR → 修 feedback"]
-    X --> P
+    P --> Z["Routine C<br/>merged PR → Board Done"]
 ```
 
 ---
@@ -244,7 +242,7 @@ docs/troubleshooting/
 | 誰寫 | PM 描述，`/prd-generation` 查核起草，人審核定稿 | `/gh-card` 從對話與已定稿 PRD 推斷 |
 | 回答什麼 | 要做什麼、為什麼、流程、規則、驗收條件（FR／TP／AC） | 現在做到哪、誰在做、本卡驗收契約（Acceptance snapshot） |
 | 位置 | `docs/product/<功能>/` | daodaoedu/daodao issue + Planning board |
-| 誰消費 | `/gh-card` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start、Routine A 派工、Routine C 回寫 |
+| 誰消費 | `/gh-card` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start、Routine C 回寫 |
 
 ### 判定表
 
@@ -257,9 +255,9 @@ docs/troubleshooting/
 
 判斷 L/M 的訊號只要中一個就算：跨 repo、要 migration、有 OQ、FRD 需要定案。定案一定要有文字落點——實踐建立流程（#141）的「統一 90 天／3 段／逐段行動同 50 字」定案當時沒回寫 Google Doc，只留在工程規格裡；現在這類定案回寫 PRD，或至少記進中央 issue 的決策區塊，讓 `/dev-task` 的驗收契約抓得到。
 
-### Routine A 的 spec gate 現況
+### 自動派工現況
 
-中央 issue 到 **Ready for Dev** 時，Routine A（`bin/pipeline/dispatch.ts`）仍檢查三件事：body 有 `OpenSpec: <slug>` 註記、`openspec/changes/<slug>/tasks.md` 存在、tasks.md 有未完成 task。OpenSpec 退役後 `openspec/` 已封存，`/gh-card` 也不再產 `OpenSpec:` 行，所以**現在任何卡改 Ready for Dev 都會被標 `needs-spec` 退回**——自動派工實質停用，所有開發走人工 `/dev-task`。程式端改讀 issue 驗收契約前，不要把卡改 Ready for Dev；plan-only／auto-pr 兩種模式暫不可用。
+自動派工 Routine A／B 已於 2026-09-20 退役（#241）：OpenSpec 退役後 Routine A 的 spec gate 失去輸入、只會退卡，Routine B 從未穩定跑通。**Ready for Dev 現在只是管理狀態**，不會觸發任何自動化；所有開發走人工 `/dev-task`。舊 prompt 封存於 `docs/archive/automation/`，要恢復自動派工需另開卡重新設計。
 
 ---
 
@@ -309,7 +307,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 ## Phase 2.5：開卡（gh-card）
 
-規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：Routine A 從這裡派工、`/dev-task` 從這裡讀需求、Routine C 在 merge 後回寫 Done。
+規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求、Routine C 在 merge 後回寫 Done。
 
 ```
 /gh-card（從對話推斷欄位，互動確認一次）
@@ -321,15 +319,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 草稿先存本機（任務目錄的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`），預覽確認後才 `gh issue create`。
 
-三種派工模式，由 label 決定：
-
-| 模式 | Label | 行為 |
-|---|---|---|
-| plan-only（預設） | 無 | Status 改 **Ready for Dev** 後，Routine A 在 sub-repo 開鏡像 issue 並產出計畫，不寫 code |
-| 全自動 | `auto:auto-pr` | Ready for Dev 後 Routine B 雲端實作、開 PR、修 feedback；適合 XS/S 雜項 |
-| 人工開發 | `human-driving` | Routine A 永遠不碰；`/dev-task` start 時自動掛上 |
-
-高風險 repo（`daodao-storage`、`daodao-infra`）強制 plan-only，migration 一律由人工做。**目前 spec gate 尚未改讀驗收契約，前兩種模式暫不可用**（見 Phase 1.5）；開卡預設 Todo，開發走 `/dev-task`。
+開發模式只有一種：人工 `/dev-task`。`human-driving` label 由 `/dev-task` start 自動掛上，作為 board 上的人工開工標記。`auto`／`auto:plan-only`／`auto:auto-pr` 等派工 labels 已隨 Routine A／B 退役（#241）不再使用，label 保留不刪。開卡預設 Todo；Ready for Dev 只是管理狀態。
 
 ---
 
@@ -365,7 +355,7 @@ daodao/
 
 1. `gh issue view` 讀中央 issue：需求、PRD／FRD、POC 連結與 Acceptance snapshot
 2. **判定涉及哪些 repo**：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）；`repo:` label 只當參考
-3. **防撞**：中央 issue 掛 `human-driving`（否則一到 Ready for Dev 就被派工）；`git worktree list` 與 `gh pr list --base dev` 查同區域的 in-flight 工作，高重疊時先問
+3. **防撞**：中央 issue 掛 `human-driving`（board 上的人工開工標記）；`git worktree list` 與 `gh pr list --base dev` 查同區域的 in-flight 工作，高重疊時先問
 4. 每個 repo：`git worktree add worktrees/<n>-<slug>/<repo> -b feat/<slug> origin/dev`（所有 repo 同名 branch；fix 用 `fix/`）
 5. 補 gitignored 檔案：複製 `.env*`、`pnpm install --ignore-workspace`（monorepo 根的 `pnpm-workspace.yaml` 會讓不加 flag 的 install 變 no-op）
 6. 寫 `task.md`：連結、範圍、驗收契約（從 PRD／FRD Test Points／AC 展開，沿用 FR／TP／AC ID）、phases（依驗收契約與 repo 順序拆）、驗證、Status、PR、備註
@@ -806,7 +796,7 @@ Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Stat
 | **需求** | PRD / FRD | 產品和功能需求文件 |
 | **需求** | Figma + Figma MCP | UI 設計稿和直接讀取 |
 | **規格** | prd-generation + product-status-check skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 定稿（L/M 必要；OpenSpec 已退役） |
-| **開卡** | gh-card skill | 中央 issue + Planning board（共用模板、Acceptance snapshot）；label 決定 plan-only / auto-pr / human-driving |
+| **開卡** | gh-card skill | 中央 issue + Planning board（共用模板、Acceptance snapshot）；`human-driving` 標記人工開工 |
 | **開發** | dev-task skill | issue 隔離 worktree（start → dev → verify → finish → cleanup）；projects/ 永遠停在 dev |
 | **開發** | Claude Code + hooks（六支） | session 狀態注入、寫檔保護與格式化、測試完整性、發 PR 閘門、Stop 品質清單 |
 | **品質** | Biome / ESLint / Black + Ruff | Lint + Format |
@@ -824,67 +814,55 @@ Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Stat
 | **CD** | GitHub Actions + Docker | 自動部署到 Linode / Cloudflare |
 | **同步** | sync-claude-config workflow | 共用設定從 daodao repo 同步到子專案；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
 | **收尾** | post-merge-wrapup skill | 核對合併／驗收／部署證據、dev 冒煙、更新 docs/product 狀態 |
-| **自動化** | Routine A / B / C | Board → 鏡像 issue → plan/auto PR → 回寫 Done（每小時；A 的 spec gate 待改，見 Phase 9） |
-| **自動化** | /publish-tasks skill | Routine A 的手動版：計畫未完成任務 → sub-repo issues + auto label |
+| **自動化** | Routine C | merged PR → 關子 issue → Board Done（每小時；Routine A／B 已於 2026-09-20 退役，見 Phase 9） |
+| **自動化** | /publish-tasks skill | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布，不觸發自動化） |
 | **Bug 追蹤** | /file-bug-issue skill | 無法立即修復的 bug 開成 GitHub issue |
 | **記錄** | /post skill → quidproquo.cc | 踩坑經驗記錄與知識分享 |
 
 ---
 
-## Phase 9：自動化 Pipeline（Routine A / B / C）
+## Phase 9：自動化 Pipeline（Routine C）
 
-Phase 1–8 是「人類觸發、AI 執行」。Phase 9 把 **Ready for Dev 之後**的工作交給三個每小時跑的 routine，人類只做三件事：寫規格、把卡改成 Ready for Dev、review + merge。
+Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for Dev 之後**的工作交給三個每小時跑的 routine；2026-09-20（#241）起自動派工 Routine A／B 退役，只剩 Routine C 做 merge 後的 board 回寫。
 
-> 完整架構、狀態機、label 體系、運維手冊見 [docs/automation/github-pipeline.md](automation/github-pipeline.md)。2026-08 起取代 Notion pipeline。
+> 完整架構、label 現況、運維手冊見 [docs/automation/github-pipeline.md](automation/github-pipeline.md)；退役文件見 [docs/archive/automation/](archive/automation/README.md)。
 
-### 9.1 三個 Routine
+### 9.1 Routine 清單
 
-| Routine | 載體 | 做什麼 |
+| Routine | 載體 | 狀態 |
 |---|---|---|
-| **A** Board → Dispatch | GitHub Actions script（`bin/pipeline/dispatch.ts`） | 掃 Planning board `Status=Ready for Dev` 且無 `dispatched`／`needs-spec`／`human-driving` 的卡 → **spec gate**（目前仍讀 OpenSpec，見 9.2）→ 依任務 `## section` 在各 sub-repo 開鏡像 issue（掛 sub-issue）→ 中央卡 `+dispatched`、Status → In Progress |
-| **B** Dispatch + PR Patrol | Claude cloud routine | 掃 sub-repo 的 open auto issue：plan-only 留計畫、`auto:auto-pr` 開 `auto/<n>-<slug>` branch 實作並開 PR；巡檢既有 auto PR 的 CI 與 review feedback 並修 |
-| **C** Merge → Done | GitHub Actions script | 掃 48h 內 merged 的 PR，由 `Parent:` 反查中央卡；部分完成留言 n/m，全部完成 Status → Done |
+| **A** Board → Dispatch | GitHub Actions script（`bin/pipeline/dispatch.ts`） | **已退役**：OpenSpec 退役後 spec gate 失去輸入，只會把 Ready for Dev 卡退回 `needs-spec`；程式與 workflow 已刪除 |
+| **B** Dispatch + PR Patrol | Claude cloud routine | **已退役**：依賴 Routine A 的鏡像 issue，從未穩定跑通 |
+| **C** Merge → Done | GitHub Actions script（`bin/pipeline/board-sync.ts`） | 運作中：掃 48h 內 merged 的 `auto` PR，由子 issue 的 `Parent:` 反查中央卡；部分完成留言 n/m，全部完成 Status → Done（不自動 close，留 product 驗收） |
 
-### 9.2 Spec gate（Routine A 的唯一閘門）— 待改
-
-程式碼（`dispatch.ts` + `lib.ts` 的 `parseOpenSpecSlug`）目前的判準：
-
-1. issue body 有 `OpenSpec: <slug>` 註記
-2. `openspec/changes/<slug>/tasks.md` 存在
-3. tasks.md 有未完成的 task
-
-三條缺一即標 `needs-spec` 並留言退回。OpenSpec 退役後第 1、2 條永遠不成立（模板已移除 `OpenSpec:` 行、`openspec/` 已封存），所以**現在把卡改 Ready for Dev 只會被退回**，Routine A 實質停用。程式端要改成讀 issue 的 Acceptance snapshot 與任務區塊才能恢復；改之前所有開發走人工 `/dev-task`（`human-driving` 的卡本來就不經過這個閘門）。
-
-### 9.3 人類在 pipeline 裡的位置
+### 9.2 人類在流程裡的位置
 
 ```
 寫 PRD（/prd-generation 定稿）→ /gh-card 開卡（Todo）
         ↓ 人工確認規格 OK
-   Status → Ready for Dev            ← 這一下就是「派工」（spec gate 改好後才有效）
-        ↓ Routine A（≤1h）
-   鏡像 issue 出現在 sub-repo
-        ↓ Routine B（≤1h）
-   plan comment 或 auto PR
+   Status → Ready for Dev            ← 管理狀態，不會觸發任何自動化
+        ↓ /dev-task start（掛 human-driving、開 worktree）
+   人工／AI 協作實作 → verify → 發 PR
         ↓ 人工
    review + merge                    ← 品質最後把關
-        ↓ Routine C（≤1h）
+        ↓ Routine C（≤1h，僅對帶 auto label + Closes #n 的 PR）
    board Done → product 驗收 → 手動 close
 ```
 
-不想被 pipeline 碰：掛 `human-driving`（`/dev-task` start 自動掛）。已派工要收回：移除 `dispatched`、關鏡像 issue。
+跨 repo 子 PR 依 Phase 8 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關；Routine C 目前多為保底。
 
-### 9.4 手動版
+### 9.3 手動版
 
-`/publish-tasks` 是 Routine A 的手動版——把已確認計畫的未完成任務（沿用 FR／TP／AC ID）發成 sub-repo 子 issue 並標 `auto`，不經 board。先檢核與預覽，依授權才發布；適合想跳過 board 直接餵 Routine B 的情境。
+`/publish-tasks` 把已確認計畫的未完成任務（沿用 FR／TP／AC ID）批次發成 sub-repo 子 issue，先檢核與預覽，依授權才發布；發布後仍由人工 `/dev-task` 開工，不會有任何 routine 接手。
 
-### 9.5 限制
+### 9.4 限制
 
 | 限制 | 應對 |
 |---|---|
-| Routine B 在雲端，無本地檔案 | 鏡像 issue body 由 Routine A 從中央卡任務區塊拆出，自給自足 |
-| 高風險 repo（storage、infra） | 強制 plan-only，migration 由人工 `/dev-task` 做 |
+| 沒有自動派工 | 要恢復需另開卡重新設計（不再讀 OpenSpec，改讀 issue 驗收契約） |
+| 高風險 repo（storage、infra） | migration／IaC 由人工 `/dev-task` 做 |
 | 複雜設計決策 | 留在 Phase 2 由人類定案，寫進 PRD 或中央 issue 決策區塊 |
-| 同一區域人工與 pipeline 並行 | `/dev-task` start 的防撞檢查 + `human-driving` |
+| 同一區域多人並行 | `/dev-task` start 的防撞檢查 + `human-driving` |
 
 ---
 

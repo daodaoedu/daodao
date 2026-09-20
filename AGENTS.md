@@ -75,7 +75,7 @@ PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾�
 
 - 使用者說「開 issue」「開卡」「新增任務」時，先讀 `.claude/skills/gh-card/SKILL.md`；Codex 另有 `.codex/skills/gh-card/SKILL.md` 入口。
 - 中央／子 Issue 使用 `templates/development/` 共用模板；bug 通報依既有 `file-bug-issue` 流程。
-- 單純開卡預設 Todo；設定 Ready for Dev 與啟動自動化需在使用者要求範圍內。只修改 skill／草擬需求不建立遠端 Issue。
+- 單純開卡預設 Todo；設定 Ready for Dev 需在使用者要求範圍內（自動派工 Routine A／B 已於 2026-09-20 退役，Ready for Dev 只是管理狀態，不會觸發任何自動化）。只修改 skill／草擬需求不建立遠端 Issue。
 
 收到想法、Issue、PRD／FRD、POC 或開發分支時：
 1. 執行 `.claude/skills/prd-generation/SKILL.md`，先描述 → AI 查核與起草 → AI 自審修訂 → 人審核 → 更新定稿；由其呼叫 `product-status-check` 區分實作、測試、部署與可用證據。

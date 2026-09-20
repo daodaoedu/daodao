@@ -1,6 +1,6 @@
 # Skills 與開發流程
 
-> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+> 註（2026-09-20）：OpenSpec 已退役（#237），舊 `openspec/` 已封存於 `docs/archive/openspec/`；同日 #241 退役自動派工 Routine A／B，pipeline 只剩 Routine C。規格以 docs/product 與 Issue 驗收契約為準。
 
 更新：2026-09-19。本文件是入口導覽；細節以各 skill、AGENTS 與當下程式為準。共用規則見 [AI 檢核與人工審核](automation/ai-human-review-workflow.md)。
 
@@ -19,7 +19,7 @@
 | 審查 | code-review、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
 | 通知 | notify-related-issue | 核對 PR／Issue 狀態、草擬有證據的更新、查重 | 尚未授權的留言／關閉操作 |
 | 合併收尾 | post-merge-wrapup、dev-task cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
-| 自動化 | gh-pipeline | 核對實際 parser、workflow、runner 與 dry-run | 已準備好的派工操作 |
+| 自動化 | gh-pipeline | 核對 Routine C（`board-sync.ts` + `pipeline-board-sync.yml`）的 parser、workflow 與 dry-run；自動派工已退役 | board 回寫異常時的人工拖卡／補跑 |
 
 ## Claude 與 Codex
 
@@ -31,7 +31,7 @@ Claude hooks 不自動等同 Codex gates；Codex 須主動執行相同檢查並�
 
 新需求只維護一份 PRD，既有 FRD 不必改名。保留 FR／TP／AC ID，多文件同 ID 加文件 ID；需求定稿後保存可回溯版本。task.md 是任務狀態入口及同版驗收投影，技術文件描述實作決策，報告記錄證據，不另發明驗收條件。
 
-小變更可用已確認 Issue 驗收條件；大型變更補必要技術設計與任務，不固定要求另一份 FRD。現有 OpenSpec artifacts 可沿用；本流程不依賴 OpenSpec skills；其他環境是否仍有安裝，以當下 inventory 為準。自動 pipeline 仍可能要求 OpenSpec marker 和 tasks.md，啟動前檢查實際相容性，不能因人工流程簡化就宣稱 runner 支援任意 PRD。
+小變更可用已確認 Issue 驗收條件；大型變更補必要技術設計與任務，不固定要求另一份 FRD。本流程不依賴 OpenSpec skills；自動派工 pipeline 已退役，不再有 runner 讀 issue body 的 marker，Ready for Dev 只是管理狀態。
 
 ## 閘門（2026-09-19 起）
 
@@ -43,4 +43,4 @@ Claude hooks 不自動等同 Codex gates；Codex 須主動執行相同檢查並�
 
 程式存在、測試通過、PR 合併、部署及使用者實際可用各需對應證據。中央需求跨 repo 或驗收未完成時不得只因單一 PR merged 就關閉。
 
-本次完成入口與文件流程整合；未改造自動 runner、部署同步器，也未執行遠端發布或兩客戶端完整實測。
+本次完成入口與文件流程整合；未改造部署同步器，也未執行遠端發布或兩客戶端完整實測。
