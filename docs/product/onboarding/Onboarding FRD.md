@@ -1,3 +1,8 @@
+> **狀態：已移除（2026-09-20）** — 本 FRD 描述的「新手任務」功能（右下角懸浮任務清單、S1/S2/S3 適性化任務路由、A–E 階梯式提醒信、限量 Early User Badge）依 [daodaoedu/daodao#218](https://github.com/daodaoedu/daodao/issues/218) 全數移除，程式碼已合併並部署 dev、dev 冒煙 16/16 通過。
+> 保留下來的只有「註冊流程」：`/auth/onboarding` 三步表單、`isTemporary` 註冊閘門、後台動態 onboarding flow 編輯器、設定頁完整度提示，以及註冊驗證後直接寄出的歡迎信。
+> 相關 PR：[daodao-server#490](https://github.com/daodaoedu/daodao-server/pull/490)、[daodao-f2e#1015](https://github.com/daodaoedu/daodao-f2e/pull/1015)、[daodao-admin-ui#154](https://github.com/daodaoedu/daodao-admin-ui/pull/154)。DB 殘留（`user_onboarding` 表、`email_logs` 的 `onboarding_*` 值、A–E 信件模板）清理另見 [#244](https://github.com/daodaoedu/daodao/issues/244)。
+> 本文件保留作為歷史規格，內容不再反映現況。
+
 ## **Purpose**
 
 本功能旨在引導新註冊用戶在進入 App 內，透過視覺化引導完成關鍵的 Onboarding 任務。
