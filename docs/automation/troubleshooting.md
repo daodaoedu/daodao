@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 ## Intervention Definition {#intervention-definition}
 
 **「人工介入」的定義**（對齊 plan §11.1 acceptance criteria）：
@@ -24,14 +26,14 @@ SLA 目標：staging 7 天測試期間，每張測試卡的人工介入次數 �
 
 | Failure Mode | 症狀 | Log 位置 | 處理方式 |
 |---|---|---|---|
-| **Notion API 錯誤** | Routine A 無法讀取 Notion DB；issue comment 含 "Notion API error" | `.omc/logs/notion-sync-latest.log`（後 80 行）| 檢查 `NOTION_API_KEY` env 是否設定；確認 DB ID 正確；檢查 Notion workspace 權限 |
-| **GH push 拒絕** | handler push 失敗；issue comment 含 "push rejected" | `.omc/logs/routine-b-latest.log` | 確認 `GITHUB_TOKEN` 有 write 權限；確認 branch protection 設定；handler exit code 非 0 |
-| **Test 失敗（verification loop 耗盡）** | issue 加上 `human-coding` label；issue comment 含 "verification loop exhausted (2 retries)" | `.omc/logs/routine-b-latest.log` | 手動查看 PR diff + test output；加 `human-driving` label 接手 |
-| **Permission denied** | handler 嘗試執行不在 allowlist 的工具；issue comment 含 "BLOCKED: tool '…' not in allowlist" | `.omc/logs/routine-b-latest.log` | 確認 `bin/routine-dispatch/policy/tool-allowlist.json` 是否需更新（需 PR review） |
-| **Headless OpenSpec timeout** | `bin/openspec-headless.ts` 超過 30 秒；exit code 2；issue comment 含 "headless OpenSpec hung" | `.omc/logs/routine-b-latest.log` | 確認 `OPENSPEC_NONINTERACTIVE=1` env 有設；檢查 openspec-ff-change skill 是否有 interactive prompt 殘留 |
+| **Notion API 錯誤** | Routine A 無法讀取 Notion DB；issue comment 含 "Notion API error" | （omc 已退役，log 路徑待確認）| 檢查 `NOTION_API_KEY` env 是否設定；確認 DB ID 正確；檢查 Notion workspace 權限 |
+| **GH push 拒絕** | handler push 失敗；issue comment 含 "push rejected" | （omc 已退役，log 路徑待確認） | 確認 `GITHUB_TOKEN` 有 write 權限；確認 branch protection 設定；handler exit code 非 0 |
+| **Test 失敗（verification loop 耗盡）** | issue 加上 `human-coding` label；issue comment 含 "verification loop exhausted (2 retries)" | （omc 已退役，log 路徑待確認） | 手動查看 PR diff + test output；加 `human-driving` label 接手 |
+| **Permission denied** | handler 嘗試執行不在 allowlist 的工具；issue comment 含 "BLOCKED: tool '…' not in allowlist" | （omc 已退役，log 路徑待確認） | 確認 `bin/routine-dispatch/policy/tool-allowlist.json` 是否需更新（需 PR review） |
+| **Headless OpenSpec timeout** | `bin/openspec-headless.ts` 超過 30 秒；exit code 2；issue comment 含 "headless OpenSpec hung" | （omc 已退役，log 路徑待確認） | 確認 `OPENSPEC_NONINTERACTIVE=1` env 有設；檢查 openspec-ff-change skill 是否有 interactive prompt 殘留 |
 | **Token budget exceeded** | issue comment 含 "Token budget exceeded (used X / cap Y)"；issue 加 `human-coding` label | `bin/routine-dispatch/state-store.json:token_usage_by_issue` | 評估任務是否 scope 設太小；升級 scope label 後移除 `human-coding` 讓 routine 重試 |
-| **Context overflow predicted** | handler 不啟動；issue comment 含 "context overflow predicted"；exit code 4 | `.omc/logs/routine-b-latest.log` | 拆分任務至更小 scope；或升至 scope:L 讓人類 coding |
-| **state.ts 規則 0 觸發（high-risk repo）** | `daodao-storage` 或 `daodao-infra` issue 被強制降級為 plan-only；issue body 含 "⚠️ high-risk repo，自動執行限制為 plan-only" | issue comment / `.omc/logs/routine-b-latest.log` | 此為設計行為，非 bug。若需 code PR，必須人類手動執行。 |
+| **Context overflow predicted** | handler 不啟動；issue comment 含 "context overflow predicted"；exit code 4 | （omc 已退役，log 路徑待確認） | 拆分任務至更小 scope；或升至 scope:L 讓人類 coding |
+| **state.ts 規則 0 觸發（high-risk repo）** | `daodao-storage` 或 `daodao-infra` issue 被強制降級為 plan-only；issue body 含 "⚠️ high-risk repo，自動執行限制為 plan-only" | issue comment / （omc 已退役，log 路徑待確認） | 此為設計行為，非 bug。若需 code PR，必須人類手動執行。 |
 
 ---
 
@@ -93,7 +95,7 @@ Kill switch SLA：`touch .automation-paused` 後 ≤ 65 分鐘（下一輪 cron�
 ### Routine A 跑了但 GitHub issue 沒出現
 
 1. 確認 Notion 卡 `Status = Ready for Dev` 且 `Sync to GitHub = true`
-2. 查 `.omc/logs/notion-sync-latest.log` 最後 80 行
+2. 查 （omc 已退役，log 路徑待確認）
 3. 確認 `NOTION_API_KEY` 與 `NOTION_DB_ID` 正確設定
 4. 確認 Notion DB 已有必要欄位（見 plan §7.1）
 
@@ -105,5 +107,5 @@ Kill switch SLA：`touch .automation-paused` 後 ≤ 65 分鐘（下一輪 cron�
 
 1. 確認 issue 有 `auto` + `auto:auto-pr` + `scope:*` labels
 2. 確認 `target-repo:*` 不是 `storage` 或 `infra`（規則 0）
-3. 查 `.omc/logs/routine-b-latest.log`
+3. 查 （omc 已退役，log 路徑待確認）
 4. 確認 `.automation-paused*` 檔案不存在

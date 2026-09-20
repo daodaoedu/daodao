@@ -1,5 +1,7 @@
 # Skills 與開發流程
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 更新：2026-09-19。本文件是入口導覽；細節以各 skill、AGENTS 與當下程式為準。共用規則見 [AI 檢核與人工審核](automation/ai-human-review-workflow.md)。
 
 ## 使用方式

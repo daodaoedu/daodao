@@ -8,6 +8,8 @@ description: 查核並操作島島阿學 Board、Issue、PR 自動化 pipeline�
 
 # gh-pipeline
 
+> 註（2026-09-20）：OpenSpec 已退役，舊 change 封存於 `docs/archive/openspec/`；下文提及 OpenSpec change／`OpenSpec:` 註記／`tasks.md` 之處已不適用，規格以 `docs/product/` 與 Issue 驗收契約為準。`bin/pipeline/lib.ts` 的 Spec gate 仍會讀 `OpenSpec:` 行與 `openspec/changes/<slug>/tasks.md`（目錄已不存在，會一律退回 `needs-spec`），待程式端另行調整。
+
 daodao 自動化 pipeline 行為規範。Routine A/C 是純 script（GitHub Actions 執行）；
 只有 Routine B（agentic 實作）由 Claude cloud routine 執行，執行前必須載入此 skill。
 
@@ -80,7 +82,6 @@ Script 行為：
 
 執行前讀取：
 - 鏡像 issue body（Description + Acceptance Criteria + Parent 連結）
-- Spec（若有）：`openspec/changes/{change_id}/`
 - ADR：`docs/adr/`（grep 關鍵字）
 - 確認 branch 為 `auto/{issue_num}-{slug}`
 

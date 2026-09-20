@@ -267,7 +267,7 @@ git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分
 
 3. 刪任務資料夾：`rm -rf "$TASK"`（刪之前確認核心旅程矩陣與 dev 冒煙結果已在 issue comment；task.md 其他有留存價值的內容先摘要進 comment）
 4. 開工時加過 `human-driving` label 的：移除它
-5. 接 `post-merge-wrapup` skill（歸檔 openspec change、更新 docs/product）
+5. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）
 6. clone 模式的任務：確認無未 push commit 後 `rm -rf`
 7. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
 

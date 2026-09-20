@@ -1,5 +1,7 @@
 # 島島阿學開發流程圖解
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 日期：2026-09-12。定位：以 Mermaid 說明目前成果、目標流程與待實作範圍。
 > **規劃與模板已建立，不代表自動化已完成。** 本文依本次對話與工作區盤點整理，未新增 GitHub、runner 或部署驗證。
 

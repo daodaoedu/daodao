@@ -1,5 +1,7 @@
 # GitHub Pipeline — Board → Issue → Plan → PR 自動化架構
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 2026-08 起取代 Notion pipeline。任務管理層從 Notion DB 遷移到
 > **GitHub org Project「Planning」** + **daodaoedu/daodao 中央 issues**。
 > Notion 完全退場；舊架構文件見 [architecture.md](architecture.md)（僅供考古）。

@@ -1,5 +1,7 @@
 # Claude Code + Codex 訂閱雙 Agent 自動化 PRD
 
+> 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
+
 > 狀態：Draft（Phase 1 方案 + 補洞）
 > 日期：2026-09-12
 > 範圍：daodao 工程自動化；不屬於終端使用者產品功能，不納入 `product_status_manifest.yml`

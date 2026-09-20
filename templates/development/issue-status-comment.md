@@ -11,7 +11,7 @@ templateVersion: 1
 - 模式／writer／reviewer：<local|auto / provider / 獨立 reviewer>
 - Lease owner／fencing token：<值；未啟用則明列限制>
 - 契約版本／acceptance key／spec digest／POC digest：<值>
-- 需求／POC／OpenSpec 或 AC snapshot：<URLs>
+- 需求／POC／AC snapshot：<URLs>
 
 | Repo | 子 Issue | Base／head SHA | PR／狀態 | 驗證與部署狀態 |
 |---|---|---|---|---|

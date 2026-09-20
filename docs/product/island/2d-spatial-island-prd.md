@@ -3,7 +3,7 @@
 > 狀態：P0 原型實作中，正式接線與上線驗收未完成
 > 日期：2026-09-12
 > 取代範圍：逐步取代 `/island/[identifier]` 的 3D renderer；不立即刪除既有 3D engine 與資產
-> 相關文件：[3d-island-prd.md](./3d-island-prd.md)、[island/prd.md](./prd.md)、`openspec/changes/island-3d/`
+> 相關文件：[3d-island-prd.md](./3d-island-prd.md)、[island/prd.md](./prd.md)、`docs/archive/openspec/changes/island-3d/`
 > 2026-09-12 補充：[共同挑戰與活動情境](./shared-space-use-cases.md) 納入本 change；個人島與共享空間共用引擎，分別使用現有業務權限。
 
 ## 0. 執行摘要

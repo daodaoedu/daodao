@@ -28,10 +28,6 @@ node_modules/
 dist/
 coverage/
 
-# OMC state（logs ignored, state-store kept）
-.omc/sessions
-.omc/state
-.omc/logs/
 .env
 
 LOGO

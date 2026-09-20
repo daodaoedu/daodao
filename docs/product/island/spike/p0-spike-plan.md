@@ -2,7 +2,7 @@
 
 > 目的：在 P1 開工前驗證「AI 圖轉 3D」管線可行性——特別是人格角色的 rigging 與手機效能。
 > 時程：1–2 天。Gate：任一驗收不過 → 回頭調整素材策略（fallback 見文末），不直接開工。
-> 對應 OpenSpec tasks：`openspec/changes/island-3d/tasks.md` §1
+> 對應 OpenSpec tasks：`docs/archive/openspec/changes/island-3d/tasks.md` §1
 
 ## 1. 參考圖對照表（來源限定五目錄）
 

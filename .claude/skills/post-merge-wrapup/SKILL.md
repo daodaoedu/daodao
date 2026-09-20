@@ -43,10 +43,9 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 ## 3. 更新適用文件與歸檔
 
 1. 在可存取的 daodao `docs/product` 找對應需求與 roadmap，按證據更新「已合併／已測試／已部署／已驗收」等適用狀態，附日期與 PR／run／驗收來源；沒有部署證據不寫已上線。
-2. 若有對應 `openspec/changes/`，確認確切 change 及任務完成狀況。只有現有 archive skill／CLI 或 repo 文件明確支援時，讀取該流程並在授權範圍內歸檔；不可依賴已刪除的 skill，也不憑資料夾存在就歸檔所有 change。
-3. 沒有 OpenSpec 就用現有開發文件記錄完成與剩餘事項，不要求另建 OpenSpec。工具缺失或未完成任務保留原檔，報告尚未歸檔的原因。
-4. 結構、入口或 build 流程有變更時更新適用 codebase-map；服務依賴／schema 流程有變更時，先查 canonical system-map 與實際同步機制，再同步可確認的副本，不假定固定有六份。
-5. 相關 repo／文件不可存取時留下具體路徑、建議修訂與限制；不宣稱跨 repo 已同步。不相關項目標為不適用。
+2. OpenSpec 已於 2026-09-20 退役（舊 change 封存於 `docs/archive/openspec/`，不再歸檔）；用現有開發文件與 Issue 驗收契約記錄完成與剩餘事項。
+3. 結構、入口或 build 流程有變更時更新適用 codebase-map；服務依賴／schema 流程有變更時，先查 canonical system-map 與實際同步機制，再同步可確認的副本，不假定固定有六份。
+4. 相關 repo／文件不可存取時留下具體路徑、建議修訂與限制；不宣稱跨 repo 已同步。不相關項目標為不適用。
 
 ## 4. AI 自審後交人審閱
 

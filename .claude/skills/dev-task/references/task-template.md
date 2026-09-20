@@ -9,7 +9,6 @@
 - POC / 設計稿: <Figma / Google Drive / prototype branch 連結>
 - 產品決策／實作約束: <已確認 decisions.md／既有 design.md 及確認記錄；無另立文件附具體原因>
 - Audit pack: <尚未產生或 notes 中同版 pack 位置>
-- OpenSpec: <openspec/changes/<slug>/，沒有就寫 none>
 
 ## 來源基準（AI 填寫）
 - 已確認需求版本／快照: <版本、digest 或快照位置與確認紀錄>

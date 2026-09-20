@@ -6,8 +6,6 @@
 schemaVersion: 1
 templateVersion: 1
 
-OpenSpec: <slug>
-
 Parent: daodaoedu/daodao#<中央號碼>
 
 ## 中央契約與範圍
