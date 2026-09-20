@@ -266,7 +266,13 @@ verify_body=$(section_body "$task_md" '^## 驗證' '^## ')
 unchecked=$(printf '%s\n' "$verify_body" | grep -E '^[[:space:]]*[-*] \[ \]' | grep -v '豁免[：:]' || true)
 manual_rows=""
 if printf '%s\n' "$verify_body" | grep -qE '需要手動驗證|待手動驗證'; then
-  manual_rows=$(printf '%s\n' "$verify_body" | awk '/需要手動驗證|待手動驗證/{f=1; next} f && /^(#|##|###) /{exit} f && /^\|/ && !/^\|[[:space:]-]*\|/ && !/^\| *項目/' || true)
+  # 標題底下到下一個標題前的所有實質列都算：表格資料列（排除分隔列與表頭）或 bullet 清單列
+  manual_rows=$(printf '%s\n' "$verify_body" | awk '
+    /需要手動驗證|待手動驗證/ { f = 1; next }
+    f && /^[[:space:]]*#/ { exit }
+    f && /^[[:space:]]*\|/ && !/^[[:space:]]*\|[[:space:]|:-]*$/ && !/^[[:space:]]*\|[[:space:]]*(項目|頁面|路徑|route|Route)[[:space:]]*\|/ { print; next }
+    f && /^[[:space:]]*[-*] / { print }
+  ' || true)
 fi
 if [ -n "$unchecked" ] || [ -n "$manual_rows" ]; then
   gate_fail "pr-verify-unchecked" "$task_md" "$(cat <<EOF
