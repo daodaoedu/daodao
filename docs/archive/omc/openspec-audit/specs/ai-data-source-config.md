@@ -1,6 +1,6 @@
 # ai-data-source-config
 - 涉及 repo: server / ai-backend / admin-ui（全部未找到）
-- 對應 archived change: openspec/changes/add-ai-service-management（已從工作區刪除，僅規格留存）
+- 對應 archived change: docs/archive/openspec/changes/add-ai-service-management（已從工作區刪除，僅規格留存）
 - 總計: 4 條 requirement / 8 個 scenario | ✅0 ⚠️0 ❌8 ❓0
 
 ## Requirement: 系統維護全域資料欄位白名單 → ❌

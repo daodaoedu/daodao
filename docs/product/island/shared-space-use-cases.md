@@ -23,7 +23,7 @@
 | 邀請制活動空間 | `spaces.external_id`、`space_members` 的 host/member | 不可假設 spaces 與 cohorts 已有一對一映射；公開分享 token 不等於 realtime 成員資格 |
 
 以上是當前 checkout 的 source evidence，不代表本輪已驗證 production。詳細路徑見
-`openspec/changes/island-2d-spatial/evidence/shared-scope.md`。
+`docs/archive/openspec/changes/island-2d-spatial/evidence/shared-scope.md`。
 
 ## 目標與 User Stories
 

@@ -9,9 +9,7 @@ daodao/
 ├── .claude/          # Claude Code 共用設定與 skills
 ├── .github/          # GitHub Actions workflows、PR template
 ├── docs/             # 跨專案文件（PRD、FRD、技術文件）
-├── openspec/         # OpenSpec 規格與變更管理
-│   ├── specs/        # 主規格
-│   └── changes/      # 進行中的變更
+│   └── archive/openspec/  # 已退役的 OpenSpec 規格與變更（2026-09-20 封存）
 └── projects/         # 各專案（git submodule）
     ├── daodao-f2e/       # 前端
     ├── daodao-server/    # 後端 API
@@ -51,19 +49,19 @@ git submodule update --remote
 
 | Skill | 用途 |
 |-------|------|
-| `/openspec-*` | 需求 → 規格 → 任務（L/M 功能必要；S 卡進 pipeline 用 `ff-change`） |
+| `/prd-generation` | 需求查核與 PRD 起草（OpenSpec 已於 2026-09-20 退役，`/openspec-*` 不再使用） |
 | `/gh-card` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$gh-card` 或明確讀取 skill |
 | `/dev-task` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
-| `/post-merge-wrapup` | merge 後歸檔 openspec、更新 docs/product 狀態 |
+| `/post-merge-wrapup` | merge 後更新 docs/product 與驗收狀態 |
 | `/format-commit` | 結構化 commit message（Why / How） |
 | `/pre-commit-check` | Commit 前自動品質檢查與修復 |
 | `/code-review` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
 | `/collect-pr-feedback` | 收集 PR 上所有 review 回饋（含收割 `/fp` 回覆進誤判知識庫） |
 | `/file-bug-issue` | 無法立即修復的 bug 開成 GitHub issue |
-| `/publish-tasks` | Routine A 的手動版：OpenSpec tasks → sub-repo issues + auto label |
+| `/publish-tasks` | Routine A 的手動版：計畫未完成任務 → sub-repo issues + auto label |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
-快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / OpenSpec / issue AC）見其 Phase 1.5，自動化 pipeline 見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
+快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，自動化 pipeline 見 [docs/automation/github-pipeline.md](docs/automation/github-pipeline.md)。
 
 新增的[Issue → 開發 → 驗收 → 合併流程提案](docs/automation/issue-to-acceptance-workflow.md)涵蓋 Google Docs／Drive、人工與自動入口、Issue 回寫；另有[額度分配政策](docs/automation/agent-budget-policy.md)與[可複用文件模板](templates/development/README.md)。這些是待導入設計，不代表自動化已啟用。
 

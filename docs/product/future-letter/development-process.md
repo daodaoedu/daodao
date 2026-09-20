@@ -93,9 +93,9 @@ OpenSpec 中的舊 tasks 沒有刪除，而是明確標記為歷史紀錄，由�
 
 相關文件：
 
-- [Final Future Letter spec](../../../openspec/changes/future-letter/specs/future-letter/spec.md)
-- [Design decisions](../../../openspec/changes/future-letter/design.md)
-- [Implementation tasks](../../../openspec/changes/future-letter/tasks.md)
+- [Final Future Letter spec](../../archive/openspec/changes/future-letter/specs/future-letter/spec.md)
+- [Design decisions](../../archive/openspec/changes/future-letter/design.md)
+- [Implementation tasks](../../archive/openspec/changes/future-letter/tasks.md)
 
 ## Phase 3：依相依順序實作，而不是四個 repo 各做各的
 
