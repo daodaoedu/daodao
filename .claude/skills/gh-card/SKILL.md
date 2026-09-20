@@ -21,7 +21,7 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 - Bug／CI 錯誤通報：讀 [file-bug-issue](../file-bug-issue/SKILL.md)，保留錯誤原文與重現步驟。
 - 只問「有哪些模板／skill」：說明入口即可。只要 skill 修改或流程規劃：不建立 Issue。
 
-不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位。自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 skill 只開卡，不派工，也不實作 reporter、lease 或新 merge gates；子 issue 保留 `Parent: daodaoedu/daodao#N` 行供 Routine C 回寫。
+不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位。自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 skill 只開卡，不派工，也不實作 reporter、lease 或新 merge gates；子 issue 保留 `Parent: daodaoedu/daodao#N` 行供人與 AI 反查中央卡（Routine C 已退役）回寫。
 
 ## 1. 整理可開卡內容
 
@@ -71,12 +71,13 @@ gh project field-list 10 --owner daodaoedu --format json
 
 ```text
 gh issue create --repo <已驗證 repo> --title <title> --body-file <body.md> --label <既有 label>
-gh project item-add 10 --owner daodaoedu --url <issue-url> --format json
-gh project item-edit --project-id <live project-id> --id <item-id> --field-id <live status-field-id> --single-select-option-id <live option-id>
+pnpm -s tsx bin/pipeline/board.ts set <issue#> todo      # 中央卡：加入 board + 設 Status + 回讀，一步完成
 gh issue view <issue-url> --json number,url,title,body,labels,state
 ```
 
-範例是參數形狀，執行時替換已驗證值。預設明確設 Todo；使用者要求自動化時先完成 body／labels／規格檢查，最後才設 Ready。缺 label 不忽略錯誤；確認命名與權限後依已授權開卡範圍補建。
+`board.ts set` 取代手動 `item-add` + `item-edit`：六欄 option id 集中在 `bin/pipeline/types.ts`，別再從文件複製舊 ID。板上開著「Item added to project → Todo」內建 workflow，但仍明確設一次，避免 workflow 被關掉時卡片沒有 Status。人工任務要一起掛開工標記時用 `set <n> wip --add-label human-driving`（那是 dev-task start 的事，開卡階段不做）。
+
+範例是參數形狀，執行時替換已驗證值。預設明確設 Todo；使用者要求時才 `set <n> ready`，且先完成 body／labels／規格檢查。缺 label 不忽略錯誤；確認命名與權限後依已授權開卡範圍補建。
 
 Issue 建立成功但掛 Board／回填失敗：保存 URL、item ID 與待補步驟，僅重試未完成部分。建立請求 timeout 結果未知時先查是否已建立，再決定重送，避免重複卡。
 

@@ -12,7 +12,7 @@
 >
 > 範圍：daodao root control plane、private sub-repositories、isolated runners、shared agent harness
 >
-> 關聯文件：[GitHub Pipeline](github-pipeline.md)、[雙訂閱 Agents PRD](dual-subscription-agents-prd.md)、[Actions 設計檢查](github-actions-design-review.md)
+> 關聯文件：[GitHub Pipeline（已封存）](../archive/automation/github-pipeline.md)、[雙訂閱 Agents PRD](dual-subscription-agents-prd.md)、[Actions 設計檢查](github-actions-design-review.md)
 
 ## 1. 需求背景
 
