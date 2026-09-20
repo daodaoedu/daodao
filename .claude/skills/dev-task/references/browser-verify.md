@@ -22,6 +22,7 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 3. 基本盤（每次都驗）：
    - console 無新增 error
    - 改動頁面在桌機 + 行動版寬度（390px）下版面正常
+   - **版面探針**（見 §4a）：每條 route × 390／1024／1440 無登入牆、無橫向溢出、無出界元素
 4. **核心旅程矩陣**（有寫入路徑就必填，見 [journey-matrix.md](journey-matrix.md)）：任務碰到的每條「建立／編輯／刪除／送出」旅程，至少一列用真實輸入送出成功、一列用 server 會拒絕的輸入送出失敗。「點擊、輸入、送出可走通」不是驗收條件——**用什麼輸入送出、server 回了什麼、畫面顯示了什麼**才是。沒有寫入路徑時寫一行 `核心旅程不適用：<原因>`。
 
 ## 3. 工具選擇
@@ -46,6 +47,8 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
 ```
 
 ## 3a. 登入牆處理（碰到「要登入才能看」時，先自己解，不要直接丟回給使用者）
+
+**硬規則：登入牆截圖 = 該頁未驗證。** 導頁後 `location.pathname` 落在 `/auth/*`、`/login` 的截圖不能存進 evidence/ 當檢查點證據，task.md 也不能寫「需要手動驗證（需 Google OAuth 登入）」然後把 Status 往下推——#166 就是這樣把 6 個 settings 頁面沒看過就 merge，evidence 裡的 `verify-bug-report.png` 其實是 "Welcome back to Dao Dao!"。發 PR 閘門 `pr-verify-unchecked` 會擋這種清單；`layout-probe.mjs` 也會把落在登入牆的 route 標 ❌。走下面配方 A／B 登入後再驗，全部配方都不通才請使用者手動登入，並在該項寫「（豁免：<使用者說的原因>）」。
 
 **daodao 現成配方 A：dev-login 端點（部署後冒煙、要「全新帳號」時優先走這條）**
 
@@ -86,6 +89,27 @@ curl -s ... -d '{"email":"<既有 email>","mode":"user"}'
 2. 自己鑄 session：讀 auth 實作，用 `.env` 裡的 secret 簽 JWT，用 `playwright_evaluate` 注入 cookie
 3. 直接打 auth API：curl 走非 OAuth 途徑拿 Set-Cookie
 4. 以上全部不通才請使用者手動登入
+
+## 4a. 版面探針（UI 任務必跑；發 PR 閘門 `pr-layout-probe-missing` 檢查）
+
+肉眼看截圖抓不到「整頁多 132px、右邊被 overflow-hidden 切掉」這種問題（#233：settings 十五頁 `w-screen` 疊在 layout 的 `md:pl-[132px]` 上，2026-03 進來、2026-09 才被使用者發現），所以量：
+
+```bash
+cd "$TASK/daodao-f2e"    # 或 daodao-admin-ui；腳本從 cwd 的 node_modules 找 playwright
+TOKEN=$(curl -s -X POST https://server-dev.daodao.so/api/v1/auth/dev-login ... | jq -r .data.token)   # 見 §3a 配方 A
+node "$(git -C "$TASK/.." rev-parse --show-toplevel)/.claude/skills/dev-task/references/layout-probe.mjs" \
+  --base http://localhost:3001 \
+  --routes /zh-TW/settings,/zh-TW/settings/bug-report \
+  --cookie "auth_token=$TOKEN" --cookie-domain localhost \
+  --out ../evidence/verify-layout-probe
+```
+
+- 預設寬度 390／1024／1440（`--widths` 可改）；每組量三件事：落在登入牆 → ❌、`scrollWidth > innerWidth` → ❌ 並印出最寬元素、`main`／`[role=dialog]`／`aside` 內元素超出 viewport → ❌
+- 產出 `verify-layout-probe.md`（「### 版面探針」表，整段貼進 task.md「## 驗證」底下）、`.json`、每組一張截圖
+- 有 ❌：修掉重跑，不能自行放過；表裡留 ❌ 發 PR 會被擋
+- `--routes` 要列**任務碰到的每條 route**，包含新開的頁、改了共用 layout／元件時所有掛在它底下的頁（#166 改了 sidebar，settings 全部子頁都算）
+- 本機 dev server 連 server-dev 時 cookie 跨域問題同 §3a：先起 CORS 代理，`--cookie-domain localhost`
+- diff 完全沒碰頁面／版面（只改 i18n 字串、純 hook 邏輯）時，在 task.md「## 驗證」寫一行 `版面探針不適用：<具體原因>`
 
 ## 4. 驗證迴圈
 
