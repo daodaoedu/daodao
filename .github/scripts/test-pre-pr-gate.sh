@@ -295,6 +295,22 @@ printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_block "「需要手動驗證」清單（#166 原樣）" "$code" "/settings/bug-report"
 [[ "$(last_err)" == *"登入牆截圖不算證據"* ]] || fail "閘門 7 訊息要點名登入牆：$(last_err)"
+# 12b. 「需要手動驗證」用 bullet 清單、表頭不叫「項目」也要擋（AI review 在 #234 點出的缺口）
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+### 需要手動驗證
+- /settings/archived 列表（需登入）
+- /settings/connections（需登入）" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "「需要手動驗證」bullet 清單" "$code" "/settings/connections"
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+### 待手動驗證
+| 頁面 | 原因 |
+|:---|:---|
+| /settings/archived | 需登入 |" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "「待手動驗證」表頭非「項目」、分隔列帶冒號" "$code" "/settings/archived"
 t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
 - [ ] 手機版 bottom sheet（evidence/sheet.png）" '- none')")
 printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
