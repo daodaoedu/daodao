@@ -27,7 +27,9 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
 1. **取得矩陣**：從 PR body「## 驗證證據」或 task.md「### 核心旅程矩陣」取全部旅程列（格式見 dev-task 的 [journey-matrix.md](../dev-task/references/journey-matrix.md)）。PR 寫 `核心旅程不適用` 的，記「不適用：<原因>」後跳過。
 2. **確認部署 revision**：查該 repo CD run 是否已部署合併後 commit（run URL、環境、revision）；跨 repo 依 storage → server → f2e 順序全部到位才算環境就緒。未到位就停在「已合併，待部署」，不冒煙、不回報可用。
-3. **重跑旅程**：在部署後環境（dev 前端 + server-dev，或 PR 標明的目標環境）用瀏覽器或 curl 重跑**全部正常列 + 至少一列錯誤路徑**，攔 response 記狀態碼；登入與工具選擇沿用 dev-task 的 [browser-verify.md](../dev-task/references/browser-verify.md)。測試資料用完清掉或用明顯的測試命名。
+3. **重跑旅程**：在部署後環境（dev 前端 + server-dev，或 PR 標明的目標環境）用瀏覽器或 curl 重跑**全部正常列 + 至少一列錯誤路徑**，攔 response 記狀態碼；登入與工具選擇沿用 dev-task 的 [browser-verify.md](../dev-task/references/browser-verify.md)。
+   - **測試帳號 email 只能用使用者指定的 QA 信箱**（`~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt`，plus 別名 `<base>+qa<issue#>@<domain>`）。dev 走真 SMTP，自己編的地址會把退信灌進維運信箱（#218 實例見 browser-verify.md §3a）。能用 `dev-login mode=user` 登既有帳號就別建新帳號。
+   - **冒煙完清理測試資料**：退訂 `PUT /users/me isSubscribeEmail=false` → 停用 `PUT /admin/users/<external_id>/status {"isActive":false}` → 刪掉建立的實踐等會觸發排程信的資料；清不掉的用明顯測試命名並在 comment 標明。
 4. **回寫**：在對應 issue comment 追加「dev 冒煙」表：
 
 ```markdown
