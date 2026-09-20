@@ -1,6 +1,6 @@
 # Claude Code + Codex 訂閱雙 Agent 自動化 PRD
 
-> 註（2026-09-20，#241）：本 PRD 所依賴的 Routine A（`pipeline-dispatch.yml`／`dispatch.ts`）與 Routine B 已退役，pipeline 只剩 Routine C；若要導入雙訂閱 agent，dispatch 層需重新設計，不能沿用下文描述的現況。
+> 註（2026-09-20，#241）：本 PRD 所依賴的 Routine A（`pipeline-dispatch.yml`／`dispatch.ts`）、Routine B 與 Routine C（`pipeline-board-sync.yml`／`board-sync.ts`，PR #253）皆已退役，已無任何 cron；下文「已存在」清單列的三個 routine 都不存在了。若要導入雙訂閱 agent，dispatch 與回寫層都需重新設計。board 狀態現由各 skill 呼叫 `bin/pipeline/board.ts`。
 
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
