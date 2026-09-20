@@ -17,8 +17,11 @@ export interface AuditCard {
   issueState: "OPEN" | "CLOSED";
   labels: string[];
   updatedAt: string; // ISO
-  /** Linked PRs across repos, e.g. "daodao-f2e#973" */
-  prs: Array<{ ref: string; state: "open" | "merged" | "closed" }>;
+  /**
+   * PRs referencing the card. `linked` marks a real GitHub link (ConnectedEvent:
+   * closing keyword or manual Development link) as opposed to a body mention.
+   */
+  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
 }
 
 export interface AuditFinding {
@@ -43,6 +46,9 @@ export function resolveStatus(
  * `now` is injectable for tests; `staleDays` = how long a merged-but-unmoved card
  * may sit before we call it out.
  */
+/** Columns whose issue must still be open; Done is the only closed one. */
+const OPEN_STATES = ["Todo", "Ready for Dev", "In Progress", "Review", "Need Fix"];
+
 export function auditCards(
   cards: AuditCard[],
   deadLabels: readonly string[],
@@ -55,22 +61,28 @@ export function auditCards(
 
   for (const c of cards) {
     const status = c.status ?? "(none)";
-    const open = c.prs.filter((p) => p.state === "open");
-    // Central-repo PRs are docs/pipeline changes that merely mention the card;
-    // only sub-repo merges count as "implementation landed".
-    const merged = c.prs.filter(
-      (p) => p.state === "merged" && !p.ref.startsWith(`${CENTRAL_REPO}#`)
-    );
+    // A central-repo PR counts as implementation only when it is genuinely linked;
+    // docs PRs that merely mention several cards in their body must not look like
+    // landed work. Sub-repo PRs use `Refs`, which is only ever a mention, so they
+    // always count.
+    const implements_ = (p: AuditCard["prs"][number]) =>
+      !p.ref.startsWith(`${CENTRAL_REPO}#`) || p.linked;
+    const open = c.prs.filter((p) => p.state === "open" && implements_(p));
+    const merged = c.prs.filter((p) => p.state === "merged" && implements_(p));
     const ageDays = (now.getTime() - new Date(c.updatedAt).getTime()) / 86_400_000;
 
+    if (c.status === null) {
+      push(c, "卡片沒有 Status", "設 Todo，或從 board 移除");
+    }
     if (status === "Done" && c.issueState === "OPEN") {
       push(c, "Done 但 issue 仍 open", "驗收後 close issue，或移回 Review");
     }
-    if (["Todo", "Ready for Dev", "In Progress"].includes(status) && c.issueState === "CLOSED") {
+    // Done is the only column whose issue is expected to be closed (§Status 六欄)
+    if (OPEN_STATES.includes(status) && c.issueState === "CLOSED") {
       push(c, `issue 已 close 但卡在 ${status}`, "移 Done（或 reopen issue）");
     }
-    if (["Todo", "Ready for Dev"].includes(status) && open.length > 0) {
-      push(c, `有 open PR（${open.map((p) => p.ref).join(", ")}）`, "移 In Progress");
+    if (["Todo", "Ready for Dev", "In Progress"].includes(status) && open.length > 0) {
+      push(c, `有 open PR（${open.map((p) => p.ref).join(", ")}）`, "移 Review");
     }
     if (
       ["Todo", "Ready for Dev", "In Progress"].includes(status) &&

@@ -39,4 +39,4 @@ PR 開了由 `/dev-task` finish 移 Review；合併後 `/post-merge-wrapup` 依 
 
 **高風險 repo**：`daodao-storage`（SQL migration）與 `daodao-infra`（IaC）一律人工開發。
 
-詳見 [github-pipeline.md](github-pipeline.md)。
+詳見 [gh-pipeline skill](../../.claude/skills/gh-pipeline/SKILL.md)（六欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。
