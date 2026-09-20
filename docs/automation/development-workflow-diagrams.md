@@ -1,6 +1,6 @@
 # 島島阿學開發流程圖解
 
-> 註（2026-09-20，#241）：自動派工 Routine A／B 已退役，pipeline 只剩 Routine C（merged PR → Board Done）；下文提到 Routine A 派工、`dispatch.ts`、雙 gate 之處為歷史規劃，現行以人工 `/dev-task` 為準。
+> 註（2026-09-20，#241）：自動派工 Routine A／B 與 merge 回寫 Routine C 皆已退役，board 由 skill 呼叫 `bin/pipeline/board.ts` 回寫；下文提到 Routine A 派工、`dispatch.ts`、雙 gate 之處為歷史規劃，現行以人工 `/dev-task` 為準。
 
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 

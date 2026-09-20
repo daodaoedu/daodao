@@ -123,7 +123,7 @@ features:
 
   - name: activity-discovery
     # 2026-09-02 上線（storage#213 / server#447 / f2e#965）：探索活動頁、cohorts.visibility、空間列表聚合
-    doc: openspec/changes/archive/2026-09-02-challenge-activity-space-wiring
+    doc: docs/archive/openspec/changes/archive/2026-09-02-challenge-activity-space-wiring
     declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/activity.routes.ts }
@@ -131,7 +131,7 @@ features:
 
   - name: explore-activities-page
     # 探索活動頁增強：發起人解析、快覽端點、已結束期截斷、卡片欄位擴充
-    doc: openspec/changes/explore-activities-page
+    doc: docs/archive/openspec/changes/explore-activities-page
     declared: partial
     signals:
       - { repo: daodao-server, file: src/routes/activity.routes.ts, pattern: 'hosts' }
@@ -140,8 +140,10 @@ features:
 
   - name: group-messages
     # 活動群組聊天室：聊天室 CRUD、訊息收發、釘選搜尋、在線狀態
-    doc: openspec/changes/group-messages
-    declared: partial
+    # 2026-09-20：程式碼已合併（server#457／f2e#984），board #154 在 Review 待 dev 冒煙驗收；
+    # OpenSpec 已退役，doc 指向封存路徑
+    doc: docs/archive/openspec/changes/group-messages
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/routes/chat-room.routes.ts }
       - { repo: daodao-server, file: src/services/chat-room.service.ts }
@@ -157,9 +159,10 @@ features:
       - { repo: daodao-f2e, file: apps/product/e2e/island.spec.ts }
 
   - name: island-2d-spatial
-    # P0 2D/DO 原型實作中；個人島、共同挑戰與活動情境，正式 API/room 接線尚未完成。
+    # 2026-09-20 稽核：三個 signal 檔在 f2e／server／worker 皆不存在（POC 未落地），
+    # declared 由 partial 降為 planned，避免每週 drift check 固定紅燈；落地後再改回 partial。
     doc: docs/product/island/2d-spatial-island-prd.md
-    declared: partial
+    declared: planned
     signals:
       - { repo: daodao-f2e, file: packages/features/island-world-2d/package.json }
       - { repo: daodao-server, file: src/routes/island-session.routes.ts }
@@ -167,8 +170,10 @@ features:
 
   - name: cohort-setup-panel
     # 場次設定面板：互動方式、費用、報名方式、時段、隱私級聯
-    doc: openspec/changes/cohort-setup-panel
-    declared: partial
+    # 2026-09-20：程式碼已合併（f2e#980、#990），board #171 在 Review 待 dev 冒煙驗收；
+    # OpenSpec 已退役，doc 指向封存路徑
+    doc: docs/archive/openspec/changes/cohort-setup-panel
+    declared: shipped
     signals:
       - { repo: daodao-server, file: src/constants/cohort-setup.ts }
       - { repo: daodao-server, file: src/validators/cohort.validators.ts, pattern: 'interactionModes|feeType|signupMethod' }

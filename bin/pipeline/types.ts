@@ -1,19 +1,6 @@
 export const CENTRAL_REPO = "daodao";
 export const OWNER = "daodaoedu";
 
-export const SUB_REPOS = [
-  "daodao-server",
-  "daodao-f2e",
-  "daodao-ai-backend",
-  "daodao-storage",
-  "daodao-admin-ui",
-  "daodao-infra",
-  "daodao-mcp",
-  "daodao-worker",
-] as const;
-
-export type SubRepo = (typeof SUB_REPOS)[number];
-
 // Planning board (org project 10) — IDs are stable unless the project is recreated
 export const BOARD = {
   projectNumber: 10,

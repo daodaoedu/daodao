@@ -1,6 +1,6 @@
 # Skills 與開發流程
 
-> 註（2026-09-20）：OpenSpec 已退役（#237），舊 `openspec/` 已封存於 `docs/archive/openspec/`；同日 #241 退役自動派工 Routine A／B，pipeline 只剩 Routine C。規格以 docs/product 與 Issue 驗收契約為準。
+> 註（2026-09-20）：OpenSpec 已退役（#237），舊 `openspec/` 已封存於 `docs/archive/openspec/`；同日退役自動派工 Routine A／B（#241）與 Routine C；board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回。規格以 docs/product 與 Issue 驗收契約為準。
 
 更新：2026-09-19。本文件是入口導覽；細節以各 skill、AGENTS 與當下程式為準。共用規則見 [AI 檢核與人工審核](automation/ai-human-review-workflow.md)。
 
@@ -19,7 +19,7 @@
 | 審查 | code-review、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
 | 通知 | notify-related-issue | 核對 PR／Issue 狀態、草擬有證據的更新、查重 | 尚未授權的留言／關閉操作 |
 | 合併收尾 | post-merge-wrapup、dev-task cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
-| 自動化 | gh-pipeline | 核對 Routine C（`board-sync.ts` + `pipeline-board-sync.yml`）的 parser、workflow 與 dry-run；自動派工已退役 | board 回寫異常時的人工拖卡／補跑 |
+| board | gh-pipeline | Planning board 六欄語意、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
 
 ## Claude 與 Codex
 

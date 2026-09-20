@@ -21,7 +21,7 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 - Bug／CI 錯誤通報：讀 [file-bug-issue](../file-bug-issue/SKILL.md)，保留錯誤原文與重現步驟。
 - 只問「有哪些模板／skill」：說明入口即可。只要 skill 修改或流程規劃：不建立 Issue。
 
-不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位。自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 skill 只開卡，不派工，也不實作 reporter、lease 或新 merge gates；子 issue 保留 `Parent: daodaoedu/daodao#N` 行供 Routine C 回寫。
+不使用舊 `templates/issue-template-auto.md` 的 Notion 欄位。自動派工 Routine A／B 已於 2026-09-20 退役（#241），這個 skill 只開卡，不派工，也不實作 reporter、lease 或新 merge gates；子 issue 保留 `Parent: daodaoedu/daodao#N` 行供人與 AI 反查中央卡（Routine C 已退役）回寫。
 
 ## 1. 整理可開卡內容
 

@@ -1,6 +1,6 @@
 # GitHub Actions 設計檢查 — 雙訂閱 Agent 導入前安全與可靠性評估
 
-> 註（2026-09-20，#241）：本審查為 2026-09 快照。其中 `pipeline-dispatch.yml`／`dispatch.ts`（Routine A）與 `review-evals.yml`／`review-evals.ts` 已刪除，F-02（Routine A shell injection）等相關 findings 隨之失效；Routine C 仍在，相關建議仍適用。
+> 註（2026-09-20，#241）：本審查為 2026-09 快照。其中 `pipeline-dispatch.yml`／`dispatch.ts`（Routine A）與 `review-evals.yml`／`review-evals.ts` 已刪除，F-02（Routine A shell injection）等相關 findings 隨之失效；Routine C（`pipeline-board-sync.yml`）亦於同日退役，F-03 隨之失效；其餘建議仍適用。
 
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 

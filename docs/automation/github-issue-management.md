@@ -1,8 +1,8 @@
 # GitHub Issue 管理規範
 
-> **退役註記（2026-09-20，#241）**：自動派工 Routine A／B 已退役，pipeline 只剩 Routine C（merged PR → Board Done）；OpenSpec 已於 #237 退役。本文已改寫為人工管理現況：`auto`／`auto:*`／`needs-spec`／`dispatched` 等派工 labels 不再使用（保留不刪），`human-driving` 仍是人工開工標記。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回；OpenSpec 已於 #237 退役。本文已改寫為人工管理現況：`auto`／`auto:*`／`needs-spec`／`dispatched` 等派工 labels 不再使用（保留不刪），`human-driving` 仍是人工開工標記。
 
-> 日期：2026-09-12，2026-09-20 依 #241 更新。適用於一般需求、bug 與跨 repo 任務的人工管理；Routine C 落差另列於本文末。
+> 日期：2026-09-12，2026-09-20 依 #241 更新。適用於一般需求、bug 與跨 repo 任務的人工管理；自動化落差另列於本文末。
 > 遠端現況依 GitHub CLI 唯讀查詢：中央 repo labels、Planning #10 fields；程式依本機 `bin/pipeline/`。子 repo labels、既有卡片關聯未逐一驗證。本文件不會修改遠端設定。
 
 搭配[共用開發流程](issue-to-acceptance-workflow.md)、[Bug 流程圖](development-workflow-diagrams.md)及[模板索引](../../templates/development/README.md)使用。本文集中定義 Issue 欄位、labels、狀態與關聯；驗收與額度規則沿用共用流程。
@@ -77,7 +77,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | 關係 | 必須記錄 | GitHub 操作與限制 |
 |---|---|---|
 | 中央 → 子 Issue | 中央交付表列 repo、子卡 URL、PR、版本與進度 | 在已授權拆卡範圍建立原生 sub-issue 關係；核對 Board 的 Parent issue／Sub-issues progress |
-| 子 Issue → 中央 | 獨立一行 `Parent: daodaoedu/daodao#123`，並引用中央 AC IDs | Routine C（`lib.ts parseParentIssue`）解析此文字反查中央卡；原生父子關係不能代替它 |
+| 子 Issue → 中央 | 獨立一行 `Parent: daodaoedu/daodao#123`，並引用中央 AC IDs | 供人與 AI 反查中央卡；建議同時建立原生 sub-issue 關係，board 的 Sub-issues progress 欄才會顯示 |
 | Issue → PR | Issue 交付表與 PR body 雙向記錄 URL、負責 AC、受驗 SHA | 一般參照可供追蹤；不保證自動填入 Linked pull requests 欄位 |
 | 子卡 → 相依子卡 | 完整 `owner/repo#N`／URL、阻塞原因、API／schema 前提及部署順序 | 可加原生相依關係輔助，但現有 pipeline 不據此自動排程 |
 | Bug → 原功能 | 原需求 Issue、相關 PR 與發生版本 | 只有屬於同一中央交付目標才設 Parent；一般關聯寫參照即可 |
@@ -90,7 +90,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 
 使用[PR 模板](../../templates/development/pull-request.md)列中央與子 Issue。需部署後驗證的卡片，預設以一般參照記錄，並在完成驗收後人工 close；避免以 closing keyword 在 merge 時提前結案。若任務契約明定 merge 即滿足全部 Done 條件，才使用自動關閉關聯。中央跨 repo 卡不由單一子 PR 自動關閉。
 
-現有 `board-sync.ts` 透過 `lib.ts` 的 closing-keyword parser 辨識 PR 的同 repo `#N`，一般參照及完整跨 repo ref 不會由該 parser 辨識。因此採部署後關卡時，目前需要人工回寫 Issue／Board；不要為了觸發舊同步而提前關卡。parser 與同步流程的相容性屬待實作項。
+GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` 不會觸發任何自動移卡，所以 board 回寫由 `/dev-task` finish（Review）與 `/post-merge-wrapup`（Done／Need Fix）執行；不要為了觸發內建 workflow 而提前用 `Closes` 關卡。
 
 ## 5. 設定範例
 
@@ -105,7 +105,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | 關聯 | Body 引用原功能；若無中央父任務，不填假 Parent | 建立子卡後回填交付表並設定原生父子關係 |
 | 完成 | 回歸驗證、review、適用部署確認後 close | 所有必要子交付符合中央 AC 才 Done／close |
 
-子卡 body 的機器辨識行示例（Routine C 反查中央卡用）：
+子卡 body 的反查行示例（人與 AI 反查中央卡用）：
 
 ```text
 Parent: daodaoedu/daodao#123
@@ -117,7 +117,7 @@ Parent: daodaoedu/daodao#123
 |---|---|
 | 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/publish-tasks`；要恢復自動派工需另開卡重新設計 |
 | `types.ts` 已含六欄（含 Review／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、gh-card 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
-| Routine C 子卡全 closed 即設中央 Done | 只對 `auto` label PR 生效，人工流程幾乎不會觸發；人工核對並校正過早 Done；待改成合併＋驗收＋部署條件 |
+| Routine C 已退役 | merged 後卡留 Review，`/post-merge-wrapup` 依 dev 冒煙結果移 Done／Need Fix；沒有 cron |
 | 內建「Pull request merged」workflow 目標欄位未知 | API 讀不到；到 board 設定頁確認為 Review，避免中央 repo PR merge 直接 Done + auto-close |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；待補一致性檢查 |
 | PR parser 只認同 repo closing refs | 部署後關卡流程先人工回寫；待支援一般關聯與延後完成 |

@@ -1,6 +1,6 @@
 # Pipeline Architecture
 
-> 註（2026-09-20，#241）：GitHub 版 Routine A／B 亦已退役，pipeline 只剩 Routine C；本文全篇僅供考古。
+> 註（2026-09-20，#241）：GitHub 版 Routine A／B／C 亦已全部退役；本文全篇僅供考古。
 
 > ⚠️ **已過時（2026-08）**：本文件描述的是 Notion 時代的 pipeline。
 > 現行架構（GitHub Projects + 中央 issues）見 [github-pipeline.md](github-pipeline.md)。
