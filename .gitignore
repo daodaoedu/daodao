@@ -31,3 +31,6 @@ coverage/
 .env
 
 LOGO
+# Python bytecode（scripts/ 與 hooks/ 都會產生）
+__pycache__/
+*.pyc
