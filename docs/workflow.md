@@ -419,6 +419,8 @@ daodao/
 | `pr-deferred-unlinked` | Deferred item 沒子 issue 也沒「待開卡」 |
 | `pr-body-evidence-missing` | PR body 缺「## 驗證證據」（報告連結或不適用聲明） |
 | `pr-fe-pattern-invalid` | 前端手寫 HTML `pattern` 編不過（#188 根因） |
+| `pr-verify-unchecked` | 「## 驗證」有 `- [ ]` 未勾項目或「需要手動驗證」清單（#166：登入牆截圖當證據） |
+| `pr-layout-probe-missing` | UI repo 缺「### 版面探針」表或表裡有 ❌（#233：settings 每頁多 132px） |
 
 逃生口 `DEV_TASK_SKIP_GATE="<原因>"`，一律留痕到 gate ledger。完整規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`。
 
