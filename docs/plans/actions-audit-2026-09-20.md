@@ -22,3 +22,4 @@
 2. Branch Base Check 加 repo 條件，root 只跑 Branch Guard。
 3. Product Status Drift：manifest `island-2d-spatial` → `planned`，workflow 補 checkout `daodao-worker`。
 4. 其餘不動。
+5. （已做）board 內建「Pull request merged」workflow 目標 Done → Review，於設定頁手動改。

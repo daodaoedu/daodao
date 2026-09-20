@@ -118,7 +118,7 @@ Parent: daodaoedu/daodao#123
 | 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/publish-tasks`；要恢復自動派工需另開卡重新設計 |
 | `types.ts` 已含六欄（含 Review／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、gh-card 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
 | Routine C 已退役 | merged 後卡留 Review，`/post-merge-wrapup` 依 dev 冒煙結果移 Done／Need Fix；沒有 cron |
-| 內建「Pull request merged」workflow 目標欄位未知 | API 讀不到；到 board 設定頁確認為 Review，避免中央 repo PR merge 直接 Done + auto-close |
+| 內建 workflow 目標欄位 API 讀不到 | 2026-09-20 於設定頁確認並把「Pull request merged」由 Done 改為 Review；之後若再改只能在設定頁看 |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；待補一致性檢查 |
 | PR parser 只認同 repo closing refs | 部署後關卡流程先人工回寫；待支援一般關聯與延後完成 |
 | 可靠回寫、共用任務鎖與完整驗收 gates 仍為目標設計 | 依共用流程分階段落地與演練，文件存在不等於自動化已完成 |

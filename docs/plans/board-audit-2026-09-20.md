@@ -76,5 +76,5 @@
 - 移出 board：#1 #172 #185 #200（Review 彙整報告，issue 保留）。
 - 清 label：`needs-spec` ×10、`human-driving`（Done 卡）×4、`human-coding` ×1。
 - 事後 `board.ts audit`：✅ 沒有狀態落差（In Progress 3 / Need Fix 3 / Done 13 / Review 9 / Todo 28；#244–247 為期間其他 session 新開）。
-- 發現 board 開著七個 GitHub 內建 workflow（`Item closed → Done`、`Auto-close issue` 等），只認同 repo closing-keyword PR；**待人工確認**「Pull request merged」目標欄位是 Review 不是 Done（API 讀不到、改不了）。
+- 發現 board 開著七個 GitHub 內建 workflow（`Item closed → Done`、`Auto-close issue` 等），只認同 repo closing-keyword PR；已用瀏覽器確認並把「Pull request merged」目標由 Done 改為 Review（API 讀不到、改不了；PR linked → In Progress、Item closed → Done 維持）。
 - 流程落地：`bin/pipeline/board.ts`（set／remove／audit）、`types.ts` 六欄、dev-task／post-merge-wrapup／gh-card／gh-pipeline skill 與 `docs/automation/github-issue-management.md`、AGENTS.md 同步。
