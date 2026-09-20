@@ -812,7 +812,7 @@ Routine C 每小時掃 merged PR，全部鏡像 issue 關閉後把中央卡 Stat
 | **PR** | collect-pr-feedback skill | 收集所有 review 回饋，分類整理 |
 | **CI** | GitHub Actions | 自動化品質檢查（lint + typecheck + test + build） |
 | **CD** | GitHub Actions + Docker | 自動部署到 Linode / Cloudflare |
-| **同步** | sync-claude-config workflow | 共用設定從 daodao repo 同步到子專案 |
+| **同步** | sync-claude-config workflow | 共用設定從 daodao repo 同步到子專案；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
 | **收尾** | post-merge-wrapup skill | 歸檔 openspec change、更新 docs/product 狀態 |
 | **自動化** | Routine A / B / C | Board → 鏡像 issue → plan/auto PR → 回寫 Done（每小時；見 Phase 9） |
 | **自動化** | /publish-tasks skill | Routine A 的手動版：OpenSpec tasks → sub-repo issues + auto label |
