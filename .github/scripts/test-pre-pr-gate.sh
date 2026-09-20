@@ -67,8 +67,15 @@ GOOD_MATRIX='### 核心旅程矩陣
 | J-01 | 建立場次 | 正常 | slug `2026-summer`、名稱含中文 | programs-manager.tsx:67 | cohort.schema.ts:42 | 201 | ✅ 201 | evidence/verify-j01.png |
 | J-02 | 建立場次 | 錯誤路徑 | slug `26-Summer` | 同上 | 同上 | 400 訊息顯示、輸入保留 | ✅ 400 | evidence/verify-j02.png |'
 
-task_md() {  # $1=status $2=驗證區塊 $3=deferred 區塊
-  printf '# Task 1: x\n\n## 驗證\n- 驗證報告: https://docs.google.com/document/d/abc/edit\n%s\n\n## Deferred items\n%s\n\n## Status\n%s\n\n## PR\n- none\n' "$2" "$3" "$1"
+# 閘門 8 需要的版面探針表（全 ✅）；預設塞進每個 fixture，讓其他案例只測自己那道閘門
+GOOD_PROBE='### 版面探針
+| 寬度 | route | 落點 | scrollWidth / viewport | 結果 | 問題 | 截圖 |
+|---|---|---|---|---|---|---|
+| 390 | /zh-TW/settings | /settings | 390 / 390 | ✅ | — | verify-layout-probe-390.png |
+| 1440 | /zh-TW/settings | /settings | 1440 / 1440 | ✅ | — | verify-layout-probe-1440.png |'
+
+task_md() {  # $1=status $2=驗證區塊 $3=deferred 區塊 $4=版面探針區塊（預設 GOOD_PROBE）
+  printf '# Task 1: x\n\n## 驗證\n- 驗證報告: https://docs.google.com/document/d/abc/edit\n%s\n\n%s\n\n## Deferred items\n%s\n\n## Status\n%s\n\n## PR\n- none\n' "$2" "${4-$GOOD_PROBE}" "$3" "$1"
 }
 
 pr_cmd() {  # $1=repo path $2=body file
@@ -272,5 +279,70 @@ code=$(DEV_TASK_SKIP_GATE="測試逃生口" run_hook "$t/daodao-f2e" "$(pr_cmd "
 expect_pass "DEV_TASK_SKIP_GATE 放行" "$code"
 grep -q '"result":"skip:測試逃生口"' "$HOME/.cache/daodao-harness/gate-ledger.jsonl" || fail "逃生口未留痕到 gate ledger"
 printf '✅ %s\n' "逃生口留痕"
+
+# 12. 閘門 7：「## 驗證」留未驗項目 → 擋（#166：6 頁「需 Google OAuth 登入」照樣發 PR）
+ISSUE_166='- [x] 桌面版 Account Menu（evidence/menu.png）
+
+### 需要手動驗證（需 Google OAuth 登入）
+
+| 項目 | 原因 |
+|------|------|
+| /settings 頁面 + User Card | 路由層 auth guard |
+| /settings/bug-report 表單 | 同上 |'
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+$ISSUE_166" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "「需要手動驗證」清單（#166 原樣）" "$code" "/settings/bug-report"
+[[ "$(last_err)" == *"登入牆截圖不算證據"* ]] || fail "閘門 7 訊息要點名登入牆：$(last_err)"
+# 12b. 「需要手動驗證」用 bullet 清單、表頭不叫「項目」也要擋（AI review 在 #234 點出的缺口）
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+### 需要手動驗證
+- /settings/archived 列表（需登入）
+- /settings/connections（需登入）" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "「需要手動驗證」bullet 清單" "$code" "/settings/connections"
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+### 待手動驗證
+| 頁面 | 原因 |
+|:---|:---|
+| /settings/archived | 需登入 |" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "「待手動驗證」表頭非「項目」、分隔列帶冒號" "$code" "/settings/archived"
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+- [ ] 手機版 bottom sheet（evidence/sheet.png）" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "未勾的檢查項" "$code" "手機版 bottom sheet"
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
+- [ ] 手機版 bottom sheet（豁免：使用者說 app 端另卡處理）" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_pass "未勾但使用者豁免" "$code"
+
+# 13. 閘門 8：UI repo 版面探針（#233：settings 每頁多 132px）
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX" '- none' '')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "UI repo 缺版面探針" "$code" "沒有「### 版面探針」"
+BAD_PROBE=$(printf '%s\n' "$GOOD_PROBE" | sed 's/| 1440 \/ 1440 | ✅ | — |/| 1572 \/ 1440 | ❌ | 橫向溢出 132px（div.w-screen） |/')
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX" '- none' "$BAD_PROBE")")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "版面探針有 ❌" "$code" "橫向溢出 132px"
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX" '- none' '版面探針不適用：只改 i18n 字串，無 tsx／css 變更')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_pass "版面探針不適用（有原因）" "$code"
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX" '- none' '版面探針不適用：<原因>')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "版面探針不適用沒原因" "$code" "沒有具體原因"
+t=$(make_task daodao-server "$(task_md verified "$GOOD_MATRIX" '- none' '')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_pass "後端 repo 不要求版面探針" "$code"
 
 echo "✅ pre-pr-gate regression tests passed"
