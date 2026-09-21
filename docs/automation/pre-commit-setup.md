@@ -4,7 +4,7 @@ Install the secret-scan + dependency-audit pre-commit hook for each of the 8 sub
 
 ## 待辦：依專案選擇品質檢查
 
-目前 `.claude/skills/pre-commit-check/SKILL.md` 把 `make check` 與
+目前 `plugin/skills/pre-commit-check/SKILL.md` 把 `make check` 與
 `make lint` 當成通用入口，但 daodao root 與各子專案並沒有統一使用 Make。
 後續需將 skill 改成先辨識目前 repo、變更檔案與可用 scripts，再執行對應檢查：
 

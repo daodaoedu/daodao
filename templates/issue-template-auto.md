@@ -6,7 +6,7 @@ labels: auto
 assignees: ""
 ---
 
-<!-- DEPRECATED (2026-09-20, #241): Routine A／B 已退役，此模板不再由任何 pipeline 產生或解析，僅供辨識舊 issue。新子 issue 用 templates/development/subtask-issue.md -->
+<!-- DEPRECATED (2026-09-20, #241): Routine A／B 已退役，此模板不再由任何 pipeline 產生或解析，僅供辨識舊 issue。新子 issue 用 plugin/templates/subtask-issue.md -->
 <!-- managed by Routine A -->
 <!-- notion-id: {{notion_short_id}} -->
 

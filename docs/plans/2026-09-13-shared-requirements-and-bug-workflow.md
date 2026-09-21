@@ -22,10 +22,10 @@
 
 | 本地來源 | 已有能力 | 本次建議補強 |
 |---|---|---|
-| [共用模板](../../templates/development/README.md)、[需求文件](../../templates/development/requirements-doc.md) | 穩定 AC、例外狀態、權限、版本與驗收證據 | 區分角色與階段，補操作流程、欄位規則、設計定位與待決策表；工程執行欄位移至對應階段 |
-| [prd-generation](../../.claude/skills/prd-generation/SKILL.md) | 生成、五角色補洞、優化 | 實際引用共用模板；缺漏標明影響、負責角色與是否阻擋 Ready；產出需求到設計／任務的對照 |
-| [gh-card](../../.claude/skills/gh-card/SKILL.md) | 模板引用、查重、Todo 與 Ready 分離、發布回讀 | 承接核准需求，避免再次改寫 AC；提供非工程使用者可讀的缺項摘要 |
-| [file-bug-issue](../../.claude/skills/file-bug-issue/SKILL.md) | 錯誤、重現、環境與嘗試紀錄 | 接受使用者操作／視覺異常，補影響程度、實際結果、發生頻率、去重、分流、回歸與關單條件 |
+| [共用模板](../../plugin/templates/README.md)、[需求文件](../../plugin/templates/requirements-doc.md) | 穩定 AC、例外狀態、權限、版本與驗收證據 | 區分角色與階段，補操作流程、欄位規則、設計定位與待決策表；工程執行欄位移至對應階段 |
+| [prd-generation](../../plugin/skills/prd-generation/SKILL.md) | 生成、五角色補洞、優化 | 實際引用共用模板；缺漏標明影響、負責角色與是否阻擋 Ready；產出需求到設計／任務的對照 |
+| [gh-card](../../plugin/skills/gh-card/SKILL.md) | 模板引用、查重、Todo 與 Ready 分離、發布回讀 | 承接核准需求，避免再次改寫 AC；提供非工程使用者可讀的缺項摘要 |
+| [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md) | 錯誤、重現、環境與嘗試紀錄 | 接受使用者操作／視覺異常，補影響程度、實際結果、發生頻率、去重、分流、回歸與關單條件 |
 | [Issue 管理規範](../automation/github-issue-management.md) | Board、跨 repo、Done、重開與 UI bug 驗收 | 把既有管理要求納入 bug skill，避免規範和開單產物不同步 |
 | [開發驗收提案](../automation/issue-to-acceptance-workflow.md) | 討論文件、凍結契約、驗收報告分工 | 增加 PM／設計師每天如何填、何時 review、變更怎麼處理的使用流程 |
 
@@ -133,9 +133,9 @@ skill 預設先產本地草稿與缺項；發布沿用當次授權，完成去�
 
 | 項目 | 規劃變更 |
 |---|---|
-| `templates/development/requirements-doc.md` | v2 分階段內容、角色分工、規則／狀態／AC 對照、未知與變更紀錄 |
-| `templates/development/bug-issue.md`（新增） | 通報、分流、修復、驗收區塊，標示各階段必填 |
-| `templates/development/README.md` | 一頁使用指引、精簡／完整判定、誰何時填、版本維護規則 |
+| `plugin/templates/requirements-doc.md` | v2 分階段內容、角色分工、規則／狀態／AC 對照、未知與變更紀錄 |
+| `plugin/templates/bug-issue.md`（新增） | 通報、分流、修復、驗收區塊，標示各階段必填 |
+| `plugin/templates/README.md` | 一頁使用指引、精簡／完整判定、誰何時填、版本維護規則 |
 | `central-issue.md`／`subtask-issue.md`／`acceptance-report.md` | 與需求 v2 共用欄位；一般閱讀摘要與執行附錄分開，保留既有機器 marker |
 | `prd-generation` | 引用 canonical 模板；依提出／補洞／Ready review 輸出；未知不自動補成定案 |
 | `file-bug-issue` | 擴充非工程通報、共用 bug 模板、去重分流、驗收與回讀 |
@@ -209,6 +209,6 @@ QA 五張卡 #163、#164、#165、#179、#190 都同時在 Planning；本次兩�
 2. Planning 建議作整體交付狀態來源，QA 作驗收／退回進度；同一 Issue 可同時加入，避免為同一缺陷複製一張新 Issue。QA 的 Need to fix 需指定由誰回寫 Planning 與摘要，Done 仍依整體交付條件。此為待定規則，本次不改看板。
 3. Priority 先決定選項與判準；PM／設計／RD owner 可先放 body，試跑後再決定哪些值得升成 Board 欄位。
 4. 對齊 [TEMPLATE] 與正式看板的角色，區分「Project 設定範本」和「Issue 需求／bug 內容模板」，不能互相取代。
-5. 遠端 main 的完整 tree 未見 `templates/development/`、`.github/ISSUE_TEMPLATE/` 或 `docs/automation/github-issue-management.md`。前一輪盤點的共用模板與新管理規範目前存在本地工作樹，不能描述成團隊已在遠端使用。正式導入需包含發布與入口教學。
+5. 遠端 main 的完整 tree 未見 `plugin/templates/`、`.github/ISSUE_TEMPLATE/` 或 `docs/automation/github-issue-management.md`。前一輪盤點的共用模板與新管理規範目前存在本地工作樹，不能描述成團隊已在遠端使用。正式導入需包含發布與入口教學。
 
 遠端 main 核對版本：`f249705af7b2359b1b3b4cb297d28b748ccc1a93`。遠端 gh-card 已採 GitHub，不是 Notion；但仍使用內嵌模板、固定 board IDs 與預設 scope M，尚未包含本地新版的共用模板、live preflight、回讀及重試規則。遠端 file-bug-issue、prd-generation 與本地版本相同。Skill 與模板的發布應作同一批交付，避免 wrapper／連結先發布而引用尚不存在的檔案。

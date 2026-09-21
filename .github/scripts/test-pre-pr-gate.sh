@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Regression tests for .claude/hooks/pre-pr-gate.sh（dev-task 發 PR 閘門）。
+# Regression tests for plugin/hooks/pre-pr-gate.sh（dev-task 發 PR 閘門）。
 # 每個案例建一個假的 worktrees/<n>-<slug>/task.md，模擬 Claude PreToolUse 的 CLAUDE_TOOL_INPUT。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/../../.claude/hooks/pre-pr-gate.sh"
+HOOK="$SCRIPT_DIR/../../plugin/hooks/pre-pr-gate.sh"
 [ -x "$HOOK" ] || chmod +x "$HOOK"
 
 SANDBOX=$(mktemp -d)

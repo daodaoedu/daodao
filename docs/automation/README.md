@@ -1,6 +1,6 @@
 # docs/automation — 自動化 Pipeline 文件索引
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 gh-card／dev-task／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../.claude/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 gh-card／dev-task／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
 
 這個目錄包含 **GitHub Board／Issue／PR** 自動化與開發流程的操作與維護文件。
 
@@ -15,7 +15,7 @@
 | [development-workflow-diagrams.md](development-workflow-diagrams.md) | **Mermaid 圖解入口**：目前完成度、Issue／PR 文件分工、雙入口開發、驗收與回寫，以及導入順序 |
 | [issue-to-acceptance-workflow.md](issue-to-acceptance-workflow.md) | **目標流程提案**：Issue／Google Docs／Drive、雙入口開發、瀏覽器與後端驗收、merge gate、Issue 自動回寫 |
 | [agent-budget-policy.md](agent-budget-policy.md) | Claude Code／Codex 訂閱與 Workers AI 分工、預算保留、限額與失敗處理提案 |
-| [開發文件模板](../../templates/development/README.md) | 可複用的中央／子 Issue、需求文件、驗收報告、PR 與狀態回寫格式 |
+| [開發文件模板](../../plugin/templates/README.md) | 可複用的中央／子 Issue、需求文件、驗收報告、PR 與狀態回寫格式 |
 | [github-actions-design-review.md](github-actions-design-review.md) | GitHub Actions 現況審查、風險證據與雙訂閱 agent 導入 gate（2026-09 審查快照；Routine A／review-evals 段落已退役） |
 | [dual-subscription-agents-prd.md](dual-subscription-agents-prd.md) | Claude Code + Codex 訂閱雙 agent 自動化 PRD（提案；所依賴的 Routine A／B 已退役，導入前需重新設計 dispatch） |
 | [dual-subscription-development-workflow.md](dual-subscription-development-workflow.md) | 雙訂閱 agent 的 v2 開發流程、Harness、Runner、Artifact 與分階段落地規劃（提案；Routine A／B 已退役） |
@@ -39,4 +39,4 @@ PR 開了由 `/dev-task` finish 移 Review；合併後 `/post-merge-wrapup` 依 
 
 **高風險 repo**：`daodao-storage`（SQL migration）與 `daodao-infra`（IaC）一律人工開發。
 
-詳見 [gh-pipeline skill](../../.claude/skills/gh-pipeline/SKILL.md)（六欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。
+詳見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)（六欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。

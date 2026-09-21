@@ -28,7 +28,7 @@
 | 卡 close 了卻在 Todo／In Progress | 內建 `Item closed → Done` 沒觸發 | `board.ts set <n> done` |
 | 不知道哪些卡不對 | — | `board.ts audit`（列八類落差） |
 
-操作手冊：[.claude/skills/gh-pipeline/SKILL.md](../../.claude/skills/gh-pipeline/SKILL.md)。
+操作手冊：[plugin/skills/gh-pipeline/SKILL.md](../../plugin/skills/gh-pipeline/SKILL.md)。
 
 ---
 

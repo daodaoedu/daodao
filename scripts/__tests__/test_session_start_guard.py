@@ -13,7 +13,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-HOOK = ROOT / ".claude/hooks/session-start.sh"
+HOOK = ROOT / "plugin/hooks/session-start.sh"
 
 
 def git(cwd, *args):

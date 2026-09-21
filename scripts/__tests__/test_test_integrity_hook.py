@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-HOOK = Path(__file__).resolve().parents[2] / '.claude/hooks/test-integrity-guard.py'
+HOOK = Path(__file__).resolve().parents[2] / 'plugin/hooks/test-integrity-guard.py'
 spec = importlib.util.spec_from_file_location('hook', HOOK)
 hook = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hook)
