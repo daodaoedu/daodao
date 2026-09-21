@@ -21,8 +21,14 @@ const PLUGIN_ROOT = resolve(import.meta.dirname, '..')
 const OUT = join(PLUGIN_ROOT, 'out', 'release')
 const STAGE = join(PLUGIN_ROOT, 'out', '.stage')
 
-/** 固定時間戳（1980-01-01 是 zip 格式能表示的最早時間）。 */
-const EPOCH = '198001010000'
+/**
+ * 固定時間戳。刻意不用 1980-01-01：那正好是 ZIP 格式的時間下界，只要時區一位移
+ * 就會掉到界外被 clamp，而 clamp 行為隨實作而異。2000-01-01 離界夠遠。
+ *
+ * 另外 `touch -t` 吃的是本機時區，不強制 TZ=UTC 的話，macOS（UTC+8）與 CI（UTC）
+ * 會把同一份內容存成不同的時間戳，sha256 自然對不起來。
+ */
+const EPOCH = '200001010000'
 
 /** 不進 zip 的東西：產物、其他平台的包、node 垃圾。 */
 const EXCLUDE = new Set(['out', 'node_modules', '.DS_Store'])
@@ -57,18 +63,20 @@ const staged: string[] = []
     if (statSync(full).isDirectory()) walk(full)
   }
 })(join(STAGE, 'plugin'))
-execFileSync('touch', ['-t', EPOCH, ...staged.sort()])
+execFileSync('touch', ['-t', EPOCH, ...staged.sort()], { env: { ...process.env, TZ: 'UTC' } })
 
 // ---------------------------------------------------------------- zip
 
 mkdirSync(OUT, { recursive: true })
 const zipPath = join(OUT, zipName)
 rmSync(zipPath, { force: true })
-// -X 去掉 macOS 額外屬性，-9 最高壓縮，排序後逐檔加入讓條目順序固定
+// -X 去掉平台額外屬性，-D 不存目錄條目（少一組時間戳變數，解壓時目錄照樣會建），
+// -9 最高壓縮；排序後逐檔加入讓條目順序固定。
 const entries = staged
+  .filter((f) => statSync(f).isFile())
   .sort()
-  .map((p) => relative(STAGE, p))
-execFileSync('zip', ['-qX9', zipPath, ...entries], { cwd: STAGE })
+  .map((f) => relative(STAGE, f))
+execFileSync('zip', ['-qX9D', zipPath, ...entries], { cwd: STAGE, env: { ...process.env, TZ: 'UTC' } })
 
 const bytes = readFileSync(zipPath)
 const sha256 = createHash('sha256').update(bytes).digest('hex')

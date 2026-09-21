@@ -13,21 +13,38 @@ const zipPath = join(RELEASE, `daodao-plugin-${version}.zip`)
 
 function pack() {
   execFileSync('pnpm', ['-s', 'plugin:package'], { cwd: REPO_ROOT, encoding: 'utf8' })
-  return createHash('sha256').update(readFileSync(zipPath)).digest('hex')
+  return {
+    sha: createHash('sha256').update(readFileSync(zipPath)).digest('hex'),
+    // -v 會帶出每個條目的時間戳、CRC 與壓縮後大小；sha 不合時用它指出到底哪裡變了，
+    // 光看兩個 hash 不同沒辦法除錯（2026-09-21 就卡在這：本機過、Linux 紅）。
+    listing: execFileSync('unzip', ['-v', zipPath], { encoding: 'utf8' }),
+  }
 }
 
+function firstDifferingLines(a: string, b: string, max = 6): string {
+  const la = a.split('\n')
+  const lb = b.split('\n')
+  const out: string[] = []
+  for (let i = 0; i < Math.max(la.length, lb.length) && out.length < max; i++) {
+    if (la[i] !== lb[i]) out.push(`  run1: ${la[i] ?? '<無>'}\n  run2: ${lb[i] ?? '<無>'}`)
+  }
+  return out.join('\n') || '  （條目清單完全相同——差異在壓縮資料或檔頭）'
+}
+
+let first = { sha: '', listing: '' }
+let second = { sha: '', listing: '' }
 let firstSha = ''
-let secondSha = ''
 
 beforeAll(() => {
-  firstSha = pack()
-  secondSha = pack()
+  first = pack()
+  second = pack()
+  firstSha = first.sha
 }, 60_000)
 
 describe('release zip', () => {
   // 可重現是 sha256 釘住的前提：CI 打的包，本機要能打出一模一樣的來驗。
   it('同一份原始碼打兩次得到同一個 sha256', () => {
-    expect(secondSha).toBe(firstSha)
+    expect(second.sha, `zip 不可重現，差異處：\n${firstDifferingLines(first.listing, second.listing)}`).toBe(first.sha)
   })
 
   // Claude Code 只在 zip 頂層、或單一頂層資料夾底下找 .claude-plugin/，再深一層就裝不起來。
