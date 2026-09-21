@@ -18,7 +18,7 @@ The workflow uses the PR event with read-only repository permission, no secrets,
 
 ## Claude pre-edit hook
 
-Register `.claude/hooks/test-integrity-guard.py` for the `PreToolUse` matcher `Write|Edit` using `python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/test-integrity-guard.py"`. It reads the native event from stdin (`tool_name`, `tool_input`, `cwd`), computes proposed content without writing, and exits 2 with a diagnostic when newly introduced skip/focus/todo lines are detected. Unchanged or moved legacy marker lines remain allowed; duplicate marker lines are new occurrences and blocked. Malformed matching events, unreadable files and ambiguous edits block rather than claiming validation succeeded. Unsupported tool names are a no-op.
+Register `plugin/hooks/test-integrity-guard.py` for the `PreToolUse` matcher `Write|Edit` using `python3 "$CLAUDE_PROJECT_DIR/plugin/hooks/test-integrity-guard.py"`. It reads the native event from stdin (`tool_name`, `tool_input`, `cwd`), computes proposed content without writing, and exits 2 with a diagnostic when newly introduced skip/focus/todo lines are detected. Unchanged or moved legacy marker lines remain allowed; duplicate marker lines are new occurrences and blocked. Malformed matching events, unreadable files and ambiguous edits block rather than claiming validation succeeded. Unsupported tool names are a no-op.
 
 This adapter only checks Write/Edit proposals. Shell writes, other tools, Codex and assertion deletions are not guarded by this adapter: use the CLI/CI check for the final diff. It does not authenticate approvals or accept receipts. Client registration and actual client execution are separate from synthetic event validation. Regression command for both scanner and adapter:
 

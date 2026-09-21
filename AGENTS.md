@@ -45,8 +45,8 @@ daodao 是一個 monorepo，各子專案職責如下：
 
 commit 時必須依序執行：
 
-1. 先執行 `.claude/skills/pre-commit-check/SKILL.md` skill 跑品質檢查
-2. 檢查通過後，執行 `.claude/skills/format-commit/SKILL.md` skill 產生 commit message
+1. 先執行 `plugin/skills/pre-commit-check/SKILL.md` skill 跑品質檢查
+2. 檢查通過後，執行 `plugin/skills/format-commit/SKILL.md` skill 產生 commit message
 3. 使用者確認後才執行 git commit
 
 ### 各子專案品質檢查指令
@@ -62,41 +62,41 @@ commit 時必須依序執行：
 ## Push 流程
 
 使用者說要 push 時，先詢問「要 review 嗎？」：
-- Yes → 執行 `.claude/skills/code-review/SKILL.md` skill，review 完再 push
+- Yes → 執行 `plugin/skills/code-review/SKILL.md` skill，review 完再 push
 - No → 直接 push
 
 ## Merge 後流程
 
-PR merged 後，執行 `.claude/skills/post-merge-wrapup/SKILL.md` skill 收尾：核對實際合併與驗收狀態、按適用範圍整理既有規劃 artifacts、更新 docs/product 與地圖；合併不等於部署或整體需求完成。
+PR merged 後，執行 `plugin/skills/post-merge-wrapup/SKILL.md` skill 收尾：核對實際合併與驗收狀態、按適用範圍整理既有規劃 artifacts、更新 docs/product 與地圖；合併不等於部署或整體需求完成。
 
 ## Planning Board 狀態
 
-中央卡在 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) 的 Status 由流程各步驟負責移，不靠 GitHub 內建 workflow（它們認不出 sub-repo 的 `Refs` PR）：gh-card → `Todo`；dev-task start → `In Progress`；dev-task finish（PR 開了）→ `Review`；post-merge-wrapup 冒煙通過 → `Done`、失敗 → `Need Fix`。一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`，`board.ts audit` 找落差；細節見 `.claude/skills/gh-pipeline/SKILL.md`。
+中央卡在 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) 的 Status 由流程各步驟負責移，不靠 GitHub 內建 workflow（它們認不出 sub-repo 的 `Refs` PR）：gh-card → `Todo`；dev-task start → `In Progress`；dev-task finish（PR 開了）→ `Review`；post-merge-wrapup 冒煙通過 → `Done`、失敗 → `Need Fix`。一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`，`board.ts audit` 找落差；細節見 `plugin/skills/gh-pipeline/SKILL.md`。
 
 ## 需求規劃流程
 
 ### 開 Issue
 
-- 使用者說「開 issue」「開卡」「新增任務」時，先讀 `.claude/skills/gh-card/SKILL.md`；Codex 另有 `.codex/skills/gh-card/SKILL.md` 入口。
-- 中央／子 Issue 使用 `templates/development/` 共用模板；bug 通報依既有 `file-bug-issue` 流程。
+- 使用者說「開 issue」「開卡」「新增任務」時，先讀 `plugin/skills/gh-card/SKILL.md`。四個平台（Claude Code／Codex／ChatGPT／Claude.ai）的對應產物由 `pnpm plugin:build` 產生，見 `plugin/README.md`。
+- 中央／子 Issue 使用 `plugin/templates/` 共用模板；bug 通報依既有 `file-bug-issue` 流程。
 - 單純開卡預設 Todo；設定 Ready for Dev 需在使用者要求範圍內（自動派工 Routine A／B 已於 2026-09-20 退役，Ready for Dev 只是管理狀態，不會觸發任何自動化）。只修改 skill／草擬需求不建立遠端 Issue。
 
 收到想法、Issue、PRD／FRD、POC 或開發分支時：
-1. 執行 `.claude/skills/prd-generation/SKILL.md`，先描述 → AI 查核與起草 → AI 自審修訂 → 人審核 → 更新定稿；由其呼叫 `product-status-check` 區分實作、測試、部署與可用證據。
+1. 執行 `plugin/skills/prd-generation/SKILL.md`，先描述 → AI 查核與起草 → AI 自審修訂 → 人審核 → 更新定稿；由其呼叫 `product-status-check` 區分實作、測試、部署與可用證據。
 2. 新需求統一一份 PRD，包含流程、規則與驗收；既有 FRD 及 FR／TP ID 沿用，不要求另寫 FRD。提出者不用填 repo、SHA 或負責人表。
 3. 依既有授權銜接開卡或目標 repo 的開發規劃。技術設計與執行證據由開發／驗收文件承接；確認需求不等於 Ready 或派工。
 
 ## Bug Issue 流程
 
 任何使用者遇到操作異常，或開發／CI 錯誤需追蹤時：
-1. 執行 `.claude/skills/file-bug-issue/SKILL.md`；Codex 入口為 `.codex/skills/file-bug-issue/SKILL.md`。
+1. 執行 `plugin/skills/file-bug-issue/SKILL.md`。Codex 讀 `.agents/skills/file-bug-issue/SKILL.md`（build 產物）。
 2. 從描述整理位置、操作、實際／期待結果與證據，由 AI 起草、查核 codebase／分類／重複卡、自審修訂後交人審核，再補問關鍵問題，不要求通報者知道 repo 或根因。
 3. 預覽具體內容並沿用已授權範圍發布；只有草擬授權就保留本機草稿。未知資訊可記於 Todo，不把通報當作已重現或已修復。
 
 ## PR Feedback 流程
 
 Push 並開 PR 後，使用者說「收集 feedback」或「看 PR review」時：
-1. 執行 `.claude/skills/collect-pr-feedback/SKILL.md` skill
+1. 執行 `plugin/skills/collect-pr-feedback/SKILL.md` skill
 2. 收集 CI 狀態 + AI Code Review + Gemini Code Assist + 人類 reviewer 的 feedback
 3. 整理成總覽表格，分類為「必須修 / 建議修 / 可忽略」
 4. AI 先查證 feedback，修正已授權範圍內可確定的問題並重驗；產品取捨、新增範圍或必要授權才交人決策
@@ -111,4 +111,4 @@ file-bug-issue 與 prd-generation 處理使用者提供的來源（issue-body、
 
 ## 共用 AI 檢核與雙端入口
 
-需求到合併收尾均遵循 `docs/automation/ai-human-review-workflow.md`：AI 先查核、自審修訂，人審核成果與決策。完整入口表見 `docs/development-skills-and-workflow.md`；Claude 使用 `.claude/skills/`，Codex 同名 `.codex/skills/` 入口引用完整規則。工具及 hooks 必須以當前客戶端實際能力核對，不假稱自動執行。
+需求到合併收尾均遵循 `plugin/docs/ai-human-review-workflow.md`：AI 先查核、自審修訂，人審核成果與決策。完整入口表見 `docs/development-skills-and-workflow.md`。完整規則只有一份在 `plugin/skills/`，Claude Code／Codex／ChatGPT／Claude.ai 四個平台的檔案都是 `pnpm plugin:build` 的產物，不要直接改產物；安裝方式與各平台能力落差見 `plugin/README.md`。工具及 hooks 必須以當前客戶端實際能力核對，不假稱自動執行。

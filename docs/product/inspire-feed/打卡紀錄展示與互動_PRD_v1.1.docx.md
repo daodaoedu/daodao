@@ -2,7 +2,7 @@
 
 版本 1.1　｜　2026-04-22
 
-> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但靈感牆（Inspire Feed）已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-ai-backend/src/routers/feed.py`、`daodao-f2e/packages/api/src/services/feed-hooks.ts`。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但靈感牆（Inspire Feed）已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-ai-backend/src/routers/feed.py`、`daodao-f2e/packages/api/src/services/feed-hooks.ts`。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `plugin/skills/product-status-check`。
 
 ## **Overview**
 

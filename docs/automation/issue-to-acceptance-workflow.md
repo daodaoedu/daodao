@@ -8,7 +8,7 @@
 > 本文承接[雙訂閱 v2](dual-subscription-development-workflow.md)，補足 Google Docs／Drive、人工入口、產品驗收與 Issue 回寫契約。
 > 本文的命令介面、check 名稱、欄位與狀態皆為目標設計，除「現況」明列者外，不代表已部署。
 
-搭配使用：[額度分配政策](agent-budget-policy.md)與[可複用文件模板](../../templates/development/README.md)。下文內嵌格式是閱讀示例，正式複製以模板目錄為準。
+搭配使用：[額度分配政策](agent-budget-policy.md)與[可複用文件模板](../../plugin/templates/README.md)。下文內嵌格式是閱讀示例，正式複製以模板目錄為準。
 
 Issue 欄位、labels、Board 狀態與關聯設定見 [GitHub Issue 管理規範](github-issue-management.md)，其中明列遠端現況與程式尚未支援的部分。
 
@@ -46,7 +46,7 @@ Issue 欄位、labels、Board 狀態與關聯設定見 [GitHub Issue 管理規�
 | 能力 | 現況證據 | 本次規劃 |
 |---|---|---|
 | Issue 自動派工 | `bin/pipeline/dispatch.ts` 已檢查 OpenSpec、`human-driving` 等條件 | 保留 Routine A，接 v2 router |
-| 本機隔離開發 | `.claude/skills/dev-task/SKILL.md` 定義 worktree 與驗收流程 | 抽出雙 host 共用執行契約 |
+| 本機隔離開發 | `plugin/skills/dev-task/SKILL.md` 定義 worktree 與驗收流程 | 抽出雙 host 共用執行契約 |
 | POC 比對與 Google 報告 | `dev-task/references/` 有 browser、poc-compare、verify-report 草案；部分未追蹤／未提交 | 加入版本綁定、證據留存、權限與 CI 重驗 |
 | Board 收尾 | Routine C（`board-sync.ts`）已於 2026-09-20 退役；改由 `/post-merge-wrapup` 依 dev 冒煙結果呼叫 `bin/pipeline/board.ts` 移 Done／Need Fix | merged／deployed／accepted 已由「merged 留 Review、冒煙過才 Done」區分；部署證據仍待納入 |
 | 雙訂閱 harness | v2 仍為規劃，`bin/agent/` 尚不存在 | 分階段實作，不把設計命令當可用指令 |
@@ -148,7 +148,7 @@ v2 的 private auto flow 保留 cross-provider review 要求。Public repo 採�
 
 ### 本機入口
 
-目前可指定 agent：「依 `.claude/skills/dev-task/SKILL.md`，從中央 Issue #N 啟動，完成開發與驗收報告。」Codex 需明確讀取該 skill，不能假設有 Claude slash command。
+目前可指定 agent：「依 `plugin/skills/dev-task/SKILL.md`，從中央 Issue #N 啟動，完成開發與驗收報告。」Codex 需明確讀取該 skill，不能假設有 Claude slash command。
 
 目標 CLI 介面如下，**尚未實作，不可直接執行**：
 

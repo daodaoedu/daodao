@@ -1,0 +1,216 @@
+{
+  "$comment": "各 skill 需要的能力、各平台實際具備的能力。plugin/scripts/build.ts 用這份資料決定每個平台收到哪些 skill，以及要注入哪段能力落差警語。改完要重跑 pnpm plugin:build。事實依據見 plugin/README.md「平台事實」。",
+  "capabilities": {
+    "filesystem": "讀寫本機 checkout 的檔案",
+    "bash": "執行本機 shell 命令",
+    "git": "git 讀寫（diff／commit／push／branch）",
+    "worktree": "git worktree 隔離工作目錄",
+    "gh": "GitHub 讀寫（gh CLI 或等價 API／connector）",
+    "runtests": "在本機跑 lint／typecheck／測試",
+    "browser": "瀏覽器自動化驗證與截圖",
+    "db": "直連資料庫查詢",
+    "subagent": "另開獨立 agent 做審查",
+    "drive": "上傳 Google 文件／Drive",
+    "hooks": "harness 自動觸發的攔截式 gate"
+  },
+  "platforms": {
+    "claude-code": {
+      "label": "Claude Code",
+      "emit": "native",
+      "target": "plugin/",
+      "has": [
+        "filesystem",
+        "bash",
+        "git",
+        "worktree",
+        "gh",
+        "runtests",
+        "browser",
+        "db",
+        "subagent",
+        "drive",
+        "hooks"
+      ],
+      "note": "canonical 來源。plugin/ 直接被 Claude Code 載入，不另外產生檔案。"
+    },
+    "agents-skills": {
+      "label": "Codex／ChatGPT 桌面版（.agents/skills）",
+      "emit": "full-copy",
+      "target": ".agents/skills/",
+      "pluginRoot": "plugin",
+      "has": [
+        "filesystem",
+        "bash",
+        "git",
+        "worktree",
+        "gh",
+        "runtests",
+        "db",
+        "subagent",
+        "hooks"
+      ],
+      "missing_note": {
+        "browser": "這裡預設沒有瀏覽器工具。需要畫面驗證時標記為未完成，或請人工執行後貼回證據；不得只因程式碼看起來對就打勾。",
+        "drive": "沒有 Drive connector。驗證報告先存成本機 Markdown，上傳由人工或 Claude Code 完成。"
+      },
+      "hooks_note": "Codex 有自己的 hooks（事件名與 Claude Code 相同）。本 repo 的 .codex/hooks.json 已指向同一批腳本，所以 pre-pr-gate 等閘門在 Codex 也會實際觸發。仍要確認 /hooks 已信任該設定，未信任時視同沒有閘門。"
+    },
+    "openai-plugin": {
+      "label": "OpenAI Plugin（ChatGPT 網頁／行動版＋Codex）",
+      "emit": "openai-plugin",
+      "target": "plugin/out/openai-plugin/",
+      "pluginRoot": "plugin",
+      "has": [
+        "filesystem",
+        "bash",
+        "git",
+        "worktree",
+        "gh",
+        "runtests",
+        "db",
+        "subagent"
+      ],
+      "conditional_note": "同一個 plugin 會同時被有 repo 的 Codex 與沒有 repo 的 ChatGPT 網頁／行動版載入，所以能力落差寫成條件式，由 agent 在執行時自己判斷。",
+      "missing_note": {
+        "browser": "沒有瀏覽器工具時，畫面驗證標記為未完成，不得用讀程式碼代替。",
+        "drive": "沒有 Drive connector 時，報告留在本機或直接貼進對話。",
+        "hooks": "plugin 內沒有附 hooks。發 PR 前的閘門必須由 agent 主動逐項執行並貼出輸出，不得宣稱機器已攔截。"
+      },
+      "linkMode": "standalone"
+    },
+    "claude-ai": {
+      "label": "Claude.ai",
+      "emit": "skill-bundle",
+      "target": "plugin/out/web-plugin/",
+      "has": [
+        "gh"
+      ],
+      "specClean": true,
+      "descriptionLimit": 200,
+      "gh_note": "僅在使用者已連接 GitHub connector、或 sandbox egress 開到 github.com 時成立；否則退化為純草稿。",
+      "missing_note": {
+        "filesystem": "沒有使用者的 repo checkout。sandbox 裡的檔案系統是空的暫時環境，不是專案。需要讀程式碼的步驟改為請使用者貼上檔案或 PR diff；拿不到就標「未查證」，不要推測。",
+        "bash": "sandbox 能跑指令，但跑不到使用者的專案。所有 pnpm／git／gh 指令改成輸出給使用者自己貼進終端機的清單。",
+        "git": "不能對使用者的 repo commit／push。只產草稿與訊息。",
+        "runtests": "跑不到專案的測試。不得宣稱測試通過。",
+        "hooks": "沒有 gate。輸出必須自行列出 PR 證據檢核表交人確認。"
+      },
+      "linkMode": "standalone",
+      "pluginRoot": ""
+    }
+  },
+  "skills": {
+    "prd-generation": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "gh"
+      ]
+    },
+    "product-status-check": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "bash"
+      ]
+    },
+    "file-bug-issue": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "gh"
+      ]
+    },
+    "gh-card": {
+      "requires": [],
+      "optional": [
+        "gh"
+      ]
+    },
+    "publish-tasks": {
+      "requires": [],
+      "optional": [
+        "gh"
+      ]
+    },
+    "notify-related-issue": {
+      "requires": [],
+      "optional": [
+        "gh"
+      ]
+    },
+    "format-commit": {
+      "requires": [
+        "git"
+      ],
+      "optional": [
+        "bash"
+      ]
+    },
+    "collect-pr-feedback": {
+      "requires": [
+        "gh"
+      ],
+      "optional": [
+        "filesystem",
+        "bash"
+      ]
+    },
+    "pre-commit-check": {
+      "requires": [
+        "bash",
+        "filesystem",
+        "runtests"
+      ],
+      "optional": []
+    },
+    "code-review": {
+      "requires": [
+        "bash",
+        "filesystem",
+        "git"
+      ],
+      "optional": [
+        "gh",
+        "subagent"
+      ]
+    },
+    "post-merge-wrapup": {
+      "requires": [
+        "bash",
+        "filesystem",
+        "git",
+        "gh"
+      ],
+      "optional": [
+        "runtests"
+      ]
+    },
+    "gh-pipeline": {
+      "requires": [
+        "bash",
+        "gh"
+      ],
+      "optional": [
+        "filesystem"
+      ]
+    },
+    "dev-task": {
+      "requires": [
+        "bash",
+        "filesystem",
+        "git",
+        "worktree",
+        "gh",
+        "runtests"
+      ],
+      "optional": [
+        "browser",
+        "db",
+        "subagent",
+        "drive",
+        "hooks"
+      ]
+    }
+  }
+}

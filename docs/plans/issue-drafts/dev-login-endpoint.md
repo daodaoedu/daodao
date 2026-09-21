@@ -18,7 +18,7 @@ dev 環境目前唯一登入方式是 Google OAuth。新開發流程要求每次
 - Google 需求文件：n/a：需求全文在本卡，無外部文件
 - 核准需求快照：本卡 body（建立後以 issue 版本為準）
 - Acceptance snapshot：本卡「驗收契約」表；S 人工任務不使用 OpenSpec
-- POC：n/a：純後端端點，無 UI；判定依據 templates/development/README.md「純後端 POC 可 N/A」
+- POC：n/a：純後端端點，無 UI；判定依據 plugin/templates/README.md「純後端 POC 可 N/A」
 - Drive 任務資料夾／驗收群組：n/a：驗證報告以 issue comment 與 Google 文件（dev-task verify 產出）交付
 
 ## 目標與範圍

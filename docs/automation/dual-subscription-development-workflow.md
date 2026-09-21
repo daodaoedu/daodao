@@ -16,7 +16,7 @@
 
 ## 1. 需求背景
 
-配套提案：[Issue 到開發、驗收與合併](issue-to-acceptance-workflow.md)、[額度分配政策](agent-budget-policy.md)、[文件模板](../../templates/development/README.md)。前者細化本機／自動共用 lease、Google Docs／Drive 驗收包、Issue 回寫與 Done 定義；後者補充 admission budget。均待實作，不改變本文 Phase 0 前置條件。
+配套提案：[Issue 到開發、驗收與合併](issue-to-acceptance-workflow.md)、[額度分配政策](agent-budget-policy.md)、[文件模板](../../plugin/templates/README.md)。前者細化本機／自動共用 lease、Google Docs／Drive 驗收包、Issue 回寫與 Done 定義；後者補充 admission budget。均待實作，不改變本文 Phase 0 前置條件。
 
 daodao 現有 pipeline 已將工程工作分為三段：Routine A 從 Planning Board 派送 mirror issues，
 Routine B 由外部 Claude cloud routine 實作與巡 PR，Routine C 在 merge 後回寫狀態。
@@ -45,10 +45,10 @@ harness。現行 Routine B 也讓 agent 直接修改、push 與開 PR，不適�
 |---|---|---|
 | Board → mirror issue | `.github/workflows/pipeline-dispatch.yml`、`bin/pipeline/dispatch.ts` | Routine A control plane |
 | Merge → Board Done | `.github/workflows/pipeline-board-sync.yml`、`bin/pipeline/board-sync.ts` | Routine C reconciliation |
-| Claude lifecycle hooks | `.claude/hooks/`、`.claude/settings.json` | Host adapter 與即時 feedback |
-| Profile rules | `.claude/hooks/profiles/*.json` | 搬到 host-neutral canonical profiles |
-| Gate Ledger | `.claude/hooks/lib.sh`、`analyze-ledger.sh` | 本機 ledger；schema 需擴充 |
-| Pre-PR gate | `.claude/hooks/pre-pr-gate.sh` | Harness deterministic rule（2026-09-19 起六道：Status、POC 比對、核心旅程矩陣、Deferred 開卡、PR body 驗證證據、前端 pattern parity） |
+| Claude lifecycle hooks | `plugin/hooks/`、`.claude/settings.json` | Host adapter 與即時 feedback |
+| Profile rules | `plugin/hooks/profiles/*.json` | 搬到 host-neutral canonical profiles |
+| Gate Ledger | `plugin/hooks/lib.sh`、`analyze-ledger.sh` | 本機 ledger；schema 需擴充 |
+| Pre-PR gate | `plugin/hooks/pre-pr-gate.sh` | Harness deterministic rule（2026-09-19 起六道：Status、POC 比對、核心旅程矩陣、Deferred 開卡、PR body 驗證證據、前端 pattern parity） |
 | PR evidence gate（CI） | `.github/workflows/pr-evidence-gate.yml`、`.github/scripts/check-pr-evidence.sh` | Pre-PR gate 的 CI 版，涵蓋 Codex／手動 gh／runner；advisory，升 block 需 repo variable + ruleset |
 | Validation parity | `scripts/check-validation-parity.py` | 前端手寫驗證規則 vs openapi pattern 的 signal（#188 教訓） |
 | Context Pack | `.github/scripts/retrieve-context.sh` | Prepare/reviewer input |

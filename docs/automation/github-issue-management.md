@@ -5,18 +5,18 @@
 > 日期：2026-09-12，2026-09-20 依 #241 更新。適用於一般需求、bug 與跨 repo 任務的人工管理；自動化落差另列於本文末。
 > 遠端現況依 GitHub CLI 唯讀查詢：中央 repo labels、Planning #10 fields；程式依本機 `bin/pipeline/`。子 repo labels、既有卡片關聯未逐一驗證。本文件不會修改遠端設定。
 
-搭配[共用開發流程](issue-to-acceptance-workflow.md)、[Bug 流程圖](development-workflow-diagrams.md)及[模板索引](../../templates/development/README.md)使用。本文集中定義 Issue 欄位、labels、狀態與關聯；驗收與額度規則沿用共用流程。
+搭配[共用開發流程](issue-to-acceptance-workflow.md)、[Bug 流程圖](development-workflow-diagrams.md)及[模板索引](../../plugin/templates/README.md)使用。本文集中定義 Issue 欄位、labels、狀態與關聯；驗收與額度規則沿用共用流程。
 
 ## 1. 開在哪裡、填哪些內容
 
 | 工作 | 開卡位置與格式 |
 |---|---|
-| 使用者目標／跨 repo 需求 | `daodaoedu/daodao` 中央 Issue，使用[中央模板](../../templates/development/central-issue.md)並加入 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) |
-| 中央目標的 repo 實作 | 對應子 repo，使用[子任務模板](../../templates/development/subtask-issue.md)，引用中央 AC |
-| Bug／CI 錯誤 | 依 [file-bug-issue](../../.claude/skills/file-bug-issue/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
+| 使用者目標／跨 repo 需求 | `daodaoedu/daodao` 中央 Issue，使用[中央模板](../../plugin/templates/central-issue.md)並加入 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) |
+| 中央目標的 repo 實作 | 對應子 repo，使用[子任務模板](../../plugin/templates/subtask-issue.md)，引用中央 AC |
+| Bug／CI 錯誤 | 依 [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
 | 同 repo 小任務 | 可直接以一張 Issue 關聯 PR，不為形式另拆子卡 |
 
-一般開卡使用 [gh-card](../../.claude/skills/gh-card/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
+一般開卡使用 [gh-card](../../plugin/skills/gh-card/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
 
 開卡時填目標與範圍、責任 repo／負責人、可驗收 AC、相依任務及 Done 條件。需求缺項填「待確認：原因／責任人／下一步」，執行後才產生的 SHA、run、PR、報告填「尚未開始／尚未產生」。不要為了開卡捏造版本或證據。
 
@@ -61,7 +61,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | `Need Fix` | post-merge-wrapup 的 dev 冒煙任一 ❌ 或未冒煙：驗收退回、待修 | open |
 | `Done` | 全部必要 repo 合併 + dev 冒煙通過（post-merge-wrapup 設定）；無部署需求依事先定義的替代條件 | board 內建「Auto-close issue」workflow 隨 Done 自動 close |
 
-移卡一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`（六欄 option id 與別名在 `bin/pipeline/types.ts`），`board.ts audit` 定期列出 Status 與 issue／PR／labels 的落差；操作手冊見 [gh-pipeline](../../.claude/skills/gh-pipeline/SKILL.md)。Board 另開著七個 GitHub 內建 workflow（Item added → Todo、Item closed → Done、Auto-close issue、PR linked／merged、Auto-add），但只對**同 repo** closing-keyword 連結的 PR 生效，sub-repo `Refs` 不會觸發，不能依賴它們移卡。
+移卡一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`（六欄 option id 與別名在 `bin/pipeline/types.ts`），`board.ts audit` 定期列出 Status 與 issue／PR／labels 的落差；操作手冊見 [gh-pipeline](../../plugin/skills/gh-pipeline/SKILL.md)。Board 另開著七個 GitHub 內建 workflow（Item added → Todo、Item closed → Done、Auto-close issue、PR linked／merged、Auto-add），但只對**同 repo** closing-keyword 連結的 PR 生效，sub-repo `Refs` 不會觸發，不能依賴它們移卡。
 
 目前沒有獨立的 Blocked、待部署或 Cancelled Status。處理方式如下：
 
@@ -70,7 +70,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 - 取消、重複或不處理要寫明結案原因，必要時使用對應 label，close 後將卡片從活躍 Board 封存，避免把未交付任務標成 Done；中央相依範圍由驗收者重新確認。
 - 已關閉 bug 若原情境仍失敗，重新開啟並回到 Todo（待調查）或 In Progress（已開始修正）；新問題另開卡並引用原卡。同步校正中央卡，不因其他子卡已完成而掩蓋未解問題。
 
-用[狀態摘要模板](../../templates/development/issue-status-comment.md)記錄本次版本、AC 結果、PR、驗收／部署證據、阻塞與下一步；同一摘要持續更新。GitHub 更新後回讀確認。未來 manifest／durable event store 才是自動執行權威，目前人工操作不得捏造 run 或 lease。
+用[狀態摘要模板](../../plugin/templates/issue-status-comment.md)記錄本次版本、AC 結果、PR、驗收／部署證據、阻塞與下一步；同一摘要持續更新。GitHub 更新後回讀確認。未來 manifest／durable event store 才是自動執行權威，目前人工操作不得捏造 run 或 lease。
 
 ## 4. 中央、子 Issue、PR 與相依關係
 
@@ -88,7 +88,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 
 ### PR 關聯與關閉時機
 
-使用[PR 模板](../../templates/development/pull-request.md)列中央與子 Issue。需部署後驗證的卡片，預設以一般參照記錄，並在完成驗收後人工 close；避免以 closing keyword 在 merge 時提前結案。若任務契約明定 merge 即滿足全部 Done 條件，才使用自動關閉關聯。中央跨 repo 卡不由單一子 PR 自動關閉。
+使用[PR 模板](../../plugin/templates/pull-request.md)列中央與子 Issue。需部署後驗證的卡片，預設以一般參照記錄，並在完成驗收後人工 close；避免以 closing keyword 在 merge 時提前結案。若任務契約明定 merge 即滿足全部 Done 條件，才使用自動關閉關聯。中央跨 repo 卡不由單一子 PR 自動關閉。
 
 GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` 不會觸發任何自動移卡，所以 board 回寫由 `/dev-task` finish（Review）與 `/post-merge-wrapup`（Done／Need Fix）執行；不要為了觸發內建 workflow 而提前用 `Closes` 關卡。
 

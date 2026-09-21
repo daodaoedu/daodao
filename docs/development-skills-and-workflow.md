@@ -21,11 +21,11 @@
 | 合併收尾 | post-merge-wrapup、dev-task cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
 | board | gh-pipeline | Planning board 六欄語意、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
 
-## Claude 與 Codex
+## 四平台的 skill 來源
 
-上述 13 個 skill 均有 `.claude/skills/<name>/SKILL.md` 完整規則與 `.codex/skills/<name>/SKILL.md` 薄入口；Codex 引用同一完整規則。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
+上述 13 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版讀 `.agents/skills/`，ChatGPT 網頁／行動版讀 `plugin/out/openai-plugin/`，Claude.ai 上傳 `plugin/out/claude-ai/` 打包的 zip（只收 7 個不需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
 
-Claude hooks 不自動等同 Codex gates；Codex 須主動執行相同檢查並保留證據。工具不可用標限制；缺少獨立 agent 不把自審冒稱獨立 review。檔案存在不證明兩客戶端端到端實測通過。
+Codex 有自己的 hooks（`.codex/hooks.json`，與 Claude Code 指向同一批腳本），但**首次使用要先 `/hooks` 信任**才會觸發；沒信任就等同沒有閘門，須主動執行相同檢查並保留輸出。ChatGPT 與 Claude.ai 沒有閘門機制，一律由 skill 內文逐項執行。工具不可用標限制；缺少獨立 agent 不把自審冒稱獨立 review。檔案存在不證明各客戶端端到端實測通過。
 
 ## 文件與執行基準
 
@@ -35,7 +35,7 @@ Claude hooks 不自動等同 Codex gates；Codex 須主動執行相同檢查並�
 
 ## 閘門（2026-09-19 起）
 
-發 PR 由 `.claude/hooks/pre-pr-gate.sh` 攔：Status 未 `verified`、POC 比對缺、核心旅程矩陣缺或有 ⬜／❌、Deferred item 無子 issue、PR body 無「## 驗證證據」、前端手寫 `pattern` 編不過、「## 驗證」留未勾項目或「需要手動驗證」清單、UI repo 缺全 ✅ 的「### 版面探針」表（`references/layout-probe.mjs`）。CI 側 `pr-evidence-gate` 讀同一段（advisory，可升 block）。規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`；各階段細節見 `docs/workflow.md` Phase 3、6–8。跨 repo 子 PR 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關。
+發 PR 由 `plugin/hooks/pre-pr-gate.sh` 攔：Status 未 `verified`、POC 比對缺、核心旅程矩陣缺或有 ⬜／❌、Deferred item 無子 issue、PR body 無「## 驗證證據」、前端手寫 `pattern` 編不過、「## 驗證」留未勾項目或「需要手動驗證」清單、UI repo 缺全 ✅ 的「### 版面探針」表（`references/layout-probe.mjs`）。CI 側 `pr-evidence-gate` 讀同一段（advisory，可升 block）。規則與升級策略見 `plugin/hooks/ADR-0001-gates-over-guidelines.md`；各階段細節見 `docs/workflow.md` Phase 3、6–8。跨 repo 子 PR 用 `Refs` 不用 `Closes`，中央卡由冒煙通過後手動關。
 
 ## 工作區與完成界線
 

@@ -7,7 +7,7 @@
 > 日期：2026-09-12。定位：以 Mermaid 說明目前成果、目標流程與待實作範圍。
 > **規劃與模板已建立，不代表自動化已完成。** 本文依本次對話與工作區盤點整理，未新增 GitHub、runner 或部署驗證。
 
-詳細規則以[共用開發流程](issue-to-acceptance-workflow.md)為準；額度見[分配政策](agent-budget-policy.md)，可複製格式見[模板索引](../../templates/development/README.md)。圖中的狀態是目標語意，不表示 GitHub Board 已有相同欄位。
+詳細規則以[共用開發流程](issue-to-acceptance-workflow.md)為準；額度見[分配政策](agent-budget-policy.md)，可複製格式見[模板索引](../../plugin/templates/README.md)。圖中的狀態是目標語意，不表示 GitHub Board 已有相同欄位。
 
 Issue 欄位、labels、Board 狀態及中央／子卡／PR 關聯統一見 [GitHub Issue 管理規範](github-issue-management.md)，適用一般需求與下方 Bug 流程。
 
@@ -69,7 +69,7 @@ flowchart TD
 - Google Docs 供討論／閱讀，執行使用已核准快照；manifest 記錄實際版本與驗證結果。
 - 同 repo 的小任務可直接由中央 Issue 關聯 PR，不必為形式多拆一張子卡。
 
-開卡使用 [gh-card](../../.claude/skills/gh-card/SKILL.md)。預設 Todo；「建立 Issue」與「啟動自動開發」是不同操作。
+開卡使用 [gh-card](../../plugin/skills/gh-card/SKILL.md)。預設 Todo；「建立 Issue」與「啟動自動開發」是不同操作。
 
 ## 3. 完整目標流程：自動與本機共用驗收
 
@@ -115,7 +115,7 @@ flowchart TD
 
 ## 4. Bug 通報與修復流程
 
-Bug／CI 錯誤通報由 [gh-card](../../.claude/skills/gh-card/SKILL.md) 分流至 [file-bug-issue](../../.claude/skills/file-bug-issue/SKILL.md)。開發中可立即處理、且屬於目前任務的錯誤，可在原 Issue／PR 留下重現與修復證據；無法立即修復或需要獨立追蹤時，走 bug 開卡流程。
+Bug／CI 錯誤通報由 [gh-card](../../plugin/skills/gh-card/SKILL.md) 分流至 [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md)。開發中可立即處理、且屬於目前任務的錯誤，可在原 Issue／PR 留下重現與修復證據；無法立即修復或需要獨立追蹤時，走 bug 開卡流程。
 
 ```mermaid
 flowchart TD

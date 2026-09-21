@@ -78,7 +78,7 @@ flowchart TD
 | **GitHub Copilot CLI** | GitHub 的 CLI agent | `npm install -g @github/copilot` |
 | **Codex CLI** | OpenAI 的 CLI agent，可作為替代方案 | `npm install -g @openai/codex` |
 
-Claude Code 是這套工作流程的核心 — 文件中提到的所有 skills（`/prd-generation`、`/gh-card`、`/dev-task`、`/format-commit`、`/code-review` 等）都在 Claude Code 環境內執行。安裝後需要登入 Anthropic 帳號。Codex 有同名 `.codex/skills/` 入口。
+Claude Code 是這套工作流程的核心 — 文件中提到的所有 skills（`/prd-generation`、`/gh-card`、`/dev-task`、`/format-commit`、`/code-review` 等）都在 Claude Code 環境內執行。安裝後需要登入 Anthropic 帳號。Codex 與 ChatGPT 桌面版讀 build 產物 `.agents/skills/`；ChatGPT 網頁／行動版與 Claude.ai 另有對應包裝，見 `plugin/README.md`。
 
 ### 0.2 GitHub CLI（gh）
 
@@ -118,7 +118,7 @@ node -v && pnpm -v && python3 --version && docker --version && git --version
 安裝 Claude Code 後，需要設定 hooks 和 skills 才能使用完整流程：
 
 1. **Hooks** — `.claude/settings.json` 掛了六支 hook（session-start、pre-write-guard、test-integrity-guard、pre-pr-gate、post-write-format、stop-quality-gate），涵蓋 session 開始、寫檔前後、開 PR 前與任務結束；完整說明見 [Phase 3.3](#33-開發中的自動化hooks)
-2. **Skills** — 位於 `.claude/skills/` 目錄，隨 repo clone 下來即可使用
+2. **Skills** — 位於 `plugin/skills/` 目錄，隨 repo clone 下來即可使用
 3. **Memory** — 位於 `~/.claude/projects/` 目錄，自動建立，用於跨對話記憶
 
 第一次 clone repo 後，跑一次 Claude Code 確認 hooks 正常運作：
@@ -275,7 +275,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 |------|-----|--------|------|
 | 1 | 提出者 | 用白話描述誰、在哪個情境、遇到什麼問題、希望怎麼改善；不用填 repo、SHA、負責人 | 對話或 issue |
 | 2 | AI | 讀來源（PRD／FRD／Issue comments／POC／設計稿），依 `product-status-check` 查 codebase 現況，列出目前行為、期待改動、影響與未知 | 現況查核 |
-| 3 | AI | 依 `templates/development/requirements-doc.md` 起草或補洞；已有文件就直接補，不另造同義規格 | PRD 草稿 |
+| 3 | AI | 依 `plugin/templates/requirements-doc.md` 起草或補洞；已有文件就直接補，不另造同義規格 | PRD 草稿 |
 | 4 | AI | 依 skill 的「交審前自審」檢核並修訂：規則衝突、驗收不可測、反面條件缺漏、與現況矛盾 | 修訂後草稿 + 檢核摘要 + 待決策清單 |
 | 5 | 人 | 審核是否符合原意、做產品取捨；每輪只回一兩個關鍵決策 | 決策 |
 | 6 | AI | 依決策更新，重新檢核受影響的規則與驗收條件 | 定稿到 `docs/product/<功能>/` |
@@ -366,7 +366,7 @@ daodao/
 跨 repo 順序固定 **storage（migration）→ server（API）→ ai-backend → f2e**。每完成一個 phase 的預設動作序列，不問「要 commit 還是先看效果」：
 
 1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看；API → curl；migration / script / skill → 依 `pre-commit-check` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」。碰到 form／mutation／controller／DTO 的 phase 要**真的送出一次**：一筆真實輸入成功、一筆 server 會拒絕的輸入失敗且訊息顯示——先把核心旅程矩陣的列開出來
-2. 跑 `bash .claude/hooks/stop-quality-gate.sh` 看高風險分類（migration / API / auth / env / CI），有標記的在 task.md 記「⚠ 高風險：<分類>」
+2. 跑 `bash plugin/hooks/stop-quality-gate.sh` 看高風險分類（migration / API / auth / env / CI），有標記的在 task.md 記「⚠ 高風險：<分類>」
 3. 驗證過 → `/pre-commit-check` → `/format-commit`
 4. 更新 `task.md` 的 checkbox 與 Status
 5. 直接進下一個 phase；定期 `git push -u origin feat/<slug>`
@@ -379,7 +379,7 @@ daodao/
 
 - 從 task.md 的驗收契約（PRD／FRD Test Points／AC）展開檢查清單，用瀏覽器（`claude-in-chrome` 或 Playwright 腳本）逐條走過，含窄螢幕（375px）、無障礙、反面條件
 - **POC 並排比對**（有可互動 HTML 原型時必做）：用 `getComputedStyle` 量測產出差異表，每條 ❌ 不是修掉就是列進「### POC 差異決策」交使用者裁決，確認後 task.md 寫 `POC 差異決策已確認`。沒有「設計系統」這個免死金牌
-- **核心旅程矩陣**（有任何寫入路徑就必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗，「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `.claude/skills/dev-task/references/journey-matrix.md`
+- **核心旅程矩陣**（有任何寫入路徑就必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗，「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `plugin/skills/dev-task/references/journey-matrix.md`
 - 每個檢查點截圖到 `evidence/`；task.md 新增「驗證」區塊記通過／失敗／未做 + 矩陣
 - **產出 Google 文件驗證報告**（必做）：截圖嵌圖，連結記進 task.md「驗證」區塊第一行；截圖只留在本機或對話裡等於沒發
 - 同一項失敗 2 次 → 停下來整理現象給使用者
@@ -399,7 +399,7 @@ daodao/
 6. task.md Status → `in-review`，記 PR 連結
 7. **回寫 issue**：`gh issue comment` 列 PR、驗證報告連結、核心旅程摘要、「尚未在 dev 冒煙」、Known incomplete scope
 
-**pre-pr 閘門**（`.claude/hooks/pre-pr-gate.sh`，攔 `gh pr create`；Codex 或未裝 hook 時由 agent 主動做同等檢查）：
+**pre-pr 閘門**（`plugin/hooks/pre-pr-gate.sh`，攔 `gh pr create`；Codex 或未裝 hook 時由 agent 主動做同等檢查）：
 
 | 閘門 | 擋什麼 |
 |---|---|
@@ -412,7 +412,7 @@ daodao/
 | `pr-verify-unchecked` | 「## 驗證」有 `- [ ]` 未勾項目或「需要手動驗證」清單（#166：登入牆截圖當證據） |
 | `pr-layout-probe-missing` | UI repo 缺「### 版面探針」表或表裡有 ❌（#233：settings 每頁多 132px） |
 
-逃生口 `DEV_TASK_SKIP_GATE="<原因>"`，一律留痕到 gate ledger。完整規則與升級策略見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`。
+逃生口 `DEV_TASK_SKIP_GATE="<原因>"`，一律留痕到 gate ledger。完整規則與升級策略見 `plugin/hooks/ADR-0001-gates-over-guidelines.md`。
 
 注意：sub-repo 的 Auto PR Description workflow 會在 opened 時覆寫標題與內文，開完 PR 等它跑完再 `gh pr edit` 還原。
 
@@ -447,7 +447,7 @@ daodao/
 | AI 寫入檔案**後** | `post-write-format.sh` | 自動格式化——JS/TS 用 Biome 或 ESLint，Python 用 Black + Ruff |
 | 任務結束（Stop） | `stop-quality-gate.sh` | 列出已變更檔案的就緒狀態、diff 統計與高風險分類（migration / API / auth / env / CI） |
 
-閘門事件一律寫進 gate ledger，`analyze-ledger.sh` 可彙整；設計原則見 `.claude/hooks/ADR-0001-gates-over-guidelines.md`。
+閘門事件一律寫進 gate ledger，`analyze-ledger.sh` 可彙整；設計原則見 `plugin/hooks/ADR-0001-gates-over-guidelines.md`。
 
 ### 3.4 各專案品質指令
 
@@ -735,7 +735,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 ### 8.3 Board 與 issue
 
-board 六欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Done（內建「Auto-close issue」workflow 順手 close 中央卡）、失敗 → Need Fix。沒有 cron；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 sub-repo 的 `Refs`。六欄語意見 [gh-pipeline skill](../.claude/skills/gh-pipeline/SKILL.md)。
+board 六欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Done（內建「Auto-close issue」workflow 順手 close 中央卡）、失敗 → Need Fix。沒有 cron；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 sub-repo 的 `Refs`。六欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
 
 驗收若發現與 PRD／FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差用 `/prd-generation` 重新定稿再開卡。
 
@@ -823,7 +823,7 @@ board 六欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-ta
 
 Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for Dev 之後**的工作交給三個每小時跑的 routine；2026-09-20 起全部退役：Routine A／B（#241）因 OpenSpec 退役失去輸入、從未穩定跑通；Routine C 只認 `auto` label PR，退役後 259 次 run 全是 no-op，還每小時吃共用 PAT 額度（稽核見 [docs/plans/actions-audit-2026-09-20.md](plans/actions-audit-2026-09-20.md)）。
 
-> 退役文件見 [docs/archive/automation/](archive/automation/README.md)；現行 board 操作見 [gh-pipeline skill](../.claude/skills/gh-pipeline/SKILL.md)。
+> 退役文件見 [docs/archive/automation/](archive/automation/README.md)；現行 board 操作見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
 
 ### 9.1 Routine 清單
 
