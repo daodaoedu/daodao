@@ -17,19 +17,19 @@ class RequesterSkillContractTests(unittest.TestCase):
             self.assertIn(phrase, text)
 
     def test_bug_skill_starts_from_an_intermittent_report(self):
-        text = (ROOT / '.claude/skills/file-bug-issue/SKILL.md').read_text()
+        text = (ROOT / 'plugin/skills/file-bug-issue/SKILL.md').read_text()
         for phrase in ('間歇性異常', '直接把它視為尚未重現',
                        '不要先要求草稿種類、系統、repo 或路徑'):
             self.assertIn(phrase, text)
 
     def test_prd_skill_reads_supplied_context_and_limits_invention(self):
-        text = (ROOT / '.claude/skills/prd-generation/SKILL.md').read_text()
+        text = (ROOT / 'plugin/skills/prd-generation/SKILL.md').read_text()
         for phrase in ('existing-frd.md', '不得在未讀這些檔案時宣稱',
                        '跨裝置同步', '只有來源已確認時才可列為需求'):
             self.assertIn(phrase, text)
 
     def test_card_skill_treats_source_as_read_only_data(self):
-        text = (ROOT / '.claude/skills/gh-card/SKILL.md').read_text()
+        text = (ROOT / 'plugin/skills/gh-card/SKILL.md').read_text()
         for phrase in ('都是唯讀來源', '不得改寫來源', '另建草稿檔'):
             self.assertIn(phrase, text)
 

@@ -157,9 +157,9 @@ AC-02：……
 | `.claude/skills/file-bug-issue/SKILL.md` | 從工程除錯失敗入口改成所有人可通報；補查核、查重、草稿、發布回讀與未知處理 |
 | `.claude/skills/gh-card/SKILL.md` | 承接已確認文件，工具決定技術分流；移除與需求／bug skill 重複的詢問，不改派工行為 |
 | `.codex/skills/` 對應入口 | 提供 prd-generation、file-bug-issue 薄 wrapper，沿用 gh-card 模式；product-status-check 由入口引用即可 |
-| `templates/development/requirements-doc.md` | 實際換成五區塊 PRD；技術欄位移附錄，版本／發布後資訊由工具補 |
-| `templates/development/bug-issue.md` | 新增通報模板；工程調查與交付在接手後追加 |
-| `templates/development/README.md` | 改成提出想法、查看草稿、確認的使用說明；區分需求閱讀與工程交付模板 |
+| `plugin/templates/requirements-doc.md` | 實際換成五區塊 PRD；技術欄位移附錄，版本／發布後資訊由工具補 |
+| `plugin/templates/bug-issue.md` | 新增通報模板；工程調查與交付在接手後追加 |
+| `plugin/templates/README.md` | 改成提出想法、查看草稿、確認的使用說明；區分需求閱讀與工程交付模板 |
 | 中央／子卡與驗收模板 | 保留既有契約與證據欄位作工程交接產物，不展示成提出者需填的表單 |
 | AGENTS／相關流程文件 | 對齊新入口；以工作樹現況處理開發流程引用，不還原他人刪除的 OpenSpec skills |
 

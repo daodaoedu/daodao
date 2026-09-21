@@ -1,0 +1,17 @@
+{
+  "name": "daodao-local",
+  "plugins": [
+    {
+      "name": "daodao",
+      "source": {
+        "source": "local",
+        "path": "./plugin/out/openai-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

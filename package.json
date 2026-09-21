@@ -6,7 +6,12 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "tsx": "tsx"
+    "tsx": "tsx",
+    "plugin:build": "tsx plugin/scripts/build.ts",
+    "plugin:check": "tsx plugin/scripts/build.ts --check",
+    "plugin:zip": "tsx plugin/scripts/zip.ts",
+    "plugin:package": "tsx plugin/scripts/package.ts",
+    "plugin:bump": "tsx plugin/scripts/bump.ts"
   },
   "devDependencies": {
     "@notionhq/client": "^2.2.15",

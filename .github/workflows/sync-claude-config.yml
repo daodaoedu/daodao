@@ -4,10 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - '.claude/hooks/**'
+      - 'plugin/**'
       - '.claude/settings.json'
-      - '.claude/skills/collect-pr-feedback/**'
-      - '.claude/skills/code-review/**'
       - '.github/workflows/auto-pr-description.yml'
       - '.github/workflows/code-review.yml'
       - '.github/workflows/branch-base-check.yml'
@@ -73,30 +71,29 @@ jobs:
           token: ${{ secrets.REPO_SYNC_TOKEN }}
           path: target
 
-      - name: Sync hooks, settings, and workflows
+      - name: Sync settings, workflows, and review scripts
         run: |
-          # Claude hooks + settings + profiles
-          mkdir -p target/.claude/hooks/profiles
-          cp .claude/hooks/*.sh target/.claude/hooks/
-          chmod +x target/.claude/hooks/*.sh
-          if [ -d .claude/hooks/profiles ]; then
-            cp .claude/hooks/profiles/*.json target/.claude/hooks/profiles/
-          fi
-
+          # 2026-09-21 起 hooks 與 skills 不再逐檔複製——那是漂移的來源。
+          # 子專案只收一份 settings.json 指向 marketplace，內容由 daodao plugin 提供，
+          # plugin 更新後子專案下次開 session 就拿到新版。
+          mkdir -p target/.claude
+          # del(.hooks) 不可省：`.[0] * .[1]` 是深合併，新的 settings.json 沒有 hooks 這個
+          # key，所以子專案原本指向 .claude/hooks/*.sh 的設定會被「保留」下來——而那些檔案
+          # 下一步就被刪掉，結果是每次 Write/Edit 都去執行一個不存在的檔案。
           if [ -f target/.claude/settings.json ]; then
-            jq -s '.[0] * .[1]' target/.claude/settings.json .claude/settings.json > target/.claude/settings.json.tmp
+            jq -s '.[0] * .[1] | del(.hooks)' target/.claude/settings.json .claude/settings.json > target/.claude/settings.json.tmp
             mv target/.claude/settings.json.tmp target/.claude/settings.json
           else
-            cp .claude/settings.json target/.claude/settings.json
+            jq 'del(.hooks)' .claude/settings.json > target/.claude/settings.json
           fi
 
-          # Shared skills
-          for skill in collect-pr-feedback code-review format-commit pre-commit-check; do
-            if [ -d ".claude/skills/$skill" ]; then
-              mkdir -p "target/.claude/skills/$skill"
-              cp ".claude/skills/$skill/SKILL.md" "target/.claude/skills/$skill/SKILL.md"
-            fi
+          # 清掉舊版複本，避免與 plugin 版本並存後雙重觸發
+          rm -f target/.claude/hooks/*.sh target/.claude/hooks/*.py target/.claude/hooks/profiles/*.json
+          rmdir target/.claude/hooks/profiles target/.claude/hooks 2>/dev/null || true
+          for skill in collect-pr-feedback code-review format-commit pre-commit-check post-merge-wrapup; do
+            rm -rf "target/.claude/skills/$skill"
           done
+          rmdir target/.claude/skills 2>/dev/null || true
 
           # Shared workflows
           mkdir -p target/.github/workflows
@@ -164,11 +161,11 @@ jobs:
           git add -f .claude/ .github/workflows/ .github/scripts/ .github/review-knowledge/
           git commit -m "chore: sync shared config from daodao
 
-          Auto-synced hooks, settings, workflows, and trusted review scripts from daodao"
+          Auto-synced settings (plugin enablement), workflows, and trusted review scripts from daodao"
           git push origin "$BRANCH"
           PR_URL=$(gh pr create \
             --title "chore: sync shared config" \
-            --body "Auto-synced from daodao main ${GITHUB_SHA} (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}). Updates hooks, settings, workflows, and trusted review scripts. Content is a machine copy of files already reviewed and merged in daodao; this PR is merged automatically once the target repo's required checks pass." \
+            --body "Auto-synced from daodao main ${GITHUB_SHA} (${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}). Updates settings (daodao plugin enablement), workflows, and trusted review scripts. Skills and hooks now ship via the daodao plugin, not as copied files. Content is a machine copy of files already reviewed and merged in daodao; this PR is merged automatically once the target repo's required checks pass." \
             --base "$DEFAULT_BRANCH")
           echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           echo "Shared config PR created: $PR_URL"
