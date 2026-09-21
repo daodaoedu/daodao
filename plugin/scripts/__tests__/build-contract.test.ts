@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -155,26 +156,40 @@ describe('build 的刪除護欄', () => {
   // build 會整個刪掉 target 目錄再重寫。platforms.json 是手改的，target 打錯字
   // （或把 claude-code 的 emit 從 native 改掉，它的 target 就是 `plugin/`）
   // 會直接刪光 canonical skills。護欄必須先擋下來。
-  const manifestPath = join(PLUGIN_ROOT, 'platforms.json')
-
-  function buildWithTarget(target: string) {
-    const original = readFileSync(manifestPath, 'utf8')
-    const mutated = JSON.parse(original)
-    mutated.platforms['agents-skills'].target = target
-    writeFileSync(manifestPath, JSON.stringify(mutated, null, 2))
+  //
+  // 用 DAODAO_PLUGIN_PLATFORMS 指向暫存 manifest，不改 repo 裡的那份：
+  // vitest 平行跑測試檔，改共用檔案會被別支測試讀到（那正是 2026-09-21 讓
+  // zip 可重現性測試紅掉的原因）。其餘平台的 target 也一併導到暫存目錄，
+  // 確保就算護欄沒攔住，也不會動到真正的產物。
+  function buildWithTarget(target: string): { blocked: boolean; stderr: string } {
+    const tmp = mkdtempSync(join(tmpdir(), 'daodao-guard-'))
     try {
-      execFileSync('pnpm', ['-s', 'plugin:build'], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' })
-      return { blocked: false }
-    } catch {
-      return { blocked: true }
+      const m = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'platforms.json'), 'utf8'))
+      for (const [id, platform] of Object.entries(m.platforms) as [string, { emit: string; target: string }][]) {
+        if (platform.emit !== 'native') platform.target = join(tmp, 'out', id)
+      }
+      m.platforms['agents-skills'].target = target
+      const manifestPath = join(tmp, 'platforms.json')
+      writeFileSync(manifestPath, JSON.stringify(m, null, 2))
+
+      execFileSync('pnpm', ['-s', 'plugin:build'], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        env: { ...process.env, DAODAO_PLUGIN_PLATFORMS: manifestPath },
+      })
+      return { blocked: false, stderr: '' }
+    } catch (e: any) {
+      return { blocked: true, stderr: `${e.stderr ?? ''}` }
     } finally {
-      writeFileSync(manifestPath, original)
-      execFileSync('pnpm', ['-s', 'plugin:build'], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' })
+      rmSync(tmp, { recursive: true, force: true })
     }
   }
 
   it('target 指向 canonical skills 會被拒絕，且 canonical 毫髮無傷', () => {
-    expect(buildWithTarget('plugin/skills/').blocked).toBe(true)
+    const r = buildWithTarget('plugin/skills/')
+    expect(r.blocked).toBe(true)
+    expect(r.stderr).toMatch(/canonical|拒絕刪除/)
     expect(existsSync(join(PLUGIN_ROOT, 'skills', 'dev-task', 'SKILL.md'))).toBe(true)
   })
 
@@ -186,6 +201,12 @@ describe('build 的刪除護欄', () => {
   it('target 指向 repo 外面會被拒絕', () => {
     expect(buildWithTarget('../').blocked).toBe(true)
   })
+
+  it('護欄測試本身不會動到 repo 的 platforms.json', () => {
+    const before = readFileSync(join(PLUGIN_ROOT, 'platforms.json'), 'utf8')
+    buildWithTarget('plugin/skills/')
+    expect(readFileSync(join(PLUGIN_ROOT, 'platforms.json'), 'utf8')).toBe(before)
+  })
 })
 
 describe('產物的相對連結必須解析得到', () => {
@@ -195,27 +216,26 @@ describe('產物的相對連結必須解析得到', () => {
   // 然後照自己的意思做事，所以這裡逐條實際解析。
   const LINK = /\]\(([^)#:]+\.(?:md|mjs|py|json|sh))\)/g
 
-  function brokenLinks(root: string): string[] {
-    const base = join(REPO_ROOT, root)
-    if (!existsSync(base)) return []
-    const broken: string[] = []
-    for (const file of walkMd(base)) {
-      const text = readFileSync(file, 'utf8')
-      for (const m of text.matchAll(LINK)) {
-        const link = m[1]
-        if (link.startsWith('http') || link.startsWith('${') || link.includes('<')) continue
-        if (!existsSync(resolve(dirname(file), link))) broken.push(`${relative(REPO_ROOT, file)} → ${link}`)
-      }
-    }
-    return broken
-  }
-
   function walkMd(dir: string): string[] {
     return readdirSync(dir).flatMap((e) => {
       const full = join(dir, e)
       if (statSync(full).isDirectory()) return walkMd(full)
       return full.endsWith('.md') ? [full] : []
     })
+  }
+
+  function brokenLinks(root: string): string[] {
+    const base = join(REPO_ROOT, root)
+    if (!existsSync(base)) return []
+    const broken: string[] = []
+    for (const file of walkMd(base)) {
+      for (const m of readFileSync(file, 'utf8').matchAll(LINK)) {
+        const link = m[1]
+        if (link.startsWith('http') || link.startsWith('${') || link.includes('<')) continue
+        if (!existsSync(resolve(dirname(file), link))) broken.push(`${relative(REPO_ROOT, file)} → ${link}`)
+      }
+    }
+    return broken
   }
 
   for (const root of ['plugin/skills', 'plugin/docs', 'plugin/templates', '.agents/skills', 'plugin/out/openai-plugin', 'plugin/out/web-plugin']) {

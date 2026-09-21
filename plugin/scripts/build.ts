@@ -45,7 +45,11 @@ type Manifest = {
   skills: Record<string, { requires: string[]; optional: string[] }>
 }
 
-const manifest: Manifest = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'platforms.json'), 'utf8'))
+// 測試要驗證「target 指到 canonical 會被擋下」，但不該為此改寫 repo 裡的 platforms.json——
+// vitest 平行跑不同測試檔，改到一半會被另一支正在打包的測試讀到（2026-09-21 就是這樣
+// 讓 zip 可重現性測試紅掉）。改用環境變數指向替代 manifest，測試就完全不碰共用狀態。
+const MANIFEST_PATH = process.env.DAODAO_PLUGIN_PLATFORMS ?? join(PLUGIN_ROOT, 'platforms.json')
+const manifest: Manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'))
 const pluginMeta = JSON.parse(readFileSync(join(PLUGIN_ROOT, '.claude-plugin', 'plugin.json'), 'utf8'))
 
 const errors: string[] = []
