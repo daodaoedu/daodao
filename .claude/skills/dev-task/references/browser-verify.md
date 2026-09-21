@@ -48,7 +48,7 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
 
 ## 3a. 登入牆處理（碰到「要登入才能看」時，先自己解，不要直接丟回給使用者）
 
-**硬規則：登入牆截圖 = 該頁未驗證。** 導頁後 `location.pathname` 落在 `/auth/*`、`/login` 的截圖不能存進 evidence/ 當檢查點證據，task.md 也不能寫「需要手動驗證（需 Google OAuth 登入）」然後把 Status 往下推——#166 就是這樣把 6 個 settings 頁面沒看過就 merge，evidence 裡的 `verify-bug-report.png` 其實是 "Welcome back to Dao Dao!"。發 PR 閘門 `pr-verify-unchecked` 會擋這種清單；`layout-probe.mjs` 也會把落在登入牆的 route 標 ❌。走下面配方 A／B 登入後再驗，全部配方都不通才請使用者手動登入，並在該項寫「（豁免：<使用者說的原因>）」。
+**硬規則：登入牆截圖 = 該頁未驗證。** 導頁後 `location.pathname` 落在 `/auth/*`、`/login` 的截圖不能存進 evidence/ 當檢查點證據，task.md 也不能寫「需要手動驗證（需 Google OAuth 登入）」然後把 Status 往下推——#166 就是這樣把 6 個 settings 頁面沒看過就 merge，evidence 裡的 `verify-bug-report.png` 其實是 "Welcome back to Dao Dao!"。發 PR 閘門 `pr-verify-unchecked` 會擋這種清單；`layout-probe.mjs` 也會把**被導去登入頁**的 route 標 ❌（目標頁本身在 `/auth/` 底下的不算）。走下面配方 A／B 登入後再驗，全部配方都不通才請使用者手動登入，並在該項寫「（豁免：<使用者說的原因>）」。
 
 **daodao 現成配方 A：dev-login 端點（部署後冒煙、要「全新帳號」時優先走這條）**
 
@@ -126,7 +126,10 @@ node "$ROOT/.claude/skills/dev-task/references/layout-probe.mjs" \
   --out "$TASK/evidence/verify-layout-probe"
 ```
 
-- 預設寬度 390／1024／1440（`--widths` 可改）；每組量三件事：落在登入牆 → ❌、`scrollWidth > innerWidth` → ❌ 並印出最寬元素、`main`／`[role=dialog]`／`aside` 內元素超出 viewport → ❌
+- 預設寬度 390／1024／1440（`--widths` 可改）；每組量三件事：
+  1. **被導離目標頁** → ❌。只有落點**不是**目標 route、且落在 `/auth/login`／`/login`／`/signin` 這類登入頁才算；目標頁本身就在 `/auth/` 底下（`/auth/error`、`/auth/onboarding`、`/auth/verify-email`）停在那裡是驗到了（daodao#239）
+  2. `scrollWidth > innerWidth` → ❌ 並印出最寬元素
+  3. `main`／`[role=dialog]`／`aside` 內元素超出 viewport → ❌。**被祖先 `overflow-x: hidden／auto／scroll` 裁切的不算**——水平捲動的卡片列、滿版裝飾插圖是刻意溢出且使用者看不到，把它們標 ❌ 只會逼人改掉正確的設計（daodao#239 的 `/practices/create` 一頁就有 89 個這種元素，而 `scrollWidth === innerWidth`）
 - 產出 `verify-layout-probe.md`（「### 版面探針」表，整段貼進 task.md「## 驗證」底下）、`.json`、每組一張截圖
 - 有 ❌：修掉重跑，不能自行放過；表裡留 ❌ 發 PR 會被擋
 - `--routes` 要列**任務碰到的每條 route**，包含新開的頁、改了共用 layout／元件時所有掛在它底下的頁（#166 改了 sidebar，settings 全部子頁都算）
@@ -134,6 +137,35 @@ node "$ROOT/.claude/skills/dev-task/references/layout-probe.mjs" \
 - 拿不到 `[id]` 動態 route 的真實 id 時，先打 `GET /api/v1/auth/me` 取 `data.user.id`；空 id 會落在別的頁，探針表的「落點」欄要對得上 route
 - `--out` 用絕對路徑；產出的 md 有 route 表，另有真實 id 的補跑結果要合併進 task.md 同一張表
 - diff 完全沒碰頁面／版面（只改 i18n 字串、純 hook 邏輯）時，在 task.md「## 驗證」寫一行 `版面探針不適用：<具體原因>`
+
+## 4b. 版面 rect 對照（零視覺差異的 refactor 必跑）
+
+抽共用元件、換 className、搬 DOM 這類「不該改變任何版面」的任務，**layout-probe 不夠**——它只看有沒有溢出，不看版面有沒有變。用 `rect-probe.mjs` 在改前改後各量一次，再用 `rect-diff.py` 比對：
+
+```bash
+# routes.json：[{ "path": "/zh-TW/settings", "auth": "user" }, ...]
+#   auth = "user"（既有使用者 token）／"temp"（dev-login mode=temp 的新用戶）／"none"（不帶 cookie）
+#   onboarding、verify-email/pending 這類頁面對已註冊使用者會被導走，要用對應身分才量得到目標頁
+
+# 改前：worktree 剛建好、還沒編輯時量（或用 git checkout <base> -- <src> 暫時還原，量完還原回 HEAD）
+node "$ROOT/.claude/skills/dev-task/references/rect-probe.mjs" \
+  --out "$TASK/evidence/baseline-rects.json" --base http://localhost:3001 \
+  --routes-file "$TASK/notes/routes.json" --cookie-file-user "$TASK/notes/tok.txt" \
+  --cookie-domain localhost --head "$(git rev-parse HEAD)" --label "改前"
+
+# 改後：同一份 routes.json
+node "$ROOT/.claude/skills/dev-task/references/rect-probe.mjs" \
+  --out "$TASK/evidence/after-rects.json" ... --label "改後"
+
+python3 "$ROOT/.claude/skills/dev-task/references/rect-diff.py" \
+  "$TASK/evidence/baseline-rects.json" "$TASK/evidence/after-rects.json" \
+  > "$TASK/evidence/ac03-rect-diff.md"     # 有差異時 exit 1
+```
+
+- 量的是：`scrollWidth`、wrapper（`main` 的父層，沒有 `main` 時取最外層帶 min-height 的捲動容器）的 rect 與 position／zIndex／overflow／minHeight／width／backgroundColor、wrapper **每個直接子元素**的 tag／rect／position、`main` 的 rect 與 maxWidth／padding／margin
+- className 字串允許不同（twMerge 會重排），computed 值必須完全相同——這是 daodao#240 抽 `PageShell` 時證明「15 頁零視覺差異」的方法
+- `--head` 把 commit 寫進輸出，讓證據自我綁定；改前的量測記得用 base 的 SHA
+- 產出的差異表整段貼進 task.md「## 驗證」底下，和版面探針表並列
 
 ## 4. 驗證迴圈
 

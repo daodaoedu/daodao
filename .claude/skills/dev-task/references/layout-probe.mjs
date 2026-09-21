@@ -47,7 +47,8 @@ if (!chromium) {
   process.exit(2);
 }
 
-const LOGIN_WALL = /\/(auth|login|signin|sign-in)(\/|$)/;
+const { isLoginWall, isClippedByAncestor } = await import(new URL("./layout-probe.lib.mjs", import.meta.url).href);
+
 const rows = [];
 const browser = await chromium.launch();
 for (const width of widths) {
@@ -59,7 +60,14 @@ for (const width of widths) {
     try {
       await page.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });
       await page.waitForTimeout(800);
-      const r = await page.evaluate(() => {
+      // dev server 首次編譯該頁時 auth 還沒 resolve，會先被丟到登入頁；重載一次就正常。
+      // 真的沒有有效 cookie 的話重載後仍然停在登入頁，照樣標 ❌。
+      if (isLoginWall(new URL(page.url()).pathname, route)) {
+        await page.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });
+        await page.waitForTimeout(2000);
+      }
+      const r = await page.evaluate((clipSrc) => {
+        const isClipped = new Function("return " + clipSrc)();
         const vw = innerWidth;
         const sw = document.documentElement.scrollWidth;
         let widest = null;
@@ -69,14 +77,20 @@ for (const width of widths) {
           if (rect.width === 0 || rect.height === 0) continue;
           const desc = `${el.tagName.toLowerCase()}.${(el.className?.toString() || "").trim().split(/\s+/).slice(0, 6).join(".")}`;
           if (rect.right > vw + 1 && (!widest || rect.right > widest.right)) widest = { desc, left: Math.round(rect.left), right: Math.round(rect.right) };
-          if ((rect.right > vw + 1 || rect.left < -1) && el.closest("main, [role=dialog], aside")) offscreen.push({ desc, left: Math.round(rect.left), right: Math.round(rect.right) });
+          if ((rect.right > vw + 1 || rect.left < -1) && el.closest("main, [role=dialog], aside")) {
+            // 被祖先的 overflow 裁切（hidden／auto／scroll，例如水平捲動的卡片列或滿版裝飾圖）就不會被使用者看到，
+            // 也不會造成頁面橫向捲動；只有「一路到 body 都沒有裁切祖先」的才是真的出界。
+            if (!isClipped(el, (a) => getComputedStyle(a).overflowX, document.body)) {
+              offscreen.push({ desc, left: Math.round(rect.left), right: Math.round(rect.right) });
+            }
+          }
         }
         return { pathname: location.pathname, vw, sw, widest, offscreen: offscreen.slice(0, 5), offscreenCount: offscreen.length };
-      });
+      }, isClippedByAncestor.toString());
       row.pathname = r.pathname;
       row.scrollWidth = r.sw;
       row.viewport = r.vw;
-      if (LOGIN_WALL.test(r.pathname)) row.problems.push(`登入牆：落在 ${r.pathname}，此頁未被驗證`);
+      if (isLoginWall(r.pathname, route)) row.problems.push(`登入牆：落在 ${r.pathname}，此頁未被驗證`);
       if (r.sw > r.vw + 1) row.problems.push(`橫向溢出 ${r.sw - r.vw}px（最寬元素 ${r.widest?.desc} left=${r.widest?.left} right=${r.widest?.right}）`);
       if (r.offscreenCount) row.problems.push(`出界元素 ${r.offscreenCount} 個：` + r.offscreen.map((o) => `${o.desc}[${o.left},${o.right}]`).join("；"));
     } catch (e) {
