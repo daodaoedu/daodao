@@ -48,6 +48,26 @@ printf 'INPUT=%s\\n' "$(printf '%s' "$HOOK_TOOL_INPUT" | jq -cS . 2>/dev/null ||
   }
 }
 
+/** 只印出正規化後的工作目錄，用來驗證各種事件形狀。 */
+function probeCwd(opts: { env?: Record<string, string>; stdin?: string }) {
+  const script = `
+set -uo pipefail
+source "${HOOKS}/lib.sh"
+hook_normalize_input
+printf '%s' "$HOOK_CWD"
+`
+  try {
+    return execFileSync('bash', ['-c', script], {
+      input: opts.stdin ?? '',
+      env: { ...process.env, ...opts.env },
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+  } catch (e: any) {
+    return `${e.stdout ?? ''}${e.stderr ?? ''}`
+  }
+}
+
 describe('hook_normalize_input：Claude Code 與 Codex 兩種輸入要等價', () => {
   const toolInput = { file_path: '/tmp/x.ts', content: 'const a = 1' }
 
@@ -67,6 +87,23 @@ describe('hook_normalize_input：Claude Code 與 Codex 兩種輸入要等價', (
     const out = probeNormalize({ stdin: JSON.stringify({ toolName: 'Edit', toolInput: toolInput }) })
     expect(out).toContain('NAME=Edit')
     expect(out).toContain('"file_path":"/tmp/x.ts"')
+  })
+
+  // 2026-09-21 迴歸：HOOK_CWD 原本綁在 CLAUDE_TOOL_INPUT 的分支裡，
+  // SessionStart 這類只有 CLAUDE_WORKING_DIRECTORY、沒有 tool input 的事件會整個跳過，
+  // hook 就跑去掃真正的 cwd 而不是指定的工作區（被 test_session_start_guard.py 抓到）。
+  it('只有 CLAUDE_WORKING_DIRECTORY、沒有 tool input 時仍採用它', () => {
+    const out = probeCwd({ env: { CLAUDE_WORKING_DIRECTORY: '/tmp/some-workspace' } })
+    expect(out.trim()).toBe('/tmp/some-workspace')
+  })
+
+  it('Codex 事件的 cwd 也認得', () => {
+    const out = probeCwd({ stdin: JSON.stringify({ tool_name: 'Bash', cwd: '/tmp/codex-workspace' }) })
+    expect(out.trim()).toBe('/tmp/codex-workspace')
+  })
+
+  it('兩邊都沒給時退回實際 cwd，不是空字串', () => {
+    expect(probeCwd({}).trim().length).toBeGreaterThan(0)
   })
 
   it('兩邊都沒給輸入時不爆炸（unbound variable 迴歸）', () => {
