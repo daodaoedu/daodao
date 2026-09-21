@@ -1,2 +1,9 @@
 packages:
   - "."
+
+# pnpm 10 預設不執行依賴的 build script，一遇到就整個 install 失敗
+# （ERR_PNPM_IGNORED_BUILDS），而不是略過後繼續。esbuild 要靠 postinstall 連結
+# 平台 binary，tsx 依賴它；本機因為 node_modules 早就存在看不出來，CI 第一次
+# 乾淨 install 才會撞到（2026-09-21 PR #268 的 regression job）。
+onlyBuiltDependencies:
+  - esbuild
