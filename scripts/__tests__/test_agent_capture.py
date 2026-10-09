@@ -12,8 +12,12 @@ import unittest
 WATCHER = Path(__file__).resolve().parents[2] / 'plugin/hooks/record-agent-writes.py'
 
 
-@unittest.skipUnless(sys.platform == 'darwin', 'native FSEvents capture requires macOS')
 class CaptureTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if sys.platform != 'darwin':
+            raise RuntimeError('Run native FSEvents integration on the dedicated macOS runner')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
