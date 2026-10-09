@@ -13,7 +13,7 @@
 //     --base http://localhost:3001 --routes /zh-TW/settings,/zh-TW/settings/bug-report \
 //     [--cookie "auth_token=<token>"] [--cookie-domain localhost] [--widths 390,1024,1440] \
 //     [--out ../evidence/verify-layout-probe] \
-//     [--open 'button[aria-label="帳號選單"]|[data-testid=filter-trigger]']   # 以 | 分隔；每個 route 依序點開量測
+//     [--open 'button[aria-label="帳號選單"]||[data-testid=filter-trigger]']   # 以 || 分隔；每個 route 依序點開量測
 // 產出：<out>.md（貼進 task.md「驗證」區塊）、<out>.json、<out>-<width>-<route>.png
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -51,25 +51,35 @@ if (!chromium) {
   process.exit(2);
 }
 
-const openers = args.open && args.open !== "true" ? args.open.split("|").map((s) => s.trim()).filter(Boolean) : [];
+const openers = args.open && args.open !== "true" ? args.open.split("||").map((s) => s.trim()).filter(Boolean) : [];
 const openerSeen = new Set();
 
 // 在頁面內執行：量目前可見浮層的裁切／出界／遮擋。無浮層回傳 null
-const measureFloating = () => {
+const FLOATING = "[role=menu],[role=listbox],[role=dialog],[data-radix-popper-content-wrapper] > *";
+// 點擊前先標記已存在的浮層，量測時排除，避免常駐 dialog 冒充「點開的浮層」
+const markExisting = (sel) => { for (const el of document.querySelectorAll(sel)) el.setAttribute("data-probe-preexisting", ""); };
+const measureFloating = (sel) => {
   const desc = (el) => `${el.tagName.toLowerCase()}.${(el.className?.toString() || "").trim().split(/\s+/).slice(0, 4).join(".")}`;
-  const layers = [...document.querySelectorAll("[role=menu],[role=listbox],[role=dialog],[data-radix-popper-content-wrapper] > *")]
+  const layers = [...document.querySelectorAll(sel)]
+    .filter((el) => !el.closest("[data-probe-preexisting]"))
     .filter((el) => {
       const r = el.getBoundingClientRect();
       const cs = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.opacity !== "0";
     })
-    .filter((el, i, arr) => !arr.some((other, j) => j !== i && other.contains(el)));
+    // 只去重同一個 radix popper 的 wrapper／content；dialog 裡的非 Portal 選單仍要各自量
+    .filter((el, i, arr) => {
+      const popper = el.closest("[data-radix-popper-content-wrapper]");
+      return !arr.some((other, j) => j !== i && popper && other.contains(el) && other.closest("[data-radix-popper-content-wrapper]") === popper);
+    });
   if (!layers.length) return null;
   const issues = [];
   for (const el of layers) {
     const r = el.getBoundingClientRect();
     const name = `${el.getAttribute("role") || "popper"} ${desc(el)}`;
-    for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+    for (let a = el.parentElement, from = el; a && a !== document.documentElement; from = a, a = a.parentElement) {
+      // fixed 定位的層脫離一般 overflow 祖先（transform 祖先的例外不處理），往上不再算裁切
+      if (getComputedStyle(from).position === "fixed") break;
       const cs = getComputedStyle(a);
       if (!/hidden|clip|auto|scroll/.test(cs.overflowX + cs.overflowY)) continue;
       const ar = a.getBoundingClientRect();
@@ -136,16 +146,23 @@ for (const width of widths) {
           continue;
         }
         openerSeen.add(sel);
-        await target.click();
+        await page.evaluate(markExisting, FLOATING);
+        try { await target.click({ timeout: 10000 }); } catch (e) {
+          row.problems.push(`--open ${sel} 點擊失敗：${e.message.split("\n")[0]}`);
+          continue;
+        }
         await page.waitForTimeout(400); // 等進場動畫（zoom-in-95）結束再量
-        const f = await page.evaluate(measureFloating);
+        const f = await page.evaluate(measureFloating, FLOATING);
         if (!f) row.problems.push(`--open ${sel} 點了沒有出現可量的浮層（role=menu|listbox|dialog／radix popper）`);
         else for (const issue of f.issues) row.problems.push(`浮層：${issue}`);
         const openShot = `${out}-${width}-${route.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "")}-open${i + 1}.png`;
         try { await page.screenshot({ path: openShot }); row.openShots.push(openShot); } catch {}
         await page.keyboard.press("Escape");
-        if (new URL(page.url()).pathname !== r.pathname) await page.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });
         await page.waitForTimeout(300);
+        // 導走了、或 Esc 關不掉（手刻浮層）→ 重新載入，下一個 opener／下一組才不會帶著開著的浮層量
+        const stillOpen = await page.evaluate((s) => !!document.querySelector(s.split(",").map((x) => `${x}:not([data-probe-preexisting])`).join(",")), "[role=menu],[role=listbox],[role=dialog]");
+        if (stillOpen || new URL(page.url()).pathname !== r.pathname) await page.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });
+        await page.evaluate(() => { for (const el of document.querySelectorAll("[data-probe-preexisting]")) el.removeAttribute("data-probe-preexisting"); });
       }
     } catch (e) {
       row.problems.push(`導頁失敗：${e.message.split("\n")[0]}`);
@@ -160,17 +177,19 @@ for (const width of widths) {
 }
 await browser.close();
 
+const neverOpened = openers.filter((sel) => !openerSeen.has(sel));
 const md = [
   "### 版面探針",
-  `<!-- layout-probe.mjs ${new Date().toISOString()} base=${base} -->`,
+  `<!-- layout-probe.mjs ${new Date().toISOString()} base=${base}${openers.length ? ` open=${JSON.stringify(openers)}` : ""} -->`,
   "| 寬度 | route | 落點 | scrollWidth / viewport | 結果 | 問題 | 截圖 |",
   "|---|---|---|---|---|---|---|",
+  // selector 在所有寬度都找不到：表格要留 ❌，發 PR 閘門只看表格
+  ...neverOpened.map((sel) => `| 全部 | --open | — | — | ❌ | --open ${sel} 在所有寬度都找不到可見目標（selector 打錯就等於沒量） | — |`),
   ...rows.map((r) => `| ${r.width} | ${r.route} | ${r.pathname ?? "—"} | ${r.scrollWidth ?? "—"} / ${r.viewport ?? "—"} | ${r.status} | ${[...r.problems, ...r.notes].join("；") || "—"} | ${[r.screenshot, ...r.openShots].filter(Boolean).map((f) => path.basename(f)).join("<br>") || "—"} |`),
   "",
 ].join("\n");
 fs.writeFileSync(`${out}.md`, md);
 fs.writeFileSync(`${out}.json`, JSON.stringify(rows, null, 1));
-const neverOpened = openers.filter((sel) => !openerSeen.has(sel));
 if (neverOpened.length) console.error(`--open 在所有寬度都找不到可見目標：${neverOpened.join("、")}（selector 打錯就等於沒量）`);
 const failed = rows.filter((r) => r.status === "❌").length + neverOpened.length;
 console.log(`\n${rows.length} 組，${failed} 組 ❌ → ${out}.md`);
