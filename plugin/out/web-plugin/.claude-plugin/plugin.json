@@ -1,7 +1,7 @@
 {
   "name": "daodao-web",
   "displayName": "島島阿學開發流程（網頁版）",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "島島阿學跨 repo 的需求→開發→驗收→合併收尾流程：網頁版收錄不需要本機 checkout 的 7 個流程。",
   "author": {
     "name": "daodaoedu",
