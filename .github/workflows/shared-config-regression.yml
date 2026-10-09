@@ -25,6 +25,12 @@ jobs:
           python3 -m pip install PyYAML==6.0.2
           python3 -m unittest discover -s scripts/__tests__ -p 'test_required_workflow_triggers.py' -v
           python3 -m unittest discover -s scripts/__tests__ -p 'test_collect_gate_protection.py' -v
+      - name: Agent handoff contract regression
+        run: |
+          python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_handoff.py' -v
+          python3 scripts/check-agent-handoff.py docs/automation/examples/agent-handoff.json
+          python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_delivery.py' -v
+          python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_trace_import.py' -v
       - name: Check shared workflow contracts
         run: |
           node --test .github/scripts/__tests__/*.test.cjs
@@ -41,3 +47,16 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm plugin:check
           pnpm vitest run plugin/scripts/__tests__/
+
+  native-trace-smoke:
+    name: Native filesystem trace (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned native observer
+        run: python3 -m pip install -r scripts/agent-trace/requirements.txt
+      - name: Verify Bash writes are independently captured
+        run: python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_capture.py' -v

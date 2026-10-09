@@ -12,7 +12,8 @@
     "plugin:check": "tsx plugin/scripts/build.ts --check",
     "plugin:zip": "tsx plugin/scripts/zip.ts",
     "plugin:package": "tsx plugin/scripts/package.ts",
-    "plugin:bump": "tsx plugin/scripts/bump.ts"
+    "plugin:bump": "tsx plugin/scripts/bump.ts",
+    "agent:check": "python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_handoff.py' -v && python3 scripts/check-agent-handoff.py docs/automation/examples/agent-handoff.json && python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_delivery.py' -v && python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_trace_import.py' -v"
   },
   "devDependencies": {
     "@notionhq/client": "^2.2.15",
