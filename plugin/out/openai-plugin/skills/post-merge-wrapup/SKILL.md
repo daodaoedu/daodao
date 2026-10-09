@@ -58,6 +58,8 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
    `Need Fix` 的卡由下一次 `/dev-task` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才移 Acceptance；部分 merged 留 Review 並在 comment 寫明剩哪些。
 
+   **母卡**（有 GitHub sub-issues）：子卡還有沒關的（含 bug 子卡），母卡冒煙通過也**留在 Review**，comment 寫明等哪幾張子卡；子卡全關後再跑一次本步驟交 PM，交接留言的驗收步驟寫「整體走一遍」而不是重驗各子卡 AC。規則見 [gh-pipeline](../gh-pipeline/SKILL.md) 的「母卡與子卡」。
+
 ## 2.6 PM 驗收之後
 
 - **通過**：PM 關 issue → 內建 `Item closed → Done` 自動移卡。之後收尾：拔 `human-driving`（`board.ts audit` 會列「Done 仍掛 human-driving」提醒）、docs/product 狀態改「已驗收」並附 PM 關 issue 的記錄。

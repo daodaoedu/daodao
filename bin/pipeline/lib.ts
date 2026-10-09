@@ -8,7 +8,6 @@
  */
 import {
   ACCEPTANCE_SLE_BUSINESS_DAYS,
-  ACCEPTANCE_WIP_LIMIT,
   CENTRAL_REPO,
   PM_LOGIN,
 } from "./types.js";
@@ -30,6 +29,12 @@ export interface AuditCard {
    * closing keyword or manual Development link) as opposed to a body mention.
    */
   prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
+  /** GitHub sub-issues of this card (parent cards only); total 0 = not a parent. */
+  subIssues?: { total: number; completed: number };
+  /** Parent issue number when this card is itself a sub-issue. */
+  parent?: number | null;
+  /** Sub-issues living outside the central repo, as `repo#n`. */
+  foreignSubIssues?: string[];
 }
 
 export interface AuditFinding {
@@ -75,15 +80,6 @@ export function businessDaysSince(since: string, now: Date): number {
   return count;
 }
 
-/** The Acceptance column over its WIP limit, or null when within it. */
-export function acceptanceOverLimit(
-  cards: AuditCard[],
-  limit = ACCEPTANCE_WIP_LIMIT
-): { count: number; limit: number } | null {
-  const count = cards.filter((c) => c.status === "Acceptance").length;
-  return count > limit ? { count, limit } : null;
-}
-
 export function auditCards(
   cards: AuditCard[],
   deadLabels: readonly string[],
@@ -105,6 +101,8 @@ export function auditCards(
     const open = c.prs.filter((p) => p.state === "open" && implements_(p));
     const merged = c.prs.filter((p) => p.state === "merged" && implements_(p));
     const ageDays = (now.getTime() - new Date(c.updatedAt).getTime()) / 86_400_000;
+    // Parent cards: the whole requirement is accepted only after every sub-issue is closed
+    const subOpen = c.subIssues ? c.subIssues.total - c.subIssues.completed : 0;
 
     if (c.status === null) {
       push(c, "卡片沒有 Status", "設 Todo，或從 board 移除");
@@ -142,7 +140,9 @@ export function auditCards(
       push(
         c,
         `PR 全 merged（${merged.map((p) => p.ref).join(", ")}）且 ${Math.floor(ageDays)} 天無活動`,
-        "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
+        subOpen > 0
+          ? `母卡：等 ${subOpen} 張子卡關閉後再跑 post-merge-wrapup 交 PM`
+          : "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
       );
     }
     if (status === "Acceptance" && c.issueState === "OPEN") {
@@ -157,6 +157,19 @@ export function auditCards(
           `提醒 @${PM_LOGIN} 驗收，或協助準備驗收材料`
         );
       }
+    }
+    if (subOpen > 0 && c.issueState === "CLOSED") {
+      push(c, `母卡已 close，仍有 ${subOpen} 張子卡未關`, "reopen 移回 Review，子卡全關後再交 PM 驗收");
+    }
+    if (subOpen > 0 && status === "Acceptance" && c.issueState === "OPEN") {
+      push(c, `母卡在 Acceptance，仍有 ${subOpen} 張子卡未關`, "移回 Review，子卡全關後再交 PM 驗收");
+    }
+    // Only two levels, and children live in the central repo (github-issue-management §4.3)
+    if (c.parent && (c.subIssues?.total ?? 0) > 0) {
+      push(c, `第三層：本卡是 #${c.parent} 的子卡，底下又有 ${c.subIssues!.total} 張子卡`, "後續改進移出成獨立卡；範圍內的工作改掛到母卡 #" + c.parent);
+    }
+    if ((c.foreignSubIssues ?? []).length > 0) {
+      push(c, `子卡不在中央 repo：${c.foreignSubIssues!.join(", ")}`, "可驗收工作改開中央子卡；工程交接筆記移出子卡關係");
     }
     if (status === "Review" && c.prs.length === 0) {
       push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");

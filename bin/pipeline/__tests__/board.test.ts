@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  acceptanceOverLimit,
   auditCards,
   businessDaysSince,
   resolveStatus,
   type AuditCard,
 } from "../lib.js";
-import { ACCEPTANCE_WIP_LIMIT, DEAD_LABELS, PM_LOGIN, STATUS_ALIASES } from "../types.js";
+import { DEAD_LABELS, PM_LOGIN, STATUS_ALIASES } from "../types.js";
 
 const NOW = new Date("2026-09-20T00:00:00Z");
 const card = (over: Partial<AuditCard>): AuditCard => ({
@@ -140,12 +139,36 @@ describe("Acceptance column", () => {
     expect(problems(card({ status: "Review", statusUpdatedAt: "2026-09-01T00:00:00Z", prs: [pr("daodao-f2e#1", "open")] }))).toEqual([]);
   });
 
-  it("reports when the column exceeds its WIP limit", () => {
-    const n = (k: number) => Array.from({ length: k }, (_, i) => ({ ...accepted("2026-09-18T02:00:00Z"), number: i + 1 }));
-    expect(acceptanceOverLimit(n(ACCEPTANCE_WIP_LIMIT))).toBeNull();
-    expect(acceptanceOverLimit(n(ACCEPTANCE_WIP_LIMIT + 1))).toEqual({
-      count: ACCEPTANCE_WIP_LIMIT + 1,
-      limit: ACCEPTANCE_WIP_LIMIT,
-    });
+});
+
+describe("parent cards", () => {
+  const parent = (over: Partial<AuditCard>) =>
+    card({ subIssues: { total: 3, completed: 1 }, prs: [pr("daodao-f2e#1", "merged")], ...over });
+
+  it("flags a closed parent that still has open sub-issues", () => {
+    expect(problems(parent({ status: "Done", issueState: "CLOSED" }))).toContain("母卡已 close，仍有 2 張子卡未關");
+    expect(problems(parent({ status: "Done", issueState: "CLOSED", subIssues: { total: 3, completed: 3 } }))).toEqual([]);
+  });
+
+  it("flags a parent handed to the PM before its sub-issues are closed", () => {
+    const f = problems(parent({ status: "Acceptance", assignees: [PM_LOGIN] }));
+    expect(f).toContain("母卡在 Acceptance，仍有 2 張子卡未關");
+    expect(problems(parent({ status: "Acceptance", assignees: [PM_LOGIN], subIssues: { total: 3, completed: 3 } }))).toEqual([]);
+  });
+
+  it("tells a stale merged parent in Review to wait for its sub-issues", () => {
+    const f = auditCards([parent({ status: "Review", updatedAt: "2026-09-05T00:00:00Z" })], DEAD_LABELS, NOW);
+    expect(f.find((x) => x.problem.startsWith("PR 全 merged"))?.suggest).toContain("等 2 張子卡關閉");
+  });
+
+  it("flags a third level: a sub-issue that has its own sub-issues", () => {
+    const f = problems(card({ status: "Done", issueState: "CLOSED", parent: 150, subIssues: { total: 2, completed: 2 } }));
+    expect(f).toContain("第三層：本卡是 #150 的子卡，底下又有 2 張子卡");
+    expect(problems(card({ parent: 150 }))).toEqual([]);
+  });
+
+  it("flags sub-issues opened outside the central repo", () => {
+    const f = problems(card({ subIssues: { total: 1, completed: 0 }, foreignSubIssues: ["daodao-f2e#1032"] }));
+    expect(f).toContain("子卡不在中央 repo：daodao-f2e#1032");
   });
 });

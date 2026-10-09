@@ -387,7 +387,7 @@ daodao/
 
 #### finish — 發 PR
 
-前置：task.md Status = `verified`。**Deferred items 先開卡再發 PR**——task.md「## Deferred items」每項要有子 issue `#n` 或 `（待開卡：<原因>）`；task.md 在 cleanup 會被刪，只留在 comment 的「之後再做」等於消失（#171 → #188 的第二個根因）。
+前置：task.md Status = `verified`。**Deferred items 先開卡再發 PR**——task.md「## Deferred items」每項要有 issue `#n` 或 `（待開卡：<原因>）`——本卡範圍內沒做完的開子 issue（母卡等它關閉才交 PM），範圍外的後續改進開獨立 issue、不掛子卡關係；task.md 在 cleanup 會被刪，只留在 comment 的「之後再做」等於消失（#171 → #188 的第二個根因）。
 
 對每個有變更的 repo：
 
@@ -736,6 +736,33 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 ### 8.3 Board 與 issue
 
 board 七欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Acceptance（assign PM＋交接留言 @PM）、失敗 → Need Fix；PM 驗收通過關 issue → Done（內建 `Item closed → Done`），退回 → Need Fix。沒有 cron；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 sub-repo 的 `Refs`。七欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
+
+```
+單張卡（子卡，或沒有子卡的卡）
+Todo → In Progress → Review → Acceptance → Done
+                       │          │
+                       │          └─ PM 退回 → Need Fix → In Progress
+                       └─ dev 冒煙失敗 → Need Fix
+
+母卡（有 sub-issues）
+子卡各自走上面流程 ─────┐
+                        ├→ 子卡全關 → 母卡進 Acceptance → PM 整體走一遍 → 關母卡 → Done
+母卡自己的 PR 全 merged ┘
+```
+
+| 欄位 | 球在誰手上 | 誰移卡 |
+|---|---|---|
+| Todo | 還沒人接 | `/gh-card` |
+| In Progress | 工程師 | `/dev-task` start |
+| Review | 人類 reviewer（review／merge） | `/dev-task` finish；merged 後仍留這裡 |
+| Acceptance | PM（`peggy1213-create`） | `/post-merge-wrapup` 冒煙通過：自動 assign PM＋交接留言 @PM |
+| Done | — | PM 驗收通過關 issue，自動移 |
+| Need Fix | 工程師 | 冒煙失敗或 PM 退回 |
+
+- **Definition of Done**：AC 全部符合＋已部署到 dev＋PM 確認通過。
+- **PM 驗收**：每天看「PM 驗收」view（依母卡分組、顯示子卡進度），照交接留言在 dev 操作；通過就關 issue，退回就留言哪條 AC 沒過並移 Need Fix。SLE 2 個工作天，欄位不設上限。
+- **母卡／子卡定義**：母卡＝一個功能（PRD），只放目標與子卡清單、不直接掛 PR；子卡＝可單獨驗收的一塊，開在中央 repo、只有兩層；技術債與後續改進開獨立卡。見 [GitHub Issue 管理規範 §4](automation/github-issue-management.md#4-母卡子卡pr-與相依關係)。
+- **母卡**：還有子卡沒關（含 bug 子卡）就留 Review，不交 PM、不可先關；PM 驗母卡時看整體串起來能不能用，不重驗子卡 AC。`board.ts audit` 會列出「母卡已 close 仍有子卡未關」與「母卡在 Acceptance 但子卡未全關」。
 
 驗收若發現與 PRD／FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差用 `/prd-generation` 重新定稿再開卡。
 

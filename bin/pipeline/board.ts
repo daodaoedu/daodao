@@ -15,7 +15,7 @@
  * (dev smoke passed → Acceptance, failed → Need Fix), collect-pr-feedback (→ Need Fix)
  * and gh-card (→ Todo). Done comes from the PM closing the issue (built-in workflow).
  */
-import { acceptanceOverLimit, auditCards, resolveStatus, type AuditCard } from "./lib.js";
+import { auditCards, resolveStatus, type AuditCard } from "./lib.js";
 import {
   addBoardItem,
   addIssueAssignees,
@@ -122,26 +122,23 @@ function cmdAudit(): void {
       issueState: l?.state ?? "OPEN",
       labels: l?.labels ?? [],
       assignees: l?.assignees ?? [],
+      subIssues: l?.subIssues,
+      parent: l?.parent,
+      foreignSubIssues: l?.foreignSubIssues,
       updatedAt: l?.updatedAt ?? new Date(0).toISOString(),
       statusUpdatedAt: it.statusUpdatedAt,
       prs: l?.prs ?? [],
     };
   });
   const findings = auditCards(cards, DEAD_LABELS, new Date(), staleDays);
-  const overLimit = acceptanceOverLimit(cards);
 
   if (argv.includes("--json")) {
-    console.log(JSON.stringify({ total: cards.length, acceptanceOverLimit: overLimit, findings }, null, 2));
+    console.log(JSON.stringify({ total: cards.length, findings }, null, 2));
     return;
   }
   const counts: Record<string, number> = {};
   for (const c of cards) counts[c.status ?? "(none)"] = (counts[c.status ?? "(none)"] ?? 0) + 1;
   console.log(`Board：${cards.length} 張　${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(" / ")}`);
-  if (overLimit) {
-    console.log(
-      `\n🚦 Acceptance ${overLimit.count} 張，超過 WIP 上限 ${overLimit.limit}：先協助清驗收，再開新工作`
-    );
-  }
   if (findings.length === 0) {
     console.log("✅ 沒有狀態落差");
     return;

@@ -12,7 +12,8 @@
 | 工作 | 開卡位置與格式 |
 |---|---|
 | 使用者目標／跨 repo 需求 | `daodaoedu/daodao` 中央 Issue，使用[中央模板](../../plugin/templates/central-issue.md)並加入 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) |
-| 中央目標的 repo 實作 | 對應子 repo，使用[子任務模板](../../plugin/templates/subtask-issue.md)，引用中央 AC |
+| 功能底下可單獨驗收的一塊（子卡） | `daodaoedu/daodao`，`gh issue create --parent <母卡>`，規則見 §4 |
+| 單一 repo 的工程交接（選用） | 對應子 repo，使用[子任務模板](../../plugin/templates/subtask-issue.md)；只當交接筆記，**不掛 sub-issue 關係、不上 board**，body 用 `Refs daodaoedu/daodao#N` 指回中央卡 |
 | Bug／CI 錯誤 | 依 [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
 | 同 repo 小任務 | 可直接以一張 Issue 關聯 PR，不為形式另拆子卡 |
 
@@ -73,12 +74,53 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 
 用[狀態摘要模板](../../plugin/templates/issue-status-comment.md)記錄本次版本、AC 結果、PR、驗收／部署證據、阻塞與下一步；同一摘要持續更新。GitHub 更新後回讀確認。未來 manifest／durable event store 才是自動執行權威，目前人工操作不得捏造 run 或 lease。
 
-## 4. 中央、子 Issue、PR 與相依關係
+## 4. 母卡、子卡、PR 與相依關係
+
+2026-10-09 定案（[#290](https://github.com/daodaoedu/daodao/issues/290)）。依據：Atlassian 的 epic／story 分層（[Epics, stories](https://www.atlassian.com/agile/project-management/epics-stories-themes)：story 從使用者角度、一個 sprint 內完成、有 AC 可測；小 bug／小 UI 調整可獨立不掛 epic）、Linear 的 sub-issues（[Parent and sub-issues](https://linear.app/docs/parent-and-sub-issues)：一張卡放不下但還不到專案規模才拆）、GitHub sub-issues（[Adding sub-issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/adding-sub-issues)：最多 100 張、8 層，可跨 repo——這是能力上限，不是建議）。
+
+### 4.1 三種卡
+
+| 卡 | 是什麼 | 例子 |
+|---|---|---|
+| **母卡** | 一個完整功能，對應一份 PRD／FRD；只放目標、AC 總表與子卡清單 | #138 共同挑戰、#151 空間 |
+| **子卡** | 母卡底下一塊 PM 可單獨驗收的工作，有自己的 AC（取自母卡 AC），約一週內做完 | #181 卡片調整、#188 建立場次 |
+| **獨立卡** | 不屬於任何功能的小 bug、小調整、技術債、後續改進 | daodao-f2e#1032 |
+
+### 4.2 要不要掛成子卡
+
+問一句：**「這張不做完，母卡的 AC 會不會過？」**
+
+- 會被擋 → 子卡：拆出來的開發工作、驗收發現違反母卡 AC 的問題。
+- 不會被擋 → 獨立卡，body 寫「相關：#n」或「#n 的後續改進」：技術債、新想法、其他功能的 bug。
+- 子卡 body 寫明對應母卡哪一條 AC；對應不到就不是子卡。
+
+### 4.3 結構
+
+- **只有兩層**：母卡 → 子卡，子卡底下不再掛子卡。
+- **子卡一律開在中央 repo**，才會上 board 給 PM 驗收；同一張子卡要動多個 repo 就開多個 PR，不另開 sub-repo 子卡。
+- **母卡不直接掛 PR**：實作都在子卡或獨立卡上。
+- 開新功能時 gh-card 依 AC 一次拆好子卡；dev-task 只在子卡或獨立卡上開工。
+
+### 4.4 狀態與驗收
+
+- 子卡／獨立卡各自走 Review → Acceptance → Done，PM 只驗本卡範圍。
+- 母卡等子卡全部關閉才進 Acceptance，PM 在 dev 把整個功能走一遍；不可先關母卡。
+- 驗子卡／獨立卡沒過 → 移 Need Fix、留言哪裡不對，不另開卡。
+- 驗母卡整體沒過 → 母卡底下開新子卡記錄問題，母卡移回 Review。
+
+### 4.5 既有卡片
+
+- #138、#151 這類已直接掛 PR 的母卡維持現狀，新工作照本規則開子卡。
+- 掛錯的子卡（後續改進、第三層、開在 sub-repo）逐張確認後移出（`gh issue edit <母卡> --remove-sub-issue <n>`），並在該卡留言說明；`Parent:` 文字行可保留當來源。
+
+`board.ts audit` 檢查：母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層、子卡不在中央 repo。
+
+### 4.6 其他關聯
 
 | 關係 | 必須記錄 | GitHub 操作與限制 |
 |---|---|---|
-| 中央 → 子 Issue | 中央交付表列 repo、子卡 URL、PR、版本與進度 | 在已授權拆卡範圍建立原生 sub-issue 關係；核對 Board 的 Parent issue／Sub-issues progress |
-| 子 Issue → 中央 | 獨立一行 `Parent: daodaoedu/daodao#123`，並引用中央 AC IDs | 供人與 AI 反查中央卡；建議同時建立原生 sub-issue 關係，board 的 Sub-issues progress 欄才會顯示 |
+| 母卡 → 子卡 | 母卡 body 列子卡清單與對應 AC | `gh issue create --parent <母卡>` 或 `gh issue edit <母卡> --add-sub-issue <n>`；回讀 board 的 Parent issue／Sub-issues progress |
+| 子卡 → 母卡 | 獨立一行 `Parent: daodaoedu/daodao#123`，並引用母卡 AC IDs | 文字行供人與 AI 反查；原生 sub-issue 關係另外建立 |
 | Issue → PR | Issue 交付表與 PR body 雙向記錄 URL、負責 AC、受驗 SHA | 一般參照可供追蹤；不保證自動填入 Linked pull requests 欄位 |
 | 子卡 → 相依子卡 | 完整 `owner/repo#N`／URL、阻塞原因、API／schema 前提及部署順序 | 可加原生相依關係輔助，但現有 pipeline 不據此自動排程 |
 | Bug → 原功能 | 原需求 Issue、相關 PR 與發生版本 | 只有屬於同一中央交付目標才設 Parent；一般關聯寫參照即可 |
@@ -103,7 +145,7 @@ GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` �
 | Labels | `bug`、`scope:S`、`human-driving`（先確認子 repo 存在） | `enhancement`、`scope:M`、`repo:daodao-f2e`、`repo:daodao-server` |
 | Status | 納入 Planning 時先 Todo，開始修復後 In Progress | Todo |
 | 責任 | 指定修復者與驗收者 | 指定目標負責人與各 repo 責任人 |
-| 關聯 | Body 引用原功能；若無中央父任務，不填假 Parent | 建立子卡後回填交付表並設定原生父子關係 |
+| 關聯 | Body 引用原功能；屬於某功能驗收範圍才掛該母卡（§4.2），否則寫「相關：#n」 | 依 AC 在中央 repo 拆子卡並設定原生父子關係（§4.3） |
 | 完成 | 回歸驗證、review、適用部署確認後 close | 所有必要子交付符合中央 AC 才 Done／close |
 
 子卡 body 的反查行示例（人與 AI 反查中央卡用）：
@@ -120,7 +162,7 @@ Parent: daodaoedu/daodao#123
 | `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、gh-card 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
 | Routine C 已退役 | merged 後卡留 Review，`/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（交 PM）／Need Fix，PM 關 issue 才 Done；沒有 cron |
 | 內建 workflow 目標欄位 API 讀不到 | 2026-09-20 於設定頁確認並把「Pull request merged」由 Done 改為 Review；之後若再改只能在設定頁看 |
-| `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；待補一致性檢查 |
+| `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；`board.ts audit` 檢查第三層與子卡不在中央 repo，`Parent:` 文字一致性尚未檢查 |
 | PR parser 只認同 repo closing refs | 部署後關卡流程先人工回寫；待支援一般關聯與延後完成 |
 | 可靠回寫、共用任務鎖與完整驗收 gates 仍為目標設計 | 依共用流程分階段落地與演練，文件存在不等於自動化已完成 |
 

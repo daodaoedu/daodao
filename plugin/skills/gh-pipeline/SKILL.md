@@ -39,12 +39,32 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 
 每張 Review／Acceptance／Need Fix 的卡要有一則最新的狀態 comment（PR 連結、等誰做什麼、驗收方式），PM 只看 board 也能追。Acceptance 的交接留言用 [issue-status-comment.md](../../templates/issue-status-comment.md) 的「交給 PM 驗收」段。
 
-### Acceptance 欄的規則（Kanban Guide 2025.5 的 WIP 與 SLE）
+### Acceptance 欄的規則（Kanban Guide 2025.5 的 SLE）
 
 - **PM 怎麼操作**：每天看 board 的「PM 驗收」view（篩 `status:Acceptance`）。通過 → 關 issue（卡自動到 Done）；退回 → 留言寫**哪一條 AC 沒過**、卡移 `Need Fix`（`set <n> needfix`）。
-- **WIP 上限 5**（`ACCEPTANCE_WIP_LIMIT`）：board view 的 column limit 也設 5，超過變紅。超過時工程師先停新工作，協助 PM 清驗收（補 demo、補驗收步驟）。
+- **不設欄位上限**（2026-10-09 使用者決定）：冒煙通過就移 Acceptance，不排隊。
 - **SLE 2 個工作天**（`ACCEPTANCE_SLE_BUSINESS_DAYS`，以台北時間的週一到週五計算，從卡片移進 Acceptance 起算）：超過由 `audit` 列出並提醒 PM。累積實際 cycle time 後再調整。
 - 驗收者帳號集中在 `bin/pipeline/types.ts` 的 `PM_LOGIN`。
+
+### 母卡與子卡（GitHub sub-issues）
+
+正式定義見 [GitHub Issue 管理規範 §4](../../../docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係)（三種卡、要不要掛子卡、只有兩層、子卡開在中央 repo、母卡不直接掛 PR）。這裡只列 board 狀態的部分：驗收單位是**子卡或獨立卡**；母卡代表整個需求，狀態跟著子卡走。
+
+| | 什麼時候進 Acceptance | PM 驗什麼 |
+|---|---|---|
+| 子卡（或沒有子卡的卡） | 冒煙通過就進，同上表 | 只驗這張的 AC，通過就關 |
+| 母卡 | 自己的 PR 都 merged **且所有子卡已關閉**（含 bug 子卡） | 整體串起來走一次，通過就關 |
+
+```
+子卡各自走 Review → Acceptance → Done ─┐
+                                        ├→ 母卡進 Acceptance → PM 整體走一遍 → 關母卡 → Done
+母卡自己的 PR 全 merged ────────────────┘
+```
+
+- 還有子卡沒關的母卡留在 `Review`，不交 PM；不可先關母卡。
+- **子卡只放本卡驗收範圍內的工作**（含驗收發現的 bug）。範圍外的後續改進／技術債開獨立 issue，body 寫「#n 的後續改進」，不掛子卡關係。已經掛錯的，確認後從母卡移除（GitHub 的 Remove sub-issue）並在該卡留言說明，不要讓母卡永遠關不掉。
+- **2026-10-09 之前由工程師關閉、未經 PM 驗收的卡**：依原 issue 重新打開放 Review，重跑 dev 冒煙後移 Acceptance，不另開追蹤 issue。
+- 「PM 驗收」view 依 `Parent issue` 欄位分組，並開 `Sub-issue progress` 欄位顯示子卡完成數（[GitHub Docs](https://docs.github.com/en/issues/planning-and-tracking-with-projects/understanding-fields/about-parent-issue-and-sub-issue-progress-fields)）。
 
 **Board 常數**：Project ID `PVT_kwDOBTLl0c4Bgxef`；Status field `PVTSSF_lADOBTLl0c4Bgxefzhfvwto`，七個 option id 只維護在 `bin/pipeline/types.ts`（`BOARD.statusOptions`、`STATUS_ALIASES`、`PM_LOGIN`、`DEAD_LABELS`），不要在文件複製 ID。新增 option 只能在 board 設定頁做（API 不支援），之後用 `gh project field-list 10 --owner daodaoedu --format json` 查 id 填回 `types.ts`；id 空著時 `set` 會直接報錯。
 
@@ -63,7 +83,7 @@ pnpm -s tsx bin/pipeline/board.ts audit [--json] [--stale-days 3]
 - status 接受別名：`todo` / `ready` / `wip`／`in-progress` / `review` / `accept`／`acceptance` / `needfix` / `done`（大小寫、`-`、`_`、空白互通）
 - `set` 不在 board 會先 `item-add`；改完回讀 Status，不一致直接 exit 1
 - `set <n> accept` 會順便 assign `PM_LOGIN` 並回讀 assignee；交接留言內容隨卡片不同，由 post-merge-wrapup 另外發
-- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 post-merge-wrapup、Acceptance 未指派 PM、Acceptance 超過 SLE、Acceptance 欄超過 WIP 上限、Review 沒 PR、死 label、Done 仍掛 `human-driving`。Acceptance 的計時用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`）才算實作；只在 body 提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
+- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 post-merge-wrapup、Acceptance 未指派 PM、Acceptance 超過 SLE、母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層子卡、子卡不在中央 repo（母卡 Review 的 merged-stale 建議改成「等子卡關閉」）、Review 沒 PR、死 label、Done 仍掛 `human-driving`。Acceptance 的計時用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`）才算實作；只在 body 提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
 - 不要用 `gh project item-list` 批次查：它每次拉全部欄位，跑十幾次就撞 Projects rate limit（2026-09-20 實測）；`board.ts` 走精簡 GraphQL（`listBoardItemsLite`、`findBoardItemForIssue`）
 - GraphQL 額度是**使用者 PAT 共用的 5000/hr**，Actions 裡的 Sync Shared Config 也用同一顆；大批操作前先 `gh api rate_limit --jq .resources.graphql`
 

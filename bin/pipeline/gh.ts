@@ -147,6 +147,9 @@ export interface IssueLinks {
   updatedAt: string;
   labels: string[];
   assignees: string[];
+  subIssues: { total: number; completed: number };
+  parent: number | null;
+  foreignSubIssues: string[];
   prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
 }
 
@@ -160,6 +163,9 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         (n) => `i${n}: issue(number: ${n}) { number state updatedAt
           labels(first: 30) { nodes { name } }
           assignees(first: 10) { nodes { login } }
+          subIssuesSummary { total completed }
+          parent { number }
+          subIssues(first: 50) { nodes { number repository { name } } }
           timelineItems(last: 40, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) { nodes {
             ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged repository { name } } } }
             ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged repository { name } } } }
@@ -177,6 +183,9 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         updatedAt: string;
         labels: { nodes: Array<{ name: string }> };
         assignees: { nodes: Array<{ login: string }> };
+        subIssuesSummary: { total: number; completed: number } | null;
+        parent: { number: number } | null;
+        subIssues: { nodes: Array<{ number: number; repository: { name: string } }> };
         timelineItems: { nodes: Array<{ source?: PRNode; subject?: PRNode }> };
       };
       if (!node) continue;
@@ -197,6 +206,11 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         updatedAt: node.updatedAt,
         labels: node.labels.nodes.map((l) => l.name),
         assignees: node.assignees.nodes.map((a) => a.login),
+        subIssues: node.subIssuesSummary ?? { total: 0, completed: 0 },
+        parent: node.parent?.number ?? null,
+        foreignSubIssues: node.subIssues.nodes
+          .filter((s) => s.repository.name !== CENTRAL_REPO)
+          .map((s) => `${s.repository.name}#${s.number}`),
         prs: Array.from(prs, ([ref, v]) => ({ ref, ...v })),
       });
     }

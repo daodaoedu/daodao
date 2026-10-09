@@ -17,7 +17,8 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 從本 SKILL 所在位置向上三層定位 daodao root，不依目前 shell cwd 猜 repo。
 
 - 中央 feature／工作卡：讀 [模板規則](../../templates/README.md)與 [central-issue.md](../../templates/central-issue.md)。
-- 明確要求拆子 Issue：另外讀 [subtask-issue.md](../../templates/subtask-issue.md)，引用中央 AC；保留獨立行 `Parent: daodaoedu/daodao#N`。中央尚未建立時先存子卡草稿，取得實際號碼後再發布。
+- **母卡與子卡**：依 [GitHub Issue 管理規範 §4](../../../docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係)。開新功能（一份 PRD／FRD）時，母卡只放目標、AC 總表與子卡清單，並依 AC 一次拆好子卡：子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張有對應母卡 AC 的驗收條件、約一週內做完，body 保留獨立行 `Parent: daodaoedu/daodao#N`。只有兩層；技術債、後續改進、其他功能的 bug 開獨立卡寫「相關：#n」，不掛子卡。中央尚未建立時先存子卡草稿，取得實際號碼後再發布。
+- 單一 repo 的工程交接才用 [subtask-issue.md](../../templates/subtask-issue.md) 開在 sub-repo，只當交接筆記，不掛 sub-issue 關係、不上 board。
 - Bug／CI 錯誤通報：讀 [file-bug-issue](../file-bug-issue/SKILL.md)，保留錯誤原文與重現步驟。
 - 只問「有哪些模板／skill」：說明入口即可。只要 skill 修改或流程規劃：不建立 Issue。
 
@@ -93,5 +94,5 @@ Issue 建立成功但掛 Board／回填失敗：保存 URL、item ID 與待補�
 
 - 「用 gh-card 根據這份 Google Doc 開需求 Issue，先放 Todo。」
 - 「用 gh-card 開一張本機開發卡，附 POC、AC 與後端串接驗收要求。」
-- 「用 gh-card 將中央 #N 拆成 server／f2e 子 Issue，沿用 AC。」
+- 「用 gh-card 將母卡 #N 依 AC 拆成子卡。」
 - 「用 gh-card 只產生草稿，不發布。」

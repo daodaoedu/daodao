@@ -42,8 +42,6 @@ export const PM_LOGIN = "peggy1213-create";
 /** Service Level Expectation for Acceptance (Kanban Guide 2025.5): business days in Asia/Taipei. */
 export const ACCEPTANCE_SLE_BUSINESS_DAYS = 2;
 
-/** WIP limit for Acceptance; mirror it as the column limit on the board view. */
-export const ACCEPTANCE_WIP_LIMIT = 5;
 
 /** Labels from the retired Routine A／B dispatch era — should not remain on active cards. */
 export const DEAD_LABELS = [
