@@ -123,10 +123,13 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/dev-task/references/layout-probe.mjs" \
   --base http://localhost:3001 \
   --routes /zh-TW/settings,/zh-TW/settings/bug-report \
   --cookie "auth_token=$TOKEN" --cookie-domain localhost \
+  --open 'button[aria-label="帳號選單"]' \
   --out "$TASK/evidence/verify-layout-probe"
 ```
 
-- 預設寬度 390／1024／1440（`--widths` 可改）；每組量三件事：落在登入牆 → ❌、`scrollWidth > innerWidth` → ❌ 並印出最寬元素、`main`／`[role=dialog]`／`aside` 內元素超出 viewport → ❌
+- 預設寬度 390／1024／1440（`--widths` 可改）；每組量：HTTP ≥ 400（打錯 route 量到 404 頁）→ ❌、落在登入牆 → ❌、`scrollWidth > innerWidth` → ❌ 並印出最寬元素、`main`／`[role=dialog]`／`aside` 內元素超出 viewport → ❌
+- **`--open`（diff 碰到選單／下拉／popover／側欄／有 overflow 的容器時必加）**：以 `|` 分隔觸發元素 selector，每組依序點開後量每個可見浮層（`[role=menu|listbox|dialog]`、radix popper）：被 `overflow` 祖先裁掉、超出 viewport、5 個取樣點被別的元素蓋住 → ❌，並多存一張 `-open<n>.png`。某寬度看不到觸發元素只記註記；**所有寬度都找不到 → exit 1**（selector 打錯不能變成全 ✅）。#214 的帳號選單被 sidebar `overflow-hidden` 切掉右半 84px，關閉狀態的版面探針全 ✅——浮層不打開就量不到
+- 浮層一律用有 Portal 的 `@daodao/ui` 元件（`Popover`／`Dialog`）。`@daodao/ui` 的 `DropdownMenu` 目前不是 Portal 實作，放在 overflow 容器內一樣會被裁；f2e 的 `no-hand-rolled-floating-layer.test.ts` 會擋原生元素上的 `role="menu|listbox|dialog"`
 - 產出 `verify-layout-probe.md`（「### 版面探針」表，整段貼進 task.md「## 驗證」底下）、`.json`、每組一張截圖
 - 有 ❌：修掉重跑，不能自行放過；表裡留 ❌ 發 PR 會被擋
 - `--routes` 要列**任務碰到的每條 route**，包含新開的頁、改了共用 layout／元件時所有掛在它底下的頁（#166 改了 sidebar，settings 全部子頁都算）
