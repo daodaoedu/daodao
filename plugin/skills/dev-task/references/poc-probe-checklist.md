@@ -8,6 +8,7 @@
 | 卡片 | 外框、圓角、padding、標題／meta 字級、grid 欄數／gap、**同列高度是否拉齊** | 卡片 stretch |
 | 按鈕 | **每一種變體各一**：頁面主要鈕、modal footer 主／次鈕、確認框取消／危險鈕、小型操作鈕（恢復／刪除）、icon 鈕 | 全部歸「設計系統」放過 |
 | 輸入元件 | input／textarea／select／date／checkbox：高、邊框色、圓角、padding、placeholder 色、focus 態 | — |
+| 浮層（選單／下拉／popover） | **開啟狀態**下的寬、圓角、陰影、與觸發鈕的相對位置；`layout-probe.mjs --open` 確認沒被祖先 overflow 裁切、沒被其他區塊蓋住 | #214 sidebar 帳號選單右半被切 |
 | 對話框 | **遮罩顏色與 alpha**、面板寬／圓角／padding／陰影、**max-height 與內容是否需要捲動**、header／footer 高、關閉鈕樣式 | 遮罩 0.7 vs 0.3、精靈內捲 |
 | 表格 | 容器是否貼齊卡片、表頭底色／底線／圓角、grid 模板、min-width、列 padding、首欄字重、分組列 | 表格內縮 24px |
 | 膠囊／標籤／狀態 | 類型膠囊、草稿標籤、tag chip、統計卡數字字重 | 膠囊 12/600 vs 13/400 |
