@@ -1,7 +1,7 @@
 {
   "name": "daodao",
   "displayName": "島島阿學開發流程",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "島島阿學跨 repo 的需求→開發→驗收→合併收尾流程：13 個 skill、PR 證據閘門 hooks 與 Issue/PR 模板。",
   "author": {
     "name": "daodaoedu",
