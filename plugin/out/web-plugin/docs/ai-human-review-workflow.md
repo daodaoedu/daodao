@@ -38,3 +38,13 @@ AI 讀取來源與當下程式，完成適用檢核、自審修訂，附成果�
 沿用本次對話既有授權。AI 自審不新增 commit、push、PR、Issue 留言、Ready、merge、部署或刪除資源的授權。只有草稿授權就完成本機成果；需批准時先做好具體預覽，遵循 AGENTS 的 commit／push 流程。部分發布成功保存 URL 並只補未完成步驟；timeout 先回讀，不盲目重送。
 
 「已合併」不等於部署或整體需求完成。收尾先驗證 PR 狀態及所需驗收，處理已授權的文件更新；仍有其他 repo／驗收未完成時保留未完成狀態。工作目錄清理先查 dirty、未推送 commit、未追蹤成果與使用中的 worktree。
+
+## 重複錯誤升級與交付契約
+
+同一錯誤第二次發生，先停止同樣的重試，保存兩次證據；逐項評估 lint rule、型別與目錄限制。只改提示詞是最後手段，必須說明機械防線無法適用的理由。沿用現有 skill 和 gate，不整包照搬外部 skills。
+
+三條規則：R1 實作、測試、合併、部署、可用的證據不得互相代替；R2 需求起草最多兩個產品問題，不問 repo／SHA／負責人／根因；R3 只改明列的任務檔案，保留共用 checkout 的其他差異。
+
+有使用者 checkout 時，可在任務目錄保存 agent-handoff.json，交付試行時執行 `python3 scripts/check-agent-handoff.py <artifact>`（腳本位於 daodao root）。格式、範例與改善流程見 root 的 `docs/automation/agent-learning-loop.md`；找不到 root 或無 shell 時標記未執行，不假稱自動通過。此檢查驗證結構，證據真偽與所有寫入仍由 trace／Git diff 校對。
+
+新 delivery gate 預設 off；未完成真實 client capture pilot 不啟用強制 trace。Bash 是合法工具，不能從 shell 文字猜檔名或照 diff 捏造操作紀錄。缺 trace 明列 unavailable／partial 與原因；manifest 通過不等於操作已驗證。共用 checkout 的 hook 改動會立即影響其他 session，實驗必須隔離或預設不啟用。

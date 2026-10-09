@@ -50,7 +50,13 @@ for candidate in "$cwd" $cd_paths $wt_paths; do
 done
 [ -z "$task_dir" ] && exit 0          # 不在 dev-task 任務內，不管
 task_md="$task_dir/task.md"
-[ -f "$task_md" ] || exit 0           # 沒有 manifest（clone 模式或臨時分支），不管
+if [ ! -f "$task_md" ]; then
+  if [ "${DEV_TASK_DELIVERY_GATE_MODE:-off}" = block ]; then
+    echo "❌ dev-task 目錄缺 task.md，無法核對交付契約" >&2
+    exit 2
+  fi
+  exit 0
+fi
 
 # 目標 repo：cd 路徑或 cwd 中 worktrees/<task>/<repo>
 repo_dir=""
@@ -319,5 +325,107 @@ EOF
     fi
   fi
 fi
+
+# --- 閘門 9：試行交付契約。未完成真實 client pilot 前預設 off ---
+delivery_mode="${DEV_TASK_DELIVERY_GATE_MODE:-off}"
+case "$delivery_mode" in
+  off) exit 0 ;;
+  warn|block) ;;
+  *) echo "❌ delivery gate mode 必須是 off／warn／block" >&2; exit 2 ;;
+esac
+# warn 以 subprocess 執行 block，保留診斷但不把缺 trace 包裝成完成。
+if [ "$delivery_mode" = warn ]; then
+  if DEV_TASK_DELIVERY_GATE_MODE=block bash "$0"; then exit 0; fi
+  log_gate_event "pr-delivery-pilot" "$task_md" "warn:delivery-unverified" "dev-task"
+  echo "⚠️ delivery gate 試行未通過；不代表已驗證操作 trace" >&2
+  exit 0
+fi
+delivery_repo="$task_dir/$repo_dir"
+delivery_artifact="$task_dir/agent-handoff.$repo_dir.json"
+if [ -z "$repo_dir" ] || ! git -C "$delivery_repo" rev-parse --git-dir >/dev/null 2>&1; then
+  echo "❌ delivery gate 無法定位 Git repo" >&2
+  exit 2
+fi
+# 只解析 shell tokens，從不執行來源中的指令。
+requested_base=$(python3 - "$cmd" <<'PYBASE'
+import re, shlex, sys
+if re.search(r'\\[;&|]', sys.argv[1]):
+    raise SystemExit('delivery gate: escaped shell punctuation is unsupported; quote option values or use --body-file')
+try:
+    lexer = shlex.shlex(sys.argv[1].replace('\\\n', ''), posix=False, punctuation_chars=';&|\n')
+    lexer.whitespace = ' \t\r'
+    lexer.whitespace_split = True
+    tokens = list(lexer)
+except ValueError as exc:
+    raise SystemExit(f'delivery gate: cannot parse shell command ({exc}); use --body-file and a literal --base')
+starts = [i for i in range(len(tokens)-2) if tokens[i:i+3] == ['gh', 'pr', 'create']]
+if len(starts) != 1:
+    raise SystemExit('delivery gate: cannot identify a single PR command')
+args = tokens[starts[0]+3:]
+for i, token in enumerate(args):
+    if token and all(char in ';&|\n' for char in token):
+        args = args[:i]
+        break
+# Respect option values: a title named '-Bmain' is not a PR base flag.
+value_options = {'--title', '-t', '--body', '-b', '--body-file', '-F', '--repo', '-R',
+                 '--label', '-l', '--reviewer', '-r', '--assignee', '-a', '--project', '-p',
+                 '--milestone', '-m', '--template', '-T', '--recover'}
+base = ''
+i = 0
+while i < len(args):
+    token = shlex.split(args[i])[0]
+    if token in value_options:
+        if i+1 >= len(args): raise SystemExit('delivery gate: missing option value')
+        i += 2
+        continue
+    if token in ('--head', '-H') or token.startswith('--head=') or (token.startswith('-H') and len(token) > 2):
+        raise SystemExit('delivery gate: explicit --head is unsupported; open the validated task branch')
+    if token in ('--base', '-B'):
+        if i+1 >= len(args): raise SystemExit('delivery gate: missing --base value')
+        base = shlex.split(args[i+1])[0]
+        i += 2
+        continue
+    if token.startswith('--base='):
+        base = token.split('=', 1)[1]
+    elif token.startswith('-B') and len(token) > 2:
+        base = token[2:]
+    i += 1
+if base and (base.startswith('-') or '$' in base or '`' in base):
+    raise SystemExit('delivery gate: unresolved PR base; use a literal branch')
+print(base)
+PYBASE
+) || { echo "❌ delivery gate：無法解析 PR base" >&2; exit 2; }
+base_ref=""
+if [ -n "$requested_base" ]; then
+  base_ref="refs/remotes/origin/$requested_base"
+  if ! git -C "$delivery_repo" rev-parse --verify "$base_ref" >/dev/null 2>&1; then
+    echo "❌ delivery gate：缺 PR base ${requested_base}；先 fetch" >&2
+    exit 2
+  fi
+else
+  base_ref=$(git -C "$delivery_repo" symbolic-ref -q refs/remotes/origin/HEAD || true)
+fi
+if [ -z "$base_ref" ]; then
+  for ref in refs/remotes/origin/main refs/remotes/origin/dev; do
+    if git -C "$delivery_repo" rev-parse --verify "$ref" >/dev/null 2>&1; then base_ref="$ref"; break; fi
+  done
+fi
+if [ -z "$base_ref" ]; then
+  echo "❌ delivery gate 缺 origin default branch；先 fetch 並設定 origin/HEAD" >&2
+  exit 2
+fi
+delivery_base=$(git -C "$delivery_repo" merge-base HEAD "$base_ref") || {
+  log_gate_event "pr-delivery-unverified" "$delivery_artifact" "block:merge-base" "dev-task"
+  echo "❌ delivery gate：無法計算 merge-base；先 fetch 並確認 PR base" >&2
+  exit 2
+}
+delivery_args=(--repo "$delivery_repo" --artifact "$delivery_artifact" --base "$delivery_base")
+if [ "${DEV_TASK_REQUIRE_TRACE:-0}" = 1 ]; then delivery_args+=(--require-trace); fi
+if ! python3 "$HOOKS_DIR/check-agent-delivery.py" "${delivery_args[@]}"; then
+  log_gate_event "pr-delivery-unverified" "$delivery_artifact" "block" "dev-task"
+  echo "❌ delivery gate：任務紀錄、Git diff 或 capture 不一致；不能發 PR" >&2
+  exit 2
+fi
+log_gate_event "pr-delivery-manifest-verified" "$delivery_artifact" "pass:git-and-evidence-only" "dev-task"
 
 exit 0
