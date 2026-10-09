@@ -1,0 +1,17 @@
+{
+  "mode": "intake",
+  "claims": [{"stage": "deployment", "status": "unverified"}],
+  "questions": [{"field": "expected-behavior"}],
+  "owned_paths": ["docs/plans/example-draft.md"],
+  "writes": ["docs/plans/example-draft.md"],
+  "recurrences": [{
+    "count": 2,
+    "control": "lint",
+    "assessment": {
+      "lint": "檢查 verified claim 的 stage 與 evidence stage 一致",
+      "type": "跨客戶端 JSON，使用 runtime validation",
+      "directory": "只允許明列的任務檔案"
+    },
+    "regression_ref": "scripts/__tests__/test_agent_handoff.py"
+  }]
+}

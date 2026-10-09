@@ -8,6 +8,7 @@ HOOK="$SCRIPT_DIR/../../plugin/hooks/pre-pr-gate.sh"
 [ -x "$HOOK" ] || chmod +x "$HOOK"
 
 SANDBOX=$(mktemp -d)
+SANDBOX=$(cd "$SANDBOX" && pwd -P)
 export HOME="$SANDBOX/home"      # gate ledger 寫進沙盒，不污染真實 ~/.cache
 mkdir -p "$HOME"
 trap 'rm -rf "$SANDBOX"' EXIT
@@ -21,16 +22,53 @@ make_task() {
   local task_dir="$SANDBOX/root/worktrees/$n-case"
   mkdir -p "$task_dir/$repo" "$task_dir/notes"
   printf '%s\n' "$content" > "$task_dir/task.md"
+  make_delivery "$task_dir/$repo"
   echo "$task_dir"
+}
+
+# 交付 fixture 在真實 Git repo 留下 base / head；證據放 task 目錄，避免污染 repo。
+make_delivery() {
+  python3 - "$1" <<'PYFIXTURE'
+import hashlib, json, pathlib, subprocess, sys
+repo = pathlib.Path(sys.argv[1])
+def git(*args):
+    return subprocess.check_output(['git', '-C', str(repo), *args], text=True, stderr=subprocess.DEVNULL).strip()
+git('init', '-q')
+git('config', 'user.name', 'Gate Test')
+git('config', 'user.email', 'gate@example.invalid')
+if not (repo / '.git/HEAD').exists():
+    raise SystemExit('fixture repository missing')
+try:
+    base = git('rev-parse', '--verify', 'HEAD')
+except subprocess.CalledProcessError:
+    (repo / 'delivery.txt').write_text('base\n')
+    git('add', '-A')
+    git('commit', '-qm', 'base')
+    base = git('rev-parse', 'HEAD')
+git('update-ref', 'refs/remotes/origin/main', base)
+git('update-ref', 'refs/remotes/origin/dev', base)
+(repo / 'delivery.txt').write_text('changed\n')
+git('add', '-A')
+git('commit', '-qm', 'delivery')
+head = git('rev-parse', 'HEAD')
+paths = sorted(set(git('diff', '--name-only', base, head).splitlines()))
+trace = repo.parent / ('trace.' + repo.name + '.json')
+trace.write_text(json.dumps(dict(head_revision=head, events=[dict(kind='local-write', targets=paths)])))
+artifact = dict(mode='development', claims=[], questions=[], owned_paths=paths, writes=paths,
+                recurrences=[], base_revision=base, head_revision=head,
+                trace=dict(ref=trace.name, sha256=hashlib.sha256(trace.read_bytes()).hexdigest()))
+(repo.parent / ('agent-handoff.' + repo.name + '.json')).write_text(json.dumps(artifact))
+PYFIXTURE
 }
 
 # 跑 hook：$1=cwd  $2=指令  → 輸出 exit code；stderr 存到 $ERR_FILE（run_hook 在 $(...) 子 shell 內跑，變數帶不出來）
 ERR_FILE="$SANDBOX/last.err"
+OUT_FILE="$SANDBOX/last.out"
 run_hook() {
   local cwd="$1" command="$2" code=0
   local input
   input=$(jq -cn --arg c "$command" '{command: $c}')
-  CLAUDE_TOOL_INPUT="$input" CLAUDE_WORKING_DIRECTORY="$cwd" bash "$HOOK" >/dev/null 2>"$ERR_FILE" || code=$?
+  DEV_TASK_DELIVERY_GATE_MODE=block CLAUDE_TOOL_INPUT="$input" CLAUDE_WORKING_DIRECTORY="$cwd" bash "$HOOK" >"$OUT_FILE" 2>"$ERR_FILE" || code=$?
   echo "$code"
 }
 last_err() { cat "$ERR_FILE" 2>/dev/null || true; }
@@ -86,6 +124,14 @@ pr_cmd() {  # $1=repo path $2=body file
 # 0. 不在 dev-task 任務內 → 不管
 code=$(run_hook "$SANDBOX/elsewhere" "gh pr create --base dev --title t --body b")
 expect_pass "非 dev-task 目錄不攔" "$code"
+mkdir -p "$SANDBOX/root/worktrees/99-missing-task/daodao-server"
+code=$(run_hook "$SANDBOX/root/worktrees/99-missing-task/daodao-server" 'gh pr create --base dev --title t --body b')
+expect_block "block 模式缺 task.md" "$code" "task.md"
+input=$(jq -cn '{command:"gh pr create --base dev --title t --body b"}')
+code=0
+env -u DEV_TASK_DELIVERY_GATE_MODE CLAUDE_TOOL_INPUT="$input" CLAUDE_WORKING_DIRECTORY="$SANDBOX/root/worktrees/99-missing-task/daodao-server" bash "$HOOK" >/dev/null 2>"$ERR_FILE" || code=$?
+expect_pass "預設 off 缺 task.md 不新增攔截" "$code"
+
 
 # 1. Status implementing → 擋
 t=$(make_task daodao-f2e "$(task_md implementing "$GOOD_MATRIX" '- none')")
@@ -222,6 +268,7 @@ if command -v node >/dev/null && command -v python3 >/dev/null; then
   code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
   expect_block "前端無效 HTML pattern（#188）" "$code" "v flag 編不過"
   printf 'const P = "[a-z0-9]+(-[a-z0-9]+)*";\n<input pattern={P} />\n' > "$t/daodao-f2e/src/form.tsx"
+  make_delivery "$t/daodao-f2e"
   code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
   expect_pass "前端 pattern 修正後對到 openapi" "$code"
 else
@@ -344,5 +391,92 @@ t=$(make_task daodao-server "$(task_md verified "$GOOD_MATRIX" '- none' '')")
 printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
 code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
 expect_pass "後端 repo 不要求版面探針" "$code"
+
+# 14. 真實交付入口缺紀錄或 SHA 過期必須擋住。
+python3 - "$t/agent-handoff.daodao-server.json" <<'PYFIXTURE'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1]); data = json.loads(path.read_text())
+data.pop('trace')
+data.update(trace_status='unavailable', trace_reason='Bash client has no structured targets')
+path.write_text(json.dumps(data))
+PYFIXTURE
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_pass "missing trace 有明確原因標為 unverified" "$code"
+[[ "$(last_err) $(cat "$OUT_FILE")" == *"trace unverified"* ]] || fail "missing trace 必須顯示 unverified 警告"
+rm "$t/agent-handoff.daodao-server.json"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "缺 agent handoff" "$code" "delivery gate"
+input=$(jq -cn --arg c "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")" '{command: $c}')
+code=0
+env -u DEV_TASK_DELIVERY_GATE_MODE CLAUDE_TOOL_INPUT="$input" CLAUDE_WORKING_DIRECTORY="$t/daodao-server" bash "$HOOK" >/dev/null 2>"$ERR_FILE" || code=$?
+expect_pass "delivery gate 預設 off 缺 artifact 放行" "$code"
+for gate_mode in off warn; do
+  input=$(jq -cn --arg c "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")" '{command: $c}')
+  code=0
+  DEV_TASK_DELIVERY_GATE_MODE="$gate_mode" CLAUDE_TOOL_INPUT="$input" CLAUDE_WORKING_DIRECTORY="$t/daodao-server" bash "$HOOK" >/dev/null 2>"$ERR_FILE" || code=$?
+  expect_pass "delivery gate $gate_mode 缺 artifact 放行" "$code"
+  if [ "$gate_mode" = warn ]; then
+    [[ "$(last_err)" == *"delivery"* ]] || fail "warn 模式必須警告 delivery"
+  fi
+done
+
+# 還原既有已提交版本的 fixture，然後新增提交製造 stale head。
+python3 - "$t" <<'PYFIXTURE'
+import hashlib, json, pathlib, subprocess, sys
+root = pathlib.Path(sys.argv[1]); repo = root / 'daodao-server'
+head = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
+base = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD^'], text=True).strip()
+trace = root / 'trace.daodao-server.json'
+data = dict(mode='development', claims=[], questions=[], owned_paths=['delivery.txt'], writes=['delivery.txt'],
+            recurrences=[], base_revision=base, head_revision=head,
+            trace=dict(ref=trace.name, sha256=hashlib.sha256(trace.read_bytes()).hexdigest()))
+(root / 'agent-handoff.daodao-server.json').write_text(json.dumps(data))
+PYFIXTURE
+printf 'new head\n' > "$t/daodao-server/delivery.txt"
+git -C "$t/daodao-server" add delivery.txt
+git -C "$t/daodao-server" commit -qm 'new head'
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "agent handoff head 過期" "$code" "delivery gate"
+
+# 15. PR 指定 dev，必須比較 origin/dev 而非預設 main。
+t=$(make_task daodao-server "$(task_md verified "$GOOD_MATRIX" '- none' '')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+repo="$t/daodao-server"
+git -C "$repo" update-ref refs/remotes/origin/dev HEAD
+git -C "$repo" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+printf 'dev change\n' > "$repo/dev-change.txt"
+make_delivery "$repo"
+# make_delivery 更新 main；還原 main 到 dev 的父提交。
+git -C "$repo" update-ref refs/remotes/origin/main "$(git -C "$repo" rev-parse origin/dev^ )"
+for base_option in '--base dev' '-B dev' '--base=dev' '-Bdev'; do
+  code=$(run_hook "$repo" "cd $repo && gh pr create $base_option --title t --body-file $t/notes/body.md")
+  expect_pass "指定 $base_option 比較 dev 而非 main" "$code"
+done
+code=$(run_hook "$repo" "cd $repo && gh pr create --base dev --title t --body-file $t/notes/body.md; true")
+expect_pass "PR base 接 shell 分隔符號" "$code"
+code=$(run_hook "$repo" "cd $repo && gh pr create --base dev --title t --body-file $t/notes/body.md && git branch -B main")
+expect_pass "後續 shell 指令的 -B 不改 PR base" "$code"
+code=$(run_hook "$repo" "cd $repo && gh pr create --base dev --head other-branch --title t --body-file $t/notes/body.md")
+expect_block "PR 指定不同 head 不冒用 local HEAD 驗證" "$code" "delivery gate"
+code=$(run_hook "$repo" "cd $repo && gh pr create --base dev --title '-Bmain' --body-file $t/notes/body.md")
+expect_pass "PR title 中的 -B 只是文字" "$code"
+code=$(run_hook "$repo" "cd $repo && gh pr create --base dev --title ';' --body-file $t/notes/body.md")
+expect_pass "quoted title 分隔符號不終止 PR command" "$code"
+code=$(run_hook "$repo" "cd $repo && gh pr create --base dev --title foo\;bar --head other-branch --body-file $t/notes/body.md")
+expect_block "escaped title 不可隱藏 explicit head" "$code" "delivery gate"
+code=$(run_hook "$repo" "cd $repo && gh pr create --title foo\;bar --base dev --body-file $t/notes/body.md")
+expect_block "escaped punctuation 不可誤用預設 base" "$code" "delivery gate"
+newline_command=$(printf 'cd %s && gh pr create --title t --body-file %s --base dev\ngit branch -B main' "$repo" "$t/notes/body.md")
+code=$(run_hook "$repo" "$newline_command")
+expect_pass "換行後的 -B 不改 PR base" "$code"
+continued_command=$(printf 'cd %s && gh pr create \\\n --base dev --title t --body-file %s' "$repo" "$t/notes/body.md")
+code=$(run_hook "$repo" "$continued_command")
+expect_pass "shell line continuation 保留 PR options" "$code"
+# 沒有共同祖先時仍應 exit 2 並留下 delivery blocker。
+orphan=$(printf 'orphan\n' | git -C "$repo" commit-tree "$(git -C "$repo" rev-parse HEAD^{tree})")
+git -C "$repo" update-ref refs/remotes/origin/dev "$orphan"
+code=$(run_hook "$repo" "$(pr_cmd "$repo" "$t/notes/body.md")")
+expect_block "PR base 無共同祖先" "$code" "delivery gate"
+grep -q 'pr-delivery' "$HOME/.cache/daodao-harness/gate-ledger.jsonl" || fail "無共同祖先未留下 delivery ledger"
 
 echo "✅ pre-pr-gate regression tests passed"
