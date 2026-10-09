@@ -28,7 +28,13 @@ export interface AuditCard {
    * PRs referencing the card. `linked` marks a real GitHub link (ConnectedEvent:
    * closing keyword or manual Development link) as opposed to a body mention.
    */
-  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
+  prs: Array<{
+    ref: string;
+    state: "open" | "merged" | "closed";
+    linked: boolean;
+    /** Central cards this PR explicitly targets (title `— daodao#N`, Refs/Closes/Fixes lines). */
+    targets?: number[];
+  }>;
   /** GitHub sub-issues of this card (parent cards only); total 0 = not a parent. */
   subIssues?: { total: number; completed: number };
   /** Parent issue number when this card is itself a sub-issue. */
@@ -43,6 +49,22 @@ export interface AuditFinding {
   status: string | null;
   problem: string;
   suggest: string;
+}
+
+/**
+ * Central-repo cards a PR explicitly targets: a `daodao#N` marker in the title, or
+ * `Refs`/`Closes`/`Fixes`/`Resolves` lines naming `daodaoedu/daodao#N`, `daodao#N` or the
+ * issue URL. Prose mentions (follow-up lists, 「另卡 #n」) are not targets.
+ */
+export function prTargets(title: string, body: string): number[] {
+  const found = new Set<number>();
+  const card = /(?:daodaoedu\/)?daodao(?:#|\/issues\/)(\d+)\b/g;
+  for (const m of title.matchAll(card)) found.add(Number(m[1]));
+  for (const line of body.split("\n")) {
+    if (!/^\s*(?:[-*]\s*)?(?:refs?|closes?|fixes?|resolves?)\b/i.test(line)) continue;
+    for (const m of line.matchAll(card)) found.add(Number(m[1]));
+  }
+  return [...found];
 }
 
 /** Match the alias table without importing types at runtime (keeps lib.ts I/O-free). */
@@ -94,10 +116,12 @@ export function auditCards(
     const status = c.status ?? "(none)";
     // A central-repo PR counts as implementation only when it is genuinely linked;
     // docs PRs that merely mention several cards in their body must not look like
-    // landed work. Sub-repo PRs use `Refs`, which is only ever a mention, so they
-    // always count.
+    // landed work. A sub-repo PR that explicitly targets other cards only mentions this one (e.g. #218's PRs
+    // listing follow-up cards); PRs with no target marker predate the convention and still count.
     const implements_ = (p: AuditCard["prs"][number]) =>
-      !p.ref.startsWith(`${CENTRAL_REPO}#`) || p.linked;
+      p.ref.startsWith(`${CENTRAL_REPO}#`)
+        ? p.linked
+        : p.linked || !p.targets?.length || p.targets.includes(c.number);
     const open = c.prs.filter((p) => p.state === "open" && implements_(p));
     const merged = c.prs.filter((p) => p.state === "merged" && implements_(p));
     const ageDays = (now.getTime() - new Date(c.updatedAt).getTime()) / 86_400_000;

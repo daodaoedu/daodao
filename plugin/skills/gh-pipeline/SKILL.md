@@ -63,7 +63,7 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 
 - 還有子卡沒關的母卡留在 `Review`，不交 PM；不可先關母卡。
 - **子卡只放本卡驗收範圍內的工作**（含驗收發現的 bug）。範圍外的後續改進／技術債開獨立 issue，body 寫「#n 的後續改進」，不掛子卡關係。已經掛錯的，確認後從母卡移除（GitHub 的 Remove sub-issue）並在該卡留言說明，不要讓母卡永遠關不掉。
-- **2026-10-09 之前由工程師關閉、未經 PM 驗收的卡**：依原 issue 重新打開放 Review，重跑 dev 冒煙後移 Acceptance，不另開追蹤 issue。
+- **2026-10-09 之前由工程師關閉、未經 PM 驗收的卡**：依原 issue 重新打開放 Review，重跑 dev 冒煙後移 Acceptance，不另開追蹤 issue。**只重開以「完成」（`COMPLETED`）關閉的卡**；以「不做」（not planned）或「重複」（duplicate）關閉的卡維持關閉，不需 PM 驗收（2026-10-10 曾誤重開 #170、#219，已改回）。
 - 「PM 驗收」view 依 `Parent issue` 欄位分組，並開 `Sub-issue progress` 欄位顯示子卡完成數（[GitHub Docs](https://docs.github.com/en/issues/planning-and-tracking-with-projects/understanding-fields/about-parent-issue-and-sub-issue-progress-fields)）。
 
 **Board 常數**：Project ID `PVT_kwDOBTLl0c4Bgxef`；Status field `PVTSSF_lADOBTLl0c4Bgxefzhfvwto`，七個 option id 只維護在 `bin/pipeline/types.ts`（`BOARD.statusOptions`、`STATUS_ALIASES`、`PM_LOGIN`、`DEAD_LABELS`），不要在文件複製 ID。新增 option 只能在 board 設定頁做（API 不支援），之後用 `gh project field-list 10 --owner daodaoedu --format json` 查 id 填回 `types.ts`；id 空著時 `set` 會直接報錯。
@@ -83,7 +83,7 @@ pnpm -s tsx bin/pipeline/board.ts audit [--json] [--stale-days 3]
 - status 接受別名：`todo` / `ready` / `wip`／`in-progress` / `review` / `accept`／`acceptance` / `needfix` / `done`（大小寫、`-`、`_`、空白互通）
 - `set` 不在 board 會先 `item-add`；改完回讀 Status，不一致直接 exit 1
 - `set <n> accept` 會順便 assign `PM_LOGIN` 並回讀 assignee；交接留言內容隨卡片不同，由 post-merge-wrapup 另外發
-- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 post-merge-wrapup、Acceptance 未指派 PM、Acceptance 超過 SLE、母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層子卡、子卡不在中央 repo（母卡 Review 的 merged-stale 建議改成「等子卡關閉」）、Review 沒 PR、死 label、Done 仍掛 `human-driving`。Acceptance 的 SLE 與 Review 的「merged 後停留天數」都用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`）才算實作；只在 body 提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
+- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 post-merge-wrapup、Acceptance 未指派 PM、Acceptance 超過 SLE、母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層子卡、子卡不在中央 repo（母卡 Review 的 merged-stale 建議改成「等子卡關閉」）、Review 沒 PR、死 label、Done 仍掛 `human-driving`。Acceptance 的 SLE 與 Review 的「merged 後停留天數」都用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`）才算實作；只在 body 提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。sub-repo PR 若在標題（`— daodao#N`）或 `Refs`／`Closes`／`Fixes` 行**明確指向別張卡**，對本卡只算提及、不算實作（例：#218 的 PR 在內文列出後續卡 #244、#247）；沒有任何標記的舊 PR 仍照算。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
 - 不要用 `gh project item-list` 批次查：它每次拉全部欄位，跑十幾次就撞 Projects rate limit（2026-09-20 實測）；`board.ts` 走精簡 GraphQL（`listBoardItemsLite`、`findBoardItemForIssue`）
 - GraphQL 額度是**使用者 PAT 共用的 5000/hr**，Actions 裡的 Sync Shared Config 也用同一顆；大批操作前先 `gh api rate_limit --jq .resources.graphql`
 

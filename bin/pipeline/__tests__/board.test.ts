@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auditCards,
+  prTargets,
   businessDaysSince,
   resolveStatus,
   type AuditCard,
@@ -178,5 +179,26 @@ describe("parent cards", () => {
   it("flags sub-issues opened outside the central repo", () => {
     const f = problems(card({ subIssues: { total: 1, completed: 0 }, foreignSubIssues: ["daodao-f2e#1032"] }));
     expect(f).toContain("子卡不在中央 repo：daodao-f2e#1032");
+  });
+});
+
+describe("sub-repo PR targets", () => {
+  it("reads targets from the title marker and Refs/Closes lines, not from prose", () => {
+    expect(prTargets("refactor(onboarding): 移除新手任務 — daodao#218", "DB 清理另卡 [daodaoedu/daodao#244](https://github.com/daodaoedu/daodao/issues/244)")).toEqual([218]);
+    expect(prTargets("fix: x", "Closes daodaoedu/daodao#239\n- 無關的 bug：[daodao#257](u)")).toEqual([239]);
+    expect(prTargets("fix: y", "Refs daodaoedu/daodao#293\nRefs daodaoedu/daodao#250")).toEqual([293, 250]);
+    expect(prTargets("feat(chat): 對齊 FRD", "沒有標記")).toEqual([]);
+  });
+
+  it("does not count a PR that explicitly targets other cards", () => {
+    const followUp = card({ number: 244, status: "Todo", updatedAt: "2026-09-01T00:00:00Z",
+      prs: [{ ref: "daodao-server#490", state: "merged", linked: false, targets: [218] }] });
+    expect(problems(followUp)).toEqual([]);
+    // legacy PRs without any marker still count
+    const legacy = card({ number: 166, status: "In Progress", updatedAt: "2026-09-01T00:00:00Z",
+      prs: [{ ref: "daodao-f2e#985", state: "merged", linked: false, targets: [] }] });
+    expect(problems(legacy).some((x) => x.startsWith("PR 全 merged"))).toBe(true);
+    const own = card({ number: 293, status: "Todo", prs: [{ ref: "daodao-server#517", state: "open", linked: false, targets: [293, 250] }] });
+    expect(problems(own).some((x) => x.startsWith("有 open PR"))).toBe(true);
   });
 });

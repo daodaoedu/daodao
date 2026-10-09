@@ -2,6 +2,7 @@
  * Thin gh CLI wrappers for the Planning board CLI. All I/O lives here.
  */
 import { execSync } from "child_process";
+import { prTargets } from "./lib.js";
 import { BOARD, CENTRAL_REPO, OWNER, type BoardStatus } from "./types.js";
 
 function sh(cmd: string): string {
@@ -150,7 +151,7 @@ export interface IssueLinks {
   subIssues: { total: number; completed: number };
   parent: number | null;
   foreignSubIssues: string[];
-  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
+  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean; targets: number[] }>;
 }
 
 /** One GraphQL round-trip per 50 issues: state, labels, and cross-referenced PRs. */
@@ -167,8 +168,8 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
           parent { number }
           subIssues(first: 100) { nodes { number repository { name } } }
           timelineItems(last: 40, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) { nodes {
-            ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged repository { name } } } }
-            ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged repository { name } } } }
+            ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged title body repository { name } } } }
+            ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged title body repository { name } } } }
           } } }`
       )
       .join("\n");
@@ -189,7 +190,7 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         timelineItems: { nodes: Array<{ source?: PRNode; subject?: PRNode }> };
       };
       if (!node) continue;
-      const prs = new Map<string, { state: "open" | "merged" | "closed"; linked: boolean }>();
+      const prs = new Map<string, { state: "open" | "merged" | "closed"; linked: boolean; targets: number[] }>();
       for (const t of node.timelineItems.nodes) {
         // ConnectedEvent = a real GitHub link (closing keyword / Development panel);
         // CrossReferencedEvent = only a mention in some body.
@@ -198,7 +199,11 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         if (!pr || pr.__typename !== "PullRequest") continue;
         const ref = `${pr.repository.name}#${pr.number}`;
         const state = pr.merged ? "merged" : pr.state === "OPEN" ? "open" : "closed";
-        prs.set(ref, { state, linked: linked || (prs.get(ref)?.linked ?? false) });
+        prs.set(ref, {
+          state,
+          linked: linked || (prs.get(ref)?.linked ?? false),
+          targets: prTargets(pr.title ?? "", pr.body ?? ""),
+        });
       }
       result.set(node.number, {
         number: node.number,
@@ -223,5 +228,7 @@ interface PRNode {
   number: number;
   state: "OPEN" | "CLOSED" | "MERGED";
   merged: boolean;
+  title?: string;
+  body?: string;
   repository: { name: string };
 }
