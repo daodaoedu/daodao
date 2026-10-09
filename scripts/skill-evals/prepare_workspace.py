@@ -10,10 +10,10 @@ from pathlib import Path, PurePosixPath
 PROJECT_FILES = (
     'AGENTS.md',
     'CLAUDE.md',
-    'docs/automation/ai-human-review-workflow.md',
-    'templates/development/README.md',
-    'templates/development/bug-issue.md',
-    'templates/development/requirements-doc.md',
+    'plugin/docs/ai-human-review-workflow.md',
+    'plugin/templates/README.md',
+    'plugin/templates/bug-issue.md',
+    'plugin/templates/requirements-doc.md',
 )
 SKILLS = ('file-bug-issue', 'gh-card', 'prd-generation', 'product-status-check')
 
@@ -27,10 +27,15 @@ def safe_relative(raw):
     return path
 
 
+# canonical 在 plugin/skills/；.agents/skills/ 是 build 產物，Codex 與 ChatGPT 桌面版讀它。
+# 兩份都納入 eval workspace，確保產物真的跟著 canonical 一起更新。
+SKILL_ROOTS = ('plugin/skills', '.agents/skills')
+
+
 def project_paths():
     paths = list(PROJECT_FILES)
-    for client in ('.claude', '.codex'):
-        paths.extend(f'{client}/skills/{skill}/SKILL.md' for skill in SKILLS)
+    for root in SKILL_ROOTS:
+        paths.extend(f'{root}/{skill}/SKILL.md' for skill in SKILLS)
     return tuple(paths)
 
 

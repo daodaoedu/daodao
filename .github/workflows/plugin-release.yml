@@ -1,0 +1,128 @@
+name: Publish plugin release
+
+# plugin 的散佈走 GitHub Release 的 zip，不走 marketplace clone：
+# 從 repo 裝 marketplace 會 git clone 整個 monorepo（12MB）只為了拿 163KB 的 plugin。
+# archive 來源是單純 HTTPS 下載，使用者不需要 git 也不需要 npm。
+#
+# 觸發：main 上 plugin/ 有變更。版本沒變就只驗證不發佈（避免同版本覆蓋已釘 sha256 的資產）。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'plugin/**'
+      - '.github/workflows/plugin-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plugin-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+
+      - name: Artifacts in sync with canonical skills
+        run: |
+          pnpm plugin:check
+          pnpm vitest run plugin/scripts/__tests__/
+
+      - name: Read version
+        id: meta
+        run: |
+          VERSION=$(jq -r .version plugin/.claude-plugin/plugin.json)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=plugin-v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if this version is already released
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          # 已發佈的 zip 其 sha256 被 marketplace.json 釘住，重發同版本會讓已安裝的人對不上。
+          # 要發新版就先在 plugin/.claude-plugin/plugin.json 把 version 往上加。
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$TAG 已存在，跳過發佈。要發新版請先 bump plugin.json 的 version。"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package
+        if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          pnpm plugin:package --url \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/daodao-plugin-${VERSION}.zip"
+          ls -l plugin/out/release/
+
+      - name: Create release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          SHA=$(jq -r '.plugins[0].source.sha256' plugin/out/release/marketplace.json)
+          gh release create "$TAG" \
+            "plugin/out/release/daodao-plugin-${VERSION}.zip" \
+            "plugin/out/release/marketplace.json" \
+            --title "daodao plugin v${VERSION}" \
+            --notes "$(cat <<EOF
+          安裝（不需要 clone 這個 repo）：
+
+          \`\`\`
+          /plugin install daodao@daodao
+          \`\`\`
+
+          repo 的 \`.claude/settings.json\` 已宣告 marketplace 指向
+          \`releases/latest/download/marketplace.json\`，所以開過本 repo 或任一子專案的人
+          不需要另外 add marketplace。
+
+          其他情境手動加：
+
+          \`\`\`
+          claude plugin marketplace add https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/marketplace.json
+          \`\`\`
+
+          archive sha256: \`${SHA}\`
+
+          zip 是可重現的：同一份 commit 在本機跑 \`pnpm plugin:package\` 會得到同一個 sha256。
+          EOF
+          )"
+          echo "- 發佈 $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify the published marketplace resolves
+        if: steps.check.outputs.exists == 'false'
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          # release asset 上傳後要真的抓得到，且 sha256 對得上——否則使用者會撞到
+          # "Plugin archive integrity check failed"，而我們到那時才知道就太晚了。
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download"
+          curl -fsSL "$BASE/marketplace.json" -o /tmp/mp.json
+          jq -e '.plugins[0].source.source == "archive"' /tmp/mp.json >/dev/null
+          URL=$(jq -r '.plugins[0].source.url' /tmp/mp.json)
+          WANT=$(jq -r '.plugins[0].source.sha256' /tmp/mp.json)
+          curl -fsSL "$URL" -o /tmp/plugin.zip
+          GOT=$(sha256sum /tmp/plugin.zip | cut -d' ' -f1)
+          [ "$WANT" = "$GOT" ] || { echo "❌ sha256 不符: want=$WANT got=$GOT"; exit 1; }
+          echo "✅ marketplace.json 與 zip 都抓得到，sha256 相符（$GOT）"

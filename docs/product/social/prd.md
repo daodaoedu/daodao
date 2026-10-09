@@ -1,4 +1,4 @@
-> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但快速回應、留言（含 @mention）、關注、連結四項核心互動皆已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-server/src/routes/{reaction,comment,follow,connection}.routes.ts`、`daodao-f2e/packages/api/src/services/*`、product app 的 social 頁面。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `.claude/skills/product-status-check`。
+> **狀態校準（2026-07-06）：✅ 已上線。** 本文件的需求與設計內容仍有效，但快速回應、留言（含 @mention）、關注、連結四項核心互動皆已實作於程式碼——規劃時請以程式碼為準，勿重做。實作位置：`daodao-server/src/routes/{reaction,comment,follow,connection}.routes.ts`、`daodao-f2e/packages/api/src/services/*`、product app 的 social 頁面。狀態追蹤見 daodao 主 repo 的 `scripts/product_status_manifest.yml` 與 `plugin/skills/product-status-check`。
 
 ## **Overview**
 

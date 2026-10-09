@@ -1,0 +1,26 @@
+{
+  "name": "daodao",
+  "owner": {
+    "name": "daodaoedu",
+    "url": "https://github.com/daodaoedu"
+  },
+  "description": "島島阿學開發流程。Claude Code 從 release 的 archive 裝；claude.ai 與 ChatGPT 工作區從這個 repo 同步。",
+  "plugins": [
+    {
+      "name": "daodao",
+      "source": "./plugin",
+      "displayName": "島島阿學開發流程",
+      "description": "需求→開發→驗收→合併收尾的 13 個 skill、PR 證據閘門 hooks 與 Issue/PR 模板。",
+      "category": "workflow",
+      "defaultEnabled": false
+    },
+    {
+      "name": "daodao-web",
+      "source": "./plugin/out/web-plugin",
+      "displayName": "島島阿學開發流程（網頁版）",
+      "description": "網頁版：需求、開卡、Bug 通報、PR feedback 等 7 個不需要本機 checkout 的流程。",
+      "category": "workflow",
+      "defaultEnabled": false
+    }
+  ]
+}

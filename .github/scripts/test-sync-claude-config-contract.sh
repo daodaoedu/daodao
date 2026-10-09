@@ -11,7 +11,7 @@ fail() {
 }
 
 for path in \
-  ".claude/skills/code-review/**" \
+  "plugin/**" \
   ".github/workflows/auto-pr-description.yml" \
   ".github/workflows/code-review.yml" \
   ".github/scripts/retrieve-context.sh" \
@@ -25,13 +25,49 @@ for path in \
   grep -Fq -- "- '$path'" "$WORKFLOW" || fail "push paths 未監聽 $path"
 done
 
-sync_skills=$(sed -n 's/^[[:space:]]*for skill in \(.*\); do$/\1/p' "$WORKFLOW")
-for required_skill in collect-pr-feedback code-review; do
-  case " $sync_skills " in
-    *" $required_skill "*) ;;
-    *) fail "sync workflow 未同步 $required_skill skill" ;;
-  esac
-done
+# 2026-09-21 起 skills 與 hooks 由 daodao plugin 提供，不再逐檔複製到子專案。
+# 子專案拿到的是指向 marketplace 的 settings.json；內容正確性由 plugin 那端的測試守。
+SETTINGS="$SCRIPT_DIR/../../.claude/settings.json"
+if [ -f "$SETTINGS" ]; then
+  # 兩個 key 都是「物件」不是陣列：enabledPlugins 以 name@marketplace 為 key 對應 boolean，
+  # extraKnownMarketplaces 以 marketplace 名稱為 key 對應 {source}。寫成陣列會被靜默忽略。
+  jq -e '.enabledPlugins["daodao@daodao"] == true' "$SETTINGS" >/dev/null \
+    || fail "settings.json 未啟用 daodao@daodao plugin（需為物件形式 {\"daodao@daodao\": true}）"
+  jq -e '.extraKnownMarketplaces.daodao.source.source' "$SETTINGS" >/dev/null \
+    || fail "settings.json 未宣告 daodao marketplace（需為物件形式 {daodao: {source: {...}}}）"
+fi
+grep -Fq 'jq -s' "$WORKFLOW" || fail "sync workflow 未合併 settings.json（子專案拿不到 plugin 設定）"
+# `.[0] * .[1]` 是深合併：新 settings.json 沒有 hooks key，子專案原本指向
+# .claude/hooks/*.sh 的設定會被保留，而那些檔案同一步驟就被刪掉 → 每次 Write/Edit
+# 都會執行不存在的檔案。必須明確 del(.hooks)。
+# 只認 jq 運算式本身，不認註解——否則把程式碼拿掉、註解留著也會過。
+grep -E "^[^#]*jq[^#]*\| *del\(\.hooks\)" "$WORKFLOW" >/dev/null \
+  || fail "sync workflow 合併 settings 的 jq 未接 del(.hooks)（子專案會留下指向已刪除腳本的 hooks 設定）"
+SYNC_SH="$SCRIPT_DIR/../../.claude/sync.sh"
+if [ -f "$SYNC_SH" ]; then
+  grep -E "^[^#]*jq[^#]*\| *del\(\.hooks\)" "$SYNC_SH" >/dev/null \
+    || fail ".claude/sync.sh 合併 settings 的 jq 未接 del(.hooks)（同上）"
+fi
+# 實證合併行為，不只檢查字串有沒有出現
+_tmp=$(mktemp -d)
+printf '%s' '{"hooks":{"PreToolUse":[{"matcher":"Write"}]},"permissions":{"allow":["Bash(ls:*)"]}}' > "$_tmp/target.json"
+_ROOT_SETTINGS="$SCRIPT_DIR/../../.claude/settings.json"
+if [ -f "$_ROOT_SETTINGS" ]; then
+  _merged=$(jq -s '.[0] * .[1] | del(.hooks)' "$_tmp/target.json" "$_ROOT_SETTINGS")
+  [ "$(printf '%s' "$_merged" | jq -r 'has("hooks")')" = "false" ] \
+    || fail "合併後仍保留 hooks 區塊"
+  [ "$(printf '%s' "$_merged" | jq -r '.permissions.allow | length')" -gt 0 ] \
+    || fail "合併後 permissions 被清掉了"
+fi
+rm -rf "$_tmp"
+# 舊版逐檔複本留著會與 plugin 版並存，造成 hooks 雙重觸發
+grep -Fq 'rm -f target/.claude/hooks/*.sh' "$WORKFLOW" \
+  || fail "sync workflow 未清除子專案的舊 hooks 複本（會與 plugin hooks 雙重觸發）"
+grep -Fq 'rm -rf "target/.claude/skills/$skill"' "$WORKFLOW" \
+  || fail "sync workflow 未清除子專案的舊 skills 複本（project skills 會蓋掉 plugin skills）"
+# 逐檔複製 hooks／skills 的寫法不得復活
+grep -Eq 'cp[[:space:]]+\.claude/hooks|cp[[:space:]]+plugin/hooks|cp[[:space:]]+"?plugin/skills' "$WORKFLOW" \
+  && fail "不得回頭逐檔複製 hooks／skills（那正是 plugin 化要消除的漂移來源）"
 
 for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh check-pr-evidence.sh test-pr-evidence.sh; do
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"
@@ -63,28 +99,31 @@ grep -Fq 'git add -f .claude/ .github/workflows/ .github/scripts/' "$WORKFLOW" \
   || fail "commit scope 未包含 scripts"
 grep -Fq 'chore/sync-claude-config-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}' "$WORKFLOW" \
   || fail "同步 branch 名稱未使用唯一 run identity"
-# 2026-09-20 起同步 PR 在 required checks 全綠後自動 merge（內容是 daodao main 已 review 過的機器複製）：
-# merge 必須在 `gh pr checks --watch --fail-fast` 之後、同一個 step 內，且只能 squash；不得無條件 merge
-grep -Fq 'gh pr checks "$PR_URL" --required --watch --fail-fast' "$WORKFLOW" \
-  || fail "同步 merge 前必須等 required checks（gh pr checks --required --watch --fail-fast）"
-MERGE_STEP=$(awk '/- name: Wait for required checks, then merge/{f=1} f && /- name: Report unmerged sync PR/{exit} f' "$WORKFLOW")
-[ -n "$MERGE_STEP" ] || fail "缺少「Wait for required checks, then merge」step"
+# 2026-09-20 起同步 PR 交給 GitHub auto-merge：紅燈不會合，且不需要 PAT 有 Checks: read
+# （fine-grained token 缺該權限時，輪詢 checks 會整天以 "Resource not accessible..." 失敗）。
+MERGE_STEP=$(awk '/- name: Merge now, or queue auto-merge until checks pass/{f=1} f && /- name: Report unqueued sync PR/{exit} f' "$WORKFLOW")
+[ -n "$MERGE_STEP" ] || fail "缺少「Merge now, or queue auto-merge until checks pass」step"
 printf '%s\n' "$MERGE_STEP" | grep -Fq 'gh pr merge "$PR_URL" --squash --delete-branch' \
-  || fail "同步 merge 必須是 squash 且在等 checks 的同一 step 內"
+  || fail "同步 merge 必須是 squash"
+printf '%s\n' "$MERGE_STEP" | grep -Fq 'enablePullRequestAutoMerge' \
+  || fail "merge 失敗時必須掛 auto-merge，讓 GitHub 在 required checks 全綠後才合"
+printf '%s\n' "$MERGE_STEP" | grep -Fq 'mergeMethod: SQUASH' \
+  || fail "auto-merge 也必須是 squash"
 # ruleset 已移除 admin bypass，--admin 繞不過任何規則，只會讓失敗訊息變難懂（註解裡提到不算）
-printf '%s\n' "$MERGE_STEP" | grep -v '^[[:space:]]*#' | grep -Fq 'gh pr merge "$PR_URL" --squash --delete-branch --admin' \
+printf '%s\n' "$MERGE_STEP" | grep -v '^[[:space:]]*#' | grep -Fq -- '--admin' \
   && fail "同步 merge 不得使用 --admin（ruleset 已無 bypass actor）"
-CHECKS_LINE=$(printf '%s\n' "$MERGE_STEP" | grep -n 'gh pr checks "$PR_URL"' | head -1 | cut -d: -f1)
-MERGE_LINE=$(printf '%s\n' "$MERGE_STEP" | grep -n 'gh pr merge "$PR_URL"' | cut -d: -f1)
-[ "$CHECKS_LINE" -lt "$MERGE_LINE" ] || fail "gh pr merge 必須在 gh pr checks 之後"
-printf '%s\n' "$MERGE_STEP" | grep -Fq 'timeout-minutes:' || fail "merge step 必須有 timeout-minutes 兜底永不回報的 check"
+# 不得回頭輪詢 checks：那正是 2026-09-20 整天同步失敗的原因
+printf '%s\n' "$MERGE_STEP" | grep -v '^[[:space:]]*#' | grep -Fq 'gh pr checks' \
+  && fail "不得在同步流程輪詢 checks（PAT 無 Checks: read；合併條件交給 auto-merge）"
 # 工作流其他地方不得出現無條件 merge（例如在 create 步驟直接合）
-OTHER=$(awk '/- name: Wait for required checks, then merge/{f=1} /- name: Report unmerged sync PR/{f=0} !f' "$WORKFLOW")
-if printf '%s\n' "$OTHER" | grep -Eq 'gh pr merge|--auto'; then
-  fail "gh pr merge 只允許出現在等完 checks 的 merge step"
+OTHER=$(awk '/- name: Merge now, or queue auto-merge until checks pass/{f=1} /- name: Report unqueued sync PR/{f=0} !f' "$WORKFLOW")
+if printf '%s\n' "$OTHER" | grep -Eq 'gh pr merge|enablePullRequestAutoMerge'; then
+  fail "merge／auto-merge 只允許出現在那一個 step"
 fi
-grep -Fq 'Shared config PR merged after required checks: $PR_URL' "$WORKFLOW" \
-  || fail "同步必須清楚回報 PR 已在 checks 通過後 merge"
+grep -Fq 'Shared config PR merged: $PR_URL' "$WORKFLOW" \
+  || fail "同步必須回報 PR 已 merge"
+grep -Fq 'Auto-merge queued' "$WORKFLOW" \
+  || fail "掛上 auto-merge 時必須回報，否則人看不出這次是排隊還是合了"
 grep -Fq 'Supersede older open sync PRs' "$WORKFLOW" \
   || fail "同步必須關閉被取代的舊 sync PR（design-review F-11）"
 

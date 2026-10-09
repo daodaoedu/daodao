@@ -1,0 +1,60 @@
+[
+  {
+    "id": 23186106,
+    "name": "Benchmark required checks",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "daodaoedu/daodao-server",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "refs/heads/dev"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "test",
+              "integration_id": 15368
+            },
+            {
+              "context": "workflow-tests",
+              "integration_id": 15368
+            },
+            {
+              "context": "Compare SQL ↔ Prisma schemas",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec4xj0J5zgFhyro",
+    "created_at": "2026-09-13T23:59:07.490+08:00",
+    "updated_at": "2026-09-13T23:59:07.537+08:00",
+    "bypass_actors": [
+      {
+        "actor_id": 5,
+        "actor_type": "RepositoryRole",
+        "bypass_mode": "always"
+      }
+    ],
+    "current_user_can_bypass": "always",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/daodaoedu/daodao-server/rulesets/23186106"
+      },
+      "html": {
+        "href": "https://github.com/daodaoedu/daodao-server/rules/23186106"
+      }
+    }
+  }
+]

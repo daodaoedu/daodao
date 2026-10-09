@@ -1,0 +1,7 @@
+{
+  "base": "2d6a835badb540a8839070171490c27759f33b60",
+  "test_diff_sha256": "dace30b61407eafd037cfe7390e39a101580be7ddc8d06ce4bd8891978dc1451",
+  "reviewer": "xiaoxu",
+  "reason": "移除的兩個測試守的是「sync workflow 的 for-loop 必須列出 code-review／collect-pr-feedback」，而該逐檔複製機制在本次變更中整個移除，改由 daodao plugin 提供 skills 與 hooks。等價保護以 9 個新測試取代：settings 必須啟用 daodao@daodao 且 marketplace 為物件格式、陣列舊格式不給過、workflow 必須清除子專案舊 hooks／skills 複本、逐檔複製寫法不得復活、plugin/** 必須被 push paths 監聽、合併 settings 的 jq 必須接 del(.hooks)（含行為實證）。",
+  "evidence": "本機 session 中由 xiaoxu 以 AskUserQuestion 明確回覆「審核通過，寫回條」；同一 session 另跑 OMP 與 OpenCode 兩個 review 引擎，OpenCode 指出的兩項 Medium 已修正並補測試。 合併 origin/main 後 base 與 test diff 改變，回條依同一份已審核的移除項重新簽發（findings 未增減）。"
+}

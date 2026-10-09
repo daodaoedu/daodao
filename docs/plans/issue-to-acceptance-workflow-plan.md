@@ -11,12 +11,12 @@
 - [x] 寫入共用雙入口、需求版本、驗收契約、merge gate 與導入階段。
 - [x] 補入自動回寫中央／子 Issue、狀態區分、outbox 與舊 run 防覆蓋。
 - [x] 查核官方計量方式；新增額度政策，記錄使用者確認 Max US$100／Codex Pro／Cloudflare Paid。
-- [x] 新增 templates/development 的六份範本與 README，整合 budget 欄位。
+- [x] 新增 plugin/templates 的六份範本與 README，整合 budget 欄位。
 - [x] 更新四份文件入口並檢查 diff / 連結。
 
 已知：工作區含大量既有修改；僅新增流程提案與在四個既有入口追加連結。訂閱用量、遠端 ruleset、runner、Drive 分享權限尚未實測。
 
-交付：docs/automation/issue-to-acceptance-workflow.md、agent-budget-policy.md、templates/development/（7 檔）。
+交付：docs/automation/issue-to-acceptance-workflow.md、agent-budget-policy.md、plugin/templates/（7 檔）。
 
 驗證：9 份新文件／模板、15 個本地連結、Markdown fence 配對、版本欄位與 whitespace 檢查皆通過；git diff --check 通過。純文件變更，未執行產品測試。沒有 commit、發布 Issue／Google 文件或修改 CI／遠端設定。
 

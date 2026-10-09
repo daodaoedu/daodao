@@ -1,0 +1,133 @@
+[
+  {
+    "id": 23304256,
+    "name": "Benchmark required checks",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "daodaoedu/daodao-ai-backend",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "refs/heads/dev"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Unit Tests",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec44U9iKzgFjmEA",
+    "created_at": "2026-09-14T20:56:00.473+08:00",
+    "updated_at": "2026-09-14T20:56:00.571+08:00",
+    "bypass_actors": [
+      {
+        "actor_id": 5,
+        "actor_type": "RepositoryRole",
+        "bypass_mode": "always"
+      }
+    ],
+    "current_user_can_bypass": "always",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/daodaoedu/daodao-ai-backend/rulesets/23304256"
+      },
+      "html": {
+        "href": "https://github.com/daodaoedu/daodao-ai-backend/rules/23304256"
+      }
+    }
+  },
+  {
+    "id": 5802080,
+    "name": "Protect dev branch",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "daodaoedu/daodao-ai-backend",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "refs/heads/dev",
+          "refs/heads/main"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 1,
+          "dismiss_stale_reviews_on_push": false,
+          "required_reviewers": [],
+          "require_code_owner_review": true,
+          "dismissal_restriction": {
+            "enabled": false,
+            "allowed_actors": []
+          },
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": false,
+          "require_extra_approval_for_unattributed_changes": true,
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": false,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Format & Lint",
+              "integration_id": 15368
+            }
+          ]
+        }
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "required_signatures"
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec44U9iKzgBYiGA",
+    "created_at": "2025-06-02T08:51:09.645+08:00",
+    "updated_at": "2026-05-14T06:56:05.082+08:00",
+    "bypass_actors": [
+      {
+        "actor_id": 5,
+        "actor_type": "RepositoryRole",
+        "bypass_mode": "always"
+      }
+    ],
+    "current_user_can_bypass": "always",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/daodaoedu/daodao-ai-backend/rulesets/5802080"
+      },
+      "html": {
+        "href": "https://github.com/daodaoedu/daodao-ai-backend/rules/5802080"
+      }
+    }
+  }
+]

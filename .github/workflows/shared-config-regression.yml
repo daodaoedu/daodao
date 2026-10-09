@@ -34,3 +34,10 @@ jobs:
           bash .github/scripts/test-pre-pr-gate.sh
           bash .github/scripts/test-pr-evidence.sh
           python3 -m unittest discover -s scripts/__tests__ -p 'test_validation_parity.py' -v
+
+      - name: Plugin artifacts in sync with canonical skills
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm plugin:check
+          pnpm vitest run plugin/scripts/__tests__/

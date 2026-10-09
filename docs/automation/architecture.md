@@ -3,7 +3,7 @@
 > 註（2026-09-20，#241）：GitHub 版 Routine A／B／C 亦已全部退役；本文全篇僅供考古。
 
 > ⚠️ **已過時（2026-08）**：本文件描述的是 Notion 時代的 pipeline。
-> 現行架構（GitHub Projects + 中央 issues）見 [gh-pipeline skill](../../.claude/skills/gh-pipeline/SKILL.md)。
+> 現行架構（GitHub Projects + 中央 issues）見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)。
 > Routine B 的 agentic 實作細節（state.ts / main.sh / handler）仍然有效，可參考。
 
 ## Overview
