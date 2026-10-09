@@ -69,9 +69,9 @@ daodao/
    pnpm -s tsx bin/pipeline/board.ts set <n> wip --add-label human-driving
    ```
 
-   一行同時把 Planning board 卡片移到 `In Progress`（不在 board 會先加入）、掛 `human-driving` label，並回讀確認。從 `Need Fix`（驗收退回）接手的卡同樣用這行。
+   一行同時把 Planning board 卡片移到 `In Progress`（不在 board 會先加入）、掛 `human-driving` label，並回讀確認。從 `Need Fix`（dev 冒煙失敗或 PM 驗收退回）接手的卡同樣用這行；PM 退回的先讀他留言指出哪條 AC 沒過。
    - 自動派工 Routine A／B 已於 2026-09-20 退役（#241），`human-driving` 現在只用來在 board 上辨識「有人在做」，不再是防派工閘門
-   - 不要手動 `gh project item-edit`：board 的六欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 [gh-pipeline](../gh-pipeline/SKILL.md)
+   - 不要手動 `gh project item-edit`：board 的七欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 [gh-pipeline](../gh-pipeline/SKILL.md)
    - 不要跟 `human-coding` 混淆：那是 Routine B 時代 sub-repo 鏡像 issue 的移交標記，已不再使用
 2. **跟其他任務防撞**：對每個目標 repo 檢查 in-flight 工作：
    - `git worktree list`（在 `projects/<repo>` 內）→ 已有任務在做同一個 repo 時，比對雙方 scope 是否碰同一片檔案
@@ -275,7 +275,7 @@ EOF
      pnpm -s tsx bin/pipeline/board.ts set <n> review
      ```
 
-     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
+     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Acceptance` 交給 PM 驗收，PM 關 issue 才算 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
 9. 之後用 `collect-pr-feedback` skill 收集回饋修正
 
 ## Phase 5: cleanup — merge 後收尾
@@ -292,7 +292,7 @@ git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分
 ```
 
 3. 刪任務資料夾：`rm -rf "$TASK"`（刪之前確認核心旅程矩陣與 dev 冒煙結果已在 issue comment；task.md 其他有留存價值的內容先摘要進 comment）
-4. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）；board 卡的 `Done`／`Need Fix` 與 `human-driving` 移除由該 skill 依冒煙結果執行，這裡不要提前移 Done
+4. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）；board 卡的 `Acceptance`（交給 PM）／`Need Fix` 由該 skill 依冒煙結果執行，`Done` 只由 PM 驗收通過（關 issue）產生，這裡不要提前移 Done
 5. clone 模式的任務：確認無未 push commit 後 `rm -rf`
 6. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
 

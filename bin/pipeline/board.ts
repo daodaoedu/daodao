@@ -7,22 +7,35 @@
  *   pnpm tsx bin/pipeline/board.ts remove <issue#> [--dry-run]
  *   pnpm tsx bin/pipeline/board.ts audit [--json] [--stale-days <n>]
  *
- * Status accepts aliases: todo | ready | wip / "in progress" | review | needfix / "need fix" | done.
- * `set` adds the issue to the board first if it is not there yet.
- * Called by dev-task (start → In Progress, finish → Review), post-merge-wrapup (→ Done),
- * collect-pr-feedback (→ Need Fix) and gh-card (→ Todo).
+ * Status accepts aliases: todo | ready | wip / "in progress" | review | accept / acceptance |
+ * needfix / "need fix" | done.
+ * `set` adds the issue to the board first if it is not there yet; `set <n> accept` also
+ * assigns the PM (PM_LOGIN) so the card shows up in their queue.
+ * Called by dev-task (start → In Progress, finish → Review), post-merge-wrapup
+ * (dev smoke passed → Acceptance, failed → Need Fix), collect-pr-feedback (→ Need Fix)
+ * and gh-card (→ Todo). Done comes from the PM closing the issue (built-in workflow).
  */
-import { auditCards, resolveStatus, type AuditCard } from "./lib.js";
+import { acceptanceOverLimit, auditCards, resolveStatus, type AuditCard } from "./lib.js";
 import {
   addBoardItem,
+  addIssueAssignees,
   editIssueLabels,
   findBoardItemForIssue,
   getCentralIssueLinks,
+  getIssueAssignees,
   listBoardItemsLite,
   removeBoardItem,
   setBoardStatus,
 } from "./gh.js";
-import { BOARD, CENTRAL_REPO, DEAD_LABELS, OWNER, STATUS_ALIASES, type BoardStatus } from "./types.js";
+import {
+  BOARD,
+  CENTRAL_REPO,
+  DEAD_LABELS,
+  OWNER,
+  PM_LOGIN,
+  STATUS_ALIASES,
+  type BoardStatus,
+} from "./types.js";
 
 const argv = process.argv.slice(2);
 const DRY_RUN = argv.includes("--dry-run");
@@ -49,8 +62,12 @@ function cmdSet(): void {
   if (!num || !statusName) {
     die(`usage: board.ts set <issue#> <status>  (status ∈ ${Object.keys(BOARD.statusOptions).join(" | ")})`);
   }
+  if (!BOARD.statusOptions[statusName]) {
+    die(`Status「${statusName}」還沒有 option id：先到 board 設定頁新增選項，再填進 bin/pipeline/types.ts`);
+  }
   const add = optValues("--add-label");
   const remove = optValues("--remove-label");
+  const assign = statusName === "Acceptance" ? [PM_LOGIN] : [];
 
   let item = findItem(num);
   const tag = DRY_RUN ? "[dry-run] " : "";
@@ -68,10 +85,16 @@ function cmdSet(): void {
     console.log(`${tag}#${num} labels +[${add.join(",")}] -[${remove.join(",")}]`);
     if (!DRY_RUN) editIssueLabels(CENTRAL_REPO, num, add, remove);
   }
+  if (assign.length) {
+    console.log(`${tag}#${num} assignees +[${assign.join(",")}]`);
+    if (!DRY_RUN) addIssueAssignees(CENTRAL_REPO, num, assign);
+  }
   if (!DRY_RUN) {
     const after = findItem(num);
     if (after?.status !== statusName) die(`回讀失敗：#${num} 目前 status=${after?.status}`);
-    console.log(`#${num} 回讀 OK：${after.status}`);
+    const missing = assign.filter((a) => !getIssueAssignees(CENTRAL_REPO, num).includes(a));
+    if (missing.length) die(`回讀失敗：#${num} 未指派 ${missing.join(",")}`);
+    console.log(`#${num} 回讀 OK：${after.status}${assign.length ? `，assignee 含 ${assign.join(",")}` : ""}`);
   }
 }
 
@@ -98,19 +121,27 @@ function cmdAudit(): void {
       status: it.status,
       issueState: l?.state ?? "OPEN",
       labels: l?.labels ?? [],
+      assignees: l?.assignees ?? [],
       updatedAt: l?.updatedAt ?? new Date(0).toISOString(),
+      statusUpdatedAt: it.statusUpdatedAt,
       prs: l?.prs ?? [],
     };
   });
   const findings = auditCards(cards, DEAD_LABELS, new Date(), staleDays);
+  const overLimit = acceptanceOverLimit(cards);
 
   if (argv.includes("--json")) {
-    console.log(JSON.stringify({ total: cards.length, findings }, null, 2));
+    console.log(JSON.stringify({ total: cards.length, acceptanceOverLimit: overLimit, findings }, null, 2));
     return;
   }
   const counts: Record<string, number> = {};
   for (const c of cards) counts[c.status ?? "(none)"] = (counts[c.status ?? "(none)"] ?? 0) + 1;
   console.log(`Board：${cards.length} 張　${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(" / ")}`);
+  if (overLimit) {
+    console.log(
+      `\n🚦 Acceptance ${overLimit.count} 張，超過 WIP 上限 ${overLimit.limit}：先協助清驗收，再開新工作`
+    );
+  }
   if (findings.length === 0) {
     console.log("✅ 沒有狀態落差");
     return;

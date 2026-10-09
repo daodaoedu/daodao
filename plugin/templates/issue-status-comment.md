@@ -30,3 +30,27 @@ templateVersion: 1
 - 下一步：<責任人、具體操作；不要把待驗收或已合併寫成 Done>
 
 <!-- 手動使用：將 marker 的 N 換為中央 Issue 號碼，更新同一摘要。子 Issue 留言也引用同一中央編號。未來 reporter 必須驗證最新 run/state version/fencing token 並回讀；本範本尚未提供 upsert/outbox/reconciler。 -->
+
+---
+
+## 交給 PM 驗收（post-merge-wrapup 移 Acceptance 時發）
+
+給 PM 看的白話留言，不放 SHA、run ID 等工程欄位（那些留在上面的開發結果摘要）。每個 `<...>` 都要換掉；驗收步驟寫成 PM 照著點就能做的操作，不寫 API 或程式名稱。
+
+```markdown
+## 🙋 請驗收：<功能一句話>
+
+@peggy1213-create 開發完成，已部署到 dev，AI 冒煙也通過了，請幫忙驗收。
+
+- 測試網址：<直接點進對應頁面的 dev 網址>
+- 測試帳號：<用哪個帳號／角色登入；不貼密碼>
+- 驗收步驟：
+  1. <操作>，應該看到 <結果>（對應 AC-01）
+  2. <操作>，應該看到 <結果>（對應 AC-02）
+- 對照的 AC：本 issue 內文「驗收契約」
+- AI 驗證報告：[Task <n> 驗證報告](<Google 文件連結>)
+- 已知限制／這次沒做的：<none 或清單，附子 issue 連結>
+
+✅ 通過 → 直接關掉這張 issue，卡片會自動移到 Done
+❌ 有問題 → 留言寫「哪一條 AC 沒過、看到什麼」，再把卡片移到 Need Fix
+```

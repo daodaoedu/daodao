@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { auditCards, resolveStatus, type AuditCard } from "../lib.js";
-import { DEAD_LABELS, STATUS_ALIASES } from "../types.js";
+import {
+  acceptanceOverLimit,
+  auditCards,
+  businessDaysSince,
+  resolveStatus,
+  type AuditCard,
+} from "../lib.js";
+import { ACCEPTANCE_WIP_LIMIT, DEAD_LABELS, PM_LOGIN, STATUS_ALIASES } from "../types.js";
 
 const NOW = new Date("2026-09-20T00:00:00Z");
 const card = (over: Partial<AuditCard>): AuditCard => ({
@@ -10,6 +16,8 @@ const card = (over: Partial<AuditCard>): AuditCard => ({
   issueState: "OPEN",
   labels: [],
   updatedAt: "2026-09-19T00:00:00Z",
+  statusUpdatedAt: "2026-09-19T00:00:00Z",
+  assignees: [],
   prs: [],
   ...over,
 });
@@ -21,6 +29,8 @@ describe("resolveStatus", () => {
     expect(resolveStatus("In-Progress", STATUS_ALIASES)).toBe("In Progress");
     expect(resolveStatus("need_fix", STATUS_ALIASES)).toBe("Need Fix");
     expect(resolveStatus("READY", STATUS_ALIASES)).toBe("Ready for Dev");
+    expect(resolveStatus("accept", STATUS_ALIASES)).toBe("Acceptance");
+    expect(resolveStatus("Acceptance", STATUS_ALIASES)).toBe("Acceptance");
     expect(resolveStatus("bogus", STATUS_ALIASES)).toBeNull();
   });
 });
@@ -39,7 +49,7 @@ describe("auditCards", () => {
 
   it("flags Done with open issue, and a closed issue in any open-state column", () => {
     expect(problems(card({ status: "Done" }))).toContain("Done 但 issue 仍 open");
-    for (const status of ["Todo", "Ready for Dev", "In Progress", "Review", "Need Fix"]) {
+    for (const status of ["Todo", "Ready for Dev", "In Progress", "Review", "Acceptance", "Need Fix"]) {
       expect(problems(card({ status, issueState: "CLOSED" }))).toContain(
         `issue 已 close 但卡在 ${status}`
       );
@@ -80,5 +90,62 @@ describe("auditCards", () => {
     expect(problems(card({ status: "Done", issueState: "CLOSED", labels: ["human-driving"] }))).toContain(
       "Done 仍掛 human-driving"
     );
+  });
+
+  it("sends a Review card whose PRs all merged a while ago to post-merge-wrapup", () => {
+    const merged = [pr("daodao-f2e#973", "merged")];
+    const stale = card({ status: "Review", prs: merged, updatedAt: "2026-09-05T00:00:00Z" });
+    const fresh = card({ status: "Review", prs: merged, updatedAt: "2026-09-19T00:00:00Z" });
+    const waiting = card({ status: "Review", prs: [pr("daodao-f2e#974", "open")], updatedAt: "2026-09-05T00:00:00Z" });
+    const f = auditCards([stale], DEAD_LABELS, NOW).find((x) => x.problem.startsWith("PR 全 merged"));
+    expect(f?.suggest).toContain("post-merge-wrapup");
+    expect(problems(fresh).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
+    expect(problems(waiting).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
+  });
+});
+
+describe("Acceptance column", () => {
+  // 2026-09-20 is a Sunday; Taipei is UTC+8
+  const accepted = (statusUpdatedAt: string, assignees = [PM_LOGIN]) =>
+    card({ status: "Acceptance", statusUpdatedAt, assignees, prs: [pr("daodao-f2e#1", "merged")] });
+
+  it("counts business days in Asia/Taipei, skipping weekends", () => {
+    // Fri 09-18 10:00 Taipei → Sun 09-20: no business day has passed
+    expect(businessDaysSince("2026-09-18T02:00:00Z", NOW)).toBe(0);
+    // Wed 09-16 → Sun 09-20: Thu, Fri
+    expect(businessDaysSince("2026-09-16T02:00:00Z", NOW)).toBe(2);
+    // Mon 09-14 → Sun 09-20: Tue, Wed, Thu, Fri
+    expect(businessDaysSince("2026-09-14T02:00:00Z", NOW)).toBe(4);
+    // 23:30 UTC on Thu 09-17 is already Fri 09-18 in Taipei
+    expect(businessDaysSince("2026-09-17T23:30:00Z", NOW)).toBe(0);
+  });
+
+  it("is quiet for an assigned card within the SLE", () => {
+    expect(problems(accepted("2026-09-16T02:00:00Z"))).toEqual([]);
+  });
+
+  it("flags a card past the 2-business-day SLE", () => {
+    const f = auditCards([accepted("2026-09-14T02:00:00Z")], DEAD_LABELS, NOW);
+    expect(f.map((x) => x.problem)).toContain("Acceptance 已 4 個工作天未驗收（SLE 2）");
+    expect(f[0].suggest).toContain(PM_LOGIN);
+  });
+
+  it("flags a card not assigned to the PM", () => {
+    expect(problems(accepted("2026-09-18T02:00:00Z", ["vincentxuu"]))).toContain(
+      `Acceptance 未指派 PM（${PM_LOGIN}）`
+    );
+  });
+
+  it("does not apply Acceptance rules to other columns", () => {
+    expect(problems(card({ status: "Review", statusUpdatedAt: "2026-09-01T00:00:00Z", prs: [pr("daodao-f2e#1", "open")] }))).toEqual([]);
+  });
+
+  it("reports when the column exceeds its WIP limit", () => {
+    const n = (k: number) => Array.from({ length: k }, (_, i) => ({ ...accepted("2026-09-18T02:00:00Z"), number: i + 1 }));
+    expect(acceptanceOverLimit(n(ACCEPTANCE_WIP_LIMIT))).toBeNull();
+    expect(acceptanceOverLimit(n(ACCEPTANCE_WIP_LIMIT + 1))).toEqual({
+      count: ACCEPTANCE_WIP_LIMIT + 1,
+      limit: ACCEPTANCE_WIP_LIMIT,
+    });
   });
 });

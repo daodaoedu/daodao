@@ -13,12 +13,19 @@ function sh(cmd: string): string {
 export interface BoardItem {
   itemId: string;
   status: string | null;
+  /** When the Status field was last set (ISO), null if never. */
+  statusUpdatedAt: string | null;
   issueNumber: number | null;
   repository: string | null;
   title: string;
 }
 
 export function setBoardStatus(itemId: string, statusName: BoardStatus): void {
+  if (!BOARD.statusOptions[statusName]) {
+    throw new Error(
+      `Status「${statusName}」還沒有 option id：先到 board 設定頁新增選項，再填進 bin/pipeline/types.ts`
+    );
+  }
   sh(
     `gh project item-edit --project-id ${BOARD.projectId} --id ${itemId} ` +
       `--field-id ${BOARD.statusFieldId} --single-select-option-id ${BOARD.statusOptions[statusName]}`
@@ -38,14 +45,14 @@ export function listBoardItemsLite(): BoardItem[] {
       items(first: 100${after ? `, after: "${after}"` : ""}) {
         pageInfo { hasNextPage endCursor }
         nodes { id
-          fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name updatedAt } }
           content { ... on Issue { number title repository { nameWithOwner } } } } } } } }`;
     const out = sh(`gh api graphql -f query='${query}'`);
     const page = (
       JSON.parse(out) as {
         data: { organization: { projectV2: { items: {
           pageInfo: { hasNextPage: boolean; endCursor: string };
-          nodes: Array<{ id: string; fieldValueByName: { name?: string } | null;
+          nodes: Array<{ id: string; fieldValueByName: { name?: string; updatedAt?: string } | null;
             content: { number?: number; title?: string; repository?: { nameWithOwner: string } } | null }>;
         } } } };
       }
@@ -54,6 +61,7 @@ export function listBoardItemsLite(): BoardItem[] {
       items.push({
         itemId: n.id,
         status: n.fieldValueByName?.name ?? null,
+        statusUpdatedAt: n.fieldValueByName?.updatedAt ?? null,
         issueNumber: n.content?.number ?? null,
         repository: n.content?.repository?.nameWithOwner ?? null,
         title: n.content?.title ?? "",
@@ -122,11 +130,23 @@ export function editIssueLabels(
   sh(`gh issue edit ${num} --repo ${OWNER}/${repo} ${flags}`);
 }
 
+/** Add assignees to an issue (existing assignees are kept). */
+export function addIssueAssignees(repo: string, num: number, logins: string[]): void {
+  if (logins.length === 0) return;
+  sh(`gh issue edit ${num} --repo ${OWNER}/${repo} ${logins.map((l) => `--add-assignee "${l}"`).join(" ")}`);
+}
+
+export function getIssueAssignees(repo: string, num: number): string[] {
+  const out = sh(`gh issue view ${num} --repo ${OWNER}/${repo} --json assignees --jq '[.assignees[].login]'`);
+  return JSON.parse(out) as string[];
+}
+
 export interface IssueLinks {
   number: number;
   state: "OPEN" | "CLOSED";
   updatedAt: string;
   labels: string[];
+  assignees: string[];
   prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
 }
 
@@ -139,6 +159,7 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
       .map(
         (n) => `i${n}: issue(number: ${n}) { number state updatedAt
           labels(first: 30) { nodes { name } }
+          assignees(first: 10) { nodes { login } }
           timelineItems(last: 40, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) { nodes {
             ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged repository { name } } } }
             ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged repository { name } } } }
@@ -155,6 +176,7 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         state: "OPEN" | "CLOSED";
         updatedAt: string;
         labels: { nodes: Array<{ name: string }> };
+        assignees: { nodes: Array<{ login: string }> };
         timelineItems: { nodes: Array<{ source?: PRNode; subject?: PRNode }> };
       };
       if (!node) continue;
@@ -174,6 +196,7 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         state: node.state,
         updatedAt: node.updatedAt,
         labels: node.labels.nodes.map((l) => l.name),
+        assignees: node.assignees.nodes.map((a) => a.login),
         prs: Array.from(prs, ([ref, v]) => ({ ref, ...v })),
       });
     }

@@ -75,7 +75,7 @@ pnpm -s tsx bin/pipeline/board.ts set <issue#> todo      # 中央卡：加入 bo
 gh issue view <issue-url> --json number,url,title,body,labels,state
 ```
 
-`board.ts set` 取代手動 `item-add` + `item-edit`：六欄 option id 集中在 `bin/pipeline/types.ts`，別再從文件複製舊 ID。板上開著「Item added to project → Todo」內建 workflow，但仍明確設一次，避免 workflow 被關掉時卡片沒有 Status。人工任務要一起掛開工標記時用 `set <n> wip --add-label human-driving`（那是 dev-task start 的事，開卡階段不做）。
+`board.ts set` 取代手動 `item-add` + `item-edit`：七欄 option id 集中在 `bin/pipeline/types.ts`，別再從文件複製舊 ID。板上開著「Item added to project → Todo」內建 workflow，但仍明確設一次，避免 workflow 被關掉時卡片沒有 Status。人工任務要一起掛開工標記時用 `set <n> wip --add-label human-driving`（那是 dev-task start 的事，開卡階段不做）。
 
 範例是參數形狀，執行時替換已驗證值。預設明確設 Todo；使用者要求時才 `set <n> ready`，且先完成 body／labels／規格檢查。缺 label 不忽略錯誤；確認命名與權限後依已授權開卡範圍補建。
 

@@ -307,7 +307,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 ## Phase 2.5：開卡（gh-card）
 
-規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Done／Need Fix。
+規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
 
 ```
 /gh-card（從對話推斷欄位，互動確認一次）
@@ -422,7 +422,7 @@ daodao/
 2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境（app-dev + server-dev）重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `file-bug-issue` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
 3. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪）
 4. 移除 `human-driving`
-5. `/post-merge-wrapup`：dev 冒煙、更新 `docs/product` 功能狀態；依冒煙結果 `board.ts set <n> done`（內建 workflow 順手 close issue）或 `needfix`
+5. `/post-merge-wrapup`：dev 冒煙、更新 `docs/product` 功能狀態；依冒煙結果 `board.ts set <n> accept`（自動 assign PM＋發交接留言）或 `needfix`；PM 驗收通過關 issue，內建 workflow 移 Done
 6. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
 ### 3.2 平行開發約定
@@ -735,7 +735,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 ### 8.3 Board 與 issue
 
-board 六欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Done（內建「Auto-close issue」workflow 順手 close 中央卡）、失敗 → Need Fix。沒有 cron；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 sub-repo 的 `Refs`。六欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
+board 七欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Acceptance（assign PM＋交接留言 @PM）、失敗 → Need Fix；PM 驗收通過關 issue → Done（內建 `Item closed → Done`），退回 → Need Fix。沒有 cron；子 PR 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 sub-repo 的 `Refs`。七欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
 
 驗收若發現與 PRD／FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差用 `/prd-generation` 重新定稿再開卡。
 

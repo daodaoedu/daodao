@@ -19,7 +19,7 @@
 | 審查 | code-review、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
 | 通知 | notify-related-issue | 核對 PR／Issue 狀態、草擬有證據的更新、查重 | 尚未授權的留言／關閉操作 |
 | 合併收尾 | post-merge-wrapup、dev-task cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
-| board | gh-pipeline | Planning board 六欄語意、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
+| board | gh-pipeline | Planning board 七欄語意（含 PM 驗收的 Acceptance）、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
 
 ## 四平台的 skill 來源
 
