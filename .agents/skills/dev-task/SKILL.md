@@ -198,7 +198,7 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 
 前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `plugin/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則、「## 驗證」無未勾項目／「需要手動驗證」清單、UI repo 有全 ✅ 的「### 版面探針」表）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。hook 本身需要 `jq`（缺了會 fail closed 擋下 `gh pr create` 並提示安裝）、`python3` 與 `node`（parity 檢查，缺了只 warn）。
 
-0. **Deferred items 先開卡再發 PR**：把 task.md「## Deferred items」與驗證中發現的範圍外問題整理成清單，依 `publish-tasks` skill 在既有授權範圍內開卡，每一項後面補 `#<n>`。先分兩類：**本卡範圍內沒做完的** → 開成子 issue（父卡＝本任務 issue），母卡要等它關閉才交 PM 驗收；**範圍外的後續改進／技術債** → 開成獨立 issue，body 寫「#<n> 的後續改進」，**不掛子卡關係**，否則母卡永遠關不掉（#214 → daodao-f2e#1032／#1033）；沒有開卡授權的項目寫 `（待開卡：<原因>）`，並在 issue comment 的 Known incomplete scope 原樣列出，讓人決定。**task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失**——#171 的「驗證紅框取代 toast」就是這樣變成 #188 的第二個根因
+0. **Deferred items 先開卡再發 PR**：把 task.md「## Deferred items」與驗證中發現的範圍外問題整理成清單，依 `publish-tasks` skill 在既有授權範圍內開卡，每一項後面補 `#<n>`。先分兩類：**本卡範圍內沒做完的** → 開成子 issue：本任務是子卡時掛到**它的母卡**（只有兩層，不可掛在子卡底下），body 寫對應的 AC；本任務是獨立卡時掛在本任務底下。母卡要等它關閉才交 PM 驗收；**範圍外的後續改進／技術債** → 開成獨立 issue，body 寫「#<n> 的後續改進」，**不掛子卡關係**，否則母卡永遠關不掉（#214 → daodao-f2e#1032／#1033）；沒有開卡授權的項目寫 `（待開卡：<原因>）`，並在 issue comment 的 Known incomplete scope 原樣列出，讓人決定。**task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失**——#171 的「驗證紅框取代 toast」就是這樣變成 #188 的第二個根因
 
 對每個有變更的 repo（在任務資料夾內的 worktree 執行）：
 

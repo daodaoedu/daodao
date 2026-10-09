@@ -101,6 +101,10 @@ export function auditCards(
     const open = c.prs.filter((p) => p.state === "open" && implements_(p));
     const merged = c.prs.filter((p) => p.state === "merged" && implements_(p));
     const ageDays = (now.getTime() - new Date(c.updatedAt).getTime()) / 86_400_000;
+    // Time in the current column: comments refresh issue updatedAt, the Status value's does not
+    const columnDays = c.statusUpdatedAt
+      ? (now.getTime() - new Date(c.statusUpdatedAt).getTime()) / 86_400_000
+      : ageDays;
     // Parent cards: the whole requirement is accepted only after every sub-issue is closed
     const subOpen = c.subIssues ? c.subIssues.total - c.subIssues.completed : 0;
 
@@ -135,11 +139,11 @@ export function auditCards(
       c.issueState === "OPEN" &&
       merged.length > 0 &&
       open.length === 0 &&
-      ageDays >= staleDays
+      columnDays >= staleDays
     ) {
       push(
         c,
-        `PR 全 merged（${merged.map((p) => p.ref).join(", ")}）且 ${Math.floor(ageDays)} 天無活動`,
+        `PR 全 merged（${merged.map((p) => p.ref).join(", ")}）且已在 Review ${Math.floor(columnDays)} 天`,
         subOpen > 0
           ? `母卡：等 ${subOpen} 張子卡關閉後再跑 post-merge-wrapup 交 PM`
           : "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
@@ -172,7 +176,10 @@ export function auditCards(
       push(c, `子卡不在中央 repo：${c.foreignSubIssues!.join(", ")}`, "可驗收工作改開中央子卡；工程交接筆記移出子卡關係");
     }
     if (status === "Review" && c.prs.length === 0) {
-      push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");
+      // Parents carry no PRs of their own (github-issue-management §4.3)
+      if ((c.subIssues?.total ?? 0) === 0) {
+        push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");
+      }
     }
     const dead = c.labels.filter((l) => deadLabels.includes(l));
     if (dead.length > 0) {

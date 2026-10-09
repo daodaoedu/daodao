@@ -165,7 +165,7 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
           assignees(first: 10) { nodes { login } }
           subIssuesSummary { total completed }
           parent { number }
-          subIssues(first: 50) { nodes { number repository { name } } }
+          subIssues(first: 100) { nodes { number repository { name } } }
           timelineItems(last: 40, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) { nodes {
             ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged repository { name } } } }
             ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged repository { name } } } }

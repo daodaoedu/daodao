@@ -93,13 +93,16 @@ describe("auditCards", () => {
 
   it("sends a Review card whose PRs all merged a while ago to post-merge-wrapup", () => {
     const merged = [pr("daodao-f2e#973", "merged")];
-    const stale = card({ status: "Review", prs: merged, updatedAt: "2026-09-05T00:00:00Z" });
-    const fresh = card({ status: "Review", prs: merged, updatedAt: "2026-09-19T00:00:00Z" });
-    const waiting = card({ status: "Review", prs: [pr("daodao-f2e#974", "open")], updatedAt: "2026-09-05T00:00:00Z" });
+    const stale = card({ status: "Review", prs: merged, statusUpdatedAt: "2026-09-05T00:00:00Z" });
+    const fresh = card({ status: "Review", prs: merged, statusUpdatedAt: "2026-09-19T00:00:00Z" });
+    const waiting = card({ status: "Review", prs: [pr("daodao-f2e#974", "open")], statusUpdatedAt: "2026-09-05T00:00:00Z" });
+    // a status comment refreshes issue updatedAt but must not reset the Review clock
+    const commented = card({ status: "Review", prs: merged, statusUpdatedAt: "2026-09-05T00:00:00Z", updatedAt: "2026-09-19T23:00:00Z" });
     const f = auditCards([stale], DEAD_LABELS, NOW).find((x) => x.problem.startsWith("PR 全 merged"));
     expect(f?.suggest).toContain("post-merge-wrapup");
     expect(problems(fresh).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
     expect(problems(waiting).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
+    expect(problems(commented).some((x) => x.startsWith("PR 全 merged"))).toBe(true);
   });
 });
 
@@ -157,7 +160,7 @@ describe("parent cards", () => {
   });
 
   it("tells a stale merged parent in Review to wait for its sub-issues", () => {
-    const f = auditCards([parent({ status: "Review", updatedAt: "2026-09-05T00:00:00Z" })], DEAD_LABELS, NOW);
+    const f = auditCards([parent({ status: "Review", statusUpdatedAt: "2026-09-05T00:00:00Z" })], DEAD_LABELS, NOW);
     expect(f.find((x) => x.problem.startsWith("PR 全 merged"))?.suggest).toContain("等 2 張子卡關閉");
   });
 
@@ -165,6 +168,11 @@ describe("parent cards", () => {
     const f = problems(card({ status: "Done", issueState: "CLOSED", parent: 150, subIssues: { total: 2, completed: 2 } }));
     expect(f).toContain("第三層：本卡是 #150 的子卡，底下又有 2 張子卡");
     expect(problems(card({ parent: 150 }))).toEqual([]);
+  });
+
+  it("does not ask a PR-less parent in Review for a PR", () => {
+    expect(problems(card({ status: "Review", prs: [], subIssues: { total: 2, completed: 1 } }))).toEqual([]);
+    expect(problems(card({ status: "Review", prs: [] }))).toContain("Review 但沒有關聯 PR");
   });
 
   it("flags sub-issues opened outside the central repo", () => {

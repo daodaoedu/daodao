@@ -78,6 +78,11 @@ function cmdSet(): void {
       item = { itemId: addBoardItem(url), status: null, url };
     }
   }
+  // Assign first: if it fails the card has not moved, so Acceptance never sits without its PM
+  if (assign.length) {
+    console.log(`${tag}#${num} assignees +[${assign.join(",")}]`);
+    if (!DRY_RUN) addIssueAssignees(CENTRAL_REPO, num, assign);
+  }
   console.log(`${tag}#${num} ${item?.status ?? "(none)"} → ${statusName}`);
   if (!DRY_RUN && item) setBoardStatus(item.itemId, statusName);
 
@@ -85,14 +90,11 @@ function cmdSet(): void {
     console.log(`${tag}#${num} labels +[${add.join(",")}] -[${remove.join(",")}]`);
     if (!DRY_RUN) editIssueLabels(CENTRAL_REPO, num, add, remove);
   }
-  if (assign.length) {
-    console.log(`${tag}#${num} assignees +[${assign.join(",")}]`);
-    if (!DRY_RUN) addIssueAssignees(CENTRAL_REPO, num, assign);
-  }
   if (!DRY_RUN) {
     const after = findItem(num);
     if (after?.status !== statusName) die(`回讀失敗：#${num} 目前 status=${after?.status}`);
-    const missing = assign.filter((a) => !getIssueAssignees(CENTRAL_REPO, num).includes(a));
+    const assignees = assign.length ? getIssueAssignees(CENTRAL_REPO, num) : [];
+    const missing = assign.filter((a) => !assignees.includes(a));
     if (missing.length) die(`回讀失敗：#${num} 未指派 ${missing.join(",")}`);
     console.log(`#${num} 回讀 OK：${after.status}${assign.length ? `，assignee 含 ${assign.join(",")}` : ""}`);
   }
