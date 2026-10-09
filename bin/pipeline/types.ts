@@ -11,8 +11,8 @@ export const BOARD = {
     "Ready for Dev": "c9e0e5d5",
     "In Progress": "47fc9ee4",
     Review: "f25bace1",
-    // Added in the web settings page (the API cannot create options); empty until then
-    Acceptance: "",
+    // Added in the web settings page on 2026-10-09 (the API cannot create options)
+    Acceptance: "4f45350c",
     "Need Fix": "bb831d2b",
     Done: "98236657",
   },
