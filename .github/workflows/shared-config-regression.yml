@@ -49,14 +49,22 @@ jobs:
           pnpm vitest run plugin/scripts/__tests__/
 
   native-trace-smoke:
-    name: Native filesystem trace (macOS)
-    runs-on: macos-latest
+    name: Native filesystem trace (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install pinned native observer
+        if: runner.os == 'macOS'
         run: python3 -m pip install -r scripts/agent-trace/requirements.txt
       - name: Verify Bash writes are independently captured
         run: python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_capture.py' -v
+      - name: Verify Linux overflow and watch-loss handling
+        if: runner.os == 'Linux'
+        run: python3 -m unittest discover -s scripts/__tests__ -p 'test_linux_agent_observer.py' -v
