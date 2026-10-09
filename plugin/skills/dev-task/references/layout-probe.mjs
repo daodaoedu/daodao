@@ -57,7 +57,14 @@ const openerSeen = new Set();
 // 在頁面內執行：量目前可見浮層的裁切／出界／遮擋。無浮層回傳 null
 const FLOATING = "[role=menu],[role=listbox],[role=dialog],[data-radix-popper-content-wrapper] > *";
 // 點擊前先標記已存在的浮層，量測時排除，避免常駐 dialog 冒充「點開的浮層」
-const markExisting = (sel) => { for (const el of document.querySelectorAll(sel)) el.setAttribute("data-probe-preexisting", ""); };
+// 只標「已經看得到」的：display:none／尚未展開的手刻選單點擊前就在 DOM 裡，標了會讓點開後量不到（#214 review 後實測）
+const markExisting = (sel) => {
+  for (const el of document.querySelectorAll(sel)) {
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    if (r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.opacity !== "0") el.setAttribute("data-probe-preexisting", "");
+  }
+};
 const measureFloating = (sel) => {
   const desc = (el) => `${el.tagName.toLowerCase()}.${(el.className?.toString() || "").trim().split(/\s+/).slice(0, 4).join(".")}`;
   const layers = [...document.querySelectorAll(sel)]
