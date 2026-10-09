@@ -15,9 +15,10 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 
 const PLUGIN_ROOT = resolve(import.meta.dirname, '..')
+const REPO_ROOT = resolve(PLUGIN_ROOT, '..')
 const OUT = join(PLUGIN_ROOT, 'out', 'release')
 const STAGE = join(PLUGIN_ROOT, 'out', '.stage')
 
@@ -29,9 +30,6 @@ const STAGE = join(PLUGIN_ROOT, 'out', '.stage')
  * 會把同一份內容存成不同的時間戳，sha256 自然對不起來。
  */
 const EPOCH = '200001010000'
-
-/** 不進 zip 的東西：產物、其他平台的包、node 垃圾。 */
-const EXCLUDE = new Set(['out', 'node_modules', '.DS_Store'])
 
 const meta = JSON.parse(readFileSync(join(PLUGIN_ROOT, '.claude-plugin', 'plugin.json'), 'utf8'))
 const version: string = meta.version
@@ -49,9 +47,32 @@ const archiveUrl =
 rmSync(STAGE, { recursive: true, force: true })
 mkdirSync(join(STAGE, 'plugin'), { recursive: true })
 
-for (const entry of readdirSync(PLUGIN_ROOT)) {
-  if (EXCLUDE.has(entry)) continue
-  cpSync(join(PLUGIN_ROOT, entry), join(STAGE, 'plugin', entry), { recursive: true })
+/**
+ * 以 git 追蹤的檔案為準，不是掃工作目錄。
+ *
+ * 掃工作目錄會把本機殘留一起打包——2026-09-21 就是本機的
+ * `hooks/__pycache__/*.pyc` 混進去，導致本機打的包比 CI 多一個檔案，
+ * 跨機器 sha256 永遠對不起來。`git ls-files` 拿到的就是這個 commit 的內容，
+ * 本機與 CI 必然一致，.gitignore 擋掉的東西也自然不會進來。
+ */
+const tracked = execFileSync('git', ['ls-files', '-z', '--', 'plugin'], {
+  cwd: REPO_ROOT,
+  encoding: 'utf8',
+  maxBuffer: 32 * 1024 * 1024,
+})
+  .split('\0')
+  .filter(Boolean)
+  .map((p) => relative('plugin', p))
+  // out/ 是各平台產物，不進自己的包（會套娃，也讓包變大）
+  .filter((p) => p !== '' && !p.startsWith('..') && !p.startsWith('out/'))
+  .sort()
+
+if (tracked.length === 0) throw new Error('git ls-files 沒有列出任何 plugin/ 檔案')
+
+for (const rel of tracked) {
+  const dest = join(STAGE, 'plugin', rel)
+  mkdirSync(dirname(dest), { recursive: true })
+  cpSync(join(PLUGIN_ROOT, rel), dest)
 }
 
 // 統一時間戳，讓 zip 可重現

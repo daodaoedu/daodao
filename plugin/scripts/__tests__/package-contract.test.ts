@@ -57,6 +57,20 @@ describe('release zip', () => {
     expect([...topLevels]).toEqual(['plugin'])
   })
 
+  // 2026-09-21：本機打的包比 CI 多一個 hooks/__pycache__/*.pyc，跨機器 sha256 因此
+  // 永遠對不起來。改成以 git ls-files 為準後，本機殘留（.pyc、.DS_Store、編輯器暫存）
+  // 就不可能混進去。這條測試守住「包內容 = commit 內容」。
+  it('只含 git 追蹤的檔案，沒有本機殘留', () => {
+    const tracked = new Set(
+      execFileSync('git', ['ls-files', '--', 'plugin'], { cwd: REPO_ROOT, encoding: 'utf8' })
+        .split('\n')
+        .filter(Boolean),
+    )
+    const inZip = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' }).trim().split('\n')
+    const untracked = inZip.filter((p) => !tracked.has(p))
+    expect(untracked, '包裡有 git 沒追蹤的檔案').toEqual([])
+  })
+
   it('不含產物目錄（會讓包變大又互相套娃）', () => {
     const listing = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
     expect(listing).not.toMatch(/^plugin\/out\//m)
