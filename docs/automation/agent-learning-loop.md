@@ -30,7 +30,7 @@ pnpm plugin:check
 - 新增 `agent:check` 跑 handoff regression 與範例，接入 shared-config CI。各 skill 交付前主動檢查任務 handoff；目前不自動掃描所有歷史對話，也不自動偵測同義錯誤。
 - `plugin/hooks/analyze-ledger.sh` 的統計可作候選線索。下一步先用真實 trace 校準錯誤分類與誤判率，再把分類映射至規則候選；不讓 agent 自行改個人 memory 或正式規則。
 
-此檢查只驗結構及聲明一致性，無法驗證證據真偽、JSON 是否完整涵蓋所有 prose／寫入，也不攔截實際 filesystem 操作。需由獨立 trace 與 Git diff 校對，仍須真實部署／操作證據。CI 尚未遠端執行，required check 與各客戶端 hooks 是否生效須另驗。
+此檢查只驗結構及聲明一致性，無法驗證證據真偽、JSON 是否完整涵蓋所有 prose／寫入，也不攔截實際 filesystem 操作。需由獨立 trace 與 Git diff 校對，仍須真實部署／操作證據。PR #301 的 shared regression、native macOS 與 test-integrity 已遠端通過；新增 Linux 路徑的遠端結果另記，不能由本機測試代替。各客戶端 hooks 是否生效仍須另驗。
 
 ## 文件維護
 
@@ -71,7 +71,7 @@ python3 /absolute/daodao/plugin/hooks/check-agent-delivery.py   --repo /absolute
 
 ## 可執行的 Bash trace 收集路徑
 
-原生觀測器 `plugin/hooks/record-agent-writes.py` 在 agent 之外訂閱 macOS FSEvents，不解析 shell，也不從 diff 生出 targets。它在任務開始前確認 repo 乾淨，用檔案事件 probe 確認訂閱 ready；任務完成後再做 drain probe，保存事件 journal 與 SHA-256、start／final revision。掉事件、需 rescan、observer 停止或 probe 失敗都標 partial；沒有 polling fallback。目前只支援 macOS，需要 watchdog 6.0.0。
+原生觀測器 `plugin/hooks/record-agent-writes.py` 在 agent 之外訂閱 macOS FSEvents／Linux inotify，不解析 shell，也不從 diff 生出 targets。它在任務開始前確認 repo 乾淨，用檔案事件 probe 確認訂閱 ready；任務完成後再做 drain probe，保存事件 journal 與 SHA-256、start／final revision。掉事件、需 rescan、observer 停止或 probe 失敗都標 partial；沒有 polling fallback。macOS 使用 watchdog 6.0.0；Linux 使用標準函式庫及 libc 的 inotify，不需額外 Python 套件。
 
 一次設定（venv 放 repo 外）：
 
@@ -97,3 +97,27 @@ manifest 的 trace.ref／sha256 引用產生的 trace.json。嚴格 pilot 額外
 採用的做法：先讀 repo 而非要求人填技術欄位；規則由架構／型別／lint／CI／test 到 docs 逐層選擇；驗證工具提供 launch、ready／doctor、drive、evidence、cleanup，先實跑再交付；skill 變更隔離試驗，不即時污染其他任務。這幾份 pstack 文件重點是實際產品行為，沒有把完整寫入操作 trace 當所有 PR 的通用前置条件。寫入 trace 是我們另加的輔助證據，不能取代 API／UI／服務驗收，collector 不適用時不得阻擋原本合法的驗收流程。
 
 本機實測：原生 Bash／Python／rename／delete／還原案例有 14 個檔案事件、0 個 collector error；真實 Codex CLI 修 doubled utility，先見測試失敗再修正通過，shell Python 修改由 FSEvents 捕捉、獨立 supervisor 提交，完整 capture 通過 strict delivery 核對。此為隔離小型任務的端到端證據，不是五個既有任務的追溯證明，也不代表所有平台／大型 repo 已通過。原始 logs、journal 與 proof 保留在本機私有 pilot 目錄，不提交 raw session。
+
+
+## Linux 雲端 runner
+
+相同 recorder CLI 自動選 inotify；不安裝 watchdog、不需要 root／privileged container。必須由可信任 supervisor 啟動，watcher 訂閱所有既有目錄並經 probe ready 後才放行 agent。repo 放 runner 本機 ext4／xfs／btrfs／overlay／tmpfs 等受支援檔案系統，trace／journal／stop-file 放 repo 外。Docker 上不要監看 macOS bind mount，應在 container 自己的 `/tmp` 或本機 volume clone task repo；掛載 source 工具目錄可唯讀。
+
+```bash
+# 在 Linux VM／container 中執行；使用實際安裝路徑。
+python3 /tools/plugin/hooks/record-agent-writes.py \
+  --repo /workspace/task-repo --output /evidence/trace.json \
+  --stop-file /evidence/trace.stop
+# supervisor 等 /evidence/trace.json.ready.json，再放行 agent。
+# agent 完成測試和 commit 後，supervisor 建立 stop-file、等待 recorder 結束。
+```
+
+Linux collector 處理 rename cookie、刪除、既有目錄遞迴訂閱；偵測 `IN_Q_OVERFLOW`、watch 消失、unmount、reader 異常及截斷事件時標 partial。新增／搬入／搬移目錄一律標 partial，因為初次訂閱前可能已寫入檔案；仍繼續收集可觀測事件，但不從掃描或 Git diff 補造漏失紀錄。預期新增目錄可在任務 base 準備階段建立；不能在寫入發生後重新開 collector，卻聲稱原任務完整。
+
+[inotify Linux manual](https://man7.org/linux/man-pages/man7/inotify.7.html) 說明此 API 不涵蓋網路檔案系統的遠端寫入、mmap 修改，也無 process attribution；本紀錄表示 native filesystem event 覆蓋，不保證每次 byte mutation。symlink 指向 repo 外的寫入也不在 repo scope。需要更強保證時另評估具備權限的 system-level instrumentation，不能自行升級宣稱。
+
+無法啟動獨立 watcher 的託管 agent 平台需平台提供原始寫入攔截／journal；只有 Bash 命令文字仍不足。沒有這項能力就保留 operation-unverified，不阻擋原本的產品驗收。gate 預設 off 不變。
+
+Linux 真實 client pilot（2026-10-10）：獨立 recorder 訂閱 ready 後，delegated Codex agent 透過實際 Docker exec 先重現 `7 != 6`，用 Bash／Python 修正，再測試通過與 commit；observer 停止在 commit 之後。6 個事件、0 個 collector error，嚴格核對 exit 0；restored.txt 還原後不在 final diff，但出現在 raw journal。repo 使用 container 原生 `/tmp`，容器無網路／無 privileged，僅工具唯讀掛載；證據保存在 `/tmp/daodao-linux-trace/pilot/`，不提交原始 session。這證明本機 Linux container 路徑，不代表所有 hosted agent 已整合。
+
+此外，以真正 Linux kernel queue 填滿觸發 `IN_Q_OVERFLOW` 驗證掉失偵測（未修改 sysctl、未使用 root）；另有 decoder fault injection、watch-loss、瞬間新增又刪除目錄、非 UTF-8 檔名與本機 mount 判定回歸。這些與真實 agent pilot 分別保存，不能互相代替。

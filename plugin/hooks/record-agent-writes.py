@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Observe a macOS task repo independently of agent tools (including Bash).
+"""Observe a macOS/Linux task repo independently of agent tools (including Bash).
 
-Native FSEvents capture names/actions, not contents or process attribution.
+Native filesystem events capture names/actions, not contents or process attribution.
 Start before edits. Artifacts must be outside repo. No targets come from diff.
 """
 import argparse
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import subprocess
@@ -21,11 +22,16 @@ def git(repo, *args):
 
 
 def record(repo, output, command, stop_file=None):
-    if sys.platform != 'darwin':
-        raise ValueError('native capture currently supports macOS only; no polling fallback')
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers.api import BaseObserver
-    from watchdog.observers.fsevents import FSEventsEmitter
+    if sys.platform not in ('darwin', 'linux'):
+        raise ValueError('native capture supports macOS/Linux only; no polling fallback')
+    if sys.platform == 'darwin':
+        from watchdog.events import FileSystemEventHandler
+        from watchdog.observers.api import BaseObserver
+        from watchdog.observers.fsevents import FSEventsEmitter
+        backend = 'FSEvents'
+    else:
+        FileSystemEventHandler = object
+        backend = 'inotify'
     repo = repo.resolve()
     output = output.resolve()
     if output.is_relative_to(repo) or output.exists():
@@ -48,12 +54,6 @@ def record(repo, output, command, stop_file=None):
     ignored = []
     started = datetime.now(timezone.utc).isoformat()
     stream = journal.open('x')
-
-    class CheckedEmitter(FSEventsEmitter):
-        def queue_events(self, timeout, native_events):
-            if any(e.is_kernel_dropped or e.is_user_dropped or e.must_scan_subdirs for e in native_events):
-                failures.append('native event stream dropped events or requires rescan')
-            super().queue_events(timeout, native_events)
 
     class Handler(FileSystemEventHandler):
         def on_any_event(self, event):
@@ -96,18 +96,32 @@ def record(repo, output, command, stop_file=None):
             except Exception as exc:
                 failures.append(f'event processing failed: {exc}')
 
-    observer = BaseObserver(CheckedEmitter, timeout=0.1)
-    observer.schedule(Handler(), str(repo), recursive=True)
-    observer.start()
+    if sys.platform == 'darwin':
+        class CheckedEmitter(FSEventsEmitter):
+            def queue_events(self, timeout, native_events):
+                if any(e.is_kernel_dropped or e.is_user_dropped or e.must_scan_subdirs for e in native_events):
+                    failures.append('native event stream dropped events or requires rescan')
+                super().queue_events(timeout, native_events)
+
+        observer = BaseObserver(CheckedEmitter, timeout=0.1)
+        observer.schedule(Handler(), str(repo), recursive=True)
+    else:
+        spec = importlib.util.spec_from_file_location('linux_agent_observer', Path(__file__).with_name('linux-agent-observer.py'))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        observer = module.LinuxObserver(Handler(), repo, failures)
     child = None
     exit_code = 0
+    observer_started = False
     try:
+        observer.start()
+        observer_started = True
         # Probe delivery confirms native subscription before any agent runs.
         probe.write_text('start')
         if not handshake.wait(10):
             raise ValueError('observer readiness probe not received')
         probe.unlink()
-        ready_file.write_text(json.dumps(dict(run_id=run_id, start_head=start_head, backend='FSEvents', started_at=started)))
+        ready_file.write_text(json.dumps(dict(run_id=run_id, start_head=start_head, backend=backend, started_at=started)))
         print(f'capture ready: {ready_file}', flush=True)
         if command:
             child = subprocess.Popen(command, cwd=repo)
@@ -137,20 +151,23 @@ def record(repo, output, command, stop_file=None):
     finally:
         probe.unlink(missing_ok=True)
         observer.stop()
-        observer.join(timeout=10)
+        if observer_started:
+            observer.join(timeout=10)
         if observer.is_alive():
             failures.append('observer failed to stop')
         stream.close()
     final_head = git(repo, 'rev-parse', 'HEAD')
     raw = journal.read_bytes()
     data = dict(head_revision=final_head, start_revision=start_head, run_id=run_id,
-                source='filesystem-observer', backend='FSEvents', started_at=started,
+                source='filesystem-observer', backend=backend, started_at=started,
                 ended_at=datetime.now(timezone.utc).isoformat(),
                 coverage='partial' if failures else 'monitored-repo-window',
                 events=events, ignored_events=ignored, errors=failures,
                 journal_ref=journal.name, journal_sha256=hashlib.sha256(raw).hexdigest(),
                 child_exit_code=exit_code)
-    output.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+    # Linux names may contain undecodable bytes; JSON escapes preserve the
+    # filesystem surrogate instead of dropping the complete capture on encode.
+    output.write_text(json.dumps(data, ensure_ascii=True, indent=2) + '\n')
     print(f"capture {data['coverage']}: {len(events)} events; {len(failures)} errors", flush=True)
     return 2 if failures else exit_code
 
