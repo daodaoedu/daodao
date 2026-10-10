@@ -8,6 +8,33 @@ hook_normalize_input
 
 PROJECT_ROOT="$HOOK_CWD"
 
+# task.md 的狀態：task-template 是「## Status」標題下一行；舊任務用單行「Status: xxx」
+task_status() {
+  local st
+  st=$(awk '/^## Status[[:space:]]*$/{getline; print; exit}' "$1" 2>/dev/null)
+  if [ -z "$st" ]; then
+    st=$(grep -m1 -E '^[[:space:]]*Status:' "$1" 2>/dev/null | sed -E 's/^[[:space:]]*Status:[[:space:]]*//')
+  fi
+  st=$(printf '%s' "$st" | sed -E 's/^[[:space:]]+//')
+  # task-template 的五個狀態詞後面常接備註（「verified（停在 commit 前…）」），只顯示狀態詞；其他自由文字截短
+  if printf '%s' "$st" | grep -qE '^(planning|implementing|verified|in-review|merged)([^a-z-]|$)'; then
+    st=$(printf '%s' "$st" | grep -oE '^(planning|implementing|verified|in-review|merged)' | head -1)
+  else
+    st=$(printf '%s' "$st" | cut -c1-40)
+  fi
+  echo "${st:-?}"
+}
+
+# 任務資料夾底下還有程式碼 checkout（worktree 或 clone）才算進行中
+has_checkout() {
+  local d
+  [ -e "$1/.git" ] && return 0
+  for d in "$1"/*/; do
+    [ -e "${d}.git" ] && return 0
+  done
+  return 1
+}
+
 echo "🏗️  daodao-guard v0.1.0"
 echo ""
 
@@ -23,7 +50,7 @@ if echo "$PROJECT_ROOT" | grep -q 'worktrees/'; then
 
   echo "📍 工作區：$task_dir"
   if [ -n "$task_md" ] && [ -f "$task_md" ]; then
-    status=$(grep -m1 'Status:' "$task_md" 2>/dev/null | sed 's/.*Status:\s*//' || echo "unknown")
+    status=$(task_status "$task_md")
     echo "   狀態：$status"
   fi
 else
@@ -41,21 +68,26 @@ if [ ! -d "$WORKTREES_DIR" ]; then
 fi
 
 if [ -d "$WORKTREES_DIR" ]; then
-  task_count=$(ls -d "$WORKTREES_DIR"/*/ 2>/dev/null | wc -l | tr -d ' ')
-  if [ "$task_count" -gt 0 ]; then
+  active=()
+  records=0
+  for d in "$WORKTREES_DIR"/*/; do
+    [ -d "$d" ] || continue
+    if has_checkout "${d%/}"; then active+=("${d%/}"); else records=$((records + 1)); fi
+  done
+  if [ "${#active[@]}" -gt 0 ]; then
     echo ""
-    echo "📂 進行中的任務 ($task_count)："
-    for d in "$WORKTREES_DIR"/*/; do
-      [ -d "$d" ] || continue
+    echo "📂 進行中的任務 (${#active[@]})："
+    for d in "${active[@]}"; do
       name=$(basename "$d")
-      tm="$d/task.md"
-      if [ -f "$tm" ]; then
-        st=$(grep -m1 'Status:' "$tm" 2>/dev/null | sed 's/.*Status:\s*//' || echo "?")
-        echo "   $name → $st"
+      if [ -f "$d/task.md" ]; then
+        echo "   $name → $(task_status "$d/task.md")"
       else
         echo "   $name → (no task.md)"
       fi
     done
+  fi
+  if [ "$records" -gt 0 ]; then
+    echo "   📁 另有 $records 個任務只剩紀錄（程式碼已移除，等冒煙／PM 驗收後刪資料夾）"
   fi
 fi
 
