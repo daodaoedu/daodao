@@ -35,6 +35,7 @@ jobs:
         run: |
           node --test .github/scripts/__tests__/*.test.cjs
           bash .github/scripts/test-sync-claude-config-contract.sh
+          bash .github/scripts/test-code-review-contract.sh
       - name: Dev-task gates regression (pre-pr hook, PR evidence CI gate, validation parity)
         run: |
           bash .github/scripts/test-pre-pr-gate.sh
