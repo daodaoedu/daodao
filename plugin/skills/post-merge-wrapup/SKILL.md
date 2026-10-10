@@ -19,7 +19,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 - 從 PR／Issue 連結找已確認 PRD、既有 FRD、開發計畫與驗收紀錄，保留原 FR／TP／AC ID。
 - 核對此次合併涵蓋哪些需求、哪些仍未完成。依目前 commit 分列程式實作、測試、部署、目標環境操作證據；未執行就記未驗證。
 - 自動部署 workflow 成功只能支持該工作實際完成的步驟；確認環境與 revision 後才能更新部署狀態。功能可用仍需相應驗收證據。
-- 部分完成、驗收失敗或缺少環境證據，不勾選整份需求完成，也不直接把中央 Issue 標 Done。
+- 部分完成、驗收失敗或缺少環境證據，不勾選整份需求完成，也不直接把中央 Issue 標 Done。中央 Issue 的 Done 只由 PM 驗收通過（關 issue）產生，本 skill 不移 Done。
 
 ## 2.5 目標環境冒煙（有寫入路徑的變更必做）
 
@@ -40,18 +40,27 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 | J-03 | 建立場次 | 錯誤路徑 | ✅ 409 訊息可見 | ... |
 ```
 
-   全部 ✅ 才能在 docs/product 標「已驗收」。任一 ❌ → 走 `file-bug-issue` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。冒煙工具或環境不可用時記「未冒煙：<原因>」，同樣不算可用。
+   全部 ✅ 只代表 AI 冒煙通過，docs/product 標「dev 冒煙通過，待 PM 驗收」；PM 驗收通過後才標「已驗收」（見 §2.6）。任一 ❌ → 走 `file-bug-issue` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。冒煙工具或環境不可用時記「未冒煙：<原因>」，同樣不算可用。
 
-5. **回寫 Planning board**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
+5. **回寫 Planning board 並交給 PM**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
 
    ```bash
-   # 全部 ✅：移 Done、拔開工標記；board 內建「Auto-close issue」workflow 會順手 close 中央 issue
-   pnpm -s tsx bin/pipeline/board.ts set <n> done --remove-label human-driving
-   # 任一 ❌ 或未冒煙：驗收退回
+   # 全部 ✅：移 Acceptance，並自動 assign PM（PM_LOGIN）＋回讀；不移 Done、不關 issue
+   pnpm -s tsx bin/pipeline/board.ts set <n> accept
+   # 任一 ❌ 或未冒煙：退回
    pnpm -s tsx bin/pipeline/board.ts set <n> needfix
    ```
 
-   `Need Fix` 的卡由下一次 `/dev-task` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才 Done；部分 merged 留 Review 並在 comment 寫明剩哪些。
+   移 Acceptance 後**立刻**在中央 issue 發交接留言（[issue-status-comment.md](../../templates/issue-status-comment.md) 的「交給 PM 驗收」段）：`@peggy1213-create`、測試網址（直接點進對應頁面）、白話驗收步驟、對照的 AC、驗證報告連結、已知限制，以及「通過請關 issue；退回請留言哪條 AC 沒過並移 Need Fix」。沒發交接留言等於 PM 不知道輪到他。
+
+   `Need Fix` 的卡由下一次 `/dev-task` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才移 Acceptance；部分 merged 留 Review 並在 comment 寫明剩哪些。
+
+   **母卡**（有 GitHub sub-issues）：子卡還有沒關的（含 bug 子卡），母卡冒煙通過也**留在 Review**，comment 寫明等哪幾張子卡；子卡全關後再跑一次本步驟交 PM，交接留言的驗收步驟寫「整體走一遍」而不是重驗各子卡 AC。規則見 [gh-pipeline](../gh-pipeline/SKILL.md) 的「母卡與子卡」。
+
+## 2.6 PM 驗收之後
+
+- **通過**：PM 關 issue → 內建 `Item closed → Done` 自動移卡。之後收尾：拔 `human-driving`（`board.ts audit` 會列「Done 仍掛 human-driving」提醒）、docs/product 狀態改「已驗收」並附 PM 關 issue 的記錄。
+- **退回**：PM 留言哪條 AC 沒過並移 `Need Fix`（或請工程師代移 `set <n> needfix`）。退回理由對應不到任何 AC 時，代表 AC 寫得不清楚：先跟 PM 補齊 AC，再修。
 
 ## 3. 更新適用文件與歸檔
 
@@ -65,5 +74,5 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 - 檢查文件間狀態一致性、來源連結、FR／TP 對應、未完成項目及 diff；按變更執行適用文件檢查。
 - 報告每項「已完成／未驗證／待決策／不適用」、實際修改文件及證據。人只需審閱修訂與產品／發布決策，不必重新手動搜尋合併證據。
 - 報告第一行寫明「已合併／已部署／dev 冒煙通過」三個事實各自的狀態；三者不齊不寫「功能完成」。
-- 本機文件修訂不等於 commit、push、部署或關閉 Issue。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。Board 回寫（§2.5 第 5 步）是本 skill 的標準輸出，不另外要授權，但只依冒煙結果移卡，不因「merged」就移 Done。
+- 本機文件修訂不等於 commit、push、部署或關閉 Issue。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。Board 回寫與交接留言（§2.5 第 5 步）是本 skill 的標準輸出，不另外要授權，但只依冒煙結果移卡；本 skill 不移 Done，也不關中央 issue（那是 PM 驗收通過的動作）。
 - 遠端動作如已授權，執行後讀回確認；部分失敗保留成功項目與待處理項目，避免重複操作。

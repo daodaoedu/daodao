@@ -20,7 +20,8 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 從本 SKILL 所在位置向上三層定位 daodao root，不依目前 shell cwd 猜 repo。
 
 - 中央 feature／工作卡：讀 [模板規則](../../templates/README.md)與 [central-issue.md](../../templates/central-issue.md)。
-- 明確要求拆子 Issue：另外讀 [subtask-issue.md](../../templates/subtask-issue.md)，引用中央 AC；保留獨立行 `Parent: daodaoedu/daodao#N`。中央尚未建立時先存子卡草稿，取得實際號碼後再發布。
+- **母卡與子卡**：依 **GitHub Issue 管理規範 §4**（repo 檔案 `docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係`，未隨本包出貨）。開新功能（一份 PRD／FRD）時，母卡只放目標、AC 總表與子卡清單，並依 AC 一次拆好子卡：子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張有對應母卡 AC 的驗收條件、約一週內做完，body 保留獨立行 `Parent: daodaoedu/daodao#N`。只有兩層；技術債、後續改進、其他功能的 bug 開獨立卡寫「相關：#n」，不掛子卡。中央尚未建立時先存子卡草稿，取得實際號碼後再發布。
+- 單一 repo 的工程交接才用 [subtask-issue.md](../../templates/subtask-issue.md) 開在 sub-repo，只當交接筆記，不掛 sub-issue 關係、不上 board。
 - Bug／CI 錯誤通報：讀 [file-bug-issue](../file-bug-issue/SKILL.md)，保留錯誤原文與重現步驟。
 - 只問「有哪些模板／skill」：說明入口即可。只要 skill 修改或流程規劃：不建立 Issue。
 
@@ -78,7 +79,7 @@ pnpm -s tsx bin/pipeline/board.ts set <issue#> todo      # 中央卡：加入 bo
 gh issue view <issue-url> --json number,url,title,body,labels,state
 ```
 
-`board.ts set` 取代手動 `item-add` + `item-edit`：六欄 option id 集中在 `bin/pipeline/types.ts`，別再從文件複製舊 ID。板上開著「Item added to project → Todo」內建 workflow，但仍明確設一次，避免 workflow 被關掉時卡片沒有 Status。人工任務要一起掛開工標記時用 `set <n> wip --add-label human-driving`（那是 dev-task start 的事，開卡階段不做）。
+`board.ts set` 取代手動 `item-add` + `item-edit`：七欄 option id 集中在 `bin/pipeline/types.ts`，別再從文件複製舊 ID。板上開著「Item added to project → Todo」內建 workflow，但仍明確設一次，避免 workflow 被關掉時卡片沒有 Status。人工任務要一起掛開工標記時用 `set <n> wip --add-label human-driving`（那是 dev-task start 的事，開卡階段不做）。
 
 範例是參數形狀，執行時替換已驗證值。預設明確設 Todo；使用者要求時才 `set <n> ready`，且先完成 body／labels／規格檢查。缺 label 不忽略錯誤；確認命名與權限後依已授權開卡範圍補建。
 
@@ -96,5 +97,5 @@ Issue 建立成功但掛 Board／回填失敗：保存 URL、item ID 與待補�
 
 - 「用 gh-card 根據這份 Google Doc 開需求 Issue，先放 Todo。」
 - 「用 gh-card 開一張本機開發卡，附 POC、AC 與後端串接驗收要求。」
-- 「用 gh-card 將中央 #N 拆成 server／f2e 子 Issue，沿用 AC。」
+- 「用 gh-card 將母卡 #N 依 AC 拆成子卡。」
 - 「用 gh-card 只產生草稿，不發布。」

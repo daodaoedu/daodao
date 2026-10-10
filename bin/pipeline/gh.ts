@@ -2,6 +2,7 @@
  * Thin gh CLI wrappers for the Planning board CLI. All I/O lives here.
  */
 import { execSync } from "child_process";
+import { prTargets } from "./lib.js";
 import { BOARD, CENTRAL_REPO, OWNER, type BoardStatus } from "./types.js";
 
 function sh(cmd: string): string {
@@ -13,12 +14,19 @@ function sh(cmd: string): string {
 export interface BoardItem {
   itemId: string;
   status: string | null;
+  /** When the Status field was last set (ISO), null if never. */
+  statusUpdatedAt: string | null;
   issueNumber: number | null;
   repository: string | null;
   title: string;
 }
 
 export function setBoardStatus(itemId: string, statusName: BoardStatus): void {
+  if (!BOARD.statusOptions[statusName]) {
+    throw new Error(
+      `Status「${statusName}」還沒有 option id：先到 board 設定頁新增選項，再填進 bin/pipeline/types.ts`
+    );
+  }
   sh(
     `gh project item-edit --project-id ${BOARD.projectId} --id ${itemId} ` +
       `--field-id ${BOARD.statusFieldId} --single-select-option-id ${BOARD.statusOptions[statusName]}`
@@ -38,14 +46,14 @@ export function listBoardItemsLite(): BoardItem[] {
       items(first: 100${after ? `, after: "${after}"` : ""}) {
         pageInfo { hasNextPage endCursor }
         nodes { id
-          fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+          fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name updatedAt } }
           content { ... on Issue { number title repository { nameWithOwner } } } } } } } }`;
     const out = sh(`gh api graphql -f query='${query}'`);
     const page = (
       JSON.parse(out) as {
         data: { organization: { projectV2: { items: {
           pageInfo: { hasNextPage: boolean; endCursor: string };
-          nodes: Array<{ id: string; fieldValueByName: { name?: string } | null;
+          nodes: Array<{ id: string; fieldValueByName: { name?: string; updatedAt?: string } | null;
             content: { number?: number; title?: string; repository?: { nameWithOwner: string } } | null }>;
         } } } };
       }
@@ -54,6 +62,7 @@ export function listBoardItemsLite(): BoardItem[] {
       items.push({
         itemId: n.id,
         status: n.fieldValueByName?.name ?? null,
+        statusUpdatedAt: n.fieldValueByName?.updatedAt ?? null,
         issueNumber: n.content?.number ?? null,
         repository: n.content?.repository?.nameWithOwner ?? null,
         title: n.content?.title ?? "",
@@ -122,12 +131,27 @@ export function editIssueLabels(
   sh(`gh issue edit ${num} --repo ${OWNER}/${repo} ${flags}`);
 }
 
+/** Add assignees to an issue (existing assignees are kept). */
+export function addIssueAssignees(repo: string, num: number, logins: string[]): void {
+  if (logins.length === 0) return;
+  sh(`gh issue edit ${num} --repo ${OWNER}/${repo} ${logins.map((l) => `--add-assignee "${l}"`).join(" ")}`);
+}
+
+export function getIssueAssignees(repo: string, num: number): string[] {
+  const out = sh(`gh issue view ${num} --repo ${OWNER}/${repo} --json assignees --jq '[.assignees[].login]'`);
+  return JSON.parse(out) as string[];
+}
+
 export interface IssueLinks {
   number: number;
   state: "OPEN" | "CLOSED";
   updatedAt: string;
   labels: string[];
-  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
+  assignees: string[];
+  subIssues: { total: number; completed: number };
+  parent: number | null;
+  foreignSubIssues: string[];
+  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean; targets: number[] }>;
 }
 
 /** One GraphQL round-trip per 50 issues: state, labels, and cross-referenced PRs. */
@@ -139,9 +163,13 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
       .map(
         (n) => `i${n}: issue(number: ${n}) { number state updatedAt
           labels(first: 30) { nodes { name } }
+          assignees(first: 10) { nodes { login } }
+          subIssuesSummary { total completed }
+          parent { number }
+          subIssues(first: 100) { nodes { number repository { name } } }
           timelineItems(last: 40, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) { nodes {
-            ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged repository { name } } } }
-            ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged repository { name } } } }
+            ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged title body repository { name } } } }
+            ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged title body repository { name } } } }
           } } }`
       )
       .join("\n");
@@ -155,10 +183,14 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         state: "OPEN" | "CLOSED";
         updatedAt: string;
         labels: { nodes: Array<{ name: string }> };
+        assignees: { nodes: Array<{ login: string }> };
+        subIssuesSummary: { total: number; completed: number } | null;
+        parent: { number: number } | null;
+        subIssues: { nodes: Array<{ number: number; repository: { name: string } }> };
         timelineItems: { nodes: Array<{ source?: PRNode; subject?: PRNode }> };
       };
       if (!node) continue;
-      const prs = new Map<string, { state: "open" | "merged" | "closed"; linked: boolean }>();
+      const prs = new Map<string, { state: "open" | "merged" | "closed"; linked: boolean; targets: number[] }>();
       for (const t of node.timelineItems.nodes) {
         // ConnectedEvent = a real GitHub link (closing keyword / Development panel);
         // CrossReferencedEvent = only a mention in some body.
@@ -167,13 +199,23 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         if (!pr || pr.__typename !== "PullRequest") continue;
         const ref = `${pr.repository.name}#${pr.number}`;
         const state = pr.merged ? "merged" : pr.state === "OPEN" ? "open" : "closed";
-        prs.set(ref, { state, linked: linked || (prs.get(ref)?.linked ?? false) });
+        prs.set(ref, {
+          state,
+          linked: linked || (prs.get(ref)?.linked ?? false),
+          targets: prTargets(pr.title ?? "", pr.body ?? ""),
+        });
       }
       result.set(node.number, {
         number: node.number,
         state: node.state,
         updatedAt: node.updatedAt,
         labels: node.labels.nodes.map((l) => l.name),
+        assignees: node.assignees.nodes.map((a) => a.login),
+        subIssues: node.subIssuesSummary ?? { total: 0, completed: 0 },
+        parent: node.parent?.number ?? null,
+        foreignSubIssues: node.subIssues.nodes
+          .filter((s) => s.repository.name !== CENTRAL_REPO)
+          .map((s) => `${s.repository.name}#${s.number}`),
         prs: Array.from(prs, ([ref, v]) => ({ ref, ...v })),
       });
     }
@@ -186,5 +228,7 @@ interface PRNode {
   number: number;
   state: "OPEN" | "CLOSED" | "MERGED";
   merged: boolean;
+  title?: string;
+  body?: string;
   repository: { name: string };
 }

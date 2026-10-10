@@ -31,7 +31,7 @@
 Product 在中央 repo [daodaoedu/daodao](https://github.com/daodaoedu/daodao/issues)
 開 feature issue 並掛上 [Planning board](https://github.com/orgs/daodaoedu/projects/10)。
 開發由人工 `/dev-task` 在隔離 worktree 進行（start 時自動掛 `human-driving`），
-PR 開了由 `/dev-task` finish 移 Review；合併後 `/post-merge-wrapup` 依 dev 冒煙結果移 Done（內建 workflow 順手 close issue）或 Need Fix。
+PR 開了由 `/dev-task` finish 移 Review；合併後 `/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（assign PM＋交接留言）或 Need Fix；PM 驗收通過關 issue，內建 workflow 移 Done。
 
 **沒有自動派工**：`Ready for Dev` 只是管理狀態；`auto`／`auto:*`／`needs-spec`／`dispatched` 等 labels 不再使用（保留不刪）。
 
@@ -39,4 +39,4 @@ PR 開了由 `/dev-task` finish 移 Review；合併後 `/post-merge-wrapup` 依 
 
 **高風險 repo**：`daodao-storage`（SQL migration）與 `daodao-infra`（IaC）一律人工開發。
 
-詳見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)（六欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。
+詳見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)（七欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。

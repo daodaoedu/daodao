@@ -42,7 +42,7 @@ daodao/
 
 ### 1.1 收集素材
 
-1. `gh issue view <n>` 讀 issue（中央 issue 在 daodaoedu/daodao，鏡像 issue 在 sub-repo）
+1. `gh issue view <n>` 讀 issue（中央 issue 在 daodaoedu/daodao，鏡像 issue 在 sub-repo）。**只在子卡或獨立卡上開工**：issue 底下有 sub-issues（是母卡）時不在母卡上開發，改挑或依 AC 先拆子卡（[GitHub Issue 管理規範 §4](../../../docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係)）
 2. 收集使用者提供的 PRD／既有 FRD（`docs/product/`）、Issue 留言、POC/Figma/Drive 或分支連結；**POC 是 Google Drive 資料夾連結時，下載到本機**（見 [references/poc-download.md](references/poc-download.md)），verify 階段才有東西可以直接開來比對，不用每次現開 Drive
 3. **判定涉及哪些 repo** — 依 [references/repo-detection.md](references/repo-detection.md)：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）→ 每個 repo 附依據寫進 task.md；`repo:*` label 只當參考，查證結果為準
 4. 決定命名：
@@ -57,9 +57,9 @@ daodao/
    pnpm -s tsx bin/pipeline/board.ts set <n> wip --add-label human-driving
    ```
 
-   一行同時把 Planning board 卡片移到 `In Progress`（不在 board 會先加入）、掛 `human-driving` label，並回讀確認。從 `Need Fix`（驗收退回）接手的卡同樣用這行。
+   一行同時把 Planning board 卡片移到 `In Progress`（不在 board 會先加入）、掛 `human-driving` label，並回讀確認。從 `Need Fix`（dev 冒煙失敗或 PM 驗收退回）接手的卡同樣用這行；PM 退回的先讀他留言指出哪條 AC 沒過。
    - 自動派工 Routine A／B 已於 2026-09-20 退役（#241），`human-driving` 現在只用來在 board 上辨識「有人在做」，不再是防派工閘門
-   - 不要手動 `gh project item-edit`：board 的六欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 [gh-pipeline](../gh-pipeline/SKILL.md)
+   - 不要手動 `gh project item-edit`：board 的七欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 [gh-pipeline](../gh-pipeline/SKILL.md)
    - 不要跟 `human-coding` 混淆：那是 Routine B 時代 sub-repo 鏡像 issue 的移交標記，已不再使用
 2. **跟其他任務防撞**：對每個目標 repo 檢查 in-flight 工作：
    - `git worktree list`（在 `projects/<repo>` 內）→ 已有任務在做同一個 repo 時，比對雙方 scope 是否碰同一片檔案
@@ -190,7 +190,7 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 
 前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `${CLAUDE_PLUGIN_ROOT}/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則、「## 驗證」無未勾項目／「需要手動驗證」清單、UI repo 有全 ✅ 的「### 版面探針」表）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。hook 本身需要 `jq`（缺了會 fail closed 擋下 `gh pr create` 並提示安裝）、`python3` 與 `node`（parity 檢查，缺了只 warn）。
 
-0. **Deferred items 先開卡再發 PR**：把 task.md「## Deferred items」與驗證中發現的範圍外問題整理成清單，依 `publish-tasks` skill 在既有授權範圍內開成子 issue（父卡＝本任務 issue），每一項後面補 `#<n>`；沒有開卡授權的項目寫 `（待開卡：<原因>）`，並在 issue comment 的 Known incomplete scope 原樣列出，讓人決定。**task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失**——#171 的「驗證紅框取代 toast」就是這樣變成 #188 的第二個根因
+0. **Deferred items 先開卡再發 PR**：把 task.md「## Deferred items」與驗證中發現的範圍外問題整理成清單，依 `publish-tasks` skill 在既有授權範圍內開卡，每一項後面補 `#<n>`。先分兩類：**本卡範圍內沒做完的** → 開成子 issue：本任務是子卡時掛到**它的母卡**（只有兩層，不可掛在子卡底下），body 寫對應的 AC；本任務是獨立卡時掛在本任務底下。母卡要等它關閉才交 PM 驗收；**範圍外的後續改進／技術債** → 開成獨立 issue，body 寫「#<n> 的後續改進」，**不掛子卡關係**，否則母卡永遠關不掉（#214 → daodao-f2e#1032／#1033）；沒有開卡授權的項目寫 `（待開卡：<原因>）`，並在 issue comment 的 Known incomplete scope 原樣列出，讓人決定。**task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失**——#171 的「驗證紅框取代 toast」就是這樣變成 #188 的第二個根因
 
 對每個有變更的 repo（在任務資料夾內的 worktree 執行）：
 
@@ -268,7 +268,7 @@ EOF
      pnpm -s tsx bin/pipeline/board.ts set <n> review
      ```
 
-     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
+     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Acceptance` 交給 PM 驗收，PM 關 issue 才算 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
 9. 之後用 `collect-pr-feedback` skill 收集回饋修正
 
 ## Phase 5: cleanup — merge 後收尾
@@ -285,7 +285,7 @@ git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分
 ```
 
 3. 刪任務資料夾：`rm -rf "$TASK"`（刪之前確認核心旅程矩陣與 dev 冒煙結果已在 issue comment；task.md 其他有留存價值的內容先摘要進 comment）
-4. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）；board 卡的 `Done`／`Need Fix` 與 `human-driving` 移除由該 skill 依冒煙結果執行，這裡不要提前移 Done
+4. 接 `post-merge-wrapup` skill（更新 docs/product 與驗收狀態）；board 卡的 `Acceptance`（交給 PM）／`Need Fix` 由該 skill 依冒煙結果執行，`Done` 只由 PM 驗收通過（關 issue）產生，這裡不要提前移 Done
 5. clone 模式的任務：確認無未 push commit 後 `rm -rf`
 6. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
 

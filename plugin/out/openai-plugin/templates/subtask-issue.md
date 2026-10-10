@@ -1,6 +1,6 @@
 # <repo>：<子任務名稱>
 
-> 工程交接模板，由 skill／開發補充；提出者只需確認 PRD 中的需求與驗收。下文 AC 包含既有 FR／TP／AC ID，沿用來源編號，多文件同 ID 加文件 ID，不另訂條件。尚未開始的執行欄位依 README 標記。
+> 工程交接模板（選用，開在 sub-repo）：只當交接筆記，**不掛 GitHub sub-issue 關係、不上 Planning board**；可驗收的子卡一律開在中央 repo，見 [GitHub Issue 管理規範 §4](../../docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係)。由 skill／開發補充；提出者只需確認 PRD 中的需求與驗收。下文 AC 包含既有 FR／TP／AC ID，沿用來源編號，多文件同 ID 加文件 ID，不另訂條件。尚未開始的執行欄位依 README 標記。
 
 
 schemaVersion: 1
