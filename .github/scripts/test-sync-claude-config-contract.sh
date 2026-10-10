@@ -18,6 +18,9 @@ for path in \
   ".github/scripts/test-retrieve-context.sh" \
   ".github/scripts/test-code-review-contract.sh" \
   ".github/scripts/review-knowledge.cjs" \
+  ".github/scripts/build-review-batches.py" \
+  ".github/scripts/run-review-batches.py" \
+  ".github/scripts/__tests__/test_review_*.py" \
   ".github/workflows/pr-evidence-gate.yml" \
   ".github/scripts/check-pr-evidence.sh" \
   ".github/scripts/test-pr-evidence.sh" \
@@ -69,9 +72,11 @@ grep -Fq 'rm -rf "target/.claude/skills/$skill"' "$WORKFLOW" \
 grep -Eq 'cp[[:space:]]+\.claude/hooks|cp[[:space:]]+plugin/hooks|cp[[:space:]]+"?plugin/skills' "$WORKFLOW" \
   && fail "不得回頭逐檔複製 hooks／skills（那正是 plugin 化要消除的漂移來源）"
 
-for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh check-pr-evidence.sh test-pr-evidence.sh; do
+for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh build-review-batches.py run-review-batches.py test_review_batches.py test_review_runner.py check-pr-evidence.sh test-pr-evidence.sh; do
   grep -Fq "$script" "$WORKFLOW" || fail "sync workflow 未包含 $script"
 done
+grep -Fq 'uses: actions/setup-python@v5' "$WORKFLOW" || fail "sync regression 未設定 Python runtime"
+grep -Fq "python3 -m unittest discover -s .github/scripts/__tests__ -p 'test_review_*.py' -v" "$WORKFLOW" || fail "sync regression 未執行 Python review regression"
 grep -Fq "pr-evidence-gate.yml" "$WORKFLOW" || fail "sync workflow 未同步 pr-evidence-gate.yml（PR 驗證證據 CI 閘門）"
 # 同步 PR 不做 AI review、evidence gate 不得 checkout PR 程式碼（node fixture 沒有這些檔時略過）
 CODE_REVIEW_WORKFLOW="$SCRIPT_DIR/../workflows/code-review.yml"
