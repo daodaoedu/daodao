@@ -69,7 +69,7 @@ commit 時必須依序執行：
 | PR merged 後收尾 | `plugin/skills/post-merge-wrapup/SKILL.md` |
 | 移動 Planning board 卡片狀態 | `plugin/skills/gh-pipeline/SKILL.md` |
 
-Planning board（[Planning #10](https://github.com/orgs/daodaoedu/projects/10)）的 Status 由上面各流程負責移，一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`。**Definition of Done：AC 全部符合＋已部署到 dev＋PM 確認通過**；merge 或 AI 冒煙通過都不等於 Done。
+Planning board（[Planning #10](https://github.com/orgs/daodaoedu/projects/10)）的 Status 由上面各流程負責移，一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`。**Definition of Done：AC 全部符合＋已部署到 dev＋驗收通過**。預設 PM 驗收；PM 在 dev 看不出差別的卡開卡時掛 `acceptance:engineering`，冒煙通過即可關（判斷見 `gh-pipeline`）。merge 不等於 Done。
 
 ## 需求 / Bug 草稿共通行為
 

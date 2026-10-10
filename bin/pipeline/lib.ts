@@ -9,6 +9,7 @@
 import {
   ACCEPTANCE_SLE_BUSINESS_DAYS,
   CENTRAL_REPO,
+  ENGINEERING_ACCEPTANCE_LABEL,
   PM_LOGIN,
 } from "./types.js";
 
@@ -131,6 +132,7 @@ export function auditCards(
       : ageDays;
     // Parent cards: the whole requirement is accepted only after every sub-issue is closed
     const subOpen = c.subIssues ? c.subIssues.total - c.subIssues.completed : 0;
+    const engineering = c.labels.includes(ENGINEERING_ACCEPTANCE_LABEL);
 
     if (c.status === null) {
       push(c, "卡片沒有 Status", "設 Todo，或從 board 移除");
@@ -170,10 +172,14 @@ export function auditCards(
         `PR 全 merged（${merged.map((p) => p.ref).join(", ")}）且已在 Review ${Math.floor(columnDays)} 天`,
         subOpen > 0
           ? `母卡：等 ${subOpen} 張子卡關閉後再跑 post-merge-wrapup 交 PM`
-          : "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
+          : engineering
+            ? "跑 post-merge-wrapup：dev 冒煙通過留證據並關 issue（工程驗收），失敗移 Need Fix"
+            : "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
       );
     }
-    if (status === "Acceptance" && c.issueState === "OPEN") {
+    if (status === "Acceptance" && c.issueState === "OPEN" && engineering) {
+      push(c, `工程驗收卡（${ENGINEERING_ACCEPTANCE_LABEL}）不需進 Acceptance`, "dev 冒煙證據已在留言就關 issue（自動進 Done）；沒有就先跑 post-merge-wrapup");
+    } else if (status === "Acceptance" && c.issueState === "OPEN") {
       if (!c.assignees.includes(PM_LOGIN)) {
         push(c, `Acceptance 未指派 PM（${PM_LOGIN}）`, `assign ${PM_LOGIN} 並留交接留言`);
       }

@@ -46,6 +46,7 @@ description: 為島島阿學建立 GitHub 中央需求 Issue、Planning 卡片�
 - 執行後才會產生的欄位填「尚未開始／尚未產生」；不能捏造 digest、quota、證據或完成狀態。
 - Ready 必須有可驗收目標、repo、所需需求／POC 基準與規格；純後端 POC 可 N/A 附理由。
 - Acceptance snapshot 直接填本卡驗收契約（沿用 FR／TP／AC ID）；OpenSpec 已於 2026-09-20 退役，不再要求 `OpenSpec:` 行或 `tasks.md`。
+- **驗收方式**：依 **gh-pipeline「誰驗收」**（`skills/gh-pipeline/SKILL.md`，未隨本包出貨） 判斷 PM 在 dev 看不看得出差別；看不出來就掛 `acceptance:engineering`，理由寫進 body 的「驗收方式」一行，判斷不了就不掛（預設 PM）。
 - 預設 Status=`Todo`；人工作業加 `human-driving`。Scope 依實際複雜度判斷，不把所有工作一律當 M。
 - 自動化 plan-only／auto-pr 只在使用者要求時設定；storage／infra 維持 plan-only。
 - 憑證不可放 body；Google 文件／Drive 不因開卡而自動建立或公開分享。

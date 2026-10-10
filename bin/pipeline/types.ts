@@ -39,6 +39,12 @@ export const STATUS_ALIASES: Record<string, BoardStatus> = {
 /** PM who owns the Acceptance column: `set <n> accept` assigns them, audit checks it. */
 export const PM_LOGIN = "peggy1213-create";
 
+/**
+ * Cards with no change a PM can observe in dev (tooling, CI, dev-only endpoints, zero-diff refactors,
+ * backend internals): labelled at card creation; after dev smoke passes they close straight to Done.
+ */
+export const ENGINEERING_ACCEPTANCE_LABEL = "acceptance:engineering";
+
 /** Service Level Expectation for Acceptance (Kanban Guide 2025.5): business days in Asia/Taipei. */
 export const ACCEPTANCE_SLE_BUSINESS_DAYS = 2;
 

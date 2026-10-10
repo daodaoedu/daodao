@@ -32,6 +32,7 @@ templateVersion: 1
 - 環境／語系／瀏覽器／viewport／DPR：<內容>
 - POC 容差與差異決策：<核准基準、決策連結>
 - 真實後端驗證：<API base URL、版本證明方式、寫入後 GET／DB 回讀及 reload；唯讀則 seed 對照>
+- 驗收方式：<PM（預設）／工程（掛 `acceptance:engineering`）＋一句理由：PM 在 dev 看不看得出改前改後的差別>
 - Done 條件：<逐 repo merge、部署與 smoke；無部署需求須預先定義 N/A>
 
 ## 執行政策與狀態
