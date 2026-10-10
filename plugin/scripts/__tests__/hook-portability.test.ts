@@ -1,11 +1,16 @@
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 
 const HOOKS = resolve(import.meta.dirname, '..', '..', 'hooks')
 const scratch: string[] = []
+
+/** hook 會把 gate ledger 寫進 $HOME/.cache；測試一律給沙盒 HOME，不污染真實統計。 */
+const SANDBOX_HOME = mkdtempSync(join(tmpdir(), 'daodao-hook-home-'))
+scratch.push(SANDBOX_HOME)
+const SANDBOX_LEDGER = join(SANDBOX_HOME, '.cache', 'daodao-harness', 'gate-ledger.jsonl')
 
 afterAll(() => {
   for (const dir of scratch) rmSync(dir, { recursive: true, force: true })
@@ -17,7 +22,7 @@ function runHook(script: string, opts: { env?: Record<string, string>; stdin?: s
     const stdout = execFileSync('bash', [join(HOOKS, script)], {
       input: opts.stdin ?? '',
       cwd: opts.cwd,
-      env: { ...process.env, ...opts.env },
+      env: { ...process.env, HOME: SANDBOX_HOME, ...opts.env },
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     })
@@ -39,7 +44,7 @@ printf 'INPUT=%s\\n' "$(printf '%s' "$HOOK_TOOL_INPUT" | jq -cS . 2>/dev/null ||
   try {
     return execFileSync('bash', ['-c', script], {
       input: opts.stdin ?? '',
-      env: { ...process.env, ...opts.env },
+      env: { ...process.env, HOME: SANDBOX_HOME, ...opts.env },
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     })
@@ -59,7 +64,7 @@ printf '%s' "$HOOK_CWD"
   try {
     return execFileSync('bash', ['-c', script], {
       input: opts.stdin ?? '',
-      env: { ...process.env, ...opts.env },
+      env: { ...process.env, HOME: SANDBOX_HOME, ...opts.env },
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     })
@@ -133,6 +138,16 @@ describe('pre-pr-gate：兩種 harness 下都要真的擋', () => {
     })
     expect(r.code).toBe(2)
     expect(r.out).toContain('Status')
+  })
+
+  it('擋下的紀錄寫進沙盒 HOME 的 ledger，不寫進真實 ~/.cache', () => {
+    const cwd = fakeTask('in-progress')
+    runHook('pre-pr-gate.sh', {
+      cwd,
+      env: { CLAUDE_TOOL_NAME: 'Bash', CLAUDE_TOOL_INPUT: JSON.stringify(prCommand), CLAUDE_WORKING_DIRECTORY: cwd },
+    })
+    expect(existsSync(SANDBOX_LEDGER)).toBe(true)
+    expect(readFileSync(SANDBOX_LEDGER, 'utf8')).toContain(cwd.replace(/\/daodao-f2e$/, ''))
   })
 
   it('Codex 輸入：同一個任務、同一個指令，也要擋（exit 2）', () => {
