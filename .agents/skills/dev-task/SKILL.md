@@ -123,11 +123,16 @@ find . -name ".env*" -not -path "*/node_modules/*" -maxdepth 3 | while read f; d
 done
 
 # 裝依賴（pnpm 共享 store，多為 hardlink，很快）
-# ⚠️ 必加 --ignore-workspace：monorepo 根的 pnpm-workspace.yaml 會把 worktrees/ 下的 repo 當成
-#    workspace 成員而 no-op（「Done in 274ms」、沒有 node_modules）。repo 自己有 pnpm-workspace.yaml
-#    的（daodao-f2e）不受影響但加了也無害。裝完用 ls node_modules/.bin 確認真的有東西
-cd "$TASK/<repo>" && pnpm install --ignore-workspace
+# repo 自己有 pnpm-workspace.yaml（daodao-f2e）→ 直接 pnpm install，用它自己的 workspace 與 catalog；
+#   加 --ignore-workspace 會讓 catalog 失效，報 ERR_PNPM_CATALOG_ENTRY_NOT_FOUND_FOR_SPEC
+# 其他 repo（daodao-server 等）→ 加 --ignore-workspace，否則 monorepo 根的 pnpm-workspace.yaml
+#   會把它當成 workspace 成員而 no-op（「Done in 274ms」、沒有 node_modules）
+# 裝完用 ls node_modules/.bin 確認真的有東西
+cd "$TASK/<repo>"
+if [ -f pnpm-workspace.yaml ]; then pnpm install; else pnpm install --ignore-workspace; fi
 ```
+
+server 起不來、openapi 檔冒出大量 diff、連不到 `*.orb.local` 等環境問題，先查 [references/gotchas.md](references/gotchas.md)「環境準備」。
 
 ### 1.5 產出驗收契約
 
@@ -178,6 +183,8 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 
 有 UI 變更（f2e / admin-ui）的任務**必須**通過此階段才能發 PR；純後端任務改跑 API 驗證（curl / 整合測試）後跳到 finish。詳細操作見 [references/browser-verify.md](references/browser-verify.md)。
 
+驗證途中掉登入、量到被導走的頁面、toast 截不到、寄信或 DB 驗證卡住時，先查 [references/gotchas.md](references/gotchas.md)「開發與瀏覽器驗證」。
+
 與 dev 階段 phase 級快篩的分工：快篩只看「這個 phase 的改動有沒有壞」；verify 是**對完整驗收清單（PRD／既有 FRD 的 Test Points）的總驗收**，含跨 phase 整合、回歸、無障礙與窄螢幕——快篩過了不能跳過 verify。
 
 1. **起 dev server** — 在任務資料夾的 worktree 內起，套用 task.md 的 Port offset
@@ -199,6 +206,8 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 8. 全部通過 → task.md Status → `verified`，進入 finish。「全部」包含：「## 驗證」沒有任何 `- [ ]` 未勾項目、沒有「需要手動驗證」清單、「### 版面探針」全 ✅
 
 ## Phase 4: finish — 發 PR
+
+`gh pr create` 被 GraphQL 限流時，改走 REST 並手動跑發 PR 閘門，見 [references/gotchas.md](references/gotchas.md)「發 PR」。
 
 前置：verify 已通過（task.md Status = `verified`）。發 PR 前核對驗收狀態、POC 報告、核心旅程矩陣與已確認差異。若環境另有註冊 `plugin/hooks/pre-pr-gate.sh`，確認其實際觸發與涵蓋範圍（閘門清單：Status 已 verified、POC 比對、核心旅程矩陣無 ⬜／❌ 且含錯誤路徑、Deferred items 全部有子 issue、PR body 有「## 驗證證據」、前端手寫驗證規則能編譯且對得到 server 規則、「## 驗證」無未勾項目／「需要手動驗證」清單、UI repo 有全 ✅ 的「### 版面探針」表）；未安裝或 Codex 不支援該 hook 時由 agent 主動執行同等檢查，不宣稱機器已攔截。hook 本身需要 `jq`（缺了會 fail closed 擋下 `gh pr create` 並提示安裝）、`python3` 與 `node`（parity 檢查，缺了只 warn）。
 
