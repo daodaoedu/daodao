@@ -196,9 +196,10 @@ Format your output as a table:
 Severity levels: High (bug/security risk), Medium (performance/maintainability), Low (style/minor).
 Be direct and terse. No compliments. Just the problems." \
   --model claude-sonnet-5-5 \
-  --tools "" < "$_REVIEW_INPUT"
+  --tools "" < "$_REVIEW_INPUT" > "$_REVIEW_TMP_DIR/claude.txt"
 ```
 
+- 輸出存到 `$_REVIEW_TMP_DIR/claude.txt`，跟其他引擎一樣由步驟 6.5 的誤判知識庫過濾；要看原文就讀這個檔
 - 模型：`claude-sonnet-5-5`（2026-09-28 發布，Claude 5.5 家族中階；2026-10-09 CLI 2.1.295 實測可用）。固定完整 model ID，不用 `sonnet` alias，換代時才會看得到改動
 - 需要更深的 review 時可改 `claude-opus-5-5`（成本較高）；`claude-sonnet-5` 為上一代
 - timeout: 300000（5 分鐘）
