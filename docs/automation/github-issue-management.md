@@ -61,7 +61,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 | `Review` | PR 已開（`/dev-task` finish）；merged 後仍留此欄，直到 post-merge-wrapup 冒煙通過 | open |
 | `Acceptance` | 全部必要 repo 合併 + dev 冒煙通過（post-merge-wrapup `set <n> accept`，自動 assign PM＋交接留言），等 PM 對照 AC 驗收 | open |
 | `Need Fix` | post-merge-wrapup 的 dev 冒煙任一 ❌ 或未冒煙，或 PM 驗收退回：待修 | open |
-| `Done` | PM 驗收通過並關 issue（內建 `Item closed → Done`）；無部署需求依事先定義的替代條件 | closed（由 PM 關） |
+| `Done` | PM 驗收通過並關 issue（內建 `Item closed → Done`）；掛 `acceptance:engineering` 的工程驗收卡冒煙通過後由 post-merge-wrapup 關；無部署需求依事先定義的替代條件 | closed（PM 關；工程驗收卡由 post-merge-wrapup 關） |
 
 移卡一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`（七欄 option id、別名與 `PM_LOGIN` 在 `bin/pipeline/types.ts`），`board.ts audit` 定期列出 Status 與 issue／PR／labels 的落差；操作手冊見 [gh-pipeline](../../plugin/skills/gh-pipeline/SKILL.md)。Board 另開著七個 GitHub 內建 workflow（Item added → Todo、Item closed → Done、Auto-close issue、PR linked／merged、Auto-add），但只對**同 repo** closing-keyword 連結的 PR 生效，sub-repo `Refs` 不會觸發，不能依賴它們移卡。
 

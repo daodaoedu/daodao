@@ -36,11 +36,21 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 | `Review` | PR 已開，等 code review／merge；merged 後留在這裡直到 dev 冒煙 | dev-task finish（`set <n> review`） | 工程師（AI review 引擎＋人類 reviewer 核准） |
 | `Acceptance` | 已 merge、部署 dev、AI 冒煙通過，**等 PM 對照 AC 驗收** | post-merge-wrapup 冒煙通過（`set <n> accept`，自動 assign PM）＋交接留言 @PM | PM（`peggy1213-create`） |
 | `Need Fix` | dev 冒煙失敗，或 PM 驗收退回，待修 | post-merge-wrapup（`set <n> needfix`）或 PM 退回；開修時 dev-task start 移回 In Progress | 工程師 |
-| `Done` | 符合 Definition of Done；issue closed | PM 關 issue（內建 `Item closed → Done` 自動移卡）；收尾時拔 `human-driving` | — |
+| `Done` | 符合 Definition of Done；issue closed | PM 關 issue（內建 `Item closed → Done` 自動移卡）；工程驗收卡（`acceptance:engineering`）由 post-merge-wrapup 冒煙通過後關；收尾時拔 `human-driving` | — |
 
-**Definition of Done**：AC 全部符合＋已部署到 dev＋PM 確認通過。merge 不等於 Done，AI 冒煙通過也不等於 Done。
+**Definition of Done**：AC 全部符合＋已部署到 dev＋驗收通過。預設由 PM 驗收；掛 `acceptance:engineering` 的卡由 dev 冒煙通過＋證據留言即算驗收（見下方「誰驗收」）。merge 不等於 Done；沒掛這個 label 的卡，AI 冒煙通過也不等於 Done。
 
 每張 Review／Acceptance／Need Fix 的卡要有一則最新的狀態 comment（PR 連結、等誰做什麼、驗收方式），PM 只看 board 也能追。Acceptance 的交接留言用 [issue-status-comment.md](../../../plugin/templates/issue-status-comment.md) 的「交給 PM 驗收」段。
+
+### 誰驗收：PM 或工程（開卡時決定）
+
+判斷只問一句：**PM 在 dev 環境操作，看得出改前改後的差別嗎？**
+
+- 看得出來 → PM 驗收（預設，不掛 label）：畫面或版面改動；後端改動但使用者感受得到（收到的信、列表內容、錯誤訊息）；使用者回報的 bug。
+- 看不出來 → 工程驗收，掛 `acceptance:engineering`：開發流程與工具（skill、hook、CI、board）；只在 dev 存在的端點；刻意零差異的重構（靠量測證明沒變）；不改變輸出的後端內部調整。
+- 判斷不了 → 預設 PM 驗收。
+
+gh-card 開卡時判斷並掛 label，理由寫進 body 的「驗收方式」；開發中發現判斷錯了，直接加或拔 label。工程驗收卡冒煙通過後由 post-merge-wrapup 留證據並關 issue，不進 Acceptance；`audit` 會列出誤進 Acceptance 的工程驗收卡。
 
 ### Acceptance 欄的規則（Kanban Guide 2025.5 的 SLE）
 
