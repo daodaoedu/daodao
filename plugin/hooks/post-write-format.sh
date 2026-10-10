@@ -10,7 +10,10 @@ filepath=$(echo "$HOOK_TOOL_INPUT" | jq -r '.file_path // .filePath // empty' 2>
 [ -z "$filepath" ] && exit 0
 [ ! -f "$filepath" ] && exit 0
 
-PROJECT_ROOT="$HOOK_CWD"
+# 依「被寫入檔案所屬的 repo」選 formatter，不依 session cwd：session 停在 f2e worktree 時改 server 檔，
+# 用 cwd 會拿 f2e 的 biome 把 server 檔改成雙引號（daodao#295、#166）。不在 git repo 時才退回 cwd。
+PROJECT_ROOT="$(git -C "$(dirname "$filepath")" rev-parse --show-toplevel 2>/dev/null || true)"
+[ -n "$PROJECT_ROOT" ] || PROJECT_ROOT="$HOOK_CWD"
 
 # 根據專案類型選擇 formatter
 if [ -f "$PROJECT_ROOT/biome.json" ]; then
