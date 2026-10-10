@@ -6,7 +6,7 @@ import {
   resolveStatus,
   type AuditCard,
 } from "../lib.js";
-import { DEAD_LABELS, PM_LOGIN, STATUS_ALIASES } from "../types.js";
+import { DEAD_LABELS, ENGINEERING_ACCEPTANCE_LABEL, PM_LOGIN, STATUS_ALIASES } from "../types.js";
 
 const NOW = new Date("2026-09-20T00:00:00Z");
 const card = (over: Partial<AuditCard>): AuditCard => ({
@@ -104,6 +104,25 @@ describe("auditCards", () => {
     expect(problems(fresh).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
     expect(problems(waiting).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
     expect(problems(commented).some((x) => x.startsWith("PR 全 merged"))).toBe(true);
+  });
+});
+
+describe("engineering acceptance (no PM)", () => {
+  const eng = [ENGINEERING_ACCEPTANCE_LABEL];
+
+  it("flags an engineering card sitting in Acceptance: it should close after dev smoke", () => {
+    const c = card({ status: "Acceptance", labels: eng, assignees: [PM_LOGIN], prs: [pr("daodao#1", "merged")] });
+    const f = auditCards([c], DEAD_LABELS, NOW);
+    expect(f.map((x) => x.problem)).toContain(`工程驗收卡（${ENGINEERING_ACCEPTANCE_LABEL}）不需進 Acceptance`);
+    // PM assignment / SLE rules do not apply to it
+    expect(f.map((x) => x.problem).some((x) => x.startsWith("Acceptance 未指派") || x.includes("未驗收"))).toBe(false);
+  });
+
+  it("suggests closing instead of handing to PM when a merged engineering card is stale in Review", () => {
+    const c = card({ status: "Review", labels: eng, prs: [pr("daodao#1", "merged", true)], statusUpdatedAt: "2026-09-05T00:00:00Z" });
+    const f = auditCards([c], DEAD_LABELS, NOW).find((x) => x.problem.startsWith("PR 全 merged"));
+    expect(f?.suggest).toContain("關 issue");
+    expect(f?.suggest).not.toContain("Acceptance");
   });
 });
 

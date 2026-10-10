@@ -19,7 +19,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 - 從 PR／Issue 連結找已確認 PRD、既有 FRD、開發計畫與驗收紀錄，保留原 FR／TP／AC ID。
 - 核對此次合併涵蓋哪些需求、哪些仍未完成。依目前 commit 分列程式實作、測試、部署、目標環境操作證據；未執行就記未驗證。
 - 自動部署 workflow 成功只能支持該工作實際完成的步驟；確認環境與 revision 後才能更新部署狀態。功能可用仍需相應驗收證據。
-- 部分完成、驗收失敗或缺少環境證據，不勾選整份需求完成，也不直接把中央 Issue 標 Done。中央 Issue 的 Done 只由 PM 驗收通過（關 issue）產生，本 skill 不移 Done。
+- 部分完成、驗收失敗或缺少環境證據，不勾選整份需求完成，也不直接把中央 Issue 標 Done。中央 Issue 的 Done 只由 PM 驗收通過（關 issue）產生；唯一例外是掛 `acceptance:engineering` 的工程驗收卡，冒煙全部 ✅ 時由本 skill 關 issue（見 §2.5 第 5 步）。
 
 ## 2.5 目標環境冒煙（有寫入路徑的變更必做）
 
@@ -45,8 +45,10 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 5. **回寫 Planning board 並交給 PM**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
 
    ```bash
-   # 全部 ✅：移 Acceptance，並自動 assign PM（PM_LOGIN）＋回讀；不移 Done、不關 issue
+   # 全部 ✅ 且卡片沒有 `acceptance:engineering`：移 Acceptance，並自動 assign PM（PM_LOGIN）＋回讀；不移 Done、不關 issue
    pnpm -s tsx bin/pipeline/board.ts set <n> accept
+   # 全部 ✅ 且卡片有 `acceptance:engineering`：不進 Acceptance。先發冒煙結果留言（標題「工程驗收通過」，附冒煙表與驗證報告），再關 issue，內建 workflow 會移 Done
+   gh issue close <n> --repo daodaoedu/daodao --reason completed
    # 任一 ❌ 或未冒煙：退回
    pnpm -s tsx bin/pipeline/board.ts set <n> needfix
    ```
@@ -74,5 +76,5 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 - 檢查文件間狀態一致性、來源連結、FR／TP 對應、未完成項目及 diff；按變更執行適用文件檢查。
 - 報告每項「已完成／未驗證／待決策／不適用」、實際修改文件及證據。人只需審閱修訂與產品／發布決策，不必重新手動搜尋合併證據。
 - 報告第一行寫明「已合併／已部署／dev 冒煙通過」三個事實各自的狀態；三者不齊不寫「功能完成」。
-- 本機文件修訂不等於 commit、push、部署或關閉 Issue。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。Board 回寫與交接留言（§2.5 第 5 步）是本 skill 的標準輸出，不另外要授權，但只依冒煙結果移卡；本 skill 不移 Done，也不關中央 issue（那是 PM 驗收通過的動作）。
+- 本機文件修訂不等於 commit、push、部署或關閉 Issue。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。Board 回寫與交接留言（§2.5 第 5 步）是本 skill 的標準輸出，不另外要授權，但只依冒煙結果移卡；本 skill 不移 Done，也不關中央 issue（那是 PM 驗收通過的動作）；例外是 `acceptance:engineering` 的卡冒煙全部 ✅ 時，依 §2.5 第 5 步留證據後關 issue。
 - 遠端動作如已授權，執行後讀回確認；部分失敗保留成功項目與待處理項目，避免重複操作。
