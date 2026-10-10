@@ -95,6 +95,10 @@ git worktree add "$TASK/<repo>" -b feat/<slug> origin/dev
 - git 禁止同一 branch 掛兩個 worktree——若報錯代表該 issue 已有人在做，停下來確認
 - 高風險 repo（`daodao-storage`、`daodao-infra`）依 pipeline 規範不自動開發，涉及時提醒使用者
 
+### 1.3a 操作觀測試行（派工前）
+
+需要寫入 trace 的新 macOS 任務，必須在第一次修改、產物生成與 subagent 派工**之前**啟動獨立 `record-agent-writes.py`。確認 task repo 乾淨，使用 repo 外 venv 安裝固定 watchdog 6.0.0，output／stop-file 放任務目錄、不可放 repo 內。等待 `trace.json.ready.json` 再進下一步；若 setup 已改 tracked 檔案才啟動，不能把 trace 說成全任務覆蓋。完整操作方式與限制見 daodao root 的 `docs/automation/agent-learning-loop.md`。collector 是輔助驗證，delivery gate 預設 off，不能為了補 trace 重寫舊 diff；UI／API 驗收仍依 Phase 3。Bash／Python／產物生成可由原生 watcher 觀測，不要求只用 Edit／Write。保持 collector 運行到測試與最終 commit 都完成，再建立 stop-file 並核對最終 HEAD。
+
 ### 1.4 環境準備
 
 worktree 不含 gitignored 檔案，需要補：
@@ -195,9 +199,10 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 3. 品質檢查：`pnpm run typecheck && pnpm run lint && pnpm test`
 4. **Clean-context spec audit** — 先讀 [spec audit 輸入規則](references/spec-audit.md)，用 `scripts/build-spec-audit.py` 產生固定版本的 audit pack，包含 diff、task.md 驗收契約、已確認 decisions.md／既有 design.md，以及適用 REVIEW.md。不得只傳 diff＋AC 而省略產品決策和實作約束。spawn 全新、不帶開發對話的獨立 subagent；依 pack 逐原 FR／TP／AC／決策與約束標 PASS / FAIL / UNCERTAIN 並附證據。FAIL 先修復，UNCERTAIN 由 AI 補查；必要執行證據不足不得標 PASS。需求／決策或 head 改變後重建 pack，重驗受影響項目。獨立 agent 不可用標未驗證，不以自審冒稱完成。
 
-5. Push 前跑 `code-review` skill
-6. Push（rebase 過需 force push 時先問使用者）
-6. 開 PR：
+5. 交付紀錄目前為試行，`DEV_TASK_DELIVERY_GATE_MODE` 預設 `off`，不得讓未完成的收集器阻擋其他 session。需試行時先定位 gate 的**絕對路徑**：Claude plugin 安裝目錄的 `hooks/check-agent-delivery.py` 或 daodao root 的 `plugin/hooks/check-agent-delivery.py`；確認檔案存在後存為 `DELIVERY_CHECKER`，不得從 task repo 用相對 `plugin/hooks/...` 執行。在 `$TASK/agent-handoff.<repo>.json` 保存此 repo 的紀錄（放 repo 外），使用最後 commit HEAD、與 PR 實際 base branch 的 merge-base；填 owned_paths、writes、claims、questions、recurrences。writes 是最終 Git diff 的檔案清單，可以从 Git 產生，**不代表完整寫入操作**。verified claim 的 evidence 需檔案 ref／sha256。執行 `python3 "$DELIVERY_CHECKER" --repo "$PWD" --artifact "$TASK/agent-handoff.<repo>.json" --base <merge-base-sha>`。沒有完整 trace 時必須填 `trace_status: unavailable`（或 partial）與 `trace_reason`，只能回報 manifest 核對通過、操作 trace 未驗證。客戶端 trace 有 Bash／未知工具時不能照 diff 補造，也不強迫重寫舊檔來湊紀錄。`import-agent-trace.py` 可匯入 Claude Write／Edit targets，Bash／未知工具會標 partial；必須先跑真實任務、確認包含 Bash 的操作能被完整觀測，再決定是否啟用 `--require-trace`。現有任務不可回溯製造 trace。新 macOS 任務可在派工前用 `record-agent-writes.py --repo <task-repo> --output <task>/trace.json --stop-file <task>/trace.stop` 啟動獨立 FSEvents observer（使用 repo 外 venv，安裝 `scripts/agent-trace/requirements.txt` 的 watchdog 6.0.0），確認 ready sidecar 才派工；完成測試和 commit 後建立 stop-file，等 recorder 結束，再核對完整 trace。它不要求禁止 Bash；unsupported 平台、事件掉失或收集開始過晚都不得假稱完整。試行模式 `warn` 只留診斷，`block` 核對 manifest，`DEV_TASK_REQUIRE_TRACE=1` 才強制完整 trace；啟用 block 仍需明確決策與客戶端實測。
+6. Push 前跑 `code-review` skill
+7. Push（rebase 過需 force push 時先問使用者）
+8. 開 PR：
 
 ```bash
 cat > "$TASK/notes/pr-body-<repo>.md" <<'EOF'
