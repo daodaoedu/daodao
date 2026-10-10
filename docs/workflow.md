@@ -594,38 +594,39 @@ PR opened / updated
 
 | 項目 | 說明 |
 |------|------|
-| 觸發時機 | PR opened + synchronize（每次 push 都會重新跑） |
+| 觸發時機 | PR opened / synchronize / reopened / ready_for_review；draft 與 shared-config sync PR 跳過模型呼叫 |
 | 引擎 | Cloudflare Workers AI（Gemma 4 26B，GPT-OSS 120B fallback） |
-| 效果 | 審查 diff + 確定性 Context Pack，追蹤 caller、importer、同模式漏改與 in-flight 衝突，產生嚴重度分級的 review comment |
+| 效果 | 有限分批提供完整 diff 與 BEFORE／HEAD source，搭配 Context Pack，產生來源可核對的 finding 與明確 coverage report |
 | 設定檔 | `.github/workflows/code-review.yml`（monorepo 單一來源，sync 派發） |
 
-流程（全部從 **base ref** 載入腳本與知識庫，PR head 改不到帶 `pull-requests: write` 的程式）：
+流程（runtime、policy、context retriever 與知識庫從事件 **base SHA** 載入；Python isolated mode 避免 PR 模組被載入。Workflow 本身的修改仍需 review）：
 
 ```
-Get diff        排除 openapi.json / generated/** / lockfile，截 12KB 給模型；完整 diff 另存供修復器用
+Plan            immutable merge-base..head；完整 diff+source 按檔案不可拆分，每批40k bytes、最多12批、總source400k bytes
+Coverage        每個 changed path 入 manifest；產物／binary／超預算等明列未審查，不截前綴
 Context Pack    retrieve-context.sh：caller / importer / 同模式 ⚠ / in-flight PR
-Known FP        review-knowledge.cjs prompt-block → <known_false_positives> 進 user prompt
-Workers AI      Gemma 4 26B → 不合格式 fallback GPT-OSS 120B
-Normalize       OpenCC 簡→繁 → 修復器（嚴重度中文、行號範圍、檔案欄只取路徑 token、
-                漏 :line 從完整 diff 補第一個新增行）
-Filter          review-knowledge.cjs filter（C 類 drop、D 類降 Low；全 drop 收斂成「✅ 沒有發現明顯問題」）
-Strict validate 每列必須 path:line；不合 → warning + 跳過留言（不讓 check 紅）
-Post            同 head PATCH、新 head POST；comment 帶 <!-- daodao-ai-code-review-head:<sha> --> marker
+Known FP        review-knowledge.cjs prompt-block 提供歷史脈絡；不再以 Markdown filter 刪列後轉成 clean
+Workers AI      Gemma 4 26B → 每批最多一次 GPT-OSS 120B fallback；request/output/timeout 各自有上限
+Strict validate JSON、finish reason、exact path 回執、HEAD／BEFORE side、行號與來源引用；不猜行號、不修補模型格式
+Report          完整 artifact + status.json；失敗／漏檔案／限制必呈現 Review 未完成
+Post            同 head PATCH、新 head POST；超長報告只縮公開留言，完整報告留 artifact
 ```
+
+首次導入時若可信 base 尚無 runtime，必明列 `trusted_runtime_missing`，由本機／人工審核承接；正常合併後後續 PR 才採用。Job 綠燈是流程執行成功，審查是否完整需讀 `status.json.complete`。完整設計、primary sources 與限制見 [complete-ci-review.md](automation/complete-ci-review.md)。
 
 Review comment 按嚴重度分級：
 
 | 嚴重度 | 含義 | 處理方式 |
 |--------|------|---------|
-| 🔴 High | Bug、安全漏洞、會造成故障 | 必須修正 |
-| 🟡 Medium | 效能問題、可維護性問題 | 建議修正 |
-| 🟢 Low | 風格偏好、微小優化 | 可忽略 |
+| P1 | 安全漏洞或高影響的具體 regression | 優先查證並修正 |
+| P2 | 可重現的行為或效能 regression | 查證觸發條件與影響後修正 |
+| P3 | 較低影響的具體 regression | 依實際影響處理；不回報純風格偏好 |
 
 AI Code Review 不是完美的 — 它會有 false positive，也會漏掉某些問題。但它能穩定地抓到人類容易忽略的小問題（忘記 null check、未使用的 import、命名不一致等）。
 
 **對誤判的回覆方式**：在 PR 上回 `/fp <第幾條> <A-F> <一句為什麼>`（例：`/fp 1 A route 已掛 authenticate，引用行號指到別的函式`），`collect-pr-feedback` 會收割進誤判知識庫（見 5.3）。下次 review 這個樣態會出現在模型的 `<known_false_positives>` 裡。
 
-**Debug**：job log 有 `review-knowledge filter report` 與 `Invalid review body` group——run 顯示 success 但 PR 沒留言時先看這兩個。
+**Debug**：先看 job summary、head 對應的 coverage 留言與 `ai-review-<pr>-<head>` artifact 中的 manifest／status.json。模型輸出無效或未覆蓋部分會列出原因；沒有留言時另查 posting step 的權限與 API 錯誤，不能把 job success 視為完整審查。
 
 ### 6.4 Gemini Code Assist
 

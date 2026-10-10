@@ -20,6 +20,9 @@ on:
       - '.github/scripts/check-pr-evidence.sh'
       - '.github/scripts/test-pr-evidence.sh'
       - '.github/scripts/review-knowledge.cjs'
+      - '.github/scripts/build-review-batches.py'
+      - '.github/scripts/run-review-batches.py'
+      - '.github/scripts/__tests__/test_review_*.py'
       - '.github/review-knowledge/**'
   schedule:
     # 每週一 UTC 01:00 (台灣 09:00)
@@ -41,10 +44,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Check shared workflow contracts
         run: |
           node --test .github/scripts/__tests__/*.test.cjs
           bash .github/scripts/test-sync-claude-config-contract.sh
+          python3 -m unittest discover -s .github/scripts/__tests__ -p 'test_review_*.py' -v
 
   sync:
     needs: regression
@@ -105,9 +112,14 @@ jobs:
 
           # Trusted Context Pack runtime and regression contracts
           mkdir -p target/.github/scripts
-          for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh review-knowledge.cjs check-pr-evidence.sh test-pr-evidence.sh; do
+          for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh review-knowledge.cjs build-review-batches.py run-review-batches.py check-pr-evidence.sh test-pr-evidence.sh; do
             cp ".github/scripts/$script" "target/.github/scripts/$script"
             chmod +x "target/.github/scripts/$script"
+          done
+
+          mkdir -p target/.github/scripts/__tests__
+          for test in test_review_batches.py test_review_runner.py; do
+            cp ".github/scripts/__tests__/$test" "target/.github/scripts/__tests__/$test"
           done
 
           # 誤判知識庫（單一來源在本 repo；sub-repo 只讀，CI 從 base ref 取用）
