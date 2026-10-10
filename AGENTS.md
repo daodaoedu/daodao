@@ -71,7 +71,7 @@ PR merged 後，執行 `plugin/skills/post-merge-wrapup/SKILL.md` skill 收尾�
 
 ## Planning Board 狀態
 
-中央卡在 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) 的 Status 由流程各步驟負責移，不靠 GitHub 內建 workflow（它們認不出 sub-repo 的 `Refs` PR）：gh-card → `Todo`；dev-task start → `In Progress`；dev-task finish（PR 開了）→ `Review`；post-merge-wrapup 冒煙通過 → `Done`、失敗 → `Need Fix`。一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`，`board.ts audit` 找落差；細節見 `plugin/skills/gh-pipeline/SKILL.md`。
+中央卡在 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) 的 Status 由流程各步驟負責移，不靠 GitHub 內建 workflow（它們認不出 sub-repo 的 `Refs` PR）：gh-card → `Todo`；dev-task start → `In Progress`；dev-task finish（PR 開了）→ `Review`；post-merge-wrapup 冒煙通過 → `Acceptance`（自動 assign PM `peggy1213-create`＋交接留言 @PM）、失敗 → `Need Fix`；PM 驗收通過關 issue → `Done`，退回 → `Need Fix`。**Definition of Done：AC 全部符合＋已部署到 dev＋PM 確認通過**，merge 或 AI 冒煙通過都不等於 Done。母卡（一個功能）只放目標與子卡清單，不直接掛 PR；子卡開在中央 repo、只有兩層，等子卡全部關閉才交 PM 驗收整體，不可先關母卡；技術債／後續改進開獨立卡不掛子卡。定義見 `docs/automation/github-issue-management.md` §4。一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`，`board.ts audit` 找落差；細節見 `plugin/skills/gh-pipeline/SKILL.md`。
 
 ## 需求規劃流程
 

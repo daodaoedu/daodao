@@ -6,7 +6,11 @@
  * dev-task / post-merge-wrapup / gh-card skills through bin/pipeline/board.ts.
  * Historical prompts and templates live under docs/archive/automation/.
  */
-import { CENTRAL_REPO } from "./types.js";
+import {
+  ACCEPTANCE_SLE_BUSINESS_DAYS,
+  CENTRAL_REPO,
+  PM_LOGIN,
+} from "./types.js";
 
 // ── Board audit (pure) ──────────────────────────────────────────────────
 
@@ -17,11 +21,26 @@ export interface AuditCard {
   issueState: "OPEN" | "CLOSED";
   labels: string[];
   updatedAt: string; // ISO
+  /** When the Status field was last set, i.e. when the card entered its column (ISO). */
+  statusUpdatedAt: string | null;
+  assignees: string[];
   /**
    * PRs referencing the card. `linked` marks a real GitHub link (ConnectedEvent:
    * closing keyword or manual Development link) as opposed to a body mention.
    */
-  prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean }>;
+  prs: Array<{
+    ref: string;
+    state: "open" | "merged" | "closed";
+    linked: boolean;
+    /** Central cards this PR explicitly targets (title `— daodao#N`, Refs/Closes/Fixes lines). */
+    targets?: number[];
+  }>;
+  /** GitHub sub-issues of this card (parent cards only); total 0 = not a parent. */
+  subIssues?: { total: number; completed: number };
+  /** Parent issue number when this card is itself a sub-issue. */
+  parent?: number | null;
+  /** Sub-issues living outside the central repo, as `repo#n`. */
+  foreignSubIssues?: string[];
 }
 
 export interface AuditFinding {
@@ -30,6 +49,22 @@ export interface AuditFinding {
   status: string | null;
   problem: string;
   suggest: string;
+}
+
+/**
+ * Central-repo cards a PR explicitly targets: a `daodao#N` marker in the title, or
+ * `Refs`/`Closes`/`Fixes`/`Resolves` lines naming `daodaoedu/daodao#N`, `daodao#N` or the
+ * issue URL. Prose mentions (follow-up lists, 「另卡 #n」) are not targets.
+ */
+export function prTargets(title: string, body: string): number[] {
+  const found = new Set<number>();
+  const card = /(?:daodaoedu\/)?daodao(?:#|\/issues\/)(\d+)\b/g;
+  for (const m of title.matchAll(card)) found.add(Number(m[1]));
+  for (const line of body.split("\n")) {
+    if (!/^\s*(?:[-*]\s*)?(?:refs?|closes?|fixes?|resolves?)\b/i.test(line)) continue;
+    for (const m of line.matchAll(card)) found.add(Number(m[1]));
+  }
+  return [...found];
 }
 
 /** Match the alias table without importing types at runtime (keeps lib.ts I/O-free). */
@@ -47,7 +82,25 @@ export function resolveStatus(
  * may sit before we call it out.
  */
 /** Columns whose issue must still be open; Done is the only closed one. */
-const OPEN_STATES = ["Todo", "Ready for Dev", "In Progress", "Review", "Need Fix"];
+const OPEN_STATES = ["Todo", "Ready for Dev", "In Progress", "Review", "Acceptance", "Need Fix"];
+
+const TAIPEI_OFFSET_MS = 8 * 3_600_000;
+
+/**
+ * Weekdays (Mon–Fri, Asia/Taipei calendar) that have fully started after `since`:
+ * entering on Friday and checking on Sunday is 0, on Tuesday is 2.
+ */
+export function businessDaysSince(since: string, now: Date): number {
+  const day = (t: number) => Math.floor((t + TAIPEI_OFFSET_MS) / 86_400_000);
+  const start = day(new Date(since).getTime());
+  const end = day(now.getTime());
+  let count = 0;
+  for (let d = start + 1; d <= end; d++) {
+    const weekday = new Date(d * 86_400_000).getUTCDay();
+    if (weekday !== 0 && weekday !== 6) count++;
+  }
+  return count;
+}
 
 export function auditCards(
   cards: AuditCard[],
@@ -63,13 +116,21 @@ export function auditCards(
     const status = c.status ?? "(none)";
     // A central-repo PR counts as implementation only when it is genuinely linked;
     // docs PRs that merely mention several cards in their body must not look like
-    // landed work. Sub-repo PRs use `Refs`, which is only ever a mention, so they
-    // always count.
+    // landed work. A sub-repo PR that explicitly targets other cards only mentions this one (e.g. #218's PRs
+    // listing follow-up cards); PRs with no target marker predate the convention and still count.
     const implements_ = (p: AuditCard["prs"][number]) =>
-      !p.ref.startsWith(`${CENTRAL_REPO}#`) || p.linked;
+      p.ref.startsWith(`${CENTRAL_REPO}#`)
+        ? p.linked
+        : p.linked || !p.targets?.length || p.targets.includes(c.number);
     const open = c.prs.filter((p) => p.state === "open" && implements_(p));
     const merged = c.prs.filter((p) => p.state === "merged" && implements_(p));
     const ageDays = (now.getTime() - new Date(c.updatedAt).getTime()) / 86_400_000;
+    // Time in the current column: comments refresh issue updatedAt, the Status value's does not
+    const columnDays = c.statusUpdatedAt
+      ? (now.getTime() - new Date(c.statusUpdatedAt).getTime()) / 86_400_000
+      : ageDays;
+    // Parent cards: the whole requirement is accepted only after every sub-issue is closed
+    const subOpen = c.subIssues ? c.subIssues.total - c.subIssues.completed : 0;
 
     if (c.status === null) {
       push(c, "卡片沒有 Status", "設 Todo，或從 board 移除");
@@ -77,7 +138,7 @@ export function auditCards(
     if (status === "Done" && c.issueState === "OPEN") {
       push(c, "Done 但 issue 仍 open", "驗收後 close issue，或移回 Review");
     }
-    // Done is the only column whose issue is expected to be closed (§Status 六欄)
+    // Done is the only column whose issue is expected to be closed (§Status 七欄)
     if (OPEN_STATES.includes(status) && c.issueState === "CLOSED") {
       push(c, `issue 已 close 但卡在 ${status}`, "移 Done（或 reopen issue）");
     }
@@ -97,8 +158,52 @@ export function auditCards(
         "移 Review 等驗收"
       );
     }
+    if (
+      status === "Review" &&
+      c.issueState === "OPEN" &&
+      merged.length > 0 &&
+      open.length === 0 &&
+      columnDays >= staleDays
+    ) {
+      push(
+        c,
+        `PR 全 merged（${merged.map((p) => p.ref).join(", ")}）且已在 Review ${Math.floor(columnDays)} 天`,
+        subOpen > 0
+          ? `母卡：等 ${subOpen} 張子卡關閉後再跑 post-merge-wrapup 交 PM`
+          : "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
+      );
+    }
+    if (status === "Acceptance" && c.issueState === "OPEN") {
+      if (!c.assignees.includes(PM_LOGIN)) {
+        push(c, `Acceptance 未指派 PM（${PM_LOGIN}）`, `assign ${PM_LOGIN} 並留交接留言`);
+      }
+      const waited = c.statusUpdatedAt ? businessDaysSince(c.statusUpdatedAt, now) : 0;
+      if (waited > ACCEPTANCE_SLE_BUSINESS_DAYS) {
+        push(
+          c,
+          `Acceptance 已 ${waited} 個工作天未驗收（SLE ${ACCEPTANCE_SLE_BUSINESS_DAYS}）`,
+          `提醒 @${PM_LOGIN} 驗收，或協助準備驗收材料`
+        );
+      }
+    }
+    if (subOpen > 0 && c.issueState === "CLOSED") {
+      push(c, `母卡已 close，仍有 ${subOpen} 張子卡未關`, "reopen 移回 Review，子卡全關後再交 PM 驗收");
+    }
+    if (subOpen > 0 && status === "Acceptance" && c.issueState === "OPEN") {
+      push(c, `母卡在 Acceptance，仍有 ${subOpen} 張子卡未關`, "移回 Review，子卡全關後再交 PM 驗收");
+    }
+    // Only two levels, and children live in the central repo (github-issue-management §4.3)
+    if (c.parent && (c.subIssues?.total ?? 0) > 0) {
+      push(c, `第三層：本卡是 #${c.parent} 的子卡，底下又有 ${c.subIssues!.total} 張子卡`, "後續改進移出成獨立卡；範圍內的工作改掛到母卡 #" + c.parent);
+    }
+    if ((c.foreignSubIssues ?? []).length > 0) {
+      push(c, `子卡不在中央 repo：${c.foreignSubIssues!.join(", ")}`, "可驗收工作改開中央子卡；工程交接筆記移出子卡關係");
+    }
     if (status === "Review" && c.prs.length === 0) {
-      push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");
+      // Parents carry no PRs of their own (github-issue-management §4.3)
+      if ((c.subIssues?.total ?? 0) === 0) {
+        push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");
+      }
     }
     const dead = c.labels.filter((l) => deadLabels.includes(l));
     if (dead.length > 0) {
