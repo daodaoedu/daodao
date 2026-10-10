@@ -228,7 +228,7 @@ evidence_section=$(printf '%s\n' "$body_text" | awk '/^## 驗證證據/{f=1; nex
 if ! printf '%s\n' "$body_text" | grep -q '^## 驗證證據'; then
   gate_fail "pr-body-evidence-missing" "$task_md" "$(cat <<EOF
 ❌ PR body 缺「## 驗證證據」區塊${body_file_note}。需要：驗證報告連結 + 核心旅程矩陣摘要（或 task.md 那行「核心旅程不適用：<原因>」）。
-   用 --body-file <notes/pr-body-<repo>.md>，範本見 dev-task SKILL.md Phase 4 步驟 6。
+   用 --body-file <notes/pr-body-<repo>.md>，範本見 dev-task references/phases/finish.md 步驟 8「開 PR」。
 EOF
 )"
 elif ! printf '%s\n' "$evidence_section" | grep -qE 'https?://|核心旅程不適用[：:]'; then
