@@ -6,6 +6,16 @@
 
 新流程不截取檔案前綴。每個 changed path 都有 manifest 記錄；可審查的完整 diff 與完整編號 source 作為不可拆分單位，再打包成批次。新增保留 HEAD，刪除保留 BEFORE，修改與改名保留 BEFORE 與 HEAD。單一完整單位放不下就明列未審查，不能根據缺少的片段判斷實作不存在。
 
+修改與改名的單位依序嘗試三層，前一層超過 `max_batch_bytes` 才降到下一層，manifest 以 `context_level` 記錄（#314）：
+
+| 層級 | 內容 | 可引用 |
+|---|---|---|
+| `complete` | 完整 diff＋BEFORE 全文＋HEAD 全文 | HEAD、BEFORE 任一行 |
+| `before-hunks` | 完整 diff＋HEAD 全文＋BEFORE 片段（diff 出現的舊行，保留原始行號） | HEAD 任一行；BEFORE 只限片段列出的行號 |
+| `head-only` | 完整 diff＋HEAD 全文，標頭寫明 BEFORE SOURCE OMITTED | 只有 HEAD |
+
+原因：BEFORE＋HEAD＋diff 一起算時，約 13 KB 以上的檔案改一行就超過 40 KB，`pre-pr-gate.sh`、skill 正本這類最常改、改錯影響最大的檔案會一直被略過（#309 實例）。`before-hunks` 讓「刪掉安全檢查」仍能以被刪的那幾行當 BEFORE 證據；runner 驗證 BEFORE 引用時，片段只接受列出的行號，多行引用只能延續到連續的下一個行號。降級的檔案在 review 留言列為「部分脈絡」限制，整體不會標成覆蓋完整；仍放不下的非產物檔案在留言頂端列出數量與路徑。
+
 ## 依據與取捨
 
 - [PR-Agent 的多批次實作](https://github.com/The-PR-Agent/pr-agent/blob/main/pr_agent/algo/pr_processing.py) 用有限 calls/token budget 打包，並保留 remaining/clipped files 與 coverage。本流程採用有限分批與未覆蓋清單；為避免函式中途斷裂，選擇完整檔案單位。大型檔案目前不做 AST／函式切分。
