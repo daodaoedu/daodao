@@ -223,9 +223,6 @@ class ReviewBatches(unittest.TestCase):
         self.assertEqual(len(result['head']), 40)
 
 
-if __name__ == '__main__':
-    unittest.main()
-
 
 RUNNER_SPEC = importlib.util.spec_from_file_location('runner_for_tiers', Path(__file__).resolve().parents[1] / 'run-review-batches.py')
 runner = importlib.util.module_from_spec(RUNNER_SPEC)
@@ -277,6 +274,20 @@ class LargeFileTiers(unittest.TestCase):
         result = self.run_plan()
         self.assertEqual(result['files'][0]['context_level'], 'complete')
 
+    def test_blank_context_lines_keep_before_numbers_when_suppress_blank_empty(self):
+        # diff.suppressBlankEmpty=true prints blank context lines as "" instead of " "
+        self.git('config', 'diff.suppressBlankEmpty', 'true')
+        head = self.big_file('v1')
+        before = head.replace('line_150', '\ncheck_security_gate\nline_150', 1)  # blank context, then the check
+        self.write('gate.sh', before)
+        self.base = self.commit()
+        expected = before.split('\n').index('check_security_gate') + 1
+        self.write('gate.sh', head.replace('line_150', '\nline_150', 1))  # only the check line is deleted
+        result = self.run_plan()
+        payload = (self.out / result['batches'][0]['payload']).read_text()
+        self.assertEqual(result['files'][0]['context_level'], 'before-hunks')
+        self.assertIn(f'{expected}: check_security_gate', payload)
+
     def run_runner(self, result, finding):
         def caller(model, request):
             body = {'batch_id': result['batches'][0]['id'], 'reviewed_paths': result['batches'][0]['paths'],
@@ -311,3 +322,6 @@ class LargeFileTiers(unittest.TestCase):
         self.assertIn('1 個非產物檔案未審查', head)
         self.assertIn('pre-pr-gate.sh', head)
         self.assertNotIn('plugin/out/x/SKILL.md', head)
+
+if __name__ == '__main__':
+    unittest.main()

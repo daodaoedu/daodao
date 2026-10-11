@@ -41,14 +41,21 @@ HUNK_RE = re.compile(r'^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@')
 def before_hunk_lines(diff_text):
     """Old-side lines the diff shows (context and removed), keyed by their real BEFORE line number."""
     entries, old_no, in_hunk = [], None, False
-    for line in diff_text.split('\n'):
+    lines = diff_text.split('\n')
+    if lines and lines[-1] == '':
+        lines.pop()  # trailing newline of the whole diff, not a blank context line
+    for line in lines:
         match = HUNK_RE.match(line)
         if match:
             old_no, in_hunk = int(match.group(1)), True
             continue
-        if not in_hunk or not line or line.startswith('\\'):
+        if not in_hunk or line.startswith('\\'):
             continue
-        if line[0] in ' -':
+        if line == '':
+            # diff.suppressBlankEmpty prints a blank context line without its leading space
+            entries.append((old_no, ''))
+            old_no += 1
+        elif line[0] in ' -':
             entries.append((old_no, line[1:]))
             old_no += 1
         elif line[0] != '+':
@@ -157,7 +164,8 @@ def plan(repo, base, head, out, max_batch_bytes=40000, max_batches=12, max_total
                     item.setdefault('reason', 'source-exceeds-batch-budget')
                     continue
                 # --literal-pathspecs prevents glob/metacharacters in Git paths selecting extra files.
-                diff = git(repo, '--literal-pathspecs', 'diff', '--no-ext-diff', '--no-textconv',
+                # Pin diff.suppressBlankEmpty so blank context lines keep their leading space.
+                diff = git(repo, '-c', 'diff.suppressBlankEmpty=false', '--literal-pathspecs', 'diff', '--no-ext-diff', '--no-textconv',
                            '--find-renames', merge, head_sha, '--', old, path)
                 try:
                     diff_text = diff.decode('utf-8')
