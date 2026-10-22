@@ -85,6 +85,15 @@ describe("auditCards", () => {
     expect(problems(linked).some((x) => x.startsWith("PR 全 merged"))).toBe(true);
   });
 
+  it("counts a central-repo PR whose Refs line targets the card (closing keywords skip acceptance, #364)", () => {
+    const refs = card({ number: 364, status: "Todo", updatedAt: "2026-08-19T00:00:00Z",
+      prs: [{ ref: "daodao#365", state: "merged", linked: false, targets: [364] }] });
+    expect(problems(refs).some((x) => x.startsWith("PR 全 merged"))).toBe(true);
+    const other = card({ number: 364, status: "Todo", updatedAt: "2026-08-19T00:00:00Z",
+      prs: [{ ref: "daodao#366", state: "merged", linked: false, targets: [300] }] });
+    expect(problems(other)).toEqual([]);
+  });
+
   it("flags dead labels and human-driving left on Done", () => {
     expect(problems(card({ labels: ["needs-spec", "bug"] }))).toContain("死 label：needs-spec");
     expect(problems(card({ status: "Done", issueState: "CLOSED", labels: ["human-driving"] }))).toContain(
