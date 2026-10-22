@@ -33,7 +33,7 @@ MODE="${MODE:-warn}"
 
 problems=()
 
-central_refs='daodaoedu/daodao#[0-9]+|https?://github\.com/daodaoedu/daodao/issues/[0-9]+'
+central_refs='daodaoedu/daodao#[0-9]+|(\[[^]]*\]\()?https?://github\.com/daodaoedu/daodao/issues/[0-9]+'
 [ "$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')" = "daodaoedu/daodao" ] && central_refs="$central_refs|#[0-9]+"
 closing_hits=$(printf '%s\n' "$BODY" \
   | LC_ALL=C awk '/^[[:space:]]*(```|~~~)/ { fence = !fence; next } !fence' \

@@ -123,6 +123,7 @@ for line in \
   'Fixes daodaoedu/daodao#1' \
   'FIXED: DaodaoEdu/Daodao#2' \
   'Resolves https://github.com/daodaoedu/daodao/issues/335' \
+  'Closes [daodao#336](https://github.com/daodaoedu/daodao/issues/336)' \
   '修正，resolved daodaoedu/daodao#4' \
   'This will close daodaoedu/daodao#5'; do
   code=$(run "$line
