@@ -6,15 +6,20 @@
 
 新流程不截取檔案前綴。每個 changed path 都有 manifest 記錄；可審查的完整 diff 與完整編號 source 作為不可拆分單位，再打包成批次。新增保留 HEAD，刪除保留 BEFORE，修改與改名保留 BEFORE 與 HEAD。單一完整單位放不下就明列未審查，不能根據缺少的片段判斷實作不存在。
 
-修改與改名的單位依序嘗試三層，前一層超過 `max_batch_bytes` 才降到下一層，manifest 以 `context_level` 記錄（#314）：
+修改與改名的單位依序嘗試下列層級，前一層超過 `max_batch_bytes` 才降到下一層，manifest 以 `context_level` 記錄（#314）：
 
 | 層級 | 內容 | 可引用 |
 |---|---|---|
 | `complete` | 完整 diff＋BEFORE 全文＋HEAD 全文 | HEAD、BEFORE 任一行 |
 | `before-hunks` | 完整 diff＋HEAD 全文＋BEFORE 片段（diff 出現的舊行，保留原始行號） | HEAD 任一行；BEFORE 只限片段列出的行號 |
 | `head-only` | 完整 diff＋HEAD 全文，標頭寫明 BEFORE SOURCE OMITTED | 只有 HEAD |
+| `hunks` | 完整 diff＋兩側各 hunk 前後 20 行（再放不下改 0 行）的片段，保留原始行號 | HEAD、BEFORE 都只限片段列出的行號 |
 
-原因：BEFORE＋HEAD＋diff 一起算時，約 13 KB 以上的檔案改一行就超過 40 KB，`pre-pr-gate.sh`、skill 正本這類最常改、改錯影響最大的檔案會一直被略過（#309 實例）。`before-hunks` 讓「刪掉安全檢查」仍能以被刪的那幾行當 BEFORE 證據；runner 驗證 BEFORE 引用時，片段只接受列出的行號，多行引用只能延續到連續的下一個行號。降級的檔案在 review 留言列為「部分脈絡」限制，整體不會標成覆蓋完整；仍放不下的非產物檔案在留言頂端列出數量與路徑。
+原因：BEFORE＋HEAD＋diff 一起算時，約 13 KB 以上的檔案改一行就超過 40 KB，`pre-pr-gate.sh`、skill 正本這類最常改、改錯影響最大的檔案會一直被略過（#309 實例）。`before-hunks` 讓「刪掉安全檢查」仍能以被刪的那幾行當 BEFORE 證據；runner 驗證片段引用時只接受列出的行號，多行引用只能延續到連續的下一個行號。降級的檔案在 review 留言列為「部分脈絡」限制，整體不會標成覆蓋完整；仍放不下的非產物檔案在留言頂端列出數量與路徑。
+
+單檔本身就超過 `max_batch_bytes` 時（f2e 的 `en.json`／`zh-TW.json` 約 450 KB，daodao-f2e#1073 實例），前三層都放不下，改走 `hunks`：片段外的行沒有送進模型，留言標明「片段外的行未審查」。連 diff 本身都放不下（例如整檔改寫）時以 `diff-exceeds-batch-budget` 列為未審查。只有 source 超過 `max_source_bytes`（預設 50 × `max_batch_bytes`）才在算 diff 之前以 `source-exceeds-batch-budget` 略過，避免 Git 為巨大檔案配置整份 diff。
+
+Review 未完成時（有未審查檔案、部分脈絡或批次失敗），`Flag incomplete review on the check` 步驟在 check 上留一則 warning annotation，寫出未審查與部分脈絡的檔案數；annotation 只放數字，不放 PR 控制的路徑。check 結論仍是 success，不擋 merge。
 
 ## 依據與取捨
 
