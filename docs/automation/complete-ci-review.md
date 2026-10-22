@@ -52,6 +52,20 @@ daodao-f2e#1091／#1092（2026-10-22 02:18 UTC 起，各 repo 同時）兩個模
 
 模式由 repo variable `AI_REVIEW_COVERAGE_MODE` 決定（`warn`｜`block`，未設定為 `warn`），照 `PR_EVIDENCE_GATE_MODE` 的先 warn 再升 block 慣例。「0 檔被審」兩種模式都讓 job 失敗：綠燈會被當成審過，但其實沒有審。`AI Code Review` 不在任何 ruleset 的 required checks，失敗不會擋 merge。annotation 與 neutral check 只放數字，不放 PR 控制的路徑。
 
+### synchronize 只審變更的檔（#368）
+
+Workers AI 免費額度每日 10k neurons（00:00 UTC 重置）。2026-10-22 00:00–02:18 UTC 成功送審 60 批後額度用完，之後各 repo 全部 HTTP 429（cf 4006）；其中同一支 PR 第 2 次以後的 run 佔 26 批，daodao-f2e#1087 一支就佔 20 批。舊流程每次 push 都把整個 PR 重審，rebase／update-branch 也一樣。
+
+- **基準記在哪**：runner 把這次「已涵蓋」的檔案（本次審過＋沿用）寫成 `{v, runs, files: {path: {fp, level, run}}, findings}`，壓縮後 base64，由 workflow 以 `<!-- daodao-ai-code-review-state:… -->` 接在 review 留言最後。下一次 synchronize 從 `github-actions[bot]` 的留言中取最新一則讀回。不用 actions cache：cache 會過期、會被 LRU 清掉，也看不到「上次哪些檔沒審完」；留言跟著 PR 存在，人也看得到同一份結果。報告內的 `<!--` 一律先跳脫，模型輸出與檔名無法偽造基準。
+- **怎麼判斷沒變**：每個檔取 `git diff merge-base head -- <old> <path>`，去掉 `index`（blob id）、`similarity index` 與 hunk 行號後取 sha256（`fp`）。路徑、mode、context／新增／刪除行都保留，空白也算；不用 `git patch-id --stable`，因為它忽略空白，YAML、Python、Markdown 的縮排改動會被當成沒變。base 改到 hunk 前後文時 `fp` 也會變，該檔重審。
+- **沿用**：`fp` 與基準相同的檔不送模型，manifest 狀態為 `carried`，留言分列「本次送審」與「沿用上次審查（PR diff 未變）」，並附審過該檔那次 run 的連結；上次在該檔的 findings 標「（沿用上次審查）」再列一次。全部沿用時留言寫「PR diff 未變，沿用上次審查結果」，不呼叫模型，`AI review coverage` check 為 success。
+- **一定重審**：上次未審完的檔（模型失敗、預算不足、檔案太大）不在基準內，下次一定送審。`opened`／`reopened`／`ready_for_review` 不讀基準、全部重審；PR 掛 `ai-review:full` label 時也全部重審（label 是即時讀的，加上後 re-run job 即可）。
+- **覆蓋判定**：沿用的檔不列入 `unreviewed`，算已涵蓋；當初只審部分脈絡的檔沿用時仍列「部分脈絡（…，沿用上次審查）」限制，check 維持 neutral。這次有檔案送審但模型一批都沒審到時，仍判「0 檔被審查」讓 job 失敗：沿用的舊檔不能掩蓋新變更沒被審。
+- **相容**：可信 base 的 planner／runner 還是舊版時，workflow 偵測不到 `--previous-comment`／`--run-url` 參數就照舊全審。基準超過 16,000 字元時先丟掉 findings，仍放不下就不寫基準（下次全審）；留言本文的縮短門檻由 50,000 降為 45,000 字元，加上基準仍低於 GitHub 65,536 上限。
+- **信任邊界**：基準只讀 bot 自己的留言。同 repo 分支能改 workflow 的人本來就能繞過這個 job；`AI Code Review` 不是 required check。
+
+用 daodao-f2e#1087 的實際 commit 重放（mock 模型、全部成功）：三次 run 依現行 planner 要 21＋21＋21＝63 批；增量後是 21＋1＋1＝23 批。第二次 push 只改 2 個測試檔，45 檔沿用；第三次是 merge origin/dev，dev 改到其中 1 檔的 hunk 前後文，該檔重審、46 檔沿用。
+
 ## 依據與取捨
 
 - [PR-Agent 的多批次實作](https://github.com/The-PR-Agent/pr-agent/blob/main/pr_agent/algo/pr_processing.py) 用有限 calls/token budget 打包，並保留 remaining/clipped files 與 coverage。本流程採用有限分批與未覆蓋清單；為避免函式中途斷裂，選擇完整檔案單位。大型檔案目前不做 AST／函式切分。
@@ -74,7 +88,7 @@ binary、gitlink、平台產物、非 UTF-8、特殊控制字元檔名及超預�
 
 此修改第一次提出 PR 時，可信 base 尚無新 runtime，workflow 必須發出 `trusted_runtime_missing`，不執行 PR 自己新增的程式取得 secrets。首次採用由獨立本機 review 與測試承接；正常審核合併後，後續 PR 才可使用可信 base 中的新 runtime。shared-config sync 會同步腳本、測試與 workflow；修改尚未合併不代表其他 repo 已採用。
 
-GitHub job 綠燈代表工作流程執行成功且至少審到部分檔案；必須讀 coverage comment／artifact 的 `complete`，不能把綠燈當作審查通過（見上方「Check 狀態」）。模型審查不列入 required checks，不阻擋交付。靜態審查也不代表測試、部署或產品驗收。完整報告超過 50,000 字元時只縮短公開留言，保留完成狀態、數量與 workflow artifact 入口，原始輸入及完整報告不截斷。
+GitHub job 綠燈代表工作流程執行成功且至少審到部分檔案；必須讀 coverage comment／artifact 的 `complete`，不能把綠燈當作審查通過（見上方「Check 狀態」）。模型審查不列入 required checks，不阻擋交付。靜態審查也不代表測試、部署或產品驗收。完整報告超過 45,000 字元時只縮短公開留言，保留完成狀態、數量與 workflow artifact 入口，原始輸入及完整報告不截斷。
 
 檔案內脈絡完整不代表跨檔案依賴完整，仍受 Context Pack 範圍限制。大型完整檔案目前會未審查，需人工／本機查核，未來可另行實作與驗證具完整語法邊界的拆分。本文的 deterministic tests、mocked provider 測試與 #303 真實 Git 輸入重播不等於實際 Workers AI 呼叫成功。
 
