@@ -12,17 +12,24 @@ export type AcceptanceLintFinding = { line: number; rule: string; message: strin
 /** Terms that never belong in PM steps. Tested against each step line. */
 export const PM_STEP_FORBIDDEN: ReadonlyArray<{ label: string; re: RegExp }> = [
   { label: "HTTP 方法", re: /\b(?:GET|PUT|POST|PATCH|DELETE)\b/ },
-  { label: "API", re: /\bAPI\b|\bendpoints?\b|\/api\//i },
+  { label: "API", re: /\bAPI\b|\bendpoints?\b|端點|\/api\/|\bPostman\b/i },
   { label: "body", re: /\bbody\b/i },
-  { label: "request", re: /\brequests?\b|請求/i },
-  { label: "response", re: /\bresponses?\b|status code|狀態碼/i },
+  // Bare 請求 is product copy (好友請求、加入請求), so only the English word counts here.
+  { label: "request", re: /\brequests?\b/i },
+  { label: "response", re: /\bresponses?\b|status code|狀態碼|\bHTTP\s*\d{3}\b/i },
   { label: "payload", re: /\bpayload\b|送出內容|回傳的原始資料/i },
   { label: "回讀", re: /回讀|read-?back/i },
-  { label: "regression test", re: /regression|回歸測試|單元測試|unit test|測試輸出|test job/i },
-  { label: "CI", re: /\bCI\b/ },
+  {
+    label: "regression test",
+    re: /regression|回歸測試|單元測試|unit test|測試輸出|test job|\b(?:pnpm|npm|yarn)\s+(?:run\s+)?test\b|\bvitest\b|\bjest\b|\bpytest\b/i,
+  },
+  { label: "CI", re: /\bCI\b|GitHub Actions/ },
   { label: "curl", re: /\bcurl\b/i },
+  // 「資料庫錯誤」 can be what the PM sees on screen (#179), so only DB／SQL count.
+  { label: "DB", re: /\bDB\b|\bSQL\b/ },
   // Devtools for a viewport size is something the PM can do (#163), so only console／network count.
-  { label: "log", re: /\blogs?\b|console|network 分頁|網路請求/i },
+  // "Log in／Log out" are UI labels, not logs.
+  { label: "log", re: /\blogs?\b(?![\s-]*(?:in|out)\b)|console|network 分頁|網路請求/i },
   { label: "JSON 欄位", re: /"[A-Za-z_]+"\s*:/ },
 ];
 
@@ -32,11 +39,17 @@ const TECH_URL = /https?:\/\/(?:server-dev\.|server\.|[^\s)]*\/api\/)[^\s)]*/i;
 const ENGINEERING_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**工程證據/;
 const STEPS_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗收步驟/;
 
+/** Numbered step: `1. x`, `1.x`, `1、x`, `1) x`. */
+const STEP_LINE = /^\s*\d+[.)、．]\s*\S/;
+
+/** 「」 normally wraps on-screen copy; keep its content when it smuggles in HTTP / URL paths. */
+const QUOTED_TECH = /\b(?:GET|PUT|POST|PATCH|DELETE)\b|\/|\bcurl\b|\bbody\b/i;
+
 /** A line that starts a new top-level item (ends the current section). */
 function isTopLevelBoundary(line: string): boolean {
   if (/^\s+\S/.test(line)) return false; // indented → still inside
   if (line.trim() === "") return false;
-  if (/^\d+[.)、]\s/.test(line)) return false; // non-indented numbered step
+  if (STEP_LINE.test(line)) return false; // non-indented numbered step
   return true;
 }
 
@@ -67,7 +80,7 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
   const findings: AcceptanceLintFinding[] = [];
 
   const steps = sectionLines(lines, STEPS_HEADER);
-  const stepIdx = steps ? steps.idx.filter((i) => /^\s*\d+[.)、]\s/.test(lines[i])) : [];
+  const stepIdx = steps ? steps.idx.filter((i) => STEP_LINE.test(lines[i])) : [];
   if (!steps || stepIdx.length === 0) {
     findings.push({
       line: steps ? at(steps.headerIdx) : at(0),
@@ -77,9 +90,10 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
   }
 
   if (steps) {
-    for (const i of steps.idx) {
+    // The header line itself counts too (`- 驗收步驟：用 PUT 送出…`).
+    for (const i of [steps.headerIdx, ...steps.idx]) {
       // Text inside 「」 is on-screen copy the PM reads (e.g. #292's error「請求資料格式錯誤」), not an instruction.
-      const text = lines[i].replace(/「[^」]*」/g, "「」");
+      const text = lines[i].replace(/「([^」]*)」/g, (q, inner: string) => (QUOTED_TECH.test(inner) ? q : "「」"));
       for (const { label, re } of PM_STEP_FORBIDDEN) {
         const m = text.match(re);
         if (m) {

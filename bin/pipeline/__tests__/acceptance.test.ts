@@ -51,6 +51,31 @@ describe("lintAcceptanceComment", () => {
     expect(lintAcceptanceComment(body)).toEqual([]);
   });
 
+  it("accepts Chinese-style numbering and UI words that look technical (review findings)", () => {
+    const body = [
+      "## 🙋 請驗收：x",
+      "- 驗收步驟：",
+      "1、按 Log in 登入，再按「送出」", // unindented 1、 must not end the section
+      "2.打開好友請求列表，應該看到加入請求", // bare 請求 is product copy
+      "- 工程證據（已驗，PM 不需重做）：none",
+    ].join("\n");
+    expect(lintAcceptanceComment(body)).toEqual([]);
+  });
+
+  it("catches technical wording the first version missed (review findings)", () => {
+    const cases = [
+      "- 驗收步驟（只看畫面）：照工程用 PUT 送出\n  1. 打開頁面",
+      "- 驗收步驟：\n  1. 用 Postman 打 /practices 端點，HTTP 200",
+      "- 驗收步驟：\n  1. 用 SQL 查 DB 確認",
+      "- 驗收步驟：\n  1. 跑 pnpm test 全過",
+      "- 驗收步驟：\n  1. 確認「PUT /practices body 有 privacy」",
+    ];
+    for (const c of cases) {
+      const body = `## 🙋 請驗收：x\n${c}\n- 工程證據（已驗，PM 不需重做）：none`;
+      expect(rules(body), c).toContain("pm-step-technical");
+    }
+  });
+
   it("requires numbered steps", () => {
     const body = "## 🙋 請驗收：x\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none";
     expect(rules(body)).toEqual(["steps-missing"]);
