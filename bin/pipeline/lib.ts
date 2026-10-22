@@ -115,13 +115,14 @@ export function auditCards(
 
   for (const c of cards) {
     const status = c.status ?? "(none)";
-    // A central-repo PR counts as implementation only when it is genuinely linked;
-    // docs PRs that merely mention several cards in their body must not look like
-    // landed work. A sub-repo PR that explicitly targets other cards only mentions this one (e.g. #218's PRs
+    // A central-repo PR counts as implementation only when it is genuinely linked or
+    // explicitly targets the card (`Refs daodaoedu/daodao#N`: closing keywords would
+    // auto-close the card on merge and skip acceptance, #364); docs PRs that merely
+    // mention several cards in their prose must not look like landed work. A sub-repo PR that explicitly targets other cards only mentions this one (e.g. #218's PRs
     // listing follow-up cards); PRs with no target marker predate the convention and still count.
     const implements_ = (p: AuditCard["prs"][number]) =>
       p.ref.startsWith(`${CENTRAL_REPO}#`)
-        ? p.linked
+        ? p.linked || !!p.targets?.includes(c.number)
         : p.linked || !p.targets?.length || p.targets.includes(c.number);
     const open = c.prs.filter((p) => p.state === "open" && implements_(p));
     const merged = c.prs.filter((p) => p.state === "merged" && implements_(p));

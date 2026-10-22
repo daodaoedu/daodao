@@ -7,7 +7,7 @@
 3. **判定涉及哪些 repo** — 依 [repo-detection.md](../repo-detection.md)：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）→ 每個 repo 附依據寫進 task.md；`repo:*` label 只當參考，查證結果為準
 4. 決定命名：
    - **任務資料夾**：`<issue#>-<slug>`（例：`150-home-layout`）— 帶編號方便查找
-   - **branch**：`feat/<語意化 slug>`（例：`feat/home-layout-sidebar`）— 用 kebab-case 描述「做了什麼」，不放 issue 編號；issue 關聯記在 task.md 與 PR body 的 `Closes #<n>`。fix 用 `fix/`、refactor 用 `refactor/`
+   - **branch**：`feat/<語意化 slug>`（例：`feat/home-layout-sidebar`）— 用 kebab-case 描述「做了什麼」，不放 issue 編號；issue 關聯記在 task.md 與 PR body 的 `Refs daodaoedu/daodao#<n>`（不用 Closes／Fixes／Resolves，見 [finish.md](finish.md)）。fix 用 `fix/`、refactor 用 `refactor/`
 
 ### 1.1a 防撞檢查（建 worktree 前必做）
 
