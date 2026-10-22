@@ -27,6 +27,7 @@ Block（exit 2，拒絕編輯）只用於**高信心、低誤報**的規則：
 
 ### CI 側閘門
 - `pr-evidence-gate.yml`（由 sync-claude-config 同步到各 sub-repo）：PR body「## 驗證證據」的 CI 版。預設 `warn`（advisory），repo variable `PR_EVIDENCE_GATE_MODE=block` 升為阻擋；升級後要加進 dev 的「Benchmark required checks」ruleset 才真的擋得住 merge — 2026-09-03 server PR #449 的 schema-drift 紅燈仍被 merge，「閘門存在但不 required」等於沒有
+- 同一支 `check-pr-evidence.sh` 另擋 PR body 用 closing keyword（close／fix／resolve 各變化）指向中央 issue（`daodaoedu/daodao#N`、issue URL；root 內含 `#N`）：merge 時會自動關卡、跳過 dev 冒煙與 PM 驗收（2026-10-22 #333／#335／#337，#364）。高信心、低誤報且沒有合理例外，所以不吃分支前綴／`evidence-exempt`／bot 豁免；模式沿用 `PR_EVIDENCE_GATE_MODE`（root、f2e、server 已是 block）
 
 ### Warn 規則的策略
 其餘規則先做 Advisory（warn），用 Gate Ledger 累積數據：

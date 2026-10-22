@@ -395,7 +395,7 @@ daodao/
 2. `typecheck && lint && test`；既有紅測試用 origin/dev 乾淨 worktree 對照確認非本任務造成
 3. **Clean-context spec audit**：`scripts/build-spec-audit.py` 產 audit pack，spawn 不帶開發對話的獨立 subagent 逐 FR／TP／AC 標 PASS / FAIL / UNCERTAIN；FAIL 先修
 4. `/code-review`（四引擎＋誤判知識庫，見 Phase 5）
-5. push → `gh pr create --base dev --body-file …`；跨 repo 時各 PR body 互相引用並標 merge 順序。**子 PR 只用 `Refs daodaoedu/daodao#<n>`，不用 `Closes`**——`Closes` 會在第一支 PR merge 時就關掉中央卡、board 也跟著 Done，其他 repo 的 PR 還沒合就被當完成（#190 的教訓：f2e 先合、server 懸置一週，dev onboarding 卡死）
+5. push → `gh pr create --base dev --body-file …`；跨 repo 時各 PR body 互相引用並標 merge 順序。**所有 PR（含 daodao root 自己的）只用 `Refs daodaoedu/daodao#<n>`，不用 `Closes`／`Fixes`／`Resolves`**——closing keyword 會在 PR merge 時就關掉中央卡、board 也跟著 Done，跳過 dev 冒煙與 PM 驗收；跨 repo 時其他 repo 的 PR 還沒合就被當完成（#190 的教訓：f2e 先合、server 懸置一週，dev onboarding 卡死；#333、#335、#337 也因此被提前關閉）。`pr-evidence-gate` 會偵測並報錯（#364）
 6. task.md Status → `in-review`，記 PR 連結
 7. **回寫 issue**：`gh issue comment` 列 PR、驗證報告連結、核心旅程摘要、「尚未在 dev 冒煙」、Known incomplete scope
 
