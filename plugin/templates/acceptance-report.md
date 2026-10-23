@@ -35,6 +35,12 @@ templateVersion: 1
 |---|---|---|---|---|---|
 | AC-01 | yes | <凍結契約內容> | <觀察結果> | <pass/fail/blocked/not-run/n/a> | <本次版本證據> |
 
+狀態只依凍結契約判定，退回分流見 gh-pipeline「Need Fix 只收 AC 失敗」：
+- `fail`：寫出哪條 AC、看到什麼；只有這種退回移 Need Fix。
+- `blocked`：測不了（環境、帳號、截圖上傳、瀏覽器擋網址），不是產品失敗；卡片留在 Acceptance、加 `acceptance:blocked`、@ 工程排除。
+- 驗收當下新增的要求、已通過後才改的文案：不列為本表 `fail`，另開卡（內文寫「相關：#n」），原卡依原 AC 判定。
+- 同一個 bug 出現在多張卡：指向一張卡追蹤，其餘卡留言連結。
+
 ## 真實後端串接
 
 | AC | 瀏覽器操作 | Method／route／request ID | 去敏 payload／response | 同 ID 回讀／seed 對照 | Reload 持久化 | 後端版本證據 | 結果 |

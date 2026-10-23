@@ -71,6 +71,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
 - **通過**：PM 關 issue → 內建 `Item closed → Done` 自動移卡。之後收尾：拔 `human-driving`（`board.ts audit` 會列「Done 仍掛 human-driving」提醒）、docs/product 狀態改「已驗收」並附 PM 關 issue 的記錄。
 - **退回**：PM 留言哪條 AC 沒過並移 `Need Fix`（或請工程師代移 `set <n> needfix`）。退回理由對應不到任何 AC 時，代表 AC 寫得不清楚：先跟 PM 補齊 AC，再修。
+- **受阻／新增要求不是退回**：PM 測不了 → 卡留 Acceptance、掛 `acceptance:blocked`，工程排除後拔 label 並 @PM 重驗；驗收當下的新要求或通過後改文案 → 另開卡（相關：#n），原卡依原 AC 判定。分流表見 [gh-pipeline「Need Fix 只收 AC 失敗」](../gh-pipeline/SKILL.md)。
 
 ## 3. 更新適用文件與歸檔
 
