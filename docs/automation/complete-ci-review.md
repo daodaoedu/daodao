@@ -82,6 +82,8 @@ Workers AI 免費額度每日 10k neurons（00:00 UTC 重置）。2026-10-22 00:
 
 歷史 false-positive DB 仍從可信 base 經 `prompt-block` 提供，原有 knowledge fixtures 保留。但新 CI 刻意不再跑舊 Markdown `filter`：它用文字樣態刪除／降級表格列，且全部刪掉後會改成「沒有發現明顯問題」。這不能充當覆蓋證據，也不相容新 structured findings 的 revision side 與來源驗證。新流程保留可核對 finding，由後續 review 查證；不因符合歷史文字樣態就自動隱藏。這是可觀察的行為改變，並非宣稱已用 schema 消除語意誤判；manual review 的既有 knowledge 流程保持不變。
 
+#169 在這個原則下補上 A 類 absent-claim 的後置查證：`Verify absent-claim findings against head tree` 步驟在 `run-review-batches.py`（含來源與證據的 strict 驗證）之後、留言之前執行 base 版 `review-knowledge.cjs verify --findings`。它讀 `status.json`，對「找不到／缺少／未實作 X」的 finding 在 event head SHA 的 tree 用 `git grep` 查 X，查到反證時（存在型只認定義處；檢查型要 route 同一註冊敘述掛了同一類 middleware，或輸入驗證類在 validator／schema 檔有欄位定義），只在留言末尾加「verify 標註」段落，並在 job log 的 `verified-absent-claim report` group 印出命中位置；`status.json` 與 finding 表格都不改。本機 skill 步驟 6.5 則在 filter 之後直接移除這些列，因為本機有 AI 逐項覆核 report。
+
 binary、gitlink、平台產物、非 UTF-8、特殊控制字元檔名及超預算檔案都保留明確原因。產物不消耗模型預算，但整張 PR 的 `complete` 仍不會把這些路徑算成已審查。缺少 policy／Context Pack 或模型指出限制，同樣呈現 Review 未完成／有證據限制。
 
 ## 上線與限制
