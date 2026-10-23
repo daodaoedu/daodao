@@ -57,6 +57,9 @@ export const BLOCKED_ACCEPTANCE_LABEL = "acceptance:blocked";
 /** Hours a card may sit in Need Fix without a "which AC failed + what was seen" comment (#338). */
 export const NEED_FIX_COMMENT_GRACE_HOURS = 24;
 
+/** Label of the daily board-audit report issue: an automated report, never a card to audit. */
+export const BOARD_AUDIT_LABEL = "board-audit";
+
 /** Hours `acceptance:blocked` may stay on a card before audit calls engineering out (#338). */
 export const BLOCKED_ACCEPTANCE_MAX_HOURS = 48;
 

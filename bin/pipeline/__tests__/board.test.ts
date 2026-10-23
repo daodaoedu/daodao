@@ -9,6 +9,7 @@ import {
 } from "../lib.js";
 import {
   BLOCKED_ACCEPTANCE_LABEL,
+  BOARD_AUDIT_LABEL,
   DEAD_LABELS,
   ENGINEERING_ACCEPTANCE_LABEL,
   PM_LOGIN,
@@ -332,5 +333,11 @@ describe("Need Fix triage (#338)", () => {
         labels: [BLOCKED_ACCEPTANCE_LABEL], labelAddedAt: { [BLOCKED_ACCEPTANCE_LABEL]: addedAt } });
     expect(audit(blocked("2026-10-11T00:00:00Z")).map((x) => x.problem)).toContain(`${BLOCKED_ACCEPTANCE_LABEL} 已 76 小時未排除`);
     expect(audit(blocked("2026-10-13T00:00:00Z")).some((x) => x.problem.includes(BLOCKED_ACCEPTANCE_LABEL))).toBe(false);
+  });
+
+  it("skips the board-audit report issue that Auto-add pulled onto the board", () => {
+    // #389 landed in Todo right after the first scheduled run created it; closed on a clean day it would sit there too
+    expect(audit(card({ number: 389, status: "Todo", labels: [BOARD_AUDIT_LABEL] }))).toEqual([]);
+    expect(audit(card({ number: 389, status: "Todo", issueState: "CLOSED", labels: [BOARD_AUDIT_LABEL] }))).toEqual([]);
   });
 });
