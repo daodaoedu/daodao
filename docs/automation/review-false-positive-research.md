@@ -78,7 +78,7 @@
 
 | 步 | 做什麼 | 依據 | 成本 | 狀態 |
 |---|---|---|---|---|
-| 1 | Context Pack 補 route middleware／schema／刪檔替代者 | OpenCodeReview grounded tools、cubic | 改 `retrieve-context.sh`，一張卡 | [#168](https://github.com/daodaoedu/daodao/issues/168) Todo |
+| 1 | Context Pack 補 route middleware／schema／刪檔替代者 | OpenCodeReview grounded tools、cubic | 改 `retrieve-context.sh`，一張卡 | [#168](https://github.com/daodaoedu/daodao/issues/168) 完成：pack 最前面的 0a–0c 三段，每段有條數／行數／bytes 上限；跨 repo 的 schema（FP-0007：f2e 送出、server 驗證）不在同一 repo，仍查不到 |
 | 2 | `review-knowledge.cjs verify`：「找不到 X」類 finding 後置 grep | G-Research validate-against-source-of-truth | 半天 | [#169](https://github.com/daodaoedu/daodao/issues/169) Todo |
 | 2b | Spec Drafter：S 卡缺 spec 時 Actions + Workers AI 自動起草最小 OpenSpec → PR | [spec-drafter-spike.md](../archive/automation/spec-drafter-spike.md) 驗證可行 | 一張 M 卡 | [#170](https://github.com/daodaoedu/daodao/issues/170) Todo |
 | 3 | 第二段 precision pass（另一次 call，看不到第一段推理） | G-Research 兩段式、OpenCodeReview Independent Reflection、CoVe | 改 workflow，一張卡；先用 jsonl sample 當 eval | 待開卡 |
