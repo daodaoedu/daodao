@@ -23,6 +23,7 @@ import {
   findBoardItemForIssue,
   getCentralIssueLinks,
   getIssueAssignees,
+  getIssueComments,
   listBoardItemsLite,
   removeBoardItem,
   setBoardStatus,
@@ -115,6 +116,10 @@ function cmdAudit(): void {
     (it) => it.issueNumber !== null && (it.repository ?? "").endsWith(`/${CENTRAL_REPO}`)
   );
   const links = getCentralIssueLinks(items.map((it) => it.issueNumber!));
+  // Return comments are only judged for Need Fix cards (#338)
+  const comments = getIssueComments(
+    items.filter((it) => it.status === "Need Fix").map((it) => it.issueNumber!)
+  );
   const cards: AuditCard[] = items.map((it) => {
     const l = links.get(it.issueNumber!);
     return {
@@ -130,6 +135,8 @@ function cmdAudit(): void {
       updatedAt: l?.updatedAt ?? new Date(0).toISOString(),
       statusUpdatedAt: it.statusUpdatedAt,
       prs: l?.prs ?? [],
+      comments: comments.get(it.issueNumber!),
+      labelAddedAt: l?.labelAddedAt,
     };
   });
   const findings = auditCards(cards, DEAD_LABELS, new Date(), staleDays);

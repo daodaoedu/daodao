@@ -7,7 +7,7 @@ description: 島島阿學 Planning Board 狀態操作與稽核：七欄語意（
 
 # gh-pipeline
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 gh-card／dev-task／post-merge-wrapup 各自呼叫 `board.ts` 寫回，沒有任何 cron。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 gh-card／dev-task／post-merge-wrapup 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
 
 Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
@@ -32,7 +32,7 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 | `In Progress` | 有 worktree／branch 在跑 | dev-task start（`set <n> wip --add-label human-driving`） | 工程師 |
 | `Review` | PR 已開，等 code review／merge；merged 後留在這裡直到 dev 冒煙 | dev-task finish（`set <n> review`） | 工程師（AI review 引擎＋人類 reviewer 核准） |
 | `Acceptance` | 已 merge、部署 dev、AI 冒煙通過，**等 PM 對照 AC 驗收** | post-merge-wrapup 冒煙通過（`set <n> accept`，自動 assign PM）＋交接留言 @PM | PM（`peggy1213-create`） |
-| `Need Fix` | dev 冒煙失敗，或 PM 驗收退回，待修 | post-merge-wrapup（`set <n> needfix`）或 PM 退回；開修時 dev-task start 移回 In Progress | 工程師 |
+| `Need Fix` | dev 冒煙失敗，或 PM 驗收退回且寫出**哪條 AC 失敗＋看到什麼**，待修（受阻、新增要求不進這欄，見下方分流） | post-merge-wrapup（`set <n> needfix`）或 PM 退回；開修時 dev-task start 移回 In Progress | 工程師 |
 | `Done` | 符合 Definition of Done；issue closed | PM 關 issue（內建 `Item closed → Done` 自動移卡）；工程驗收卡（`acceptance:engineering`）由 post-merge-wrapup 冒煙通過後關；收尾時拔 `human-driving` | — |
 
 **Definition of Done**：AC 全部符合＋已部署到 dev＋驗收通過。預設由 PM 驗收；掛 `acceptance:engineering` 的卡由 dev 冒煙通過＋證據留言即算驗收（見下方「誰驗收」）。merge 不等於 Done；沒掛這個 label 的卡，AI 冒煙通過也不等於 Done。
@@ -53,10 +53,24 @@ gh-card 開卡時判斷並掛 label，理由寫進 body 的「驗收方式」；
 
 ### Acceptance 欄的規則（Kanban Guide 2025.5 的 SLE）
 
-- **PM 怎麼操作**：每天看 board 的「PM 驗收」view（篩 `status:Acceptance`）。通過 → 關 issue（卡自動到 Done）；退回 → 留言寫**哪一條 AC 沒過**、卡移 `Need Fix`（`set <n> needfix`）。
+- **PM 怎麼操作**：每天看 board 的「PM 驗收」view（篩 `status:Acceptance`）。通過 → 關 issue（卡自動到 Done）；AC 沒過 → 留言寫**哪一條 AC 沒過、看到什麼**、卡移 `Need Fix`（`set <n> needfix`）。測不了、想加新要求時依下方分流，不移 Need Fix。
 - **不設欄位上限**（2026-10-09 使用者決定）：冒煙通過就移 Acceptance，不排隊。
 - **SLE 2 個工作天**（`ACCEPTANCE_SLE_BUSINESS_DAYS`，以台北時間的週一到週五計算，從卡片移進 Acceptance 起算）：超過由 `audit` 列出並提醒 PM。累積實際 cycle time 後再調整。
 - 驗收者帳號集中在 `bin/pipeline/types.ts` 的 `PM_LOGIN`。
+
+### Need Fix 只收 AC 失敗（#338）
+
+2026-10-14 板上 17 張 Need Fix 只有 7 張是 AC 真的失敗，其餘是驗收受阻、驗收時新增的要求，或沒人收的母卡。驗收結果依下表分流：
+
+| 驗收時遇到 | 卡片去哪 | 誰做什麼 |
+|---|---|---|
+| 某條 AC 沒過 | `Need Fix` | 退回者留言寫**哪條 AC 失敗＋看到什麼**（截圖或實際畫面）；沒寫的退回不算數 |
+| 測不了：網址被瀏覽器擋（`ERR_BLOCKED_BY_CLIENT`）、截圖傳不上去、帳號或權限進不去 | 留在 `Acceptance`，加 `acceptance:blocked` | 留言 @ 工程說卡在哪一步；工程排除後拔 label 並 @PM 重驗。這不是產品失敗，不移 Need Fix |
+| 驗收當下想加的新要求、已通過後才改文案 | 原卡依**原 AC** 判定：過了就關；新要求另開卡 | 新卡內文寫「相關：#n」（不掛子卡），原卡留言連結新卡 |
+| 同一個 bug 出現在多張卡 | 指向一張卡追蹤 | 其餘卡留言連結那張，依各自 AC 判定，不重複退回 |
+
+- 工程接到 Need Fix 卻找不到 AC 失敗留言：先回頭請退回者補，或依上表改分流（例：#250 受阻移回 Acceptance、#279 文案修訂另開 #339）。
+- `audit` 會抓：Need Fix 超過 24 小時沒有 AC 失敗留言（留言只有受阻時另報「驗收受阻，不是 AC 失敗」）、母卡子卡全關卻還沒進 Acceptance、`acceptance:blocked` 超過 48 小時未排除。門檻在 `types.ts`（`NEED_FIX_COMMENT_GRACE_HOURS`、`BLOCKED_ACCEPTANCE_MAX_HOURS`）。
 
 ### 母卡與子卡（GitHub sub-issues）
 
@@ -82,7 +96,7 @@ gh-card 開卡時判斷並掛 label，理由寫進 body 的「驗收方式」；
 
 **GitHub 內建 workflow（board 設定頁，API 只讀得到名稱）**：`Item added → Todo`、`Item closed → Done`、`Auto-close issue`（設 Done 就 close issue）、`Pull request linked / merged`、`Auto-add (sub-)issues` 七個都開著。它們只認**同 repo** 用 closing keyword 連結的 PR；所有 PR（含 root）依 `docs/workflow.md` 用 `Refs daodaoedu/daodao#N`，所以不會自動移卡，也不會在 merge 時關卡跳過驗收（closing keyword 由 `pr-evidence-gate` 攔，#364）——這就是 2026-09-20 前卡片全堆在 In Progress 的原因。各 workflow 目標欄位（2026-09-20 於設定頁確認）：Item added → Todo、PR linked → In Progress、**PR merged → Review**（原本是 Done，同日改掉以配合「merged 留 Review」）、Item closed → Done。這些只影響同 repo PR，仍以 skill 的 `board.ts set` 為準。
 
-**Labels 現況**：`human-driving` 是人工開工標記（dev-task start 掛；卡到 Done 後拔，`audit` 會列出殘留）。`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched`／`spec-pending`／`human-coding`／`manual` 等派工 labels **不再使用**（label 本身保留不刪；2026-09-20 已從活躍卡片整批移除，`audit` 會把殘留當「死 label」列出）。
+**Labels 現況**：`human-driving` 是人工開工標記（dev-task start 掛；卡到 Done 後拔，`audit` 會列出殘留）。`acceptance:blocked` 是驗收受阻標記（PM 測不了時掛、工程排除後拔，見「Need Fix 只收 AC 失敗」）。`board-audit` 只掛在每日 audit 的固定報告 issue。`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched`／`spec-pending`／`human-coding`／`manual` 等派工 labels **不再使用**（label 本身保留不刪；2026-09-20 已從活躍卡片整批移除，`audit` 會把殘留當「死 label」列出）。
 
 ## board.ts — 移卡與稽核 CLI
 
@@ -95,9 +109,13 @@ pnpm -s tsx bin/pipeline/board.ts audit [--json] [--stale-days 3]
 - status 接受別名：`todo` / `ready` / `wip`／`in-progress` / `review` / `accept`／`acceptance` / `needfix` / `done`（大小寫、`-`、`_`、空白互通）
 - `set` 不在 board 會先 `item-add`；改完回讀 Status，不一致直接 exit 1
 - `set <n> accept` 會順便 assign `PM_LOGIN` 並回讀 assignee；交接留言內容隨卡片不同，由 post-merge-wrapup 另外發
-- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 post-merge-wrapup、Acceptance 未指派 PM、Acceptance 超過 SLE、母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層子卡、子卡不在中央 repo（母卡 Review 的 merged-stale 建議改成「等子卡關閉」）、Review 沒 PR、死 label、Done 仍掛 `human-driving`。Acceptance 的 SLE 與 Review 的「merged 後停留天數」都用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`），或 `Refs daodaoedu/daodao#N` 行明確指向本卡，才算實作；只在內文順手提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。sub-repo PR 若在標題（`— daodao#N`）或 `Refs`／`Closes`／`Fixes` 行**明確指向別張卡**，對本卡只算提及、不算實作（例：#218 的 PR 在內文列出後續卡 #244、#247）；沒有任何標記的舊 PR 仍照算。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
+- `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 post-merge-wrapup、Acceptance 未指派 PM、Acceptance 超過 SLE、母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層子卡、子卡不在中央 repo（母卡 Review 的 merged-stale 建議改成「等子卡關閉」）、Review 沒 PR、死 label、Done 仍掛 `human-driving`、Need Fix 超過 24 小時沒有 AC 失敗留言（或留言其實是驗收受阻）、母卡子卡全關卻未進 Acceptance、`acceptance:blocked` 超過 48 小時。留言只對 Need Fix 卡另外查（`getIssueComments`，從移進欄位前 24 小時起算）：同一行有 AC ID＋FAIL／未通過／❌、且那行不是受阻列，才算 AC 失敗留言；「🙋 請驗收」交接留言不算退回。Acceptance 的 SLE 與 Review 的「merged 後停留天數」都用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`），或 `Refs daodaoedu/daodao#N` 行明確指向本卡，才算實作；只在內文順手提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。sub-repo PR 若在標題（`— daodao#N`）或 `Refs`／`Closes`／`Fixes` 行**明確指向別張卡**，對本卡只算提及、不算實作（例：#218 的 PR 在內文列出後續卡 #244、#247）；沒有任何標記的舊 PR 仍照算。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
 - 不要用 `gh project item-list` 批次查：它每次拉全部欄位，跑十幾次就撞 Projects rate limit（2026-09-20 實測）；`board.ts` 走精簡 GraphQL（`listBoardItemsLite`、`findBoardItemForIssue`）
 - GraphQL 額度是**使用者 PAT 共用的 5000/hr**，Actions 裡的 Sync Shared Config 也用同一顆；大批操作前先 `gh api rate_limit --jq .resources.graphql`
+
+### 每日 audit 排程
+
+`.github/workflows/board-audit.yml` 每天台北 09:00（也可 `gh workflow run board-audit.yml` 手動跑）執行 `board.ts audit`，結果寫進同一張置頂 issue（label `board-audit`；第一次由 workflow 建立後手動 `gh issue pin` 一次）：有落差就更新內文並保持 open，沒落差就更新成 ✅ 並關閉，下次有落差再重開。不每天開新卡、不留言、不移卡；看到落差照建議欄用 `board.ts set` 處理。讀 board 用 secret `GIT_HUB_ACCESS_TOKEN`（需 `project` scope，`GITHUB_TOKEN` 讀不到 org project），寫 issue 用 `GITHUB_TOKEN`。這張 issue 是自動報告，不放 Planning board、不走驗收：board 的內建 Auto-add 會把它加進 Todo（2026-10-23 #389 實測），所以 workflow 最後一步用 PAT `board.ts remove` 移掉，`audit` 也略過掛 `board-audit` 的卡。
 
 ```bash
 # 純函式測試（不要跑裸 pnpm test，會掃到 worktrees/）
@@ -108,7 +126,7 @@ pnpm exec vitest run bin/pipeline --exclude "**/worktrees/**"
 
 | 症狀 | 檢查 |
 |---|---|
-| merge 了但卡沒動 | 正常——沒有 cron；跑 post-merge-wrapup，它會依冒煙結果 `set accept`／`set needfix` |
+| merge 了但卡沒動 | 正常——沒有移卡 cron；跑 post-merge-wrapup，它會依冒煙結果 `set accept`／`set needfix` |
 | `set accept` 報「還沒有 option id」 | board 設定頁還沒加 `Acceptance` 選項，或 id 沒填回 `types.ts` |
 | PM 說沒收到通知 | 確認 `set accept` 有回讀到 assignee、交接留言有 `@peggy1213-create` |
 | `set` 回讀失敗 | 是否撞 rate limit（`gh api rate_limit`）；item 是否被人手動刪掉（`audit` 會列不在 board 的卡） |

@@ -1,0 +1,92 @@
+name: Board audit (daily)
+
+# Planning board 的狀態落差（issue closed 卻卡在 Need Fix、Need Fix 沒有 AC 失敗留言、
+# 母卡子卡全關、acceptance:blocked 太久…）以前要有人手動跑 board.ts audit 才看得到（#338）。
+# 每天跑一次，結果寫進同一張固定 issue（label board-audit）：有落差就更新內文並保持 open，
+# 沒落差就更新成 ✅ 並關閉；下次有落差再重開。不每天開新卡，也不每天留言。
+
+on:
+  schedule:
+    # 每天 UTC 01:00（台北 09:00），PM 開工前
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: board-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 讀 org Projects v2 需要有 project scope 的 PAT；GITHUB_TOKEN 讀不到 org project
+      - name: Run board.ts audit
+        env:
+          GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+        run: |
+          npx --yes tsx@4.19.2 bin/pipeline/board.ts audit > audit.md
+          cat audit.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upsert the board-audit issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          LABEL=board-audit
+          TITLE='[Board Audit] Planning board 狀態落差'
+          num=$(gh issue list -R "$REPO" --label "$LABEL" --state all --limit 1 --json number --jq '.[0].number // empty')
+          if grep -q '項落差' audit.md; then has_findings=1; else has_findings=0; fi
+          {
+            echo '<!-- board-audit: 每日排程自動更新，請勿手動編輯內文 -->'
+            echo "最後更新：$(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') 台北｜[workflow run]($RUN_URL)"
+            echo
+            cat audit.md
+            echo
+            echo '處理方式見 `plugin/skills/gh-pipeline/SKILL.md`（移卡一律 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`）。本 issue 是自動報告，不放 Planning board、不走驗收。'
+          } > body.md
+          if [ -z "$num" ]; then
+            if [ "$has_findings" = 1 ]; then
+              gh issue create -R "$REPO" --title "$TITLE" --label "$LABEL" --body-file body.md
+            else
+              echo '沒有落差，也還沒有 board-audit issue：不建立'
+            fi
+            exit 0
+          fi
+          gh issue edit "$num" -R "$REPO" --body-file body.md
+          state=$(gh issue view "$num" -R "$REPO" --json state --jq .state)
+          if [ "$has_findings" = 1 ] && [ "$state" = CLOSED ]; then
+            gh issue reopen "$num" -R "$REPO"
+          elif [ "$has_findings" = 0 ] && [ "$state" = OPEN ]; then
+            gh issue close "$num" -R "$REPO" --reason completed
+          fi
+          echo "board-audit issue: #$num（findings=$has_findings）"
+
+      # board 的內建 Auto-add 會把新建／更新的 issue 加進 Planning（Todo），報告不該出現在 PM 的 board
+      - name: Keep the report off the Planning board
+        env:
+          GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          num=$(gh issue list -R "$REPO" --label board-audit --state all --limit 1 --json number --jq '.[0].number // empty')
+          [ -z "$num" ] && exit 0
+          sleep 20 # Auto-add 是非同步的，等它跑完再查
+          on_board=$(gh api graphql -f query="query { repository(owner: \"daodaoedu\", name: \"daodao\") { issue(number: $num) { projectItems(first: 20) { nodes { project { number } } } } } }" \
+            --jq '[.data.repository.issue.projectItems.nodes[].project.number] | index(10) != null')
+          if [ "$on_board" = true ]; then
+            npx --yes tsx@4.19.2 bin/pipeline/board.ts remove "$num"
+          else
+            echo "#$num 不在 Planning board"
+          fi
