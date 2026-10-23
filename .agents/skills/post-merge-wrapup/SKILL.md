@@ -56,7 +56,15 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
    pnpm -s tsx bin/pipeline/board.ts set <n> needfix
    ```
 
-   移 Acceptance 後**立刻**在中央 issue 發交接留言（[issue-status-comment.md](../../../plugin/templates/issue-status-comment.md) 的「交給 PM 驗收」段）：`@peggy1213-create`、測試網址（直接點進對應頁面）、白話驗收步驟、對照的 AC、驗證報告連結、已知限制，以及「通過請關 issue；退回請留言哪條 AC 沒過並移 Need Fix」。沒發交接留言等於 PM 不知道輪到他。
+   移 Acceptance 後**立刻**在中央 issue 發交接留言（[issue-status-comment.md](../../../plugin/templates/issue-status-comment.md) 的「交給 PM 驗收」段）：`@peggy1213-create`、測試網址（直接點進對應頁面）、白話驗收步驟、對照的 AC、工程證據、驗證報告連結、已知限制，以及「通過請關 issue；退回請留言哪條 AC 沒過並移 Need Fix」。沒發交接留言等於 PM 不知道輪到他。
+
+   **驗收步驟只寫 PM 在畫面上做得到、看得到的操作與預期**。冒煙表裡的 API 送出內容／回讀、regression test、CI、log 改寫成「工程證據（已驗，PM 不需重做）」區塊並附連結，不要搬進 PM 步驟；只能用 API 或測試驗的 AC 標工程驗收項，不列入 PM 步驟。驗收契約「必須證據」欄寫了 API 回讀或測試時，「對照的 AC」要寫明由工程提供、PM 依畫面判定（#370、#358 的 PM 照契約去要 PUT body、GET 回讀與 regression test 輸出，判 BLOCKED 退回）。留言先寫成檔案，發布前必跑：
+
+   ```bash
+   # 在 daodao root 執行；留言檔放 repo 外的暫存位置
+   pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>.md   # 有 error 就改到通過再發
+   gh issue comment <n> --repo daodaoedu/daodao --body-file <留言檔>.md
+   ```
 
    `Need Fix` 的卡由下一次 `/dev-task` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才移 Acceptance；部分 merged 留 Review 並在 comment 寫明剩哪些。
 

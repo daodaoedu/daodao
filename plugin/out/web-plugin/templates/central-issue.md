@@ -29,6 +29,7 @@ templateVersion: 1
 |---|---|---|---|---|---|
 | AC-01 | yes | <前提／操作／結果> | <repo> | <seed、一般使用者與權限案例> | <截圖、API 回讀、測試> |
 
+- 「必須證據」欄的 API 回讀、測試、log 由工程在冒煙與 PR 提供，PM 依畫面判定；只能用 API 或測試驗的 AC 在 Given／When／Then 後標「（工程驗收項）」，交 PM 驗收時不列入 PM 步驟。
 - 環境／語系／瀏覽器／viewport／DPR：<內容>
 - POC 容差與差異決策：<核准基準、決策連結>
 - 真實後端驗證：<API base URL、版本證明方式、寫入後 GET／DB 回讀及 reload；唯讀則 seed 對照>
