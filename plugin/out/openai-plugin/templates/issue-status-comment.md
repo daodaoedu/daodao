@@ -35,7 +35,16 @@ templateVersion: 1
 
 ## 交給 PM 驗收（post-merge-wrapup 移 Acceptance 時發）
 
-給 PM 看的白話留言，不放 SHA、run ID 等工程欄位（那些留在上面的開發結果摘要）。每個 `<...>` 都要換掉；驗收步驟寫成 PM 照著點就能做的操作，不寫 API 或程式名稱。
+給 PM 看的白話留言，不放 SHA、run ID 等工程欄位（那些留在上面的開發結果摘要）。每個 `<...>` 都要換掉。
+
+**PM 步驟與工程證據分開寫**（#370、#358 都因為混在一起被 PM 判 BLOCKED 退回）：
+
+- 「驗收步驟」只放 PM 在畫面上做得到、看得到的操作與預期：點哪裡、填什麼、重新打開後畫面顯示什麼。不寫 API、HTTP 方法（PUT／GET…）、送出內容（body／request／response）、回讀、regression test、log、curl、console，也不給 server-dev 或 `/api/` 網址。
+- API 送出內容與回讀、regression test、CI、log 一律放「工程證據（已驗，PM 不需重做）」，每項附冒煙留言、PR 或 CI 連結。
+- AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。
+- issue 內文驗收契約的「必須證據」欄若寫了 API 回讀或測試，PM 會照著要；所以「對照的 AC」要寫明那些由工程提供、PM 依畫面判定。
+- 標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具只認這兩者同時存在的留言，缺一個就判 BLOCKED（#245、#346）。
+- 發出前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 不發。
 
 ```markdown
 ## 🙋 請驗收：<功能一句話>
@@ -44,10 +53,14 @@ templateVersion: 1
 
 - 測試網址：<直接點進對應頁面的 dev 網址>
 - 測試帳號：<用哪個帳號／角色登入；不貼密碼>
-- 驗收步驟：
+- 驗收步驟（只看畫面）：
   1. <操作>，應該看到 <結果>（對應 AC-01）
   2. <操作>，應該看到 <結果>（對應 AC-02）
-- 對照的 AC：本 issue 內文「驗收契約」
+- 對照的 AC：本 issue 內文「驗收契約」。請依畫面判定；「必須證據」欄的 API 回讀與測試由工程提供，見下方工程證據
+- 工程證據（已驗，PM 不需重做）：
+  - <AC-0x 的 API 送出內容／回讀>：[dev 冒煙留言](<留言連結>)
+  - <AC-0x regression test>：[<repo>#<PR>](<PR 連結>) 的 CI test job
+  - 工程驗收項（畫面看不出，不列入上面步驟）：<AC ID 與一句理由；沒有就寫 none>
 - AI 驗證報告：[Task <n> 驗證報告](<Google 文件連結>)
 - 已知限制／這次沒做的：<none 或清單，附子 issue 連結>
 
