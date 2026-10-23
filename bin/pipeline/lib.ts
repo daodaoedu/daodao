@@ -78,18 +78,28 @@ export function prTargets(title: string, body: string): number[] {
 /**
  * What a comment says about a returned card (#338). Need Fix only takes "which AC failed +
  * what was seen"; a blocked acceptance (could not test: ERR_BLOCKED_BY_CLIENT, upload failed,
- * no account) stays in Acceptance with `acceptance:blocked`. Blocked wins when both appear:
- * the PM tool's blocked report still lists the AC rows it could not run (#250).
+ * no account) stays in Acceptance with `acceptance:blocked`.
+ *
+ * An AC failure needs an AC ID and a fail word on the same line, and that line must not be a
+ * blocked row: the PM tool's blocked report still lists the AC rows it could not run and says
+ * 「尚未觀察到產品 FAIL」 elsewhere (#250). A mixed report with one real failing row is a failure.
+ * The 「🙋 請驗收」 hand-off itself mentions AC IDs, ❌ and the label, so it is never a return.
  */
 export type ReturnCommentKind = "ac-fail" | "blocked" | "other";
 
-const BLOCKED_WORDS = /受阻|測不了|無法測試|無法完成|無法上傳|\bBLOCKED\b|ERR_BLOCKED/i;
+// `(?<![:\w])` keeps the label name `acceptance:blocked` from reading as a blocked report
+const BLOCKED_WORDS = /受阻|測不了|無法測試|截圖(?:無法|傳不)上傳|截圖傳不上去|(?<![:\w])BLOCKED\b|ERR_BLOCKED/i;
 const AC_ID = /\bAC-?\d+/i;
 const FAIL_WORDS = /\bFAIL(?:ED)?\b|未通過|不通過|沒過|失敗|❌/i;
+const HANDOFF = /請驗收：/;
 
 export function classifyReturnComment(body: string): ReturnCommentKind {
+  if (HANDOFF.test(body)) return "other";
+  const failLine = body
+    .split("\n")
+    .some((l) => AC_ID.test(l) && FAIL_WORDS.test(l) && !BLOCKED_WORDS.test(l));
+  if (failLine) return "ac-fail";
   if (BLOCKED_WORDS.test(body)) return "blocked";
-  if (AC_ID.test(body) && FAIL_WORDS.test(body)) return "ac-fail";
   return "other";
 }
 

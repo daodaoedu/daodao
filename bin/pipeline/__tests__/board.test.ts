@@ -267,6 +267,19 @@ describe("Need Fix triage (#338)", () => {
     expect(classifyReturnComment("AC-02 PASS")).toBe("other");
   });
 
+  it("does not let blocked wording, the hand-off, or the label name override a real failure", () => {
+    // product failures that mention 無法 are still failures
+    expect(classifyReturnComment("AC-02 未通過：使用者無法完成報名")).toBe("ac-fail");
+    // a mixed report: one row really failed, another could not be run
+    expect(classifyReturnComment("| AC-01 | … | FAIL |\n| AC-02 | … | BLOCKED |")).toBe("ac-fail");
+    // fail word and AC ID on different lines is not a return
+    expect(classifyReturnComment("對照 AC-01\n圖例：❌ 未通過")).toBe("other");
+    // the 「🙋 請驗收」 hand-off lists AC IDs, ❌ and the label — it is never a return
+    const handoff = "## 🙋 請驗收：x\n1. 點儲存（對應 AC-01）\n❌ 有 AC 沒過 → …\n⏸ 測不了 → 加 `acceptance:blocked`";
+    expect(classifyReturnComment(handoff)).toBe("other");
+    expect(classifyReturnComment("已排除，拔掉 acceptance:blocked")).toBe("other");
+  });
+
   it("#250: a blocked acceptance moved to Need Fix goes back to Acceptance with acceptance:blocked", () => {
     const f = audit(card({ number: 250, status: "Need Fix", statusUpdatedAt: "2026-10-12T15:00:00Z",
       comments: [{ createdAt: "2026-10-12T14:49:14Z", body: PM_BLOCKED_250 }] }));
