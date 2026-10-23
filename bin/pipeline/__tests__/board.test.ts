@@ -3,10 +3,18 @@ import {
   auditCards,
   prTargets,
   businessDaysSince,
+  classifyReturnComment,
   resolveStatus,
   type AuditCard,
 } from "../lib.js";
-import { DEAD_LABELS, ENGINEERING_ACCEPTANCE_LABEL, PM_LOGIN, STATUS_ALIASES } from "../types.js";
+import {
+  BLOCKED_ACCEPTANCE_LABEL,
+  BOARD_AUDIT_LABEL,
+  DEAD_LABELS,
+  ENGINEERING_ACCEPTANCE_LABEL,
+  PM_LOGIN,
+  STATUS_ALIASES,
+} from "../types.js";
 
 const NOW = new Date("2026-09-20T00:00:00Z");
 const card = (over: Partial<AuditCard>): AuditCard => ({
@@ -228,5 +236,108 @@ describe("sub-repo PR targets", () => {
     expect(problems(legacy).some((x) => x.startsWith("PR 全 merged"))).toBe(true);
     const own = card({ number: 293, status: "Todo", prs: [{ ref: "daodao-server#517", state: "open", linked: false, targets: [293, 250] }] });
     expect(problems(own).some((x) => x.startsWith("有 open PR"))).toBe(true);
+  });
+});
+
+// Shapes taken from the 2026-10-14 board, when 17 cards sat in Need Fix but only 7 were AC failures (#338)
+describe("Need Fix triage (#338)", () => {
+  const OCT14 = new Date("2026-10-14T04:00:00Z");
+  const audit = (c: AuditCard) => auditCards([c], DEAD_LABELS, OCT14);
+  const PM_BLOCKED_250 = [
+    "# 驗收說明",
+    "## 本次驗收未完成：發現問題或測試受阻",
+    "@vincentxuu 本次驗收無法完成，請協助確認測試環境的存取方式。導覽回報 `net::ERR_BLOCKED_BY_CLIENT`，頁籤停在 `about:blank`。",
+    "- 整體結果：BLOCKED。",
+    "- 狀態處理：本次更新說明後改為 Need Fix，請協助排除驗收阻擋。測試結果仍為 BLOCKED，尚未觀察到產品 FAIL。",
+    "| 1／期待結果：非 UUID | 瀏覽器開啟 `/users/no-such-user/followers` | HTTP 400 | 導覽工具回報 ERR_BLOCKED_BY_CLIENT | BLOCKED |",
+  ].join("\n");
+  const PM_FAIL_236 = [
+    "# 驗收說明",
+    "## 依照本次「請驗收」說明完成驗收，發現問題",
+    "- 整體結果：**FAIL**（第 1 步指定的「已儲存」提示未出現）",
+    "| 1／AC-01、AC-06 | PE01 主旨加上「【PM 驗收】」並按「儲存」 | 顯示「已儲存」 | 未觀察到「已儲存」提示 | **FAIL**（儲存回饋） |",
+    "## 失敗與阻擋",
+    "- 其餘必要功能檢查無阻擋。",
+  ].join("\n");
+
+  it("classifies return comments: AC failure, blocked acceptance, or neither", () => {
+    expect(classifyReturnComment(PM_FAIL_236)).toBe("ac-fail");
+    expect(classifyReturnComment(PM_BLOCKED_250)).toBe("blocked");
+    expect(classifyReturnComment("截圖無法上傳，請協助")).toBe("blocked");
+    expect(classifyReturnComment("驗收時想順便把 /mine 的文案也改掉")).toBe("other");
+    expect(classifyReturnComment("AC-02 PASS")).toBe("other");
+  });
+
+  it("does not let blocked wording, the hand-off, or the label name override a real failure", () => {
+    // product failures that mention 無法 are still failures
+    expect(classifyReturnComment("AC-02 未通過：使用者無法完成報名")).toBe("ac-fail");
+    // a mixed report: one row really failed, another could not be run
+    expect(classifyReturnComment("| AC-01 | … | FAIL |\n| AC-02 | … | BLOCKED |")).toBe("ac-fail");
+    // fail word and AC ID on different lines is not a return
+    expect(classifyReturnComment("對照 AC-01\n圖例：❌ 未通過")).toBe("other");
+    // the 「🙋 請驗收」 hand-off lists AC IDs, ❌ and the label — it is never a return
+    const handoff = "## 🙋 請驗收：x\n1. 點儲存（對應 AC-01）\n❌ 有 AC 沒過 → …\n⏸ 測不了 → 加 `acceptance:blocked`";
+    expect(classifyReturnComment(handoff)).toBe("other");
+    expect(classifyReturnComment("已排除，拔掉 acceptance:blocked")).toBe("other");
+  });
+
+  it("#250: a blocked acceptance moved to Need Fix goes back to Acceptance with acceptance:blocked", () => {
+    const f = audit(card({ number: 250, status: "Need Fix", statusUpdatedAt: "2026-10-12T15:00:00Z",
+      comments: [{ createdAt: "2026-10-12T14:49:14Z", body: PM_BLOCKED_250 }] }));
+    const hit = f.find((x) => x.problem === "Need Fix 的退回是驗收受阻，不是 AC 失敗");
+    expect(hit?.suggest).toContain(BLOCKED_ACCEPTANCE_LABEL);
+  });
+
+  it("#236: Need Fix for over 24 hours with no return comment", () => {
+    const f = audit(card({ number: 236, status: "Need Fix", statusUpdatedAt: "2026-10-11T02:00:00Z", comments: [] }));
+    const hit = f.find((x) => x.problem.startsWith("Need Fix 已 74 小時，沒有「哪條 AC 失敗＋看到什麼」的退回留言"));
+    expect(hit?.suggest).toContain("另開卡");
+  });
+
+  it("is quiet for a Need Fix card whose return names the failing AC, or that is under 24 hours", () => {
+    const failed = card({ number: 236, status: "Need Fix", statusUpdatedAt: "2026-10-11T02:00:00Z",
+      comments: [{ createdAt: "2026-10-11T01:50:00Z", body: PM_FAIL_236 }] });
+    expect(audit(failed)).toEqual([]);
+    const fresh = card({ status: "Need Fix", statusUpdatedAt: "2026-10-13T12:00:00Z", comments: [] });
+    expect(audit(fresh)).toEqual([]);
+    // a fail comment from an earlier round (long before this move) does not count
+    const old = card({ status: "Need Fix", statusUpdatedAt: "2026-10-11T02:00:00Z",
+      comments: [{ createdAt: "2026-09-20T00:00:00Z", body: PM_FAIL_236 }] });
+    expect(audit(old).some((x) => x.problem.includes("沒有「哪條 AC 失敗"))).toBe(true);
+  });
+
+  it("#141: a parent whose sub-issues are all closed is due for smoke and PM acceptance", () => {
+    const f = audit(card({ number: 141, status: "Need Fix", statusUpdatedAt: "2026-09-15T00:00:00Z",
+      subIssues: { total: 3, completed: 3 }, prs: [pr("daodao-f2e#952", "merged")] }));
+    const hit = f.find((x) => x.problem === "母卡的 3 張子卡已全關，母卡仍在 Need Fix");
+    expect(hit?.suggest).toContain("移 Acceptance");
+    // still waiting on a sub-issue → no such finding
+    const waiting = audit(card({ number: 141, status: "Review", subIssues: { total: 4, completed: 3 }, prs: [pr("daodao-f2e#952", "merged")] }));
+    expect(waiting.some((x) => x.problem.startsWith("母卡的"))).toBe(false);
+    // engineering parent closes instead of going to the PM
+    const eng = audit(card({ status: "Review", labels: [ENGINEERING_ACCEPTANCE_LABEL], subIssues: { total: 2, completed: 2 } }));
+    expect(eng.find((x) => x.problem.startsWith("母卡的"))?.suggest).toContain("關 issue");
+  });
+
+  it("#212／#279: a closed issue still sitting in Need Fix is reported (regression)", () => {
+    for (const n of [212, 279]) {
+      const f = audit(card({ number: n, status: "Need Fix", issueState: "CLOSED", statusUpdatedAt: "2026-10-14T02:00:00Z" }));
+      expect(f.map((x) => x.problem)).toContain("issue 已 close 但卡在 Need Fix");
+      expect(f.some((x) => x.problem.includes("沒有「哪條 AC 失敗"))).toBe(false);
+    }
+  });
+
+  it("flags acceptance:blocked left for more than 48 hours", () => {
+    const blocked = (addedAt: string) =>
+      card({ status: "Acceptance", assignees: [PM_LOGIN], statusUpdatedAt: "2026-10-13T00:00:00Z",
+        labels: [BLOCKED_ACCEPTANCE_LABEL], labelAddedAt: { [BLOCKED_ACCEPTANCE_LABEL]: addedAt } });
+    expect(audit(blocked("2026-10-11T00:00:00Z")).map((x) => x.problem)).toContain(`${BLOCKED_ACCEPTANCE_LABEL} 已 76 小時未排除`);
+    expect(audit(blocked("2026-10-13T00:00:00Z")).some((x) => x.problem.includes(BLOCKED_ACCEPTANCE_LABEL))).toBe(false);
+  });
+
+  it("skips the board-audit report issue that Auto-add pulled onto the board", () => {
+    // #389 landed in Todo right after the first scheduled run created it; closed on a clean day it would sit there too
+    expect(audit(card({ number: 389, status: "Todo", labels: [BOARD_AUDIT_LABEL] }))).toEqual([]);
+    expect(audit(card({ number: 389, status: "Todo", issueState: "CLOSED", labels: [BOARD_AUDIT_LABEL] }))).toEqual([]);
   });
 });

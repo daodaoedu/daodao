@@ -8,8 +8,12 @@
  */
 import {
   ACCEPTANCE_SLE_BUSINESS_DAYS,
+  BLOCKED_ACCEPTANCE_LABEL,
+  BLOCKED_ACCEPTANCE_MAX_HOURS,
+  BOARD_AUDIT_LABEL,
   CENTRAL_REPO,
   ENGINEERING_ACCEPTANCE_LABEL,
+  NEED_FIX_COMMENT_GRACE_HOURS,
   PM_LOGIN,
 } from "./types.js";
 
@@ -42,6 +46,10 @@ export interface AuditCard {
   parent?: number | null;
   /** Sub-issues living outside the central repo, as `repo#n`. */
   foreignSubIssues?: string[];
+  /** Recent issue comments; fetched for Need Fix cards only (the return-reason check). */
+  comments?: Array<{ createdAt: string; body: string }>;
+  /** Latest time each label was added (ISO), from LabeledEvent. */
+  labelAddedAt?: Record<string, string>;
 }
 
 export interface AuditFinding {
@@ -66,6 +74,34 @@ export function prTargets(title: string, body: string): number[] {
     for (const m of line.matchAll(card)) found.add(Number(m[1]));
   }
   return [...found];
+}
+
+/**
+ * What a comment says about a returned card (#338). Need Fix only takes "which AC failed +
+ * what was seen"; a blocked acceptance (could not test: ERR_BLOCKED_BY_CLIENT, upload failed,
+ * no account) stays in Acceptance with `acceptance:blocked`.
+ *
+ * An AC failure needs an AC ID and a fail word on the same line, and that line must not be a
+ * blocked row: the PM tool's blocked report still lists the AC rows it could not run and says
+ * 「尚未觀察到產品 FAIL」 elsewhere (#250). A mixed report with one real failing row is a failure.
+ * The 「🙋 請驗收」 hand-off itself mentions AC IDs, ❌ and the label, so it is never a return.
+ */
+export type ReturnCommentKind = "ac-fail" | "blocked" | "other";
+
+// `(?<![:\w])` keeps the label name `acceptance:blocked` from reading as a blocked report
+const BLOCKED_WORDS = /受阻|測不了|無法測試|截圖(?:無法|傳不)上傳|截圖傳不上去|(?<![:\w])BLOCKED\b|ERR_BLOCKED/i;
+const AC_ID = /\bAC-?\d+/i;
+const FAIL_WORDS = /\bFAIL(?:ED)?\b|未通過|不通過|沒過|失敗|❌/i;
+const HANDOFF = /請驗收：/;
+
+export function classifyReturnComment(body: string): ReturnCommentKind {
+  if (HANDOFF.test(body)) return "other";
+  const failLine = body
+    .split("\n")
+    .some((l) => AC_ID.test(l) && FAIL_WORDS.test(l) && !BLOCKED_WORDS.test(l));
+  if (failLine) return "ac-fail";
+  if (BLOCKED_WORDS.test(body)) return "blocked";
+  return "other";
 }
 
 /** Match the alias table without importing types at runtime (keeps lib.ts I/O-free). */
@@ -114,6 +150,8 @@ export function auditCards(
     out.push({ number: c.number, title: c.title, status: c.status, problem, suggest });
 
   for (const c of cards) {
+    // The audit's own report issue may be pulled onto the board by Auto-add; it is not a card
+    if (c.labels.includes(BOARD_AUDIT_LABEL)) continue;
     const status = c.status ?? "(none)";
     // A central-repo PR counts as implementation only when it is genuinely linked or
     // explicitly targets the card (`Refs daodaoedu/daodao#N`: closing keywords would
@@ -210,6 +248,58 @@ export function auditCards(
       // Parents carry no PRs of their own (github-issue-management §4.3)
       if ((c.subIssues?.total ?? 0) === 0) {
         push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");
+      }
+    }
+    // Need Fix only takes AC failures (#338): blocked acceptance and new requirements go elsewhere
+    const columnHours = columnDays * 24;
+    if (status === "Need Fix" && c.issueState === "OPEN" && columnHours >= NEED_FIX_COMMENT_GRACE_HOURS) {
+      // The return comment may land just before or after the move
+      const since = (c.statusUpdatedAt ? new Date(c.statusUpdatedAt).getTime() : 0) - NEED_FIX_COMMENT_GRACE_HOURS * 3_600_000;
+      const kinds = (c.comments ?? [])
+        .filter((m) => new Date(m.createdAt).getTime() >= since)
+        .map((m) => classifyReturnComment(m.body));
+      if (!kinds.includes("ac-fail")) {
+        if (kinds.includes("blocked")) {
+          push(
+            c,
+            "Need Fix 的退回是驗收受阻，不是 AC 失敗",
+            `移回 Acceptance、加 ${BLOCKED_ACCEPTANCE_LABEL} 並 @ 工程排除受阻`
+          );
+        } else {
+          push(
+            c,
+            `Need Fix 已 ${Math.floor(columnHours)} 小時，沒有「哪條 AC 失敗＋看到什麼」的退回留言`,
+            "退回者補 AC 失敗留言；驗收時新增的要求另開卡（相關：#n）、原卡依原 AC 判定；同一 bug 指向一張卡"
+          );
+        }
+      }
+    }
+    // Parent whose sub-issues are all closed: the whole requirement is ready for the PM walk-through
+    const allSubsClosed = (c.subIssues?.total ?? 0) > 0 && subOpen === 0;
+    if (
+      allSubsClosed &&
+      c.issueState === "OPEN" &&
+      status !== "Acceptance" &&
+      status !== "Done" &&
+      open.length === 0
+    ) {
+      push(
+        c,
+        `母卡的 ${c.subIssues!.total} 張子卡已全關，母卡仍在 ${status}`,
+        engineering
+          ? "跑 post-merge-wrapup 重新冒煙：通過留證據並關 issue（工程驗收）"
+          : "跑 post-merge-wrapup 重新冒煙：通過移 Acceptance 交 PM 整體驗收，失敗留 AC 失敗留言移 Need Fix"
+      );
+    }
+    if (c.labels.includes(BLOCKED_ACCEPTANCE_LABEL) && c.issueState === "OPEN") {
+      const since = c.labelAddedAt?.[BLOCKED_ACCEPTANCE_LABEL] ?? c.statusUpdatedAt ?? c.updatedAt;
+      const hours = (now.getTime() - new Date(since).getTime()) / 3_600_000;
+      if (hours >= BLOCKED_ACCEPTANCE_MAX_HOURS) {
+        push(
+          c,
+          `${BLOCKED_ACCEPTANCE_LABEL} 已 ${Math.floor(hours)} 小時未排除`,
+          "工程排除受阻（環境／帳號／權限／上傳）後拔 label 並 @PM 重驗"
+        );
       }
     }
     const dead = c.labels.filter((l) => deadLabels.includes(l));

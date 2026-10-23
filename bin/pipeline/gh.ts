@@ -152,6 +152,7 @@ export interface IssueLinks {
   parent: number | null;
   foreignSubIssues: string[];
   prs: Array<{ ref: string; state: "open" | "merged" | "closed"; linked: boolean; targets: number[] }>;
+  labelAddedAt: Record<string, string>;
 }
 
 /** One GraphQL round-trip per 50 issues: state, labels, and cross-referenced PRs. */
@@ -167,6 +168,9 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
           subIssuesSummary { total completed }
           parent { number }
           subIssues(first: 100) { nodes { number repository { name } } }
+          labelEvents: timelineItems(last: 20, itemTypes: [LABELED_EVENT]) { nodes {
+            ... on LabeledEvent { createdAt label { name } }
+          } }
           timelineItems(last: 40, itemTypes: [CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) { nodes {
             ... on CrossReferencedEvent { source { __typename ... on PullRequest { number state merged title body repository { name } } } }
             ... on ConnectedEvent { subject { __typename ... on PullRequest { number state merged title body repository { name } } } }
@@ -188,6 +192,7 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
         parent: { number: number } | null;
         subIssues: { nodes: Array<{ number: number; repository: { name: string } }> };
         timelineItems: { nodes: Array<{ source?: PRNode; subject?: PRNode }> };
+        labelEvents: { nodes: Array<{ createdAt?: string; label?: { name: string } }> };
       };
       if (!node) continue;
       const prs = new Map<string, { state: "open" | "merged" | "closed"; linked: boolean; targets: number[] }>();
@@ -205,6 +210,10 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
           targets: prTargets(pr.title ?? "", pr.body ?? ""),
         });
       }
+      const labelAddedAt: Record<string, string> = {};
+      for (const e of node.labelEvents.nodes) {
+        if (e.label && e.createdAt) labelAddedAt[e.label.name] = e.createdAt; // oldest → newest
+      }
       result.set(node.number, {
         number: node.number,
         state: node.state,
@@ -217,7 +226,33 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
           .filter((s) => s.repository.name !== CENTRAL_REPO)
           .map((s) => `${s.repository.name}#${s.number}`),
         prs: Array.from(prs, ([ref, v]) => ({ ref, ...v })),
+        labelAddedAt,
       });
+    }
+  }
+  return result;
+}
+
+/**
+ * Recent comments of a few central issues (Need Fix cards only — bodies are heavy, so this
+ * stays out of the 50-issue link query). One round-trip per 20 issues.
+ */
+export function getIssueComments(
+  numbers: number[],
+  last = 15
+): Map<number, Array<{ createdAt: string; body: string }>> {
+  const result = new Map<number, Array<{ createdAt: string; body: string }>>();
+  for (let i = 0; i < numbers.length; i += 20) {
+    const fields = numbers
+      .slice(i, i + 20)
+      .map((n) => `i${n}: issue(number: ${n}) { number comments(last: ${last}) { nodes { createdAt body } } }`)
+      .join("\n");
+    const query = `query { repository(owner: "${OWNER}", name: "${CENTRAL_REPO}") { ${fields} } }`;
+    const out = sh(`gh api graphql -f query='${query}'`);
+    const repo = (JSON.parse(out) as { data: { repository: Record<string, unknown> } }).data.repository;
+    for (const raw of Object.values(repo)) {
+      const node = raw as { number: number; comments: { nodes: Array<{ createdAt: string; body: string }> } } | null;
+      if (node) result.set(node.number, node.comments.nodes);
     }
   }
   return result;
