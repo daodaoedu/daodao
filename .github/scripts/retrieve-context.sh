@@ -475,14 +475,16 @@ section_deleted_replacements() {
   echo "## 0c. 被刪除檔案在同 PR 新增檔案裡的替代者"
   echo
   local removed added
+  # --no-renames：搬家後改寫的檔案要算成「刪除＋新增」才找得到替代者；
+  # core.quotePath=false：中文路徑不被加引號，後面的 git show 才拿得到
   # shellcheck disable=SC2086
-  removed="$(git diff --numstat $DIFF_RANGE -- | awk -F'\t' '
+  removed="$(git -c core.quotePath=false diff --no-renames --numstat $DIFF_RANGE -- | awk -F'\t' '
     $1 != "-" && $2 >= 40 && $2 >= 4 * $1 { print $3 }' | sort -u)"
   # shellcheck disable=SC2086
-  removed="$(printf '%s\n%s\n' "$removed" "$(git diff --name-only --diff-filter=D $DIFF_RANGE -- | sort -u)" \
+  removed="$(printf '%s\n%s\n' "$removed" "$(git -c core.quotePath=false diff --no-renames --name-only --diff-filter=D $DIFF_RANGE -- | sort -u)" \
     | awk 'NF && !seen[$0]++' | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|vue|py)$' || true)"
   # shellcheck disable=SC2086
-  added="$(git diff --name-only --diff-filter=A $DIFF_RANGE -- | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|vue|py)$' \
+  added="$(git -c core.quotePath=false diff --no-renames --name-only --diff-filter=A $DIFF_RANGE -- | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|vue|py)$' \
     | grep -vE '(^|/)(__tests__|tests?)/|\.(test|spec)\.' || true)"
   if [ -z "$removed" ] || [ -z "$added" ]; then
     echo "（本次 diff 沒有被刪除的程式檔，或沒有新增檔案可當替代者，略過）"
