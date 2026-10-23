@@ -115,7 +115,7 @@ pnpm -s tsx bin/pipeline/board.ts audit [--json] [--stale-days 3]
 
 ### 每日 audit 排程
 
-`.github/workflows/board-audit.yml` 每天台北 09:00（也可 `gh workflow run board-audit.yml` 手動跑）執行 `board.ts audit`，結果寫進同一張置頂 issue（label `board-audit`；第一次由 workflow 建立後手動 `gh issue pin` 一次）：有落差就更新內文並保持 open，沒落差就更新成 ✅ 並關閉，下次有落差再重開。不每天開新卡、不留言、不移卡；看到落差照建議欄用 `board.ts set` 處理。讀 board 用 secret `GIT_HUB_ACCESS_TOKEN`（需 `project` scope，`GITHUB_TOKEN` 讀不到 org project），寫 issue 用 `GITHUB_TOKEN`。這張 issue 是自動報告，不放 Planning board、不走驗收。
+`.github/workflows/board-audit.yml` 每天台北 09:00（也可 `gh workflow run board-audit.yml` 手動跑）執行 `board.ts audit`，結果寫進同一張置頂 issue（label `board-audit`；第一次由 workflow 建立後手動 `gh issue pin` 一次）：有落差就更新內文並保持 open，沒落差就更新成 ✅ 並關閉，下次有落差再重開。不每天開新卡、不留言、不移卡；看到落差照建議欄用 `board.ts set` 處理。讀 board 用 secret `GIT_HUB_ACCESS_TOKEN`（需 `project` scope，`GITHUB_TOKEN` 讀不到 org project），寫 issue 用 `GITHUB_TOKEN`。這張 issue 是自動報告，不放 Planning board、不走驗收：board 的內建 Auto-add 會把它加進 Todo（2026-10-23 #389 實測），所以 workflow 最後一步用 PAT `board.ts remove` 移掉，`audit` 也略過掛 `board-audit` 的卡。
 
 ```bash
 # 純函式測試（不要跑裸 pnpm test，會掃到 worktrees/）

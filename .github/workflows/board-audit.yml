@@ -72,3 +72,21 @@ jobs:
             gh issue close "$num" -R "$REPO" --reason completed
           fi
           echo "board-audit issue: #$num（findings=$has_findings）"
+
+      # board 的內建 Auto-add 會把新建／更新的 issue 加進 Planning（Todo），報告不該出現在 PM 的 board
+      - name: Keep the report off the Planning board
+        env:
+          GH_TOKEN: ${{ secrets.GIT_HUB_ACCESS_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          num=$(gh issue list -R "$REPO" --label board-audit --state all --limit 1 --json number --jq '.[0].number // empty')
+          [ -z "$num" ] && exit 0
+          sleep 20 # Auto-add 是非同步的，等它跑完再查
+          on_board=$(gh api graphql -f query="query { repository(owner: \"daodaoedu\", name: \"daodao\") { issue(number: $num) { projectItems(first: 20) { nodes { project { number } } } } } }" \
+            --jq '[.data.repository.issue.projectItems.nodes[].project.number] | index(10) != null')
+          if [ "$on_board" = true ]; then
+            npx --yes tsx@4.19.2 bin/pipeline/board.ts remove "$num"
+          else
+            echo "#$num 不在 Planning board"
+          fi
