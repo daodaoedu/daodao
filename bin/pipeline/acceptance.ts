@@ -36,7 +36,14 @@ export const PM_STEP_FORBIDDEN: ReadonlyArray<{ label: string; re: RegExp }> = [
 /** Technical URLs the PM should never be sent to (anywhere outside the engineering block). */
 const TECH_URL = /https?:\/\/(?:server-dev\.|server\.|[^\s)]*\/api\/)[^\s)]*/i;
 
-const ENGINEERING_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**工程證據/;
+/**
+ * The PM's acceptance tool only treats a comment as the spec when the same comment has
+ * both this exact heading and the PM mention; otherwise it reports BLOCKED (#245, #346).
+ */
+const REQUIRED_HEADING = /^## 🙋 請驗收/;
+export const PM_MENTION = "@peggy1213-create";
+
+const ENGINEERING_HEADER =/^(?:\s*[-*]\s*|#{1,6}\s+)\**工程證據/;
 const STEPS_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗收步驟/;
 
 /** Numbered step: `1. x`, `1.x`, `1、x`, `1) x`. */
@@ -79,7 +86,23 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
   const at = (i: number) => start + i + 1;
   const findings: AcceptanceLintFinding[] = [];
 
-  const steps = sectionLines(lines, STEPS_HEADER);
+  const headingIdx = all.findIndex((l) => REQUIRED_HEADING.test(l));
+  if (headingIdx < 0) {
+    findings.push({
+      line: 1,
+      rule: "pm-heading-missing",
+      message: "缺標題「## 🙋 請驗收：<功能一句話>」：PM 驗收工具只認這個標題，沒有會判 BLOCKED（#245、#346）",
+    });
+  }
+  if (!body.includes(PM_MENTION)) {
+    findings.push({
+      line: headingIdx >= 0 ? headingIdx + 1 : 1,
+      rule: "pm-mention-missing",
+      message: `缺「${PM_MENTION}」：PM 驗收工具要求同一則留言同時有請驗收標題與這個標記，沒有會判 BLOCKED（#245、#346）`,
+    });
+  }
+
+  const steps =sectionLines(lines, STEPS_HEADER);
   const stepIdx = steps ? steps.idx.filter((i) => STEP_LINE.test(lines[i])) : [];
   if (!steps || stepIdx.length === 0) {
     findings.push({

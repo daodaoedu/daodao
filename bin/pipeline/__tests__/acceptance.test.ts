@@ -41,6 +41,7 @@ describe("lintAcceptanceComment", () => {
   it("does not treat ordinary Chinese UI wording as technical", () => {
     const body = [
       "## 🙋 請驗收：x",
+      "@peggy1213-create 請幫忙驗收。",
       "- 驗收步驟：",
       "  1. 登入後打開設定頁，按「儲存」，應該看到「已更新」",
       "  2. 登出再打開實踐頁，仍看得到這筆實踐",
@@ -54,6 +55,7 @@ describe("lintAcceptanceComment", () => {
   it("accepts Chinese-style numbering and UI words that look technical (review findings)", () => {
     const body = [
       "## 🙋 請驗收：x",
+      "@peggy1213-create 請幫忙驗收。",
       "- 驗收步驟：",
       "1、按 Log in 登入，再按「送出」", // unindented 1、 must not end the section
       "2.打開好友請求列表，應該看到加入請求", // bare 請求 is product copy
@@ -77,13 +79,37 @@ describe("lintAcceptanceComment", () => {
   });
 
   it("requires numbered steps", () => {
-    const body = "## 🙋 請驗收：x\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none";
+    const body = "## 🙋 請驗收：x\n@peggy1213-create\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none";
     expect(rules(body)).toEqual(["steps-missing"]);
+  });
+
+  // The PM's acceptance tool only accepts a comment with both the exact heading and the mention (#245, #346 BLOCKED).
+  const handOff = (heading: string, mention: string) =>
+    [heading, mention, "- 驗收步驟：", "  1. 打開頁面，應該看到列表", "- 工程證據（已驗，PM 不需重做）：none"].join("\n");
+
+  it("rejects #245/#346-style hand-off without the 「## 🙋 請驗收」 heading", () => {
+    const r = rules(handOff("## ✅ dev 冒煙通過，交 PM 驗收", "@peggy1213-create 麻煩驗收："));
+    expect(r).toContain("pm-heading-missing");
+    expect(r).not.toContain("pm-mention-missing");
+  });
+
+  it("rejects a heading at the wrong level or without the emoji", () => {
+    expect(rules(handOff("### 🙋 請驗收：x", "@peggy1213-create"))).toContain("pm-heading-missing");
+    expect(rules(handOff("## 請驗收：x", "@peggy1213-create"))).toContain("pm-heading-missing");
+  });
+
+  it("rejects a hand-off without @peggy1213-create", () => {
+    expect(rules(handOff("## 🙋 請驗收：x", "開發完成，請幫忙驗收。"))).toEqual(["pm-mention-missing"]);
+  });
+
+  it("accepts the hand-off once both the heading and the mention are present", () => {
+    expect(lintAcceptanceComment(handOff("## 🙋 請驗收：x", "@peggy1213-create 請幫忙驗收。"))).toEqual([]);
   });
 
   it("supports heading-style sections and allows API wording inside the engineering block", () => {
     const body = [
       "## 🙋 請驗收：x",
+      "@peggy1213-create 請幫忙驗收。",
       "### 驗收步驟",
       "1. 打開頁面，應該看到列表",
       "### 工程證據（已驗，PM 不需重做）",
