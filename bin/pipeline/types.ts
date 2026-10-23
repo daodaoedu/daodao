@@ -48,6 +48,18 @@ export const ENGINEERING_ACCEPTANCE_LABEL = "acceptance:engineering";
 /** Service Level Expectation for Acceptance (Kanban Guide 2025.5): business days in Asia/Taipei. */
 export const ACCEPTANCE_SLE_BUSINESS_DAYS = 2;
 
+/**
+ * Acceptance could not be carried out (environment, account, upload…): the card stays in
+ * Acceptance with this label and engineering removes the blocker — it is not a Need Fix (#338).
+ */
+export const BLOCKED_ACCEPTANCE_LABEL = "acceptance:blocked";
+
+/** Hours a card may sit in Need Fix without a "which AC failed + what was seen" comment (#338). */
+export const NEED_FIX_COMMENT_GRACE_HOURS = 24;
+
+/** Hours `acceptance:blocked` may stay on a card before audit calls engineering out (#338). */
+export const BLOCKED_ACCEPTANCE_MAX_HOURS = 48;
+
 /** Labels from the retired Routine A／B dispatch era — should not remain on active cards. */
 export const DEAD_LABELS = [
   "auto",

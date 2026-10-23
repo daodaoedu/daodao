@@ -65,5 +65,7 @@ templateVersion: 1
 - 已知限制／這次沒做的：<none 或清單，附子 issue 連結>
 
 ✅ 通過 → 直接關掉這張 issue，卡片會自動移到 Done
-❌ 有問題 → 留言寫「哪一條 AC 沒過、看到什麼」，再把卡片移到 Need Fix
+❌ 有 AC 沒過 → 留言寫「哪一條 AC 沒過、看到什麼」，再把卡片移到 Need Fix
+⏸ 測不了（網址打不開、截圖傳不上去、帳號登不進去）→ 卡片留在 Acceptance、加 `acceptance:blocked` 標籤、留言 @vincentxuu 說卡在哪一步；不要移 Need Fix
+➕ 想加新要求或改文案（原本的 AC 沒寫到）→ 另開一張卡，內文寫「相關：#<本卡號>」；這張依原本的 AC 判定通過或退回
 ```
