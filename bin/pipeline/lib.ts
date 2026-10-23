@@ -10,6 +10,7 @@ import {
   ACCEPTANCE_SLE_BUSINESS_DAYS,
   BLOCKED_ACCEPTANCE_LABEL,
   BLOCKED_ACCEPTANCE_MAX_HOURS,
+  BOARD_AUDIT_LABEL,
   CENTRAL_REPO,
   ENGINEERING_ACCEPTANCE_LABEL,
   NEED_FIX_COMMENT_GRACE_HOURS,
@@ -149,6 +150,8 @@ export function auditCards(
     out.push({ number: c.number, title: c.title, status: c.status, problem, suggest });
 
   for (const c of cards) {
+    // The audit's own report issue may be pulled onto the board by Auto-add; it is not a card
+    if (c.labels.includes(BOARD_AUDIT_LABEL)) continue;
     const status = c.status ?? "(none)";
     // A central-repo PR counts as implementation only when it is genuinely linked or
     // explicitly targets the card (`Refs daodaoedu/daodao#N`: closing keywords would
