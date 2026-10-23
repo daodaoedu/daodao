@@ -87,6 +87,28 @@ test('verify 反例：真正缺少、只在測試檔、route 沒掛 middleware�
   for (const row of rows) assert.ok(out.includes(row));
 });
 
+test('verify 反例（獨立 review 的重現）：類別不符、只是用到名字、schema SQL 都不算反證', () => {
+  const dir = repo({
+    'src/routes/cohort.routes.ts': "router.delete('/:id', authenticate, cohortController.deleteCohort);\nrouter.get('/export', authenticate, reportController.exportReports);\n",
+    'src/controllers/cohort.controller.ts': 'export class CohortController {\n  deleteCohort = asyncHandler(async () => {});\n  updateTask = asyncHandler(async () => {});\n}\n',
+    'schema/tasks.sql': 'CREATE TABLE "tasks" ( "userId" INT );\n',
+    'src/validators/task.validators.ts': 'export const taskSchema = z.object({ title: z.string() });\nconst userId = 1;\n',
+  });
+  const rows = [
+    // route 掛了 authenticate，但說缺的是擁有者檢查，且 requireCohortOwner 不存在
+    '| 🔴 High | `src/c.ts:2` | deleteCohort 缺少 `requireCohortOwner` 檢查 | 加上 |',
+    // 擁有者檢查（權限類），authenticate 不算
+    '| 🔴 High | `src/c.ts:2` | deleteCohort 沒有檢查擁有者權限 | 加上 |',
+    // userId 只出現在 SQL 與 validator 的非 schema 行
+    '| 🟡 Medium | `src/c.ts:3` | updateTask 沒有檢查 userId 是否為擁有者 | 加上 |',
+    // 存在型：route 只是用到 exportReports，沒有定義
+    '| 🔴 High | `src/r.ts:1` | route 引用的 `exportReports` 未定義 | 補上 |',
+  ];
+  const { report } = verifyBody(body(...rows), makeGrep(dir, 'HEAD'));
+  assert.deepEqual(report.dropped, []);
+  assert.equal(report.kept, 4);
+});
+
 test('CI structured findings：只標註不刪除，note 與 log 不帶反引號、換行或 workflow command', () => {
   const dir = repo(TREE);
   const status = {

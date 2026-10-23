@@ -23,7 +23,7 @@ if [ -f "$_KNOWLEDGE_SCRIPT" ]; then
 fi
 ```
 
-接著對 filter 的輸出跑 `verify`（A 類 absent-claim 後置查證）：問題欄說「找不到／缺少／未實作 X」時，到 review snapshot（`$_REVIEW_HEAD`）用 `git grep` 查 X；在 route（且掛了 authenticate／validate 類 middleware）、middleware、validator／schema 或定義處查得到就移出表格，report 記 `verified-absent-claim` 與命中的 path:line。識別字太短（<4 字）或太泛（`data`、`user`…）不查，查不到就原樣保留：
+接著對 filter 的輸出跑 `verify`（A 類 absent-claim 後置查證）：問題欄說「找不到／缺少／未實作 X」時，到 review snapshot（`$_REVIEW_HEAD`）用 `git grep` 查 X；存在型斷言（找不到／未定義）只認定義處；檢查型斷言先判缺的是權限、身份驗證還是輸入驗證，route 同一個註冊敘述掛了同一類 middleware，或（輸入驗證）validator／schema 檔有該欄位定義才算反證，查得到就移出表格，report 記 `verified-absent-claim` 與命中的 path:line。識別字太短（<4 字）或太泛（`data`、`user`…）不查；敘述點名的識別字在 tree 裡完全不存在、分不出缺哪一類檢查、或查不到反證，就原樣保留：
 
 ```bash
 if [ -f "$_KNOWLEDGE_SCRIPT" ] && grep -Fq 'verifyBody' "$_KNOWLEDGE_SCRIPT"; then

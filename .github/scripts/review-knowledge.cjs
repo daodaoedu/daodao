@@ -145,15 +145,13 @@ function filterBody(body, db) {
 // ---- verify（A 類 absent-claim 後置查證，daodao#169）----
 // finding 斷言「找不到／缺少／未實作 X」時，到 PR head tree 用 git grep 查 X；
 // 查到「足以反駁」的位置才算 verified-absent-claim。
-//   存在型斷言（找不到／未定義／not found）：X 的定義處，或 route／middleware／schema 檔裡出現 X
-//   檢查型斷言（缺少驗證／沒有檢查／missing）：只認 route／middleware／schema 檔——
-//     route 檔還要求同一個註冊敘述裡掛了 authenticate／validate／require… 類 middleware
-// 沒查到或識別字太短太泛就原樣保留：寧可漏殺，不可把真的缺漏藏掉。
+//   存在型斷言（找不到／未定義／not found）：只認 X 的定義處
+//   檢查型斷言（缺少驗證／沒有檢查／missing）：先判缺的是權限／身份驗證／輸入驗證哪一類（分不出就不查），
+//     route 檔要求同一個註冊敘述掛了「同一類」middleware；輸入驗證另認 validator／schema 程式檔的欄位定義
+// 敘述點名的識別字在 tree 裡完全不存在、沒查到、或識別字太短太泛，就原樣保留：寧可漏殺，不可把真的缺漏藏掉。
 const ABSENT_EXIST_RE = /找不到|找不着|未定義|未定义|未實作|未实现|未實現|不存在|沒有定義|没有定义|not found|not defined|is undefined|does not exist|doesn'?t exist|no such|not implemented|never defined/i;
 const ABSENT_CHECK_RE = /缺少|缺乏|欠缺|沒有檢查|没有检查|未檢查|未检查|沒有驗證|没有验证|未驗證|未验证|未做(?:驗證|检查|檢查)|missing|lacks?\b|without (?:any )?(?:check|validation|auth)|no (?:\w+ ){0,3}(?:check|validation|guard|middleware|auth\w*)|never (?:checks|validates)|does not (?:check|validate)|doesn'?t (?:check|validate)/i;
-const CONTEXT_PATH_RE = /(route|router|middleware|validat|schema|guard|polic)/i;
 const ROUTE_PATH_RE = /(route|router)/i;
-const MIDDLEWARE_TOKEN_RE = /authenticat|validate|require[A-Z]|authoriz|guard|permission|verify[A-Z]|isAdmin|checkRole/;
 const ROUTE_START_RE = /[A-Za-z_$][\w$]*\.(?:get|post|put|patch|delete|all|use|route)\(/;
 const GENERIC_IDENTS = new Set([
   "data", "error", "errors", "user", "users", "value", "values", "result", "results", "response", "request",
@@ -238,37 +236,65 @@ function makeGrep(repoRoot, rev) {
   return { grep, show };
 }
 
+// 檢查型斷言說缺的是哪一類檢查；分不出來就不查（不能拿 authenticate 反駁「缺少擁有者檢查」）
+//   順序有意義：「身份驗證」含「驗證」，權限類要先判，因為 authenticate 證明不了擁有者／角色檢查
+const CHECK_CATEGORIES = [
+  ["permission", /權限|权限|擁有者|拥有者|所有者|owner|role|admin|permission|授權|授权|authoriz|越權|越权|IDOR/i,
+    /require[A-Z]\w*|authoriz\w*|permission\w*|guard\w*|checkRole|isAdmin|\w*Owner\w*/],
+  ["auth", /身份驗證|身分驗證|身份验证|登入|登录|未登入|authenticat|req\.user|login|token|session/i,
+    /authenticat\w*|requireAuth\w*|optionalAuth\w*/],
+  ["validation", /驗證|验证|校驗|校验|validat|NaN|格式|schema|sanitiz|型別|类型/i, /validate\w*/],
+];
+const DEF_KEYWORD_RE = (id) => new RegExp(`(?:function|class|interface|type|enum|const|let|var|def)\\s+${id}\\b|^\\s*(?:export\\s+)?(?:(?:public|private|protected|static|readonly|async)\\s+)*${id}\\s*(?:=|\\()`);
+const SCHEMA_FILE_RE = /(validat|schema)[^/]*\.(?:[cm]?[jt]sx?|py)$|\/(?:validators?|schemas?)\/[^/]+\.(?:[cm]?[jt]sx?|py)$/i;
+
+function checkCategory(text) {
+  for (const [name, re, token] of CHECK_CATEGORIES) if (re.test(text)) return { name, token };
+  return null;
+}
+
 // 該命中能不能反駁這個斷言
-function refutes(hit, ident, kind, show) {
-  if (ROUTE_PATH_RE.test(hit.path)) {
-    // route 檔：同一個註冊敘述（命中那行往上找到 router.<method>( 為止）要掛了 middleware
+function refutes(hit, ident, claim, show) {
+  const tail = escapeRe(ident.split(".").pop());
+  if (claim.kind === "exist") {
+    // 存在型：只認定義處；route／middleware 裡「用到」名字正是被質疑的那件事，不算反證
+    return DEF_KEYWORD_RE(tail).test(hit.text);
+  }
+  if (!claim.category) return false;
+  if (ROUTE_PATH_RE.test(hit.path) && /\.(?:[cm]?[jt]sx?|py)$/.test(hit.path)) {
+    // route 檔：同一個註冊敘述（命中那行往上找到 router.<method>( 為止）要掛了「同一類」middleware
     const lines = show(hit.path);
     let start = hit.line;
     for (let i = hit.line; i >= Math.max(1, hit.line - 10); i--) {
       if (ROUTE_START_RE.test(lines[i - 1] || "")) { start = i; break; }
     }
     const stmt = lines.slice(start - 1, hit.line).join("\n");
-    if (MIDDLEWARE_TOKEN_RE.test(stmt)) return true;
-    return kind === "exist";
+    return claim.category.token.test(stmt);
   }
-  if (CONTEXT_PATH_RE.test(hit.path)) return true;
-  if (kind !== "exist") return false;
-  const id = escapeRe(ident.split(".").pop());
-  return new RegExp(`(?:function|class|interface|type|enum|const|let|var|def)\\s+${id}\\b|^\\s*(?:export\\s+)?(?:async\\s+)?${id}\\s*[:=(]`).test(hit.text);
+  // validator／schema 程式檔：只反駁「缺少驗證」，且命中行要是該欄位的 schema 定義（key: …）
+  if (claim.category.name === "validation" && SCHEMA_FILE_RE.test(hit.path)) {
+    return new RegExp(`(?:^|[\\s{,'"])${tail}['"]?\\??\\s*:`).test(hit.text);
+  }
+  return false;
 }
 
 function verifyText(text, verifier) {
   const kind = absentClaimKind(text);
   if (!kind) return null;
+  const claim = { kind, category: kind === "check" ? checkCategory(text) : null };
+  if (kind === "check" && !claim.category) return null;
   const evidence = [];
   for (const ident of extractIdentifiers(text)) {
-    // validator／schema／middleware 的命中最直接，排在 route 與定義處前面
-    const rank = (h) => (CONTEXT_PATH_RE.test(h.path) && !ROUTE_PATH_RE.test(h.path) ? 0 : ROUTE_PATH_RE.test(h.path) ? 1 : 2);
-    const hits = verifier.grep(ident).filter((h) => refutes(h, ident, kind, verifier.show))
+    const all = verifier.grep(ident);
+    // 敘述點名的識別字在 tree 裡完全不存在（例：缺少 `requireCohortOwner`）→ 斷言很可能為真，整列保留
+    if (!all.length) return null;
+    // validator／schema 的命中最直接，排在 route 與定義處前面
+    const rank = (h) => (SCHEMA_FILE_RE.test(h.path) ? 0 : ROUTE_PATH_RE.test(h.path) ? 1 : 2);
+    const hits = all.filter((h) => refutes(h, ident, claim, verifier.show))
       .sort((a, b) => rank(a) - rank(b) || a.path.localeCompare(b.path) || a.line - b.line);
     if (hits.length) evidence.push({ identifier: ident, hits: hits.slice(0, 3).map((h) => `${h.path}:${h.line}`) });
   }
-  return evidence.length ? { kind, evidence } : null;
+  return evidence.length ? { kind, category: claim.category && claim.category.name, evidence } : null;
 }
 
 // 表格模式（本機 skill 步驟 6.5，接在 filter 之後）：查證成功的列移出表格，記進 report
