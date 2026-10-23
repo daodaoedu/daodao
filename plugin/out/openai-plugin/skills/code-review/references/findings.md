@@ -23,7 +23,22 @@ if [ -f "$_KNOWLEDGE_SCRIPT" ]; then
 fi
 ```
 
-（只處理實際存在的輸出；過濾是輔助分類，AI 仍須以目前程式碼確認每項保留或排除的理由，不可把過濾結果直接當作無缺陷證據。）
+接著對 filter 的輸出跑 `verify`（A 類 absent-claim 後置查證）：問題欄說「找不到／缺少／未實作 X」時，到 review snapshot（`$_REVIEW_HEAD`）用 `git grep` 查 X；在 route（且掛了 authenticate／validate 類 middleware）、middleware、validator／schema 或定義處查得到就移出表格，report 記 `verified-absent-claim` 與命中的 path:line。識別字太短（<4 字）或太泛（`data`、`user`…）不查，查不到就原樣保留：
+
+```bash
+if [ -f "$_KNOWLEDGE_SCRIPT" ] && grep -Fq 'verifyBody' "$_KNOWLEDGE_SCRIPT"; then
+  for engine in omp opencode claude; do
+    [ -f "$_REVIEW_TMP_DIR/$engine.filtered.txt" ] || continue
+    node "$_KNOWLEDGE_SCRIPT" verify --repo-root "$_REPO_ROOT" --rev "$_REVIEW_HEAD" \
+      --report "$_REVIEW_TMP_DIR/$engine.verify.json" \
+      < "$_REVIEW_TMP_DIR/$engine.filtered.txt" > "$_REVIEW_TMP_DIR/$engine.verified.txt"
+  done
+fi
+```
+
+呈現時以 `$engine.verified.txt` 為準，被 verify 移除的列逐條列出 identifier 與命中位置，標註「已由 verify 查到反證」，讓人能覆核。CI 也跑同一個 `verify`，但只在 review 留言末尾標註、不刪除 finding（#363 決定 CI 不依文字樣態隱藏 finding）。
+
+（只處理實際存在的輸出；過濾與 verify 是輔助分類，AI 仍須以目前程式碼確認每項保留或排除的理由，不可把過濾結果直接當作無缺陷證據。grep 查到同名識別字不等於 finding 一定錯，被移除的列仍要看一眼命中位置。）
 
 ## 步驟 7：Cross-model 分析
 
