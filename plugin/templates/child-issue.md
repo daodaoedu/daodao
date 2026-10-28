@@ -1,5 +1,5 @@
 <!-- schemaVersion: 1; templateVersion: 1; template: child-issue -->
-<!-- 中央子卡：開在 daodaoedu/daodao、掛母卡、上 board。規則見 docs/automation/github-issue-management.md §4。發布前跑 python3 scripts/check-issue-draft.py --template child <草稿>。 -->
+<!-- 中央子卡：開在 daodaoedu/daodao、掛母卡、上 board。規則見 docs/automation/github-issue-management.md §4。發布前跑 python3 plugin/templates/check-issue-draft.py --template child <草稿>。 -->
 
 # <要做的事，用動詞開頭，例如「讓學習者在挑戰頁看到自己的打卡紀錄」>
 

@@ -13,6 +13,9 @@ PROJECT_FILES = (
     'plugin/docs/ai-human-review-workflow.md',
     'plugin/templates/README.md',
     'plugin/templates/bug-issue.md',
+    'plugin/templates/central-issue.md',
+    'plugin/templates/child-issue.md',
+    'plugin/templates/check-issue-draft.py',
     'plugin/templates/requirements-doc.md',
 )
 SKILLS = ('report-bug', 'request-feature', 'prd-generation', 'product-status-check')

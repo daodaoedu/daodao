@@ -25,7 +25,7 @@ PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 sna
 
 ## 工程模板填寫規則（由 skill／開發補充）
 
-發布前跑 `python3 scripts/check-issue-draft.py --template <bug|central|child> <草稿>`，檢查未替換的佔位符、段落與順序、子卡的 `Parent:` 行與驗證證據；印出的每一行都要修掉。
+發布前跑 `python3 plugin/templates/check-issue-draft.py --template <bug|central|child> <草稿>`，檢查未替換的佔位符、段落與順序、子卡的 `Parent:` 行與驗證證據；印出的每一行都要修掉。
 
 - 所有 `<...>` 必須替換；Todo 需求缺項填「待確認：原因／下一步」，執行階段受阻才填 `blocked`。Run、SHA、報告等開發後欄位在開卡時填「尚未開始／尚未產生」，不可留假值或要求開卡前先完成開發。
 - 必填：中央 Issue ref、AC ID、契約版本／digest、執行與報告狀態（依階段補充）；開始執行後還需版本 SHA map 與證據索引。

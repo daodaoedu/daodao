@@ -58,7 +58,7 @@ git submodule update --remote
 | `/code-review` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
 | `/collect-pr-feedback` | 收集 PR 上所有 review 回饋（含收割 `/fp` 回覆進誤判知識庫） |
 | `/report-bug` | 無法立即修復的 bug 開成 GitHub issue |
-| `/break-down-plan` | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布；自動派工已退役） |
+| `/break-down-plan` | 把已確認計畫的未完成任務批次發成中央 repo 的子 issue（人工發布；自動派工已退役） |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
 快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，Planning board 狀態怎麼流（自動派工與 Routine C 皆已退役，改由各 skill 呼叫 `bin/pipeline/board.ts`）見 [gh-pipeline skill](plugin/skills/gh-pipeline/SKILL.md)。
