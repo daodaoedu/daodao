@@ -72,9 +72,19 @@ jobs:
           # 只有 Re-run 同一個 run 才會走到這裡（run number 不變）。
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::$TAG 已存在，跳過發佈。要重發請從 Actions 手動觸發新的 run。"
+            # release 建好之後 Pages 部署失敗時，重跑要能補部署——但只限這個 tag 仍是最新版，
+            # 否則重跑舊的 run 會把 Pages 退回舊版。
+            LATEST=$(gh release view --json tagName -q .tagName)
+            if [ "$LATEST" = "$TAG" ]; then
+              echo "publish_pages=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::$TAG 已存在，不重發 release，只重新部署 Pages。"
+            else
+              echo "publish_pages=false" >> "$GITHUB_OUTPUT"
+              echo "::notice::$TAG 已存在且不是最新版（最新 $LATEST），跳過。要重發請從 Actions 手動觸發新的 run。"
+            fi
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "publish_pages=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Package
@@ -87,11 +97,16 @@ jobs:
             "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/daodao-plugin-${VERSION}.zip"
           ls -l plugin/out/release/
 
+      - name: Configure Pages
+        if: steps.check.outputs.publish_pages == 'true'
+        id: pages
+        uses: actions/configure-pages@v5
+
       - name: Create release
         if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-          PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          PAGES_URL: ${{ steps.pages.outputs.base_url }}
           TAG: ${{ steps.meta.outputs.tag }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
@@ -113,7 +128,7 @@ jobs:
           沒有 repo 的人一行裝好：
 
           \`\`\`
-          claude plugin install daodao --marketplace ${PAGES_URL}marketplace.json
+          claude plugin install daodao --marketplace ${PAGES_URL%/}/marketplace.json
           \`\`\`
 
           archive sha256: \`${SHA}\`
@@ -124,28 +139,32 @@ jobs:
           echo "- 發佈 $TAG" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Stage marketplace.json for Pages
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.publish_pages == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXISTS: ${{ steps.check.outputs.exists }}
+          TAG: ${{ steps.meta.outputs.tag }}
         run: |
           mkdir -p _site
-          cp plugin/out/release/marketplace.json _site/marketplace.json
-
-      - name: Configure Pages
-        if: steps.check.outputs.exists == 'false'
-        id: pages
-        uses: actions/configure-pages@v5
+          if [ "$EXISTS" = "true" ]; then
+            # 重跑補部署：用已發佈 release 上的那份，sha256 才會對得上已上傳的 zip
+            gh release download "$TAG" -p marketplace.json -D _site --clobber
+          else
+            cp plugin/out/release/marketplace.json _site/marketplace.json
+          fi
 
       - name: Upload Pages artifact
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.publish_pages == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
 
       - name: Deploy to Pages
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.publish_pages == 'true'
         uses: actions/deploy-pages@v4
 
       - name: Verify the published marketplace resolves
-        if: steps.check.outputs.exists == 'false'
+        if: steps.check.outputs.publish_pages == 'true'
         env:
           VERSION: ${{ steps.meta.outputs.version }}
           PAGES_URL: ${{ steps.pages.outputs.base_url }}
@@ -154,12 +173,14 @@ jobs:
           # 而且它指向的 zip sha256 對得上——否則使用者會撞到
           # "Plugin archive integrity check failed"，而我們到那時才知道就太晚了。
           # Pages 有 CDN 快取，部署完可能還拿到舊版，重試幾次。
+          got_version() { jq -r '.plugins[0].version' /tmp/mp.json 2>/dev/null; }
+          rm -f /tmp/mp.json
           for i in 1 2 3 4 5 6; do
             curl -fsSL -H 'Cache-Control: no-cache' "${PAGES_URL%/}/marketplace.json?v=${VERSION}" -o /tmp/mp.json \
-              && [ "$(jq -r '.plugins[0].version' /tmp/mp.json)" = "$VERSION" ] && break
+              && [ "$(got_version)" = "$VERSION" ] && break
             echo "Pages 還沒更新到 $VERSION，等 20 秒（第 $i 次）"; sleep 20
           done
-          [ "$(jq -r '.plugins[0].version' /tmp/mp.json)" = "$VERSION" ] || { echo "❌ Pages 上的 marketplace.json 不是 $VERSION"; exit 1; }
+          [ "$(got_version)" = "$VERSION" ] || { echo "❌ Pages 上的 marketplace.json 不是 $VERSION（拿到：$(got_version || echo 下載失敗)）"; exit 1; }
           jq -e '.plugins[0].source.source == "archive"' /tmp/mp.json >/dev/null
           URL=$(jq -r '.plugins[0].source.url' /tmp/mp.json)
           WANT=$(jq -r '.plugins[0].source.sha256' /tmp/mp.json)

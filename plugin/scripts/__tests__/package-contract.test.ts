@@ -184,6 +184,15 @@ describe('settings 指向不需要 clone 的來源', () => {
     expect(wf).toMatch(/exists.*==.*'false'/)
   })
 
+  // release 建好後 Pages 部署失敗，重跑會因 tag 已存在而跳過；要能用已發佈的 marketplace.json
+  // 補部署，而且只限最新版，避免重跑舊 run 把 Pages 退回舊版。
+  it('release workflow 重跑時能補部署 Pages，且只限最新版', () => {
+    const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
+    expect(wf).toContain('gh release download "$TAG" -p marketplace.json')
+    expect(wf).toMatch(/LATEST=.*gh release view --json tagName/)
+    expect(wf).toMatch(/name: Deploy to Pages\n\s+if: steps\.check\.outputs\.publish_pages == 'true'/)
+  })
+
   it('release workflow 存在且會產生 settings 指到的那個資產', () => {
     const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
     expect(existsSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'))).toBe(true)
