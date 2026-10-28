@@ -153,9 +153,9 @@ daodao 的 develop 流程有多層 gate，但治理目標不同於實驗：
 | **Design** (L3) | 需求與設計合併成單一 session，套用 skill 載入組織標準，產出 spec.md | **已做到且超越**：OpenSpec design.md = 完整設計決策（資料模型、API contract、正規化規則、migration SQL），單一 session 從 proposal 推導 | 沒有標準化的組織規範 skill（品牌、資安、合規、UX）供 design session 載入 |
 | **Build** (L4) | Plan mode 先寫 plan.md，commit 後才進 auto mode 實作 | **已做到且超越**：OpenSpec tasks.md = 分 Phase 的實作計畫，每個 task 有涉及檔案、驗收條件、工時預估；develop Phase 1 再轉成 task.md manifest | Playbook 的 plan.md 只列檔案和順序；OpenSpec tasks.md 細到每個 task 的 AC |
 | **Build** (L5) | CLAUDE.md 記錄慣例、架構、常見錯誤 | **已做到**：monorepo 有 CLAUDE.md，各 skill 有參考文件 | 架構約束沒寫進去（見 §4.1） |
-| **Build** (L6) | Skills 編碼組織規範 | **已做到且超越**：develop、code-review、request-feature、gh-pipeline、pre-commit-check 等 30+ skills | — |
+| **Build** (L6) | Skills 編碼組織規範 | **已做到且超越**：develop、review-change、request-feature、move-board-card、check-commit 等 30+ skills | — |
 | **Build** (L7) | 平行 session + worktree 隔離 + subagent | **已做到且超越**：develop 的 worktree 隔離是核心設計，Phase 4 用 clean-context subagent 做 spec audit | — |
-| **Test** (L8) | Feedback loop：agent 每一步自我驗證，hook 保護迴圈不被弱化 | **已做到**：Phase 2 每個 phase 的自動驗證序列（起 dev server → 瀏覽器/curl → pre-commit-check → commit） | 缺「測試失敗時修 code 不修 test」的 hook 保護（L8 的核心治理） |
+| **Test** (L8) | Feedback loop：agent 每一步自我驗證，hook 保護迴圈不被弱化 | **已做到**：Phase 2 每個 phase 的自動驗證序列（起 dev server → 瀏覽器/curl → check-commit → commit） | 缺「測試失敗時修 code 不修 test」的 hook 保護（L8 的核心治理） |
 | **Test** (L9) | CI Evals：收集真實任務做回歸測試，CLAUDE.md/skill 改動時自動跑，pass rate 掉了擋 merge | **沒做到** | 完全缺失——CLAUDE.md 和 skill 的改動目前沒有行為回歸驗證 |
 | **Deploy** (L10) | AI PR review + REVIEW.md + review comment 自動修正迴圈 | **部分做到**：4-engine code review（本地 push 前跑）+ CI code-review.yml；但沒有 REVIEW.md，沒有 PR comment → 自動修正迴圈 | 缺 REVIEW.md（定義 review pass 和嚴重程度分類）；review 只在本地跑，PR 上沒有自動修正迴圈 |
 | **Deploy** (L11) | Hooks 作為確定性閘門 | **已做到**：`pre-pr-gate.sh`（攔 `gh pr create`）、`stop-quality-gate.sh`；PreToolUse hook 機制完備 | 缺 deploy 階段的 production gate（daodao 目前沒有自動化部署管線，手動 merge dev → main） |
@@ -195,14 +195,14 @@ daodao 的 develop 流程有多層 gate，但治理目標不同於實驗：
 
 #### 缺口 C：REVIEW.md + PR comment 自動修正迴圈（L10）
 
-**問題**：daodao 的 code review 在本地 push 前跑（4-engine），CI 也跑一次。但 review 的標準散在 code-review skill 的 prompt 裡，不是團隊可見的共識文件。PR 上收到 review comment 後，修正 → push → 再 review 是手動迴圈。
+**問題**：daodao 的 code review 在本地 push 前跑（4-engine），CI 也跑一次。但 review 的標準散在 review-change skill 的 prompt 裡，不是團隊可見的共識文件。PR 上收到 review comment 後，修正 → push → 再 review 是手動迴圈。
 
 **Playbook 的做法**：
 - REVIEW.md 放在 repo 根目錄，定義 review pass（Bug / Security / Spec compliance）、嚴重程度分類、nit 上限、不需報告的排除範圍
 - PR 上 tag `@claude`，Claude 讀 comment → 修正 → push commit，完整對話留在 PR thread
 
 **daodao 落地方式**：
-1. 為每個 sub-repo 寫 REVIEW.md（可以從 code-review skill 的 prompt 抽出，變成團隊可見的文件）
+1. 為每個 sub-repo 寫 REVIEW.md（可以從 review-change skill 的 prompt 抽出，變成團隊可見的文件）
 2. 啟用 `claude-code-action` 或等效的 CI review（已有 code-review.yml 基礎）
 3. 在 CI review comment 加上 `@claude` 自動修正迴圈——reviewer 留 comment，Claude 自動修並推 commit
 4. REVIEW.md 中加入架構規則（§4.3 的內容）
@@ -217,7 +217,7 @@ daodao 在幾個面向比 Playbook 走得更遠，值得保留和強化：
 | 面向 | Playbook 教的 | daodao 實際做的 | 超越之處 |
 |---|---|---|---|
 | **OpenSpec 三件套** (L2+L3+L4) | intent.md → spec.md → plan.md，三份獨立文件 | proposal.md（問題 + FRD 缺口逐條對照 + 產品決策）→ design.md（資料模型 + API contract + 正規化規則 + migration SQL）→ tasks.md（分 Phase 實作計畫，每個 task 帶 AC + 工時預估） | 比 Playbook 更深——design.md 細到 SQL 欄位型別和 Zod schema；tasks.md 每個 task 有可判定的驗收條件 |
-| **Phase 級自我驗證** (L8) | 把驗證步驟收攏成單一命令，commit 前跑 | Phase 2 每個 phase 有獨立的驗證序列（瀏覽器/curl + `stop-quality-gate.sh` + `pre-commit-check`），不是一次跑完所有 | 分層更細——早發現早修，不累積到最後 |
+| **Phase 級自我驗證** (L8) | 把驗證步驟收攏成單一命令，commit 前跑 | Phase 2 每個 phase 有獨立的驗證序列（瀏覽器/curl + `stop-quality-gate.sh` + `check-commit`），不是一次跑完所有 | 分層更細——早發現早修，不累積到最後 |
 | **視覺驗證** (L8) | 提供瀏覽器工具讓 Claude 截圖 | Phase 3 的 POC probe checklist + getComputedStyle 量測 + 並排截圖 + Google 文件驗證報告 | 不只截圖比對，還有量化的 CSS 屬性差異表 |
 | **Clean-context 審計** (L10) | 寫程式的 agent 不能自己批准自己的 PR | Phase 4 的 spec auditor 是一個全新的 subagent，只看 diff + 驗收契約，完全看不到開發對話 | Playbook 講的是「不同身份」，daodao 做的是「不同 context」——更強的隔離 |
 | **Worktree 隔離** (L7) | 多個 session 用 git worktree 隔離 | develop 完整的 worktree 管理（防撞檢查、clone mode fallback、port offset、env 複製、跨 repo 統一 branch） | 生產級的隔離方案，不只是 `git worktree add` |
@@ -481,8 +481,8 @@ Layer 2: .claude/skills/
 │   ├── [NEW] storage phase 後跑 check_schema_sync.py
 │   ├── [NEW] server phase 後跑 openapi:generate + diff
 │   └── Phase 4 spec auditor [UPGRADE] 接 decisions.md
-├── code-review/ [UPGRADE] 加入架構規則 + REVIEW.md
-└── pre-commit-check/
+├── review-change/ [UPGRADE] 加入架構規則 + REVIEW.md
+└── check-commit/
 
 Layer 3: .github/workflows/
 ├── code-review.yml

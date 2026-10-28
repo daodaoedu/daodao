@@ -1,6 +1,6 @@
 # docs/automation — 自動化 Pipeline 文件索引
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 request-feature／develop／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 request-feature／develop／verify-deploy 呼叫 `bin/pipeline/board.ts` 寫回（見 [move-board-card skill](../../plugin/skills/move-board-card/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
 
 這個目錄包含 **GitHub Board／Issue／PR** 自動化與開發流程的操作與維護文件。
 
@@ -21,7 +21,7 @@
 | [dual-subscription-development-workflow.md](dual-subscription-development-workflow.md) | 雙訂閱 agent 的 v2 開發流程、Harness、Runner、Artifact 與分階段落地規劃（提案；Routine A／B 已退役） |
 | [troubleshooting.md](troubleshooting.md) | board.ts 除錯、人工介入定義 |
 | [evals.md](evals.md) | Weekly 評估指標（歷史快照；`review-evals` 週報已停） |
-| [../archive/automation/](../archive/automation/README.md) | 已退役：Routine A／B 運維手冊與 prompt、manual-issue-to-routine、spec-drafter spike、gh-pipeline agentic flows／templates |
+| [../archive/automation/](../archive/automation/README.md) | 已退役：Routine A／B 運維手冊與 prompt、manual-issue-to-routine、spec-drafter spike、move-board-card agentic flows／templates |
 | [review-false-positive-research.md](review-false-positive-research.md) | AI code review 誤判：知識庫解不了的三個問題的文獻對照與落地順序（#168／#169） |
 | [../../.github/review-knowledge/README.md](../../.github/review-knowledge/README.md) | 誤判知識庫：樣態 A–F、記錄方式、本機 skill 與 CI 共用機制 |
 | [architecture.md](architecture.md) | ⚠️ 舊版 Notion pipeline 架構（僅供考古） |
@@ -31,7 +31,7 @@
 Product 在中央 repo [daodaoedu/daodao](https://github.com/daodaoedu/daodao/issues)
 開 feature issue 並掛上 [Planning board](https://github.com/orgs/daodaoedu/projects/10)。
 開發由人工 `/develop` 在隔離 worktree 進行（start 時自動掛 `human-driving`），
-PR 開了由 `/develop` finish 移 Review；合併後 `/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（assign PM＋交接留言）或 Need Fix；PM 驗收通過關 issue，內建 workflow 移 Done。
+PR 開了由 `/develop` finish 移 Review；合併後 `/verify-deploy` 依 dev 冒煙結果移 Acceptance（assign PM＋交接留言）或 Need Fix；PM 驗收通過關 issue，內建 workflow 移 Done。
 
 **沒有自動派工**：`Ready for Dev` 只是管理狀態；`auto`／`auto:*`／`needs-spec`／`dispatched` 等 labels 不再使用（保留不刪）。
 
@@ -39,4 +39,4 @@ PR 開了由 `/develop` finish 移 Review；合併後 `/post-merge-wrapup` 依 d
 
 **高風險 repo**：`daodao-storage`（SQL migration）與 `daodao-infra`（IaC）一律人工開發。
 
-詳見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)（七欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。
+詳見 [move-board-card skill](../../plugin/skills/move-board-card/SKILL.md)（七欄語意與 `board.ts`）；退役前的 pipeline 總覽見 [封存版](../archive/automation/github-pipeline.md)。

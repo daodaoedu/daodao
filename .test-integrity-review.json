@@ -1,7 +1,7 @@
 {
-  "base": "a65c73cf98bca4b1b6c3d2a072c387a69f177400",
-  "test_diff_sha256": "cd7f8f3081101ed7c5bd4664f8eb390f537624497a0590b2208a6c3716f50897",
+  "base": "b4e5996e15ef2356e94e7e12bbd2edf45f3f447f",
+  "test_diff_sha256": "0f592671c05d75615c0e0480fba915ece4fbb2d7a237619416642d53aef72e60",
   "reviewer": "vincentxuu",
-  "reason": "dev-task → develop 改名：layout-probe.lib.test.ts 三份為 R100 搬移，另 5 行僅測試名稱與路徑字串改名，斷言邏輯不變",
-  "evidence": "https://github.com/daodaoedu/daodao/pull/411"
+  "reason": "skill 改名：board.test.ts 2 行與 test_review_runner.py 1 行僅把 post-merge-wrapup／code-review 字串改為 verify-deploy／review-change，對應程式字串同步改名，斷言邏輯不變",
+  "evidence": "chore/rename-skills-verb 分支 diff（PR 建立後見 PR 頁面）"
 }

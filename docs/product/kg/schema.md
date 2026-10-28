@@ -124,7 +124,7 @@ docs/product/kg/
 | `feature-ai-actions` | AI 生成行動／AI 額度 | live |
 | `feature-b-dashboard` | B 端進度儀表板 | planned |
 
-（status 以 `product-status-check` 驗證為準，抽取時如與文件矛盾，以程式碼／實際上線狀態為準並註記。）
+（status 以 `check-product-status` 驗證為準，抽取時如與文件矛盾，以程式碼／實際上線狀態為準並註記。）
 
 ---
 

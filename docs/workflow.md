@@ -28,7 +28,7 @@ flowchart TD
     A1[PM 描述需求<br/>既有 FRD 沿用] --> A4[需求來源]
     A2[設計師出 Figma 設計稿] --> A4
     A3[POC 分支／可互動原型] --> A4
-    A4 --> B["/prd-generation<br/>AI 查核現況、起草 PRD、自審修訂"]
+    A4 --> B["/draft-prd<br/>AI 查核現況、起草 PRD、自審修訂"]
 
     BUG -- "Bug / 小改動" --> BUGPATH{"問題複雜度？"}
     BUGPATH -- "原因明確" --> BUGA["路徑 A：截圖貼給<br/>Claude Code 直接修"]
@@ -41,8 +41,8 @@ flowchart TD
     A4 -- "scope S：只寫 AC" --> E2
     E2 --> F["/develop<br/>worktrees/編號-slug/ 隔離開發<br/>start → dev → verify → finish"]
     F --> G["Hooks 自動保護 + format"]
-    G --> H["Commit<br/>pre-commit-check skill + format-commit skill"]
-    H --> I["Push<br/>code-review skill"]
+    G --> H["Commit<br/>check-commit skill + format-commit skill"]
+    H --> I["Push<br/>review-change skill"]
     I --> J[開 PR]
 
     J --> K["Auto PR Description<br/>Workers AI"]
@@ -55,7 +55,7 @@ flowchart TD
     P -- 是 --> Q[修正 → commit → push] --> O
     P -- 否 --> R[Merge 到 dev → CD 部署 dev 環境]
     R --> S["/develop cleanup<br/>dev 冒煙 → 移除 worktree、branch、任務資料夾"]
-    S --> T["/post-merge-wrapup<br/>docs/product 狀態、驗收證據"]
+    S --> T["/verify-deploy<br/>docs/product 狀態、驗收證據"]
 
     Q -. 遇到錯誤 .-> U["寫文章記錄<br/>quidproquo.cc（個人 /post skill）"]
     F -. 遇到錯誤 .-> U
@@ -64,7 +64,7 @@ flowchart TD
 
     T --> Z{"驗收方式？"}
     Z -- "PM 驗收（預設）" --> Z1["board Acceptance<br/>PM 在 dev 驗收 → 關 issue → Done"]
-    Z -- "acceptance:engineering" --> Z2["冒煙通過＋證據留言<br/>post-merge-wrapup 關 issue → Done"]
+    Z -- "acceptance:engineering" --> Z2["冒煙通過＋證據留言<br/>verify-deploy 關 issue → Done"]
 ```
 
 ---
@@ -78,13 +78,13 @@ flowchart TD
 | 工具 | 用途 | 安裝方式 |
 |------|------|---------|
 | **Claude Code** | 主力 AI 開發工具，執行 daodao plugin 的 skills 與 hooks | `curl -fsSL https://claude.ai/install.sh \| bash`（原生安裝器） |
-| **Codex CLI** | `/daodao:code-review` 四引擎之一；也可當替代客戶端（讀 `.agents/skills/`，hooks 需先 `/hooks` 信任） | `npm install -g @openai/codex` |
-| **OMP** | `/daodao:code-review` 四引擎之一（OpenRouter 免費模型） | `bun add -g @oh-my-pi/pi-coding-agent` |
-| **OpenCode** | `/daodao:code-review` 四引擎之一（OpenCode Zen 免費模型） | `npm install -g opencode-ai` |
+| **Codex CLI** | `/daodao:review-change` 四引擎之一；也可當替代客戶端（讀 `.agents/skills/`，hooks 需先 `/hooks` 信任） | `npm install -g @openai/codex` |
+| **OMP** | `/daodao:review-change` 四引擎之一（OpenRouter 免費模型） | `bun add -g @oh-my-pi/pi-coding-agent` |
+| **OpenCode** | `/daodao:review-change` 四引擎之一（OpenCode Zen 免費模型） | `npm install -g opencode-ai` |
 
-code-review 的引擎缺哪一個就記「未執行」，不會整個失敗；四個都裝 review 覆蓋率最高。
+review-change 的引擎缺哪一個就記「未執行」，不會整個失敗；四個都裝 review 覆蓋率最高。
 
-同一套 13 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`develop`、`code-review`、`pre-commit-check`、`format-commit`、`post-merge-wrapup`、`gh-pipeline` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
+同一套 13 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
 
 ### 0.2 GitHub CLI（gh）
 
@@ -135,7 +135,7 @@ node -v && pnpm -v && python3 --version && uv --version && docker --version && g
      ```
 
      marketplace 放在 GitHub Pages、plugin 本體是 release zip（163KB），不 clone repo。不要改用 `github.com/.../releases/...` 網址：`marketplace add` 會把 github.com 網址當成 git repo 去 clone 而失敗
-2. **Skills** — 指令帶命名空間：`/daodao:develop`、`/daodao:request-feature`……本文寫 `/develop` 時都是指 `/daodao:develop`（`/code-review` 尤其要注意，Claude Code 另有同名的內建 skill）
+2. **Skills** — 指令帶命名空間：`/daodao:develop`、`/daodao:request-feature`……本文寫 `/develop` 時都是指 `/daodao:develop`
 3. **Hooks** — 六支，註冊在 `plugin/hooks/hooks.json`，隨 plugin 生效：session-start、pre-write-guard、test-integrity-guard、pre-pr-gate、post-write-format、stop-quality-gate；完整說明見 [Phase 3.3](#33-開發中的自動化hooks)。改了 `plugin/` 正本要等 plugin 發版、更新後才生效
 4. **改 plugin 的人** — 用本機 marketplace：`claude plugin marketplace add ./` 再 `claude plugin install daodao@daodao-dev`；正本改完跑 `pnpm plugin:build` 重產各平台產物，產物不手改
 
@@ -190,7 +190,7 @@ pnpm run lint && pnpm run typecheck
 
 ### 1.1 PM 描述需求
 
-最正式的需求來源。提出者用白話描述「誰、在哪個情境、遇到什麼問題、希望怎麼改善」即可，不用填 repo、API、SHA、負責人；由 `/prd-generation` 查核現況、起草、補洞（見 Phase 2）。
+最正式的需求來源。提出者用白話描述「誰、在哪個情境、遇到什麼問題、希望怎麼改善」即可，不用填 repo、API、SHA、負責人；由 `/draft-prd` 查核現況、起草、補洞（見 Phase 2）。
 
 **新需求只寫一份 PRD**，功能行為與驗收都在裡面，不再另外要求 FRD；大型需求可以連結子 PRD。**既有 FRD 仍然有效**：沿用原文件、決策與 FR／TP 識別碼，不為了改名重新搬寫。PRD 的驗收情境（TP）之後就是 `/develop` verify 階段逐條驗收的清單。
 
@@ -205,11 +205,11 @@ pnpm run lint && pnpm run typecheck
 
 ### 1.3 在分支開發 Prototype（POC）
 
-有些需求用文字和設計稿很難說清楚，特別是互動體驗或技術可行性。直接在分支上做 prototype（常見是可互動的 HTML 原型），用 code 回答「這樣行不行」。`/prd-generation` 會以唯讀 diff 辨認 POC 展示的行為，記成候選需求：假 API、localStorage、假成功提示不代表正式服務已存在，權限、資料保存、失敗處理仍要在 PRD 補洞。有可互動原型的任務，`/develop` verify 會做 POC 並排比對（見 Phase 3）。
+有些需求用文字和設計稿很難說清楚，特別是互動體驗或技術可行性。直接在分支上做 prototype（常見是可互動的 HTML 原型），用 code 回答「這樣行不行」。`/draft-prd` 會以唯讀 diff 辨認 POC 展示的行為，記成候選需求：假 API、localStorage、假成功提示不代表正式服務已存在，權限、資料保存、失敗處理仍要在 PRD 補洞。有可互動原型的任務，`/develop` verify 會做 POC 並排比對（見 Phase 3）。
 
 ### 1.4 放置位置
 
-需求文件按功能模組放在 `docs/product/<功能>/`（目前 30 多個模組，例如 `practice/`、`challenge/`、`lighthouse/`、`notification/`、`social/`、`onboarding/`、`admin/`、`island/`、`space/`）。`/prd-generation` 的草稿先存既有任務目錄，沒有任務目錄時存 `docs/plans/requirements/`（不覆蓋舊檔）；人審核確認後依 PRD 附錄記錄確認基準。`docs/product/` 的功能狀態（已合併／已部署／已驗收）由 `/post-merge-wrapup` 在 merge 後回寫。
+需求文件按功能模組放在 `docs/product/<功能>/`（目前 30 多個模組，例如 `practice/`、`challenge/`、`lighthouse/`、`notification/`、`social/`、`onboarding/`、`admin/`、`island/`、`space/`）。`/draft-prd` 的草稿先存既有任務目錄，沒有任務目錄時存 `docs/plans/requirements/`（不覆蓋舊檔）；人審核確認後依 PRD 附錄記錄確認基準。`docs/product/` 的功能狀態（已合併／已部署／已驗收）由 `/verify-deploy` 在 merge 後回寫。
 
 ### Bug 修復 / 小改動
 
@@ -221,7 +221,7 @@ pnpm run lint && pnpm run typecheck
 
 `docs/troubleshooting/` 是舊的分析案例存放處（`auth-error/`、`android-oauth-login-fix.md` 等），新的問題不再往這裡放。
 
-查核後原因明確 → 開 S 卡或直接修；發現問題複雜（跨 repo、要改資料模型）→ 當成新功能走 Phase 1.5 判定。確認其實是新需求時，保留原始通報、改走 `/prd-generation`。
+查核後原因明確 → 開 S 卡或直接修；發現問題複雜（跨 repo、要改資料模型）→ 當成新功能走 Phase 1.5 判定。確認其實是新需求時，保留原始通報、改走 `/draft-prd`。
 
 ---
 
@@ -235,16 +235,16 @@ pnpm run lint && pnpm run typecheck
 
 | | PRD / FRD | 中央 issue |
 |---|---|---|
-| 誰寫 | 提出者描述，`/prd-generation` 查核起草、自審修訂，人審核確認 | `/request-feature` 從對話與已定稿 PRD 推斷 |
+| 誰寫 | 提出者描述，`/draft-prd` 查核起草、自審修訂，人審核確認 | `/request-feature` 從對話與已定稿 PRD 推斷 |
 | 回答什麼 | 要做什麼、為什麼、流程、規則、驗收條件（FR／TP／AC） | 現在做到哪、誰在做、本卡驗收契約（Acceptance snapshot） |
 | 位置 | 草稿在任務目錄或 `docs/plans/requirements/`；既有功能文件在 `docs/product/<功能>/` | daodaoedu/daodao issue + Planning board |
-| 誰消費 | `/request-feature` 的輸入、`/develop` verify 的檢查清單 | `/develop` start／finish、`/post-merge-wrapup` 的 board 回寫 |
+| 誰消費 | `/request-feature` 的輸入、`/develop` verify 的檢查清單 | `/develop` start／finish、`/verify-deploy` 的 board 回寫 |
 
 ### 判定表
 
 | scope | 條件 | 規格要求 | 進入方式 |
 |---|---|---|---|
-| **L / M** | 跨 repo（storage + server + f2e）、改資料模型、有關鍵待確認事項、需求與工程審閱有落差需定案 | **PRD 必須定稿**：含流程、規則、驗收與待決策清單（`/prd-generation`）；工程定案回寫 PRD 或記進 issue 決策區塊；issue body 的 Acceptance snapshot 指向該 PRD 版本 | Phase 2 → Phase 2.5 開卡 → Phase 3 `/develop` |
+| **L / M** | 跨 repo（storage + server + f2e）、改資料模型、有關鍵待確認事項、需求與工程審閱有落差需定案 | **PRD 必須定稿**：含流程、規則、驗收與待決策清單（`/draft-prd`）；工程定案回寫 PRD 或記進 issue 決策區塊；issue body 的 Acceptance snapshot 指向該 PRD 版本 | Phase 2 → Phase 2.5 開卡 → Phase 3 `/develop` |
 | **S** | 單 repo、工程決策少、範圍明確 | issue body 寫 **Acceptance Criteria** 即可，不必另寫 PRD | Phase 2.5 開卡 → `/develop` |
 | **XS / bug** | 原因明確的修正、文案、樣式 | 不需要 spec，不需要 issue | 路徑 A 直接修 → Phase 4 |
 | **CI / skill / 文件** | 只動 monorepo 自身的 `.github/`、`plugin/`、`bin/`、`docs/` | issue 寫 AC（給自己追蹤），通常掛 `acceptance:engineering` | monorepo 開 branch → PR 到 main（不直接 push main） |
@@ -259,20 +259,20 @@ L/M 的新功能開成**母卡＋子卡**：母卡＝一份 PRD，只放目標�
 
 ---
 
-## Phase 2：PRD 定稿（prd-generation）
+## Phase 2：PRD 定稿（draft-prd）
 
 L/M 功能在這一步把想法、既有 FRD、POC 或 issue 整理成一份可驗收的 PRD。OpenSpec 的 proposal／design／specs／tasks 四層 artifacts 已於 2026-09-20 退役，舊 change 封存於 `docs/archive/openspec/`；現在只要一份 PRD，流程、規則與驗收都在裡面，既有 FRD 及其 FR／TP ID 沿用，不另寫 FRD。
 
 ### 2.1 為什麼需要這一步
 
-FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要改成什麼、做到哪算完成」。`/prd-generation` 先查 codebase 現況（`product-status-check` 區分已實作、已測試、已部署、實際可用），再對照需求補洞，把工程審閱的定案和待決策事項寫進同一份文件，讓之後每個接手的 session 都有同一份真相。
+FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要改成什麼、做到哪算完成」。`/draft-prd` 先查 codebase 現況（`check-product-status` 區分已實作、已測試、已部署、實際可用），再對照需求補洞，把工程審閱的定案和待決策事項寫進同一份文件，讓之後每個接手的 session 都有同一份真相。
 
 ### 2.2 流程：描述 → AI 查核與起草 → AI 自審修訂 → 人審核 → 更新定稿
 
 | 順序 | 誰 | 做什麼 | 產出 |
 |------|-----|--------|------|
 | 1 | 提出者 | 用白話描述誰、在哪個情境、遇到什麼問題、希望怎麼改善；不用填 repo、SHA、負責人 | 對話或 issue |
-| 2 | AI | 讀來源（PRD／FRD／Issue comments／POC／設計稿），依 `product-status-check` 查 codebase 現況，列出目前行為、期待改動、影響與未知 | 現況查核 |
+| 2 | AI | 讀來源（PRD／FRD／Issue comments／POC／設計稿），依 `check-product-status` 查 codebase 現況，列出目前行為、期待改動、影響與未知 | 現況查核 |
 | 3 | AI | 依 `plugin/templates/requirements-doc.md` 起草或補洞；已有文件就直接補，不另造同義規格 | PRD 草稿 |
 | 4 | AI | 依 skill 的「交審前自審」檢核並修訂：來源與現況證據、目標與範圍一致、流程與畫面狀態、規則與例外、設計差異、跨功能影響、需求到驗收的對應、未確認的推論；能由證據修正的先修 | 修訂後草稿 + 精簡檢核摘要 + 待決策清單 |
 | 5 | 人 | 審核是否符合原意、做產品取捨；每輪只回一兩個關鍵決策 | 決策 |
@@ -285,7 +285,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 依 `plugin/templates/requirements-doc.md`：
 
 1. **問題與範圍** — 為誰解決什麼、包含／不包含，「不做什麼」也寫清楚
-2. **現況與希望改動** — `product-status-check` 查到的目前行為與期待的改變
+2. **現況與希望改動** — `check-product-status` 查到的目前行為與期待的改變
 3. **使用流程與功能規則（FR）** — 操作步驟、每一步的系統行為、欄位限制、權限、例外與錯誤處理；工程審閱定案（例如「90 天／3 段／50 字」）直接寫在這
 4. **驗收情境（TP）** — 每條寫前提、操作、預期結果，含反面條件（不顯示什麼、不出現什麼）；這份清單就是 `/develop` verify 的檢查清單
 5. **待確認與變更** — 分「關鍵待確認」（開工前要定）與「可延後」，加變更紀錄
@@ -308,7 +308,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 ## Phase 2.5：開卡（request-feature）
 
-規格確認後，用 `/request-feature` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/develop` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
+規格確認後，用 `/request-feature` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/develop` 從這裡讀需求並移 In Progress／Review，`/verify-deploy` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
 
 ```
 /request-feature（從對話推斷欄位，互動確認一次）
@@ -359,7 +359,7 @@ daodao/
 | 「接手 worktrees/141-…」或已在該資料夾內 | **dev** | 逐 phase 實作、驗證、commit |
 | 「驗證」或全部 phase 完成 | **verify** | 對驗收契約總驗收 + 讀取權限驗證 + 核心旅程矩陣 + 版面探針 + Google 文件報告 |
 | 「發 PR」 | **finish** | Deferred items 開卡、rebase、品質檢查、spec audit、code review、過 pre-pr 閘門、開 PR、回寫 issue |
-| 「merge 了」「收尾」 | **cleanup** | dev 冒煙 → 移除 worktree／branch／任務資料夾 → 接 post-merge-wrapup |
+| 「merge 了」「收尾」 | **cleanup** | dev 冒煙 → 移除 worktree／branch／任務資料夾 → 接 verify-deploy |
 
 #### start — 建立任務
 
@@ -375,10 +375,10 @@ daodao/
 
 跨 repo 順序固定 **storage（migration）→ server（API）→ ai-backend → f2e**。修改、安裝與 commit 都鎖在自己的任務資料夾；`projects/` 只做唯讀查證。每完成一個 phase 的預設動作序列，不問「要 commit 還是先看效果」：
 
-1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看（typecheck 過 ≠ 畫面對），有可互動 POC 的 UI phase 這一步就把 POC 開在旁邊跑基本 probe；API → curl；migration / script / skill → 依 `pre-commit-check` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」。碰到 form／mutation／controller／DTO 的 phase 要**真的送出一次**：一筆真實輸入成功、一筆 server 會拒絕的輸入失敗且訊息顯示
+1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看（typecheck 過 ≠ 畫面對），有可互動 POC 的 UI phase 這一步就把 POC 開在旁邊跑基本 probe；API → curl；migration / script / skill → 依 `check-commit` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」。碰到 form／mutation／controller／DTO 的 phase 要**真的送出一次**：一筆真實輸入成功、一筆 server 會拒絕的輸入失敗且訊息顯示
 2. **契約及測試完整性檢查**：依 `references/benchmark-gates.md` 跑適用 repo 的 schema／API signal 與測試完整性檢查
 3. **高風險掃描**：跑 `stop-quality-gate.sh` 看逐檔就緒清單與高風險分類（migration / API / auth / env / CI），有標記的在 task.md 記「⚠ 高風險：<分類>」
-4. 驗證過 → `/pre-commit-check` → `/format-commit`
+4. 驗證過 → `/check-commit` → `/format-commit`
 5. 更新 `task.md` 的 checkbox 與 Status，直接進下一個 phase；push 已授權時定期 `git push -u origin feat/<slug>`
 
 只有四種情況停下來：全部 phase 完成（進 verify）、碰到 task.md 記載的待決事項且無法繞過、驗證失敗 2 次修不掉、使用者喊停。phase 邊界是繼續點，不是回報暫停點。
@@ -410,7 +410,7 @@ daodao/
 1. `git status` 確認全部 commit；`git fetch origin dev && git rebase origin/dev`（衝突時列出檔案；openapi 生成物用官方腳本重產）
 2. `typecheck && lint && test`；既有紅測試用 origin/dev 乾淨 worktree 對照確認非本任務造成
 3. **Clean-context spec audit**：`scripts/build-spec-audit.py` 產 audit pack（diff、驗收契約、已確認決策、適用 REVIEW.md），spawn 不帶開發對話的獨立 subagent 逐 FR／TP／AC 標 PASS / FAIL / UNCERTAIN；FAIL 先修
-4. `/code-review`（四引擎＋誤判知識庫，見 Phase 5）；需要 force push 時先問
+4. `/review-change`（四引擎＋誤判知識庫，見 Phase 5）；需要 force push 時先問
 5. push → `gh pr create --base dev --body-file …`（worker、infra 的 base 是 `main`）；body 一律用 `--body-file`。跨 repo 時各 PR body 互相引用並標 merge 順序。**所有 PR（含 daodao root 自己的）用獨立一行 `Refs daodaoedu/daodao#<n>`，不用 `Closes`／`Fixes`／`Resolves`**——closing keyword 會在 PR merge 時就關掉中央卡、board 跟著 Done，跳過 dev 冒煙與 PM 驗收；跨 repo 時其他 repo 的 PR 還沒合就被當完成（#190：f2e 先合、server 懸置一週；#333、#335、#337 也因此被提前關閉）。CI 的 `pr-evidence-gate` 會偵測這類寫法（#364）
 6. PR body 要有「## 驗證證據」：驗證報告連結＋核心旅程矩陣（或 `核心旅程不適用：<原因>`）；body 沿用 Why／How 格式。有「## 驗證證據」時 Auto PR Description 會跳過，不覆寫
 7. task.md Status → `in-review`，記 PR 連結；`board.ts set <n> review` 移卡
@@ -437,7 +437,7 @@ daodao/
 1. 確認**所有 repo** 的 PR merged（跨 repo 少一支就不算）
 2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `report-bug` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
 3. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪；clone 模式先確認沒有未 push 的 commit）
-4. 接 `/post-merge-wrapup`：更新 `docs/product` 功能狀態，依冒煙結果移卡（見 Phase 8）；`Done` 只由驗收通過產生，這裡不提前移
+4. 接 `/verify-deploy`：更新 `docs/product` 功能狀態，依冒煙結果移卡（見 Phase 8）；`Done` 只由驗收通過產生，這裡不提前移
 5. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
 ### 3.2 平行開發約定
@@ -488,7 +488,7 @@ server 的 `pnpm dev` 或 jest 載入 app 時會重寫 `openapi.json`／`openapi
 
 ### 4.1 Pre-commit 檢查
 
-依 AGENTS.md 的 commit 流程，AI 在 commit 前執行 `pre-commit-check` skill（不是 git hook，要由流程呼叫；寫檔當下的自動格式化另由 `post-write-format` hook 負責）：
+依 AGENTS.md 的 commit 流程，AI 在 commit 前執行 `check-commit` skill（不是 git hook，要由流程呼叫；寫檔當下的自動格式化另由 `post-write-format` hook 負責）：
 
 0. **判斷指令入口** — 依 repo 用 Makefile、pnpm 或 monorepo root 的指令
 1. **格式檢查與自動修復** — `make check`／`pnpm format:check`，有錯先 `make format`／`pnpm format` 再重查
@@ -533,12 +533,12 @@ commit 完成後、push 到遠端之前，還有一道本地 review。
 
 ### 5.1 流程
 
-`code-review` skill 會審查整個 branch 相對於 base branch 的所有變更。`SKILL.md` 只放前置步驟，引擎指令在 `references/engines.md`、整合與查證在 `references/findings.md`：
+`review-change` skill 會審查整個 branch 相對於 base branch 的所有變更。`SKILL.md` 只放前置步驟，引擎指令在 `references/engines.md`、整合與查證在 `references/findings.md`：
 
 ```
 git push 前
   → Claude 問「要 review 嗎？」
-    → Yes → code-review skill 審查整個 branch
+    → Yes → review-change skill 審查整個 branch
       步驟 0   建共用 review input：base 的 REVIEW.md 審查準則 + diff + Context Pack + <known_false_positives>（誤判知識庫）
       步驟 1   確認 base 與變更範圍
       步驟 2–5 Codex / OMP（OpenRouter free）/ OpenCode（Zen free）/ Claude Sonnet 5.5 四引擎獨立 review
@@ -685,7 +685,7 @@ CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有�
     3. AI 逐條對程式碼／測試查證：已確認缺陷／待產品決策／證據不足／已解決或不適用
        - 人類要求與模型 High 都只是待查證訊號，多個模型同意也不等於正確
        - `/fp <n> <A-F> <why>` 只採 PR 作者或已驗證成員的回覆，查證後 record --source ci（不自動 commit／push）
-    4. 有修復授權：修已確認缺陷（bug 先補 regression test）→ 走 pre-commit-check／format-commit commit；
+    4. 有修復授權：修已確認缺陷（bug 先補 regression test）→ 走 check-commit／format-commit commit；
        push 與回覆 reviewer 需另有授權
        只有分析授權：給修正建議與驗證方法，不擅改程式
     5. 交人審核：已修什麼、還有什麼待決策
@@ -702,13 +702,13 @@ CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有�
 一個 PR 要 merge 需要滿足：
 
 - 目標 repo ruleset 的 required checks 全綠（各 repo 不同，見 6.4；f2e、server 含 `PR evidence`）
-- AI Code Review 的 P1 已查證處理（AI review 不是 required check，coverage 不完整時由本機 `/code-review` 補）
+- AI Code Review 的 P1 已查證處理（AI review 不是 required check，coverage 不完整時由本機 `/review-change` 補）
 - 人類 reviewer 審過（流程要求；GitHub ruleset 目前不強制 approve 數）
 - **跨 repo 依 PR body 標的順序合併**（storage → server → ai-backend → f2e），不要先合前端；前端一合就會打尚未部署的 API
 
 ### 7.2 部署
 
-PR merge 到 `dev` 後，CD 自動部署到 **dev 環境**，`/post-merge-wrapup` 的 dev 冒煙就在這裡做。**prod 不會因為 merge 到 dev 而部署**：要另外把變更合進各 repo 的 prod 分支，分支名稱各 repo 不同。
+PR merge 到 `dev` 後，CD 自動部署到 **dev 環境**，`/verify-deploy` 的 dev 冒煙就在這裡做。**prod 不會因為 merge 到 dev 而部署**：要另外把變更合進各 repo 的 prod 分支，分支名稱各 repo 不同。
 
 | 子專案 | 部署方式 | dev 環境（`dev` 分支） | prod 環境（分支） |
 |--------|---------|---------|------|
@@ -737,12 +737,12 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 2. **dev 冒煙**（通過前不刪任務資料夾）：CD 跑到該 revision 後，用核心旅程矩陣在 dev 重跑全部正常列＋至少一列錯誤路徑，結果回寫 issue comment；失敗走 `report-bug` 並標「已合併，dev 冒煙未過」，沒過不往下
 3. 每個 repo：`git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`（只更新 origin/dev，不動 `projects/` 的本機分支）
 4. `rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 issue comment 才刪；task.md 其他值得留的內容先摘要進 comment；clone 模式先確認沒有未 push 的 commit）
-5. 接 `/post-merge-wrapup`
+5. 接 `/verify-deploy`
 6. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
-`human-driving` label 不在 cleanup 拔，等卡片到 Done 後由 post-merge-wrapup 拔（`board.ts audit` 會列出 Done 仍掛著的卡）。
+`human-driving` label 不在 cleanup 拔，等卡片到 Done 後由 verify-deploy 拔（`board.ts audit` 會列出 Done 仍掛著的卡）。
 
-### 8.2 `/post-merge-wrapup`
+### 8.2 `/verify-deploy`
 
 1. 核對合併範圍與證據：程式實作／測試／部署／目標環境操作各自要有證據；未執行就記未驗證
 2. 目標環境冒煙（同 8.1 步驟 2），表格格式 `## 🔥 dev 冒煙（<環境>，revision <sha>，<日期>）`。跨 repo 要所有 PR 都 merged 且冒煙過才移卡；全部 ✅ 只能在 docs/product 標「dev 冒煙通過，待 PM 驗收」，PM 關 issue 後才標「已驗收」
@@ -755,7 +755,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 ### 8.3 Board 與 issue
 
-board 七欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/develop` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Acceptance（assign PM＋交接留言 @PM）、失敗或未冒煙 → Need Fix；`/collect-pr-feedback` 也可能移 Need Fix；PM 驗收通過關 issue → Done（內建 `Item closed → Done`），AC 沒過 → Need Fix；工程驗收卡冒煙通過由 post-merge-wrapup 關 issue → Done。沒有移卡 cron；PR 一律用 `Refs` 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 `Refs`。七欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
+board 七欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/develop` start → In Progress、finish → Review（merged 後仍留 Review）、`/verify-deploy` 冒煙通過 → Acceptance（assign PM＋交接留言 @PM）、失敗或未冒煙 → Need Fix；`/collect-pr-feedback` 也可能移 Need Fix；PM 驗收通過關 issue → Done（內建 `Item closed → Done`），AC 沒過 → Need Fix；工程驗收卡冒煙通過由 verify-deploy 關 issue → Done。沒有移卡 cron；PR 一律用 `Refs` 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 `Refs`。七欄語意見 [move-board-card skill](../plugin/skills/move-board-card/SKILL.md)。
 
 ```
 單張卡（子卡，或沒有子卡的卡）
@@ -779,8 +779,8 @@ Todo → In Progress → Review → Acceptance → Done
 | Ready for Dev | 工程師 | 人工（選用的管理狀態，不觸發任何自動化） |
 | In Progress | 工程師 | `/develop` start |
 | Review | 人類 reviewer（review／merge） | `/develop` finish；merged 後仍留這裡 |
-| Acceptance | PM（`peggy1213-create`） | `/post-merge-wrapup` 冒煙通過：`board.ts` assign PM，skill 另發交接留言 @PM |
-| Done | — | PM 驗收通過關 issue，自動移；工程驗收卡由 `/post-merge-wrapup` 關 |
+| Acceptance | PM（`peggy1213-create`） | `/verify-deploy` 冒煙通過：`board.ts` assign PM，skill 另發交接留言 @PM |
+| Done | — | PM 驗收通過關 issue，自動移；工程驗收卡由 `/verify-deploy` 關 |
 | Need Fix | 工程師 | 冒煙失敗，或 PM 退回且寫出哪條 AC 失敗＋看到什麼 |
 
 - **Definition of Done**：AC 全部符合＋已部署到 dev＋驗收通過。預設 PM 驗收；`acceptance:engineering` 卡以 dev 冒煙通過＋證據留言為驗收。
@@ -799,7 +799,7 @@ Todo → In Progress → Review → Acceptance → Done
 
 **每日 board audit**：`.github/workflows/board-audit.yml` 每天台北 09:00 跑 `board.ts audit`（只讀、不移卡；可 `gh workflow run board-audit.yml` 手動跑），結果寫進同一張固定的報告 issue（label `board-audit`）：有落差就更新並保持 open，沒落差就更新成 ✅ 並關閉。抓的落差除了狀態不一致、母子卡、殘留 label，還包括 Need Fix 超過 24 小時沒有 AC 失敗留言、`acceptance:blocked` 超過 48 小時、誤進 Acceptance 的工程驗收卡。這張報告 issue 不放 board、不走驗收。
 
-驗收若發現與 PRD／FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差用 `/prd-generation` 重新定稿再開卡。
+驗收若發現與 PRD／FRD 有落差 → 回到 Phase 1.5 判定：小落差開 S 卡直接修，大落差用 `/draft-prd` 重新定稿再開卡。
 
 ---
 
@@ -818,7 +818,7 @@ Todo → In Progress → Review → Acceptance → Done
     4. 展示標題、內容、目標 repo 與 labels，依授權用 gh issue create 發布（預設 daodaoedu/daodao）
 ```
 
-非工程人員也可以直接通報，不需要先知道問題在哪個 repo；無法重現也可以通報，寫明發生頻率與已知條件。草稿存在任務的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`。確認其實是新需求時，保留原始通報、改走 `/prd-generation`。
+非工程人員也可以直接通報，不需要先知道問題在哪個 repo；無法重現也可以通報，寫明發生頻率與已知條件。草稿存在任務的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`。確認其實是新需求時，保留原始通報、改走 `/draft-prd`。
 
 ### 適合使用的情境
 
@@ -854,21 +854,21 @@ Todo → In Progress → Review → Acceptance → Done
 | 階段 | 工具 | 用途 |
 |------|------|------|
 | **前置** | Claude Code + daodao plugin | 主力 AI 開發工具；plugin 提供 13 個 skills 與 6 支 hooks（`/daodao:<skill>`） |
-| **前置** | Codex CLI／OMP／OpenCode | code-review 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`） |
+| **前置** | Codex CLI／OMP／OpenCode | review-change 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`） |
 | **前置** | GitHub CLI（gh） | PR、issue、CI 狀態、Planning board 操作 |
 | **前置** | MCP：playwright、Google Drive、Figma、daodao-pg-dev／prod | 瀏覽器驗收、驗證報告、設計稿、唯讀查 DB |
 | **需求** | PRD（既有 FRD 沿用） | 一份文件含功能行為與驗收（FR／TP） |
 | **需求** | Figma + Figma MCP | UI 設計稿與 `get_screenshot` 對照 |
-| **規格** | prd-generation + product-status-check skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 確認（L/M 必要；OpenSpec 已退役） |
+| **規格** | draft-prd + check-product-status skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 確認（L/M 必要；OpenSpec 已退役） |
 | **開卡** | request-feature skill | 中央 issue（母卡／子卡）+ Planning board（共用模板、Acceptance snapshot、驗收方式） |
 | **開發** | develop skill | issue 隔離 worktree（start → dev → verify → finish → cleanup）；projects/ 只當 worktree 來源 |
 | **開發** | hooks（六支） | session 狀態注入、寫檔保護與格式化、測試完整性、發 PR 閘門、Stop 品質清單 |
 | **品質** | Biome / ESLint / Black + Ruff | Lint + Format |
 | **品質** | TypeScript / Pylint | 型別檢查 / 靜態分析 |
 | **品質** | Jest / Vitest / pytest | 測試 |
-| **Commit** | pre-commit-check skill | Commit 前格式、lint、typecheck 與變更對應的驗證 |
+| **Commit** | check-commit skill | Commit 前格式、lint、typecheck 與變更對應的驗證 |
 | **Commit** | format-commit skill | 結構化 commit message（Why / How），起草後確認一次 |
-| **Review** | code-review skill | Push 前本地 code review（Codex／OMP／OpenCode／Claude Sonnet 5.5 四引擎） |
+| **Review** | review-change skill | Push 前本地 code review（Codex／OMP／OpenCode／Claude Sonnet 5.5 四引擎） |
 | **Review** | review-knowledge.cjs + false-positives.jsonl | 誤判知識庫：本機 skill 與 CI 共用的紀錄、prompt 提示、確定性過濾、verify、fixture |
 | **PR** | Auto PR Description | Workers AI 為手動開的 PR 產生描述 |
 | **PR** | AI Code Review | Workers AI 審查 diff（增量、coverage check） |
@@ -878,11 +878,11 @@ Todo → In Progress → Review → Acceptance → Done
 | **CD** | GitHub Actions + Docker／EAS | merge 到 dev 自動部署 dev 環境；prod 另合 prod 分支；worker 手動 wrangler |
 | **同步** | sync-claude-config workflow | 共用 workflow 與誤判知識庫從 daodao repo 同步到子專案；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
 | **發版** | plugin-release workflow | 打包 daodao plugin、建 GitHub release；Claude Code 端自動更新 |
-| **收尾** | post-merge-wrapup skill | 核對合併／部署證據、dev 冒煙、更新 docs/product 狀態、交 PM 驗收或關工程驗收卡 |
+| **收尾** | verify-deploy skill | 核對合併／部署證據、dev 冒煙、更新 docs/product 狀態、交 PM 驗收或關工程驗收卡 |
 | **收尾** | `bin/pipeline/acceptance-lint.ts` | 交 PM 驗收留言發布前檢查：PM 步驟不得混入 API／測試證據 |
 | **收尾** | notify-related-issue skill | 依實際 PR 與驗收狀態草擬關聯 issue 更新，明確授權才留言或關閉 |
 | **收尾** | product-status-drift workflow | 每週一檢查 docs/product 狀態標示與實際落差，發到 Discord |
-| **board** | gh-pipeline skill + `bin/pipeline/board.ts` | 七欄語意；`board.ts set／remove／audit`，各 skill 自己移卡；`audit` 每日 09:00 由 `board-audit.yml` 排程跑（只讀）；Routine A／B／C 已於 2026-09-20 退役，見 Phase 9 |
+| **board** | move-board-card skill + `bin/pipeline/board.ts` | 七欄語意；`board.ts set／remove／audit`，各 skill 自己移卡；`audit` 每日 09:00 由 `board-audit.yml` 排程跑（只讀）；Routine A／B／C 已於 2026-09-20 退役，見 Phase 9 |
 | **拆卡** | break-down-plan skill | 把已確認計畫的未完成任務批次開成子 issue（可驗收子卡開在中央 repo；sub-repo 只放工程交接筆記），人工發布，不觸發自動化 |
 | **Bug 追蹤** | report-bug skill | 操作異常或無法立即修復的錯誤整理成草稿，查核後開成 GitHub issue |
 | **記錄** | /post（個人 skill）→ quidproquo.cc | 踩坑經驗記錄與知識分享 |
@@ -893,7 +893,7 @@ Todo → In Progress → Review → Acceptance → Done
 
 Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for Dev 之後**的工作交給三個排程 routine；2026-09-20 起全部退役：Routine A／B（#241）因 OpenSpec 退役失去輸入、從未穩定跑通；Routine C 只認 `auto` label PR，259 次 run 抽樣 60 次全是 no-op，還每小時吃共用 PAT 額度（稽核見 [docs/plans/actions-audit-2026-09-20.md](plans/actions-audit-2026-09-20.md)）。
 
-> 退役文件見 [docs/archive/automation/](archive/automation/README.md)；現行 board 操作見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
+> 退役文件見 [docs/archive/automation/](archive/automation/README.md)；現行 board 操作見 [move-board-card skill](../plugin/skills/move-board-card/SKILL.md)。
 
 ### 9.1 Routine 清單
 
@@ -906,18 +906,18 @@ Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for De
 ### 9.2 人類在流程裡的位置
 
 ```
-寫 PRD（/prd-generation 定稿）→ /request-feature 開卡（board Todo）
+寫 PRD（/draft-prd 定稿）→ /request-feature 開卡（board Todo）
         ↓ 人工確認規格 OK
    Status → Ready for Dev            ← 管理狀態，選用
         ↓ /develop start（board In Progress + human-driving、開 worktree）
    人工／AI 協作實作 → verify → 發 PR（board Review）
         ↓ 人工
    review + merge                    ← 品質最後把關；卡留 Review
-        ↓ /post-merge-wrapup dev 冒煙
+        ↓ /verify-deploy dev 冒煙
    ✅ board Acceptance（交 PM）／❌ board Need Fix → 下次 /develop start 移回 In Progress
         ↓ PM 在 dev 驗收                ← 產品最後把關
    ✅ PM 關 issue → Done／❌ AC 沒過 → Need Fix
-   （acceptance:engineering 卡：冒煙 ✅ 後由 post-merge-wrapup 關 issue → Done）
+   （acceptance:engineering 卡：冒煙 ✅ 後由 verify-deploy 關 issue → Done）
 ```
 
 ### 9.3 手動版

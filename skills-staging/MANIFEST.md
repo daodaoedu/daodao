@@ -4,7 +4,7 @@
 
 **路徑慣例**：本庫所有指令與相對路徑以 `/home/user` 為基準（九個 repo 平行並列於此）。你若在某個 repo 內部，請用各檔給的絕對路徑或先確認 cwd。
 
-**零上下文 session 的進場順序**：(1) 目標 repo 的 `CLAUDE.md` →(2) 動手前該 repo 的 `project-rules`、不熟結構讀 `codebase-map`、跨 repo 影響讀 `system-map` →(3) 本庫按 frontmatter 觸發條件載入對應檔。commit/push 一律走 CLAUDE.md 的互動流程（pre-commit-check → format-commit → 使用者確認；push 前問要不要 review），自動化情境也不可自答跳過。
+**零上下文 session 的進場順序**：(1) 目標 repo 的 `CLAUDE.md` →(2) 動手前該 repo 的 `project-rules`、不熟結構讀 `codebase-map`、跨 repo 影響讀 `system-map` →(3) 本庫按 frontmatter 觸發條件載入對應檔。commit/push 一律走 CLAUDE.md 的互動流程（check-commit → format-commit → 使用者確認；push 前問要不要 review），自動化情境也不可自答跳過。
 
 | Skill | 一行說明 | 證據基礎 |
 |---|---|---|

@@ -203,8 +203,8 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
 | Drive 報告 | ✅ | ❌ | ❌ | ❌ |
 
-Claude.ai 少掉的 6 個是 `develop`、`code-review`、`pre-commit-check`、`post-merge-wrapup`、
-`gh-pipeline`、`format-commit`——全都需要使用者的 checkout。Claude.ai 的 sandbox 有檔案系統也能跑
+Claude.ai 少掉的 6 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
+`move-board-card`、`format-commit`——全都需要使用者的 checkout。Claude.ai 的 sandbox 有檔案系統也能跑
 指令，但那是一個空的暫時環境，不是專案。
 
 ## 平台事實（2026-09-21 查證）

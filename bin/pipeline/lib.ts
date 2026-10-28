@@ -3,7 +3,7 @@
  *
  * Routine A／B were retired on 2026-09-20 (#241) and Routine C (board-sync)
  * the same day: board status is now written by the
- * develop / post-merge-wrapup / request-feature skills through bin/pipeline/board.ts.
+ * develop / verify-deploy / request-feature skills through bin/pipeline/board.ts.
  * Historical prompts and templates live under docs/archive/automation/.
  */
 import {
@@ -210,14 +210,14 @@ export function auditCards(
         c,
         `PR 全 merged（${merged.map((p) => p.ref).join(", ")}）且已在 Review ${Math.floor(columnDays)} 天`,
         subOpen > 0
-          ? `母卡：等 ${subOpen} 張子卡關閉後再跑 post-merge-wrapup 交 PM`
+          ? `母卡：等 ${subOpen} 張子卡關閉後再跑 verify-deploy 交 PM`
           : engineering
-            ? "跑 post-merge-wrapup：dev 冒煙通過留證據並關 issue（工程驗收），失敗移 Need Fix"
-            : "跑 post-merge-wrapup：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
+            ? "跑 verify-deploy：dev 冒煙通過留證據並關 issue（工程驗收），失敗移 Need Fix"
+            : "跑 verify-deploy：dev 冒煙通過移 Acceptance，失敗移 Need Fix"
       );
     }
     if (status === "Acceptance" && c.issueState === "OPEN" && engineering) {
-      push(c, `工程驗收卡（${ENGINEERING_ACCEPTANCE_LABEL}）不需進 Acceptance`, "dev 冒煙證據已在留言就關 issue（自動進 Done）；沒有就先跑 post-merge-wrapup");
+      push(c, `工程驗收卡（${ENGINEERING_ACCEPTANCE_LABEL}）不需進 Acceptance`, "dev 冒煙證據已在留言就關 issue（自動進 Done）；沒有就先跑 verify-deploy");
     } else if (status === "Acceptance" && c.issueState === "OPEN") {
       if (!c.assignees.includes(PM_LOGIN)) {
         push(c, `Acceptance 未指派 PM（${PM_LOGIN}）`, `assign ${PM_LOGIN} 並留交接留言`);
@@ -287,8 +287,8 @@ export function auditCards(
         c,
         `母卡的 ${c.subIssues!.total} 張子卡已全關，母卡仍在 ${status}`,
         engineering
-          ? "跑 post-merge-wrapup 重新冒煙：通過留證據並關 issue（工程驗收）"
-          : "跑 post-merge-wrapup 重新冒煙：通過移 Acceptance 交 PM 整體驗收，失敗留 AC 失敗留言移 Need Fix"
+          ? "跑 verify-deploy 重新冒煙：通過留證據並關 issue（工程驗收）"
+          : "跑 verify-deploy 重新冒煙：通過移 Acceptance 交 PM 整體驗收，失敗留 AC 失敗留言移 Need Fix"
       );
     }
     if (c.labels.includes(BLOCKED_ACCEPTANCE_LABEL) && c.issueState === "OPEN") {
