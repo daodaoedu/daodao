@@ -56,8 +56,11 @@ const errors: string[] = []
 
 // ---------------------------------------------------------------- helpers
 
+// 執行期快取（例如跑過 templates/check-issue-draft.py 的測試後產生的 __pycache__）不是正本，不能進產物。
+const IGNORED_ENTRIES = new Set(['__pycache__', '.DS_Store'])
+
 function walk(dir: string): string[] {
-  return readdirSync(dir).flatMap((e) => {
+  return readdirSync(dir).filter((e) => !IGNORED_ENTRIES.has(e)).flatMap((e) => {
     const full = join(dir, e)
     return statSync(full).isDirectory() ? walk(full) : [full]
   })
