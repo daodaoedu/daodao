@@ -38,21 +38,24 @@ pnpm plugin:zip      # 打包 claude.ai 上傳用的 zip
 ### Claude Code
 
 **不需要 clone 這個 repo。** 從 GitHub repo 裝 marketplace 會 git clone 整包 monorepo（12MB）
-只為了拿 163KB 的 plugin，所以散佈走 GitHub Release 的 zip（`archive` 來源，純 HTTPS 下載，
-不需要 git 也不需要 npm）。
+只為了拿 163KB 的 plugin，所以 plugin 本體走 GitHub Release 的 zip（`archive` 來源，純 HTTPS
+下載，不需要 git 也不需要 npm），指向它的 `marketplace.json` 發在 GitHub Pages：
+`https://daodaoedu.github.io/daodao/marketplace.json`。
 
-repo 的 `.claude/settings.json` 已宣告 marketplace 指向 release，所以開過本 repo 或任一
+> marketplace 網址不能用 `github.com/.../releases/...`：`claude plugin marketplace add` 看到
+> github.com 的 https 網址一律當成 git repo 去 clone，會失敗在 `git over dumb-http ... 403`。
+
+repo 的 `.claude/settings.json` 已宣告這個 marketplace，所以開過本 repo 或任一
 子專案的人只要：
 
 ```
 /plugin install daodao@daodao
 ```
 
-完全不在這些 repo 裡的人，自己加一次 marketplace（一樣不 clone）：
+完全不在這些 repo 裡的人，一行裝好（第一次會順便加 marketplace，一樣不 clone）：
 
 ```bash
-claude plugin marketplace add https://github.com/daodaoedu/daodao/releases/latest/download/marketplace.json
-claude plugin install daodao@daodao
+claude plugin install daodao --marketplace https://daodaoedu.github.io/daodao/marketplace.json
 ```
 
 裝完**重開 session** 才載入；skill 會是 `/daodao:dev-task` 這種帶命名空間的形式。
@@ -78,8 +81,8 @@ claude plugin install daodao@daodao-dev
 改到 `plugin/` 的 PR 合進 main 就會發版，不需要另外 bump。
 
 `plugin-release.yml` 自動產生版號（major.minor 取 `plugin.json`，patch 用 workflow
-run number，例如 `0.1.26`），打包、算 sha256、建 release、上傳 zip 與 marketplace.json，
-最後**實際下載回來驗 sha256 對不對**才算成功。同一個 run 重跑會撞到已發佈的 tag 而跳過——
+run number，例如 `0.1.26`），打包、算 sha256、建 release 上傳 zip、把 marketplace.json
+部署到 GitHub Pages，最後**從 Pages 實際下載回來驗版號與 sha256**才算成功。同一個 run 重跑會撞到已發佈的 tag 而跳過——
 已發佈的 zip 其 sha256 被釘住，重發同版本會讓已安裝的人對不上。
 
 zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version <release 版號>`

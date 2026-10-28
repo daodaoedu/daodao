@@ -188,7 +188,18 @@ describe('settings 指向不需要 clone 的來源', () => {
     const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
     expect(existsSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'))).toBe(true)
     expect(wf).toContain('marketplace.json')
-    expect(settings.extraKnownMarketplaces.daodao.source.url).toContain('releases/latest/download/marketplace.json')
+    expect(settings.extraKnownMarketplaces.daodao.source.url).toBe('https://daodaoedu.github.io/daodao/marketplace.json')
+    expect(wf).toContain('actions/deploy-pages')
+  })
+
+  // `marketplace add` 看到 github.com 的 https 網址一律當 git repo clone，release 下載網址會
+  // 失敗在 "git over dumb-http ... 403"（2026-10-28 實際踩到）。對外給的網址必須不在 github.com。
+  it('文件與設定給的 marketplace 網址都不在 github.com（否則會被當成 git repo clone）', () => {
+    const files = ['.claude/settings.json', 'plugin/README.md', 'docs/workflow.md', '.github/workflows/plugin-release.yml']
+    for (const f of files) {
+      const text = readFileSync(join(REPO_ROOT, f), 'utf8')
+      expect(text, f).not.toMatch(/https:\/\/github\.com\/[^\s"'`]*marketplace\.json/)
+    }
   })
 })
 

@@ -4,6 +4,10 @@ name: Publish plugin release
 # 從 repo 裝 marketplace 會 git clone 整個 monorepo（12MB）只為了拿 163KB 的 plugin。
 # archive 來源是單純 HTTPS 下載，使用者不需要 git 也不需要 npm。
 #
+# marketplace.json 另外發到 GitHub Pages：`claude plugin marketplace add` 看到 github.com 的
+# https 網址一律當成 git repo 去 clone（官方 marketplace reference 的規則），release 下載網址
+# 因此不能拿來 add。Pages 網址不在 github.com 底下，會被當成 marketplace.json 直接下載。
+#
 # 觸發：main 上 plugin/ 有變更就發新版。版號自動產生：major.minor 取 plugin.json，
 # patch 用這個 workflow 的 run number——合 PR 就等於發版，不需要人記得 bump。
 # 同一個 run 重跑（run number 不變）會撞到已發佈的 tag 而跳過，不覆蓋已釘 sha256 的資產。
@@ -18,6 +22,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: plugin-release
@@ -26,6 +32,9 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.base_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -82,6 +91,7 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
           TAG: ${{ steps.meta.outputs.tag }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
@@ -97,14 +107,13 @@ jobs:
           /plugin install daodao@daodao
           \`\`\`
 
-          repo 的 \`.claude/settings.json\` 已宣告 marketplace 指向
-          \`releases/latest/download/marketplace.json\`，所以開過本 repo 或任一子專案的人
+          repo 的 \`.claude/settings.json\` 已宣告 marketplace，所以開過本 repo 或任一子專案的人
           不需要另外 add marketplace。
 
-          其他情境手動加：
+          沒有 repo 的人一行裝好：
 
           \`\`\`
-          claude plugin marketplace add https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/marketplace.json
+          claude plugin install daodao --marketplace ${PAGES_URL}marketplace.json
           \`\`\`
 
           archive sha256: \`${SHA}\`
@@ -114,20 +123,47 @@ jobs:
           )"
           echo "- 發佈 $TAG" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Stage marketplace.json for Pages
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          mkdir -p _site
+          cp plugin/out/release/marketplace.json _site/marketplace.json
+
+      - name: Configure Pages
+        if: steps.check.outputs.exists == 'false'
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to Pages
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/deploy-pages@v4
+
       - name: Verify the published marketplace resolves
         if: steps.check.outputs.exists == 'false'
         env:
-          TAG: ${{ steps.meta.outputs.tag }}
           VERSION: ${{ steps.meta.outputs.version }}
+          PAGES_URL: ${{ steps.pages.outputs.base_url }}
         run: |
-          # release asset 上傳後要真的抓得到，且 sha256 對得上——否則使用者會撞到
+          # 使用者實際 add 的是 Pages 上的 marketplace.json：要真的抓得到、版號是這次的，
+          # 而且它指向的 zip sha256 對得上——否則使用者會撞到
           # "Plugin archive integrity check failed"，而我們到那時才知道就太晚了。
-          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download"
-          curl -fsSL "$BASE/marketplace.json" -o /tmp/mp.json
+          # Pages 有 CDN 快取，部署完可能還拿到舊版，重試幾次。
+          for i in 1 2 3 4 5 6; do
+            curl -fsSL -H 'Cache-Control: no-cache' "${PAGES_URL%/}/marketplace.json?v=${VERSION}" -o /tmp/mp.json \
+              && [ "$(jq -r '.plugins[0].version' /tmp/mp.json)" = "$VERSION" ] && break
+            echo "Pages 還沒更新到 $VERSION，等 20 秒（第 $i 次）"; sleep 20
+          done
+          [ "$(jq -r '.plugins[0].version' /tmp/mp.json)" = "$VERSION" ] || { echo "❌ Pages 上的 marketplace.json 不是 $VERSION"; exit 1; }
           jq -e '.plugins[0].source.source == "archive"' /tmp/mp.json >/dev/null
           URL=$(jq -r '.plugins[0].source.url' /tmp/mp.json)
           WANT=$(jq -r '.plugins[0].source.sha256' /tmp/mp.json)
           curl -fsSL "$URL" -o /tmp/plugin.zip
           GOT=$(sha256sum /tmp/plugin.zip | cut -d' ' -f1)
           [ "$WANT" = "$GOT" ] || { echo "❌ sha256 不符: want=$WANT got=$GOT"; exit 1; }
-          echo "✅ marketplace.json 與 zip 都抓得到，sha256 相符（$GOT）"
+          echo "✅ Pages 上的 marketplace.json（$VERSION）與 zip 都抓得到，sha256 相符（$GOT）"
