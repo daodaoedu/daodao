@@ -129,10 +129,10 @@ if [ "$has_poc" = 1 ] && [ "$is_ui_repo" = 1 ]; then
     if cov_unresolved=$(jq -er '.unresolved | if type == "array" then join("、") else error("unresolved 不是陣列") end' "$cov" 2>/dev/null); then
       [ -z "$cov_unresolved" ] || ok=0
     else
-      cov_unresolved="(coverage.json 缺 unresolved 陣列，請用新版 poc-report.py 重跑)"; ok=0
+      cov_unresolved="(coverage.json 無法解析或缺 unresolved 陣列，請用新版 poc-report.py 重跑)"; ok=0
     fi
   else
-    cov_missing="(沒有 coverage.json，請跑 poc-report.py)"; ok=0
+    cov_missing="(沒有 coverage.json，請跑 poc-report.py)"; cov_unresolved="(未檢查：沒有 coverage.json)"; ok=0
   fi
   if [ "$ok" = 0 ]; then
     gate_fail "pr-poc-compare-missing" "$task_dir" "$(cat <<EOF

@@ -313,7 +313,7 @@ code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_block "POC coverage 有未解析的 probe" "$code" "home · button.typo"
 echo '{"missing":[]}' > "$t/notes/poc-compare/coverage.json"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
-expect_block "POC coverage 是舊版（缺 unresolved）" "$code" "缺 unresolved"
+expect_block "POC coverage 是舊版（缺 unresolved）" "$code" "缺 unresolved 陣列"
 
 # 9d. jq 不在時對 gh pr create 一律擋下（fail closed），非發 PR 指令照常放行
 # run_hook 自己也用 jq 組 payload，所以先用真 jq 組好，再用壞掉的 jq shim 跑 hook
