@@ -4,7 +4,7 @@
 
 - **執行載體選擇**（session vs subagent）：
   - M/L 任務（有中途決策點：驗證失敗判斷、force push、migration 過目）→ 獨立 Claude／Codex session，開場：「/dev-task 接手 worktrees/<n>-<slug>」或給 issue 編號
-  - XS/S 任務（scope 明確、無決策點）→ 可整包委派一個 subagent 從 start 做到 finish（prompt 指明任務資料夾與本 skill 路徑），或標 `auto` 走 pipeline
+  - XS/S 任務（scope 明確、無決策點）→ 可整包委派一個 subagent 從 start 做到 finish（prompt 指明任務資料夾與本 skill 路徑）；自動派工 pipeline 已退役，不再標 `auto`
   - 任何任務**內部**的機械子步驟（repo 查證、掃 caller、批次改檔、寫測試）→ 隨時 fan out subagent，唯讀調查用 Explore agent
   - 判斷原則：需要使用者中途點頭的工作不要塞進背景 subagent——要嘛卡住要嘛自作主張
 - `git worktree list`（在 `projects/<repo>` 內執行）可查目前有哪些任務在進行

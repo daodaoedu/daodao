@@ -47,7 +47,7 @@ rclone config create gdrive drive scope=drive.file token='<上一步印出的 to
      -F "file=@report.html;type=text/html"
    ```
    （`rclone copyto --drive-import-formats html` 會報 can't convert .html to .docx，不可用；權限 API 碰到 403 rateLimitExceeded 等 20 秒重試。）
-6. **確認擁有者 + 分享**：回傳的 `owner` 欄位如果不是使用者自己平常登入的帳號（例如是連接這個 MCP 的組織帳號），用 `share_file` 分享給使用者本人 email（`vincent.xu.work@gmail.com`），`role: writer`。
+6. **確認擁有者 + 分享**：回傳的 `owner` 欄位如果不是使用者自己平常登入的帳號（例如是連接這個 MCP 的組織帳號），用 `share_file` 分享給使用者本人的 Google 帳號 email，`role: writer`。email 不寫死在 skill 裡：從對話、`git config user.email` 或 rclone 設定的帳號取得，不確定就問一次。
 7. **設定文件公開**：用 rclone 刷新後的 token 呼叫 Drive API 設定 `{"role":"reader","type":"anyone"}` 權限（同步驟 3 相同做法），讓知道連結的人可看。若 rclone 共用 client 被 rate limit，改由使用者手動在 Google 文件 Share 設定。
 8. 把文件連結記進 task.md「驗證」區塊最上方，並帶進 finish 階段 issue comment。
 

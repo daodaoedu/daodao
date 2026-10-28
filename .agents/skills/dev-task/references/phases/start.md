@@ -48,7 +48,7 @@ git worktree add "$TASK/<repo>" -b feat/<slug> origin/dev
 ```
 
 注意：
-- 明確從 `origin/dev` 建立任務分支，不使用來源工作目錄的 `HEAD`；有未合併任務依賴時，依「平行開發約定」指定依賴分支。
+- 明確從 `origin/dev` 建立任務分支，不使用來源工作目錄的 `HEAD`（daodao-worker、daodao-infra 沒有 `dev`，上面的 `dev` 都換成 `main`）；有未合併任務依賴時，依「平行開發約定」指定依賴分支。
 - `fetch` 與 `worktree add` 會更新共用 Git metadata，但不改動來源工作檔案、暫存區或目前分支。不得為了開工在 `projects/` 執行 `checkout`、`switch`、`pull`、`reset`、`stash`、`clean`，或安裝依賴、自動修復檔案。
 - `fetch` 失敗時先處理錯誤，不得默默改用可能過期的 `origin/dev`。
 - 所有 repo 用**同一個 branch 名稱** `feat/<slug>`（fix 用 `fix/`）

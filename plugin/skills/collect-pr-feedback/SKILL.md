@@ -16,7 +16,7 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 
 ## 2. 收集並查證
 
-1. 收集 CI/checks、AI review、Gemini 與人類 review，保留來源連結、comment ID、commit、已解決／過時狀態；一般討論與自動描述不直接視為缺陷。
+1. 收集 CI/checks、AI review、第三方 bot（如 f2e 的 SonarCloud、Vercel）與人類 review，保留來源連結、comment ID、commit、已解決／過時狀態；一般討論與自動描述不直接視為缺陷。
 2. 查閱失敗 job 日誌與對應程式碼／測試。先判斷 finding 是否仍適用目前 head，再確認觸發條件及影響。
 3. 去重同一根因。人類要求修改及模型 High 標籤都是待查證訊號，不能代替證據；多個模型同意也不能證明正確。
 4. Pending checks 先列未完成並分析已有資料。需要其結果才能完成既定任務時採工具支援的有界等待，持續回報；不預設詢問是否要等，也不無限輪詢。
