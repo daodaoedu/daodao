@@ -18,7 +18,7 @@ description: 你觀察到以下任一狀態時載入：正要引用任何 daodao
 | `daodao-server/openspec/project.md`：「混合 JavaScript/TypeScript 架構，正逐步遷移」 | 遷移已完成，legacy JS 已移除；以 codebase-map「以本檔為準」為準 | server codebase-map（2026-07-06 校準） |
 | `daodao-server/package.json` engines：node `>=16.14.0`、pnpm `>=8` | 實際 CI/Docker 是 Node 20 + pnpm 9；engines 是過鬆殘留 | continuous-integration.yml、Dockerfile:4 |
 | `daodao-infra/README.md` vhost 表：admin 路由到 `daodao-admin:3000` | upstreams.conf 實際定義 `admin-ui-prod`/`admin-ui-dev` | nginx/conf.d/upstreams.conf |
-| `docs/product/` 各 PRD/FRD 的狀態標籤（規劃中/進行中） | 普遍落後於程式碼——照文件規劃會重做已上線功能 | product-status-drift.yml:3-5 明文；product-status-check skill 因此存在 |
+| `docs/product/` 各 PRD/FRD 的狀態標籤（規劃中/進行中） | 普遍落後於程式碼——照文件規劃會重做已上線功能 | product-status-drift.yml:3-5 明文；check-product-status skill 因此存在 |
 | f2e `update-i18n.yml` workflow 寫入路徑 `shared/config/locales` | 該路徑不存在於現行樹（實際 locales 在 packages/i18n）；workflow 疑似陳舊（未驗證其最後成功 run） | workflow 檔 vs 檔案樹 |
 | `daodao-storage/Sync Data and Import Container Guide.md`：手動編輯 Makefile 備份路徑 | Makefile 已自動挑最新備份 | Makefile:11 |
 | `daodao-f2e/PLAN.md`、`daodao-server/plan.md` 看似待辦 | 兩者都是**已落地**工作的計畫殘渣（前者 #773；後者的 `scripts/collect-learning-resources/` 已在 `77499a8` #245 建立）——照著它們「開工」會重做既有工作 | failure-archaeology §7 |
@@ -32,7 +32,7 @@ description: 你觀察到以下任一狀態時載入：正要引用任何 daodao
 | toolchain 版本 | CI workflow 的釘死版本 > pyproject/engines 的範圍宣告 |
 | 跨 repo 呼叫與同步鏈 | `system-map` skill（2026-07-06 校準，六份相同） |
 | 各 repo 結構與慣例 | 各 repo `codebase-map` / `project-rules` skill（皆 2026-07 校準，比任何 README 新） |
-| 功能上線狀態 | `check_product_status.py` + 程式碼本身（product-status-check skill） |
+| 功能上線狀態 | `check_product_status.py` + 程式碼本身（check-product-status skill） |
 | worker secrets 清單 | `daodao-worker/src/types.ts` 的 `Env` interface |
 | 自動化管線行為 | `daodao/docs/automation/` + `bin/` 原始碼（不是 workflow.md Phase 9） |
 

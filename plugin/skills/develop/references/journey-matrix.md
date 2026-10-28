@@ -68,4 +68,4 @@
 
 1. **PR body**：`## 驗證證據` 區塊放驗證報告連結、核心旅程矩陣摘要與讀取權限聲明；適用時連同「### 讀取權限驗證」及其證據欄一起帶入。CI `pr-evidence-gate` 只讀這個區塊，放在 Test plan 不算。
 2. **issue comment**：finish 階段的「瀏覽器驗證」摘要引用 J-ID。
-3. **合併後冒煙**：`post-merge-wrapup` 在部署後的 dev 環境重跑所有正常列 + 至少一列錯誤路徑，結果寫成「dev 冒煙」表。task.md 刪除前先把矩陣抄進 issue comment，冒煙才有依據。
+3. **合併後冒煙**：`verify-deploy` 在部署後的 dev 環境重跑所有正常列 + 至少一列錯誤路徑，結果寫成「dev 冒煙」表。task.md 刪除前先把矩陣抄進 issue comment，冒煙才有依據。

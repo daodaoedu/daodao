@@ -41,7 +41,7 @@ description: 你觀察到以下任一狀態時載入：想修改 .claude/hooks�
 1. 讀該 repo `CLAUDE.md`（薄入口）。
 2. 動手前讀 `.claude/skills/project-rules/`；不熟結構讀 `codebase-map`；跨 repo 影響讀 `system-map`。
 3. 本 skill 庫（skills-staging）補的是它們沒有的層：事故史、跨 repo 驗證標準、營運。兩邊衝突時，先驗證 codebase，再依 G3 處理。
-4. commit/push 流程照 CLAUDE.md：pre-commit-check → format-commit → 使用者確認才 commit；push 前問「要 review 嗎」。**這些流程 skill 有互動節點（詢問使用者），自動化情境下不可跳過改成自答**。
+4. commit/push 流程照 CLAUDE.md：check-commit → format-commit → 使用者確認才 commit；push 前問「要 review 嗎」。**這些流程 skill 有互動節點（詢問使用者），自動化情境下不可跳過改成自答**。
 
 ## G6. AGENTS.md 與 CLAUDE.md 的已知分工
 

@@ -109,7 +109,7 @@ describe("auditCards", () => {
     );
   });
 
-  it("sends a Review card whose PRs all merged a while ago to post-merge-wrapup", () => {
+  it("sends a Review card whose PRs all merged a while ago to verify-deploy", () => {
     const merged = [pr("daodao-f2e#973", "merged")];
     const stale = card({ status: "Review", prs: merged, statusUpdatedAt: "2026-09-05T00:00:00Z" });
     const fresh = card({ status: "Review", prs: merged, statusUpdatedAt: "2026-09-19T00:00:00Z" });
@@ -117,7 +117,7 @@ describe("auditCards", () => {
     // a status comment refreshes issue updatedAt but must not reset the Review clock
     const commented = card({ status: "Review", prs: merged, statusUpdatedAt: "2026-09-05T00:00:00Z", updatedAt: "2026-09-19T23:00:00Z" });
     const f = auditCards([stale], DEAD_LABELS, NOW).find((x) => x.problem.startsWith("PR 全 merged"));
-    expect(f?.suggest).toContain("post-merge-wrapup");
+    expect(f?.suggest).toContain("verify-deploy");
     expect(problems(fresh).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
     expect(problems(waiting).some((x) => x.startsWith("PR 全 merged"))).toBe(false);
     expect(problems(commented).some((x) => x.startsWith("PR 全 merged"))).toBe(true);

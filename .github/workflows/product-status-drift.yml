@@ -94,7 +94,7 @@ jobs:
                   "content": "⚠️ 產品文件狀態漂移！docs/product 的狀態標示與程式碼現實不符。",
                   "embeds": [{
                     "title": "🔍 Product Status Drift Detected",
-                    "description": "每週排程檢查發現 PRD/FRD 狀態落後或超前程式碼。照文件規劃前請先修正狀態（見 product-status-check skill）。",
+                    "description": "每週排程檢查發現 PRD/FRD 狀態落後或超前程式碼。照文件規劃前請先修正狀態（見 check-product-status skill）。",
                     "url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
                     "color": 16776960,
                     "footer": { "text": "Weekly scheduled check" }

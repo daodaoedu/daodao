@@ -56,6 +56,6 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 ## 5. 人審核與後續
 
 - 更新人已裁定的問題與草稿，沿用既有授權，不固定再問一次「要修哪些」。缺少產品決策才集中提出關鍵問題。
-- Commit 遵守目標 repo 的 **pre-commit-check**（`skills/pre-commit-check/SKILL.md`，未隨本包出貨）、**format-commit**（`skills/format-commit/SKILL.md`，未隨本包出貨） 與確認規則。Commit 授權不等於 push、merge 或回覆 reviewer 的授權。
+- Commit 遵守目標 repo 的 **check-commit**（`skills/check-commit/SKILL.md`，未隨本包出貨）、**format-commit**（`skills/format-commit/SKILL.md`，未隨本包出貨） 與確認規則。Commit 授權不等於 push、merge 或回覆 reviewer 的授權。
 - 只有已授權時才 push／回覆／resolve thread；發布前準備具體內容。文字以結構化工具或 body-file 傳送，避免把外部留言插入 shell。
 - 遠端寫入後讀回確認；逾時先查是否成功，不盲目重送。Push 後使用新 head 查 CI，不沿用舊 head 的通過結果。

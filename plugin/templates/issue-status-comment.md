@@ -33,7 +33,7 @@ templateVersion: 1
 
 ---
 
-## 交給 PM 驗收（post-merge-wrapup 移 Acceptance 時發）
+## 交給 PM 驗收（verify-deploy 移 Acceptance 時發）
 
 給 PM 看的白話留言，不放 SHA、run ID 等工程欄位（那些留在上面的開發結果摘要）。每個 `<...>` 都要換掉。
 

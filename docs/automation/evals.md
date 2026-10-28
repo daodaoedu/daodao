@@ -57,7 +57,7 @@ weekly row 將誤寫為零；這種零值不得解讀為「沒有 findings」。
 - [ ] 覆蓋 seeded finding、decoy、clean 與截斷邊界案例，並以真實 PR patch 補充驗證。
 - [ ] 記錄 finding recall、precision、clean pass、schema 解析成功率、timeout／錯誤率、p50／p95 延遲與多次輸出穩定性。
 - [ ] 主模型硬門檻為 5/5 可解析且不 timeout；clean fixture 不得產生 High／Medium 誤報，也不得捏造 diff／Context Pack 外的事實。
-- [ ] 將完整結果與選型理由寫回本文件後，才調整 `code-review` skill 的 OMP／OpenCode 預設模型。
+- [ ] 將完整結果與選型理由寫回本文件後，才調整 `review-change` skill 的 OMP／OpenCode 預設模型。
 
 ## AI Review 接受率（weekly）<!-- review-evals -->
 

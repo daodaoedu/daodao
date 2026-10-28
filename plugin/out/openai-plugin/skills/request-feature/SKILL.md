@@ -39,12 +39,12 @@ description: 把想法、PRD、FRD 或 POC 整理成島島阿學的需求 Issue�
 | 母卡底下的子卡 | [child-issue.md](../../templates/child-issue.md) | `--template child` |
 | 單一 sub-repo 的工程交接筆記（不掛子卡、不上 board） | [subtask-issue.md](../../templates/subtask-issue.md) | 不檢查 |
 
-- 新產品需求先依 [prd-generation](../prd-generation/SKILL.md) 查核與起草；已確認的規格直接引用，不重做。
+- 新產品需求先依 [draft-prd](../draft-prd/SKILL.md) 查核與起草；已確認的規格直接引用，不重做。
 - repo 與工程欄位由你查，不讓提出者填表；指派用 GitHub Assignees。
 - 沿用來源的 FR／TP／AC ID，不另編同義條件。
 - 標題寫功能與使用者可觀察的結果，不寫實作方式。
 - 先寫白話需求摘要，工程欄位放交接附錄。
-- 驗收方式：依 [gh-pipeline「誰驗收」](../gh-pipeline/SKILL.md)判斷，PM 在 dev 看不出差別就掛 `acceptance:engineering` 並寫一句理由；判斷不了就不掛。
+- 驗收方式：依 [move-board-card「誰驗收」](../move-board-card/SKILL.md)判斷，PM 在 dev 看不出差別就掛 `acceptance:engineering` 並寫一句理由；判斷不了就不掛。
 - 不知道的欄位填「待確認：原因／下一步」；開發後才有的欄位填「尚未開始」。不捏造 SHA、證據或狀態。
 - 只有連結不代表讀過內容；Google 文件用可用的 Drive skill／connector 讀取，讀不到就寫限制。
 - 憑證不放 body；不因開卡而建立或分享 Google 文件。

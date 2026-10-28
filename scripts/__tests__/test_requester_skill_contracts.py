@@ -12,7 +12,7 @@ class RequesterSkillContractTests(unittest.TestCase):
 
     def test_root_routes_minimal_draft_requests_without_technical_intake(self):
         text = (ROOT / 'AGENTS.md').read_text()
-        for phrase in ('report-bug', 'prd-generation', '不得改寫來源',
+        for phrase in ('report-bug', 'draft-prd', '不得改寫來源',
                        '最多提出 1–2 個關鍵問題'):
             self.assertIn(phrase, text)
 
@@ -23,7 +23,7 @@ class RequesterSkillContractTests(unittest.TestCase):
             self.assertIn(phrase, text)
 
     def test_prd_skill_reads_supplied_context_and_limits_invention(self):
-        text = (ROOT / 'plugin/skills/prd-generation/SKILL.md').read_text()
+        text = (ROOT / 'plugin/skills/draft-prd/SKILL.md').read_text()
         for phrase in ('existing-frd.md', '不得在未讀這些檔案時宣稱',
                        '跨裝置同步', '只有來源已確認時才可列為需求'):
             self.assertIn(phrase, text)
