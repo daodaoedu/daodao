@@ -176,7 +176,7 @@ pnpm plugin:bump minor    # 或 major；產物版號會一起更新，走正常 
 |---|---|
 | Claude Code | marketplace 已開 `autoUpdate`，session 啟動後十分鐘內背景更新，跳出提示後跑 `/reload-plugins`；要立刻更新就 `/plugin update daodao@daodao` |
 | Codex／ChatGPT 桌面（有 repo） | `.agents/skills/` 在 repo 裡，`git pull` 就是更新 |
-| Codex／ChatGPT 桌面（沒有 repo） | `codex plugin marketplace upgrade` 重抓 marketplace。Codex 版 `plugin.json` 的版號不隨自動發版遞增，版號沒變時是否會重裝新內容尚未驗證；拿不到新內容就 `codex plugin remove daodao@daodao-local` 後重新 `add` |
+| Codex／ChatGPT 桌面（沒有 repo） | 自動：Codex 每次啟動在背景檢查 git marketplace，main 有新 commit 就強制重裝已安裝的 plugin，**不看版號**（所以 Codex 版 `plugin.json` 停在 0.1.1 不影響更新）。要立刻更新就 `codex plugin marketplace upgrade` |
 | ChatGPT 工作區 | 匯入的 marketplace 每日自動同步，管理員也可以按 **Sync now** |
 | claude.ai | 從 repository 加的 marketplace 會跟著 repo 更新；手動傳的 zip 要自己重傳 |
 
