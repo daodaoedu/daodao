@@ -54,7 +54,7 @@ daodao/
 
 ## 注意事項
 
-1. 永遠從 `origin/dev` 開分支，PR 開回 `dev`
+1. 從整合分支 `origin/dev` 開分支，PR 開回 `dev`；daodao-worker、daodao-infra 沒有 `dev`，改用 `origin/main`、PR 開回 `main`
 2. 不在 monorepo 根目錄 commit submodule 指標變更（submodule 各自管理）
 3. `projects/` 不在 `dev` 或有未提交變更時，保留原狀並從明確的 `origin/dev` 建立隔離 worktree，無需為此詢問。只有需要變更來源工作目錄、暫存區或目前分支，或發現同一任務已存在、開發範圍高度重疊時，才停下來確認。
 4. worktree add 失敗說 branch 已存在 → 該 issue 可能已在進行，`git worktree list` 查證

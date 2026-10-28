@@ -56,7 +56,7 @@ claude plugin install daodao@daodao
 ```
 
 裝完**重開 session** 才載入；skill 會是 `/daodao:dev-task` 這種帶命名空間的形式。
-`claude plugin details daodao@daodao` 可確認 13 skills + 4 hooks 都在。
+`claude plugin details daodao@daodao` 可確認 13 skills + 6 hooks 都在。
 
 沒辦法讓別人「自動」裝好——官方明講 repo 設定啟用外部來源 plugin 不會幫別人安裝，
 自動的只有 marketplace 註冊，`install` 每人跑一次。
