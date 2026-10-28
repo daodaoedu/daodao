@@ -1,6 +1,6 @@
 # Phase 3: verify — 瀏覽器驗證（總驗收）
 
-有 UI 變更（f2e / admin-ui）的任務**必須**通過此階段才能發 PR；純後端任務改跑 API 驗證（curl / 整合測試）後跳到 finish。詳細操作見 [browser-verify.md](../browser-verify.md)。
+每個任務都須完成本階段適用的驗證、矩陣與證據，Status 達 `verified` 才進 finish。UI 變更需瀏覽器／版面檢查；純後端可用 curl／整合測試取代無關的畫面步驟，但仍要完成核心旅程、讀取權限聲明，以及適用的角色／fixture／真實 DB 證據，不能直跳 finish。瀏覽器操作細節見 [browser-verify.md](../browser-verify.md)。
 
 驗證途中掉登入、量到被導走的頁面、toast 截不到、寄信或 DB 驗證卡住時，先查 [gotchas.md](../gotchas.md)「開發與瀏覽器驗證」。
 
@@ -17,9 +17,9 @@
    - **登入牆不是證據、也不是跳過理由**：導頁後落在 `/auth/*` 的截圖等於這頁沒驗過（#166 的 `verify-bug-report.png` 就是登入頁）。需要登入的頁面走 [browser-verify.md §3a](../browser-verify.md) 的 dev-login 配方；task.md 不得留「需要手動驗證（需登入）」清單發 PR——每項不是驗掉，就是使用者明確豁免並記「（豁免：<原因>）」，發 PR 閘門 `pr-verify-unchecked` 會檢查
    - **版面探針**（UI repo 必做，發 PR 閘門 `pr-layout-probe-missing` 會檢查）：對任務碰到的每條 route，在 390／1024／1440 三個寬度跑 `references/layout-probe.mjs`，量被導離目標頁（目標頁本身在 `/auth/` 底下的不算）、`scrollWidth > innerWidth` 橫向溢出、`main` 內未被 overflow 裁切的出界元素；產出的「### 版面探針」表貼進 task.md「## 驗證」底下，有 ❌ 先修再重跑。**這一步是 #233 的直接對策：settings 十五頁 `w-screen` 疊在 `md:pl-[132px]` 上、每頁多 132px，肉眼看截圖六個月沒人發現，一行 `scrollWidth` 就抓到。** diff 沒碰任何頁面／版面時寫一行 `版面探針不適用：<具體原因>`
    - **版面 rect 對照**（零視覺差異的 refactor 必做）：抽共用元件／換 className／搬 DOM 時，layout-probe 只證明「沒有溢出」，不證明「版面沒變」。用 `references/rect-probe.mjs` 改前改後各量一次、`rect-diff.py` 比對 rect 與 computedStyle（見 [browser-verify.md §4b](../browser-verify.md)），差異表貼進 task.md。#240 抽 `PageShell` 就是這樣證明 15 頁 45 組零差異的
-3. **核心旅程矩陣**（有任何寫入路徑就必做，發 PR 閘門會檢查）— 依 [journey-matrix.md](../journey-matrix.md) 把任務碰到的每條「建立／編輯／刪除／送出」旅程列成表：每條至少一列真實輸入成功、一列 server 拒絕的輸入失敗；「實際」欄要有攔到的 HTTP 狀態碼；FE／BE 規則來源要寫 `檔案:行號`，前端手寫的驗證規則對不到 server 規則就是缺口、先修再驗。**這一步是 #188 的直接對策：畫面像 POC 不等於使用者能建立場次。** 沒有寫入路徑的任務寫一行 `核心旅程不適用：<具體原因>`
+3. **核心旅程矩陣**（寫入，或涉及權限／隱私／資料範圍的讀取都必做）— 依 [journey-matrix.md](../journey-matrix.md) 列出正常與錯誤路徑，記錄實際 HTTP 狀態碼與資料斷言。寫入須驗 server 拒絕、畫面訊息與輸入保留；讀取須從入口走到下游，並依 [read-access-verification.md](../read-access-verification.md) 填角色矩陣、固定資料、真實 DB／快取撤權／期限邊界的適用證據。每個任務填讀取權限適用聲明；兩類行為都不涉及才可宣告核心旅程不適用。FE／BE 規則來源仍寫 `檔案:行號`，不以畫面或 mock 通過取代真正行為。
 4. **留證據** — 每個檢查點截圖存到 `$TASK/evidence/`，命名 `<phase>-<checkpoint>.png`；旅程列命名 `verify-jNN.png`
-5. **記錄結果** — task.md 新增「驗證」區塊：檢查清單 + 通過/失敗 + 截圖檔名 + 核心旅程矩陣
+5. **記錄結果** — task.md 新增「驗證」區塊：檢查清單 + 通過/失敗 + 截圖檔名 + 核心旅程矩陣。讀取權限適用時保留同一組 fixture ID、實際登入角色與各 repo ref；mock、真實資料庫、部署後操作的結果分列。若包含原生 App 驗收，先確認可安裝的測試 build、裝置與對應版本；OTA 發布成功或 Expo web 通過不等於實機可驗收。
 6. **失敗處理** — 修復後重驗該項（沿用 pipeline 慣例：同一項失敗 2 次，停止重複相同嘗試；整理已查核原因、證據與阻塞，能繼續查明的技術問題由 AI 調查，不要交人猜根因或無限重試）
 7. **產出 Google 文件驗證報告**（必做）— 把「驗證」區塊 + 核心旅程矩陣 + evidence/ 截圖整理成一份 Google 文件（截圖嵌圖，不是留在本機資料夾），連結記進 task.md「驗證」區塊第一行；操作細節與一次性 rclone 設定見 [verify-report.md](../verify-report.md)
 8. 全部通過 → task.md Status → `verified`，進入 finish。「全部」包含：「## 驗證」沒有任何 `- [ ]` 未勾項目、沒有「需要手動驗證」清單、「### 版面探針」全 ✅

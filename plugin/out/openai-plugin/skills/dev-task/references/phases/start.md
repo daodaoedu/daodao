@@ -4,7 +4,7 @@
 
 1. `gh issue view <n>` 讀 issue（中央 issue 在 daodaoedu/daodao，鏡像 issue 在 sub-repo）。**只在子卡或獨立卡上開工**：issue 底下有 sub-issues（是母卡）時不在母卡上開發，改挑或依 AC 先拆子卡（**GitHub Issue 管理規範 §4**（repo 檔案 `docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係`，未隨本包出貨））
 2. 收集使用者提供的 PRD／既有 FRD（`docs/product/`）、Issue 留言、POC/Figma/Drive 或分支連結；**POC 是 Google Drive 資料夾連結時，下載到本機**（見 [poc-download.md](../poc-download.md)），verify 階段才有東西可以直接開來比對，不用每次現開 Drive
-3. **判定涉及哪些 repo** — 依 [repo-detection.md](../repo-detection.md)：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）→ 每個 repo 附依據寫進 task.md；`repo:*` label 只當參考，查證結果為準
+3. **判定涉及哪些 repo** — 依 [repo-detection.md](../repo-detection.md)：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位）→ 每個 repo 附依據寫進 task.md；`repo:*` label 只當參考，查證結果為準。涉及讀取權限、隱私或篩選時，從使用者入口追到列表、詳情與下游資料的實際 service，記錄各自的 ACL／查詢與 cache，不按原 issue 的 repo label 截斷調查。依 [read-access-verification.md](../read-access-verification.md) 預先選定角色與固定資料，沿用已確認的可見性規則，不自行新增產品權限。
 4. 決定命名：
    - **任務資料夾**：`<issue#>-<slug>`（例：`150-home-layout`）— 帶編號方便查找
    - **branch**：`feat/<語意化 slug>`（例：`feat/home-layout-sidebar`）— 用 kebab-case 描述「做了什麼」，不放 issue 編號；issue 關聯記在 task.md 與 PR body 的 `Refs daodaoedu/daodao#<n>`（不用 Closes／Fixes／Resolves，見 [finish.md](finish.md)）。fix 用 `fix/`、refactor 用 `refactor/`

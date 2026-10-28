@@ -56,6 +56,12 @@ python3 <daodao-root>/scripts/check-validation-parity.py --repo <absolute-f2e> -
 
 規則來源優先序：server zod → `openapi.json` 的 `pattern`／`minLength`／`enum` → 前端引用；前端不得自創第二套規則。openapi 沒帶 `pattern` 的欄位，先在 server schema 補 `.regex()` 讓生成器帶出來，再讓前端跟。腳本只看正則文字，長度、enum、跨欄位規則仍靠矩陣的錯誤路徑列實測。
 
+## 讀取權限與真實資料庫
+
+涉及 ACL、隱私 predicate 或資料範圍篩選時，使用 [讀取權限驗證](read-access-verification.md) 的同一組角色與資料測試入口到下游；權限常數沒有改動也可能漏在另一個 service。改 SQL／ORM 查詢時，要在相容的真實資料庫執行實際查詢／service，包含有權限、無權限、撤權與適用期限邊界，記錄 fixture／schema 版本、命令、預期資料與實際回應。mock 或檢查 SQL 字串可以補 regression，但不能標成真實 DB 驗證通過。
+
+CI 尚未具備該測試環境時保留缺口與下一步，不以 gate 格式通過、單元測試數量或 required check 名稱代替資料庫證據。跨服務全棧旅程 runner（#324）是另項工作；本檢查不宣稱已建好它。純前端路由／呈現變更且未改資料查詢時，可附具體理由將資料庫驗證標不適用。
+
 ## 證據交接
 
 結果加入 task.md 驗證欄；需要的檢查未執行就保留未驗證。spec audit 按 [spec-audit.md](spec-audit.md) 納入決策與約束。根 repo CI 只檢查本 repo，不能宣稱子 repo 或 Claude／Codex 自動 hooks 已同步。

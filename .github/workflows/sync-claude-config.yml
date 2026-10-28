@@ -52,6 +52,7 @@ jobs:
           node --test .github/scripts/__tests__/*.test.cjs
           bash .github/scripts/test-sync-claude-config-contract.sh
           python3 -m unittest discover -s .github/scripts/__tests__ -p 'test_review_*.py' -v
+          python3 -m unittest discover -s plugin/hooks/__tests__ -p 'test_read_access_evidence.py' -v
 
   sync:
     needs: regression
@@ -116,6 +117,9 @@ jobs:
             cp ".github/scripts/$script" "target/.github/scripts/$script"
             chmod +x "target/.github/scripts/$script"
           done
+
+          # One canonical read-access validator serves both packaged hooks and CI.
+          cp plugin/hooks/check-read-access-evidence.py target/.github/scripts/check-read-access-evidence.py
 
           mkdir -p target/.github/scripts/__tests__
           for test in test_review_batches.py test_review_runner.py; do

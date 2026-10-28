@@ -69,7 +69,10 @@ grep -Fq 'rm -f target/.claude/hooks/*.sh' "$WORKFLOW" \
 grep -Fq 'rm -rf "target/.claude/skills/$skill"' "$WORKFLOW" \
   || fail "sync workflow 未清除子專案的舊 skills 複本（project skills 會蓋掉 plugin skills）"
 # 逐檔複製 hooks／skills 的寫法不得復活
-grep -Eq 'cp[[:space:]]+\.claude/hooks|cp[[:space:]]+plugin/hooks|cp[[:space:]]+"?plugin/skills' "$WORKFLOW" \
+# 唯一例外：canonical 純資料驗證 CLI 同步到 .github/scripts，供 trusted CI 執行；不是 harness hook。
+helper_copy='^[[:space:]]*cp plugin/hooks/check-read-access-evidence\.py target/\.github/scripts/check-read-access-evidence\.py[[:space:]]*$'
+grep -Eq "$helper_copy" "$WORKFLOW" || fail "未同步 canonical 讀取權限驗證器到 .github/scripts"
+grep -Ev "$helper_copy" "$WORKFLOW" | grep -Eq 'cp[[:space:]]+\.claude/hooks|cp[[:space:]]+plugin/hooks|cp[[:space:]]+"?plugin/skills' \
   && fail "不得回頭逐檔複製 hooks／skills（那正是 plugin 化要消除的漂移來源）"
 
 for script in retrieve-context.sh test-retrieve-context.sh test-code-review-contract.sh build-review-batches.py run-review-batches.py test_review_batches.py test_review_runner.py check-pr-evidence.sh test-pr-evidence.sh; do
