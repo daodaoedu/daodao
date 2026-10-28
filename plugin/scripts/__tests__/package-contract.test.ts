@@ -170,6 +170,14 @@ describe('settings 指向不需要 clone 的來源', () => {
     expect(mpRelease().plugins[0].version).toBe(version)
   })
 
+  // 2026-10-09 到 10-28 合了 25 個改 plugin 的 commit 都沒人 bump，release 全被跳過。
+  // 版號改由 CI 產生，合 PR 就發版。
+  it('release workflow 自動產生版號，不靠人手動 bump', () => {
+    const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
+    expect(wf).toContain('github.run_number')
+    expect(wf).toMatch(/plugin:package --version "\$VERSION"/)
+  })
+
   it('release workflow 遇到已發佈的版號會跳過，不覆蓋已釘 sha256 的資產', () => {
     const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
     expect(wf).toContain('gh release view')
@@ -181,5 +189,34 @@ describe('settings 指向不需要 clone 的來源', () => {
     expect(existsSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'))).toBe(true)
     expect(wf).toContain('marketplace.json')
     expect(settings.extraKnownMarketplaces.daodao.source.url).toContain('releases/latest/download/marketplace.json')
+  })
+})
+
+// 放最後：這組會用另一個版號重打，覆寫 out/release/marketplace.json。
+describe('--version 覆寫發佈版號', () => {
+  const override = '0.1.9999'
+  const overrideZip = join(RELEASE, `daodao-plugin-${override}.zip`)
+
+  beforeAll(() => {
+    execFileSync('pnpm', ['-s', 'plugin:package', '--version', override], { cwd: REPO_ROOT, encoding: 'utf8' })
+  }, 60_000)
+
+  it('marketplace 宣告覆寫後的版號與對應的 archive', () => {
+    const mp = JSON.parse(readFileSync(join(RELEASE, 'marketplace.json'), 'utf8'))
+    expect(mp.plugins[0].version).toBe(override)
+    expect(mp.plugins[0].source.url).toContain(`plugin-v${override}/daodao-plugin-${override}.zip`)
+  })
+
+  it('包裡的 plugin.json 也是覆寫後的版號，zip 內外一致', () => {
+    const inner = JSON.parse(
+      execFileSync('unzip', ['-p', overrideZip, 'plugin/.claude-plugin/plugin.json'], { encoding: 'utf8' }),
+    )
+    expect(inner.version).toBe(override)
+  })
+
+  it('不合法的版號直接失敗', () => {
+    expect(() =>
+      execFileSync('pnpm', ['-s', 'plugin:package', '--version', 'latest'], { cwd: REPO_ROOT, stdio: 'pipe' }),
+    ).toThrow()
   })
 })

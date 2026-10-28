@@ -75,17 +75,15 @@ claude plugin install daodao@daodao-dev
 
 #### 發新版
 
-```bash
-# 1. 在 plugin/.claude-plugin/plugin.json 把 version 往上加
-# 2. 合進 main
-```
+改到 `plugin/` 的 PR 合進 main 就會發版，不需要另外 bump。
 
-`plugin-release.yml` 會打包、算 sha256、建 release、上傳 zip 與 marketplace.json，
-最後**實際下載回來驗 sha256 對不對**才算成功。版本沒往上加會跳過發佈——已發佈的 zip
-其 sha256 被釘住，重發同版本會讓已安裝的人對不上。
+`plugin-release.yml` 自動產生版號（major.minor 取 `plugin.json`，patch 用 workflow
+run number，例如 `0.1.26`），打包、算 sha256、建 release、上傳 zip 與 marketplace.json，
+最後**實際下載回來驗 sha256 對不對**才算成功。同一個 run 重跑會撞到已發佈的 tag 而跳過——
+已發佈的 zip 其 sha256 被釘住，重發同版本會讓已安裝的人對不上。
 
-zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package` 會得到跟 CI 一樣的 sha256，
-可以自己驗。
+zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version <release 版號>`
+會得到跟 CI 一樣的 sha256，可以自己驗。
 
 ### Codex
 
@@ -145,16 +143,16 @@ claude.ai → Claude Code 單向下載，沒有反向推送。
 
 ## 更新
 
-改流程的人只做一件事：**bump 版號**。版號是使用者收不收得到更新的唯一訊號——
-marketplace entry 宣告了 `version`，Claude Code 就以它判斷要不要重抓 archive；
-沒 bump 就改 zip，已安裝的人會一直用舊快取，而且 release workflow 會直接跳過發佈。
+改流程的人不需要管版號：改到 `plugin/` 的 PR merge 後，`plugin-release.yml` 自動產生
+新版號、打包、建 release、**下載回來驗 sha256**。版號是使用者收不收得到更新的唯一訊號——
+marketplace entry 宣告了 `version`，Claude Code 就以它判斷要不要重抓 archive。
+
+repo 裡 `plugin.json` 的 patch 不代表實際發佈的版號，要查目前版本看 Releases 頁面。
+只有要升 minor／major 時才手動改：
 
 ```bash
-pnpm plugin:bump          # patch；也可以 minor / major / 直接給 0.3.0
-# 產物版號會一起更新，然後走正常 commit → PR → merge main
+pnpm plugin:bump minor    # 或 major；產物版號會一起更新，走正常 commit → PR → merge main
 ```
-
-merge 後 `plugin-release.yml` 打包、建 release、**下載回來驗 sha256**。
 
 使用者端：
 
