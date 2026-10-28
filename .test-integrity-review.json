@@ -1,7 +1,0 @@
-{
-  "base": "17f11ec8fa897d0fba162b3a9210e8af70933ae8",
-  "test_diff_sha256": "91a708492bcba4c05855d88dd949417251179573e8b2f9dda81ce4292c3dc10b",
-  "reviewer": "xiaoxu",
-  "reason": "移除的斷言要求 .claude/settings.json 的 marketplace 網址含 releases/latest/download/marketplace.json，而本 PR 修的正是該 github.com 網址在 marketplace add 時被當成 git repo clone 而失敗，斷言已不成立。改為 toBe 完整比對 GitHub Pages 網址（比 toContain 更嚴格），並新增測試禁止 settings、plugin/README.md、docs/workflow.md、plugin-release.yml 出現 github.com 的 marketplace 網址。",
-  "evidence": "PR #406；本機 session 中 xiaoxu 看過被移除與取代的斷言原文後回覆「可以」。"
-}
