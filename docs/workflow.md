@@ -349,7 +349,7 @@ daodao/
 |---|---|---|
 | 「開發 issue #141」 | **start** | 讀卡、判定 repo、防撞、建 worktree、寫驗收契約與 task.md |
 | 「接手 worktrees/141-…」或已在該資料夾內 | **dev** | 逐 phase 實作、驗證、commit |
-| 「驗證」或全部 phase 完成 | **verify** | 對驗收契約總驗收 + 核心旅程矩陣 + 版面探針 + Google 文件報告 |
+| 「驗證」或全部 phase 完成 | **verify** | 對驗收契約總驗收 + 讀取權限驗證 + 核心旅程矩陣 + 版面探針 + Google 文件報告 |
 | 「發 PR」 | **finish** | Deferred items 開卡、rebase、品質檢查、spec audit、code review、過 pre-pr 閘門、開 PR、回寫 issue |
 | 「merge 了」「收尾」 | **cleanup** | dev 冒煙 → 移除 worktree／branch／任務資料夾 → 接 post-merge-wrapup |
 
@@ -377,14 +377,15 @@ daodao/
 
 #### verify — 總驗收
 
-有 UI 變更（f2e / admin-ui）的任務必須通過；純後端改跑 API 驗證（curl／整合測試）後直接 finish。dev 階段的快篩只看「這個 phase 有沒有壞」，verify 是對完整驗收清單的總驗收，快篩過了不能跳過。
+每個任務都要完成適用的驗證、矩陣與證據，Status 到 `verified` 才進 finish。UI 變更需要瀏覽器與版面檢查；純後端可以用 curl／整合測試取代畫面步驟，但仍要完成核心旅程、讀取權限聲明與適用的證據，不能直跳 finish。dev 階段的快篩只看「這個 phase 有沒有壞」，verify 是對完整驗收清單的總驗收，快篩過了不能跳過。
 
 - **逐條驗收**：從 task.md 的驗收契約展開檢查清單，用瀏覽器逐條走過（工具依 `references/browser-verify.md`），含跨 phase 整合、回歸、無障礙、窄螢幕（390px）與反面條件
 - **登入牆不是證據**：導到 `/auth/*` 的截圖等於這頁沒驗過（#166）；要登入的頁面走 dev-login 配方。task.md 不得留「需要手動驗證」清單，每項不是驗掉、就是使用者明確豁免並記原因
 - **POC 並排比對**（有可互動 HTML 原型時必做）：用 `getComputedStyle` 量測產出差異表，probe 要涵蓋 `poc-probe-checklist` 全部類別，量完再逐組看並排截圖補漏。每條 ❌ 不是修掉，就是列進「### POC 差異決策」交使用者裁決，確認後 task.md 寫 `POC 差異決策已確認`。沒有「設計系統」這個免死金牌
 - **版面探針**（UI repo 必做）：對任務碰到的每條 route，在 390／1024／1440 三個寬度跑 `layout-probe.mjs`，量被導離、`scrollWidth > innerWidth` 橫向溢出、出界元素，「### 版面探針」表貼進 task.md；沒碰頁面寫 `版面探針不適用：<原因>`（#233：settings 每頁多 132px，六個月沒人發現）
 - **版面 rect 對照**（零視覺差異的 refactor 必做）：`rect-probe.mjs` 改前改後各量一次、`rect-diff.py` 比對（#240 抽 `PageShell` 證明 15 頁零差異）
-- **核心旅程矩陣**（有任何寫入路徑就必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗，「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `references/journey-matrix.md`
+- **讀取權限驗證**（改到 ACL、隱私、資料範圍篩選，或因此造成列表／詳情不一致時必做，#400）：從使用者入口追到下游各服務的 ACL／查詢／cache（列表、搜尋、詳情未必共用後端），用同一組固定資料驗資料擁有者、同範圍成員、範圍外使用者、被移除者的可見性；改查詢或 DB ACL 要在真實資料庫上證明舊版失敗、新版通過，mock 不算。規則見 `references/read-access-verification.md`；不適用要寫具體理由
+- **核心旅程矩陣**（寫入，或涉及權限／隱私／資料範圍的讀取都必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗（讀取旅程的錯誤路徑是「拒絕存取且回應不含私人資料」），「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `references/journey-matrix.md`
 - **留證據**：截圖存 `evidence/`，命名 `<phase>-<checkpoint>.png`、旅程列 `verify-jNN.png`；task.md 新增「驗證」區塊記通過／失敗／未做 + 矩陣
 - **Google 文件驗證報告**（必做）：依 `references/verify-report.md`，rclone 上傳截圖 → 產生 HTML（核心旅程矩陣放最前）→ 建 Google 文件、設知道連結者可看，連結記進 task.md「驗證」區塊第一行。截圖只留在本機或對話裡等於沒發
 - 同一項失敗 2 次 → 停止重複嘗試，整理已查核的原因與證據
@@ -413,6 +414,7 @@ daodao/
 |---|---|
 | `pr-status-not-verified` | task.md Status 為空或仍是 planning／implementing |
 | `pr-poc-compare-missing` | UI repo 有可互動原型，卻缺比對報告（`notes/poc-compare/report.md`、「### POC 比對」、probe 類別）或差異決策確認行 |
+| `pr-read-access-evidence-missing` | 讀取權限適用卻缺角色／固定資料／真實 DB 等證據，或沒有不適用理由（#400） |
 | `pr-journey-matrix-missing` | 核心旅程矩陣缺、沒有錯誤路徑列、或有 ⬜／❌ |
 | `pr-deferred-unlinked` | Deferred item 沒子 issue 也沒「待開卡」 |
 | `pr-body-evidence-missing` | PR body 缺「## 驗證證據」（報告連結或不適用聲明） |
@@ -420,7 +422,7 @@ daodao/
 | `pr-verify-unchecked` | 「## 驗證」有 `- [ ]` 未勾項目或「需要手動驗證」清單（#166：登入牆截圖當證據） |
 | `pr-layout-probe-missing` | UI repo 缺「### 版面探針」表或表裡有 ❌（#233：settings 每頁多 132px） |
 
-逃生口 `DEV_TASK_SKIP_GATE="<原因>"`（相容舊名 `DEV_TASK_SKIP_POC_GATE`），只作用於上面八道，一律留痕到 gate ledger。另有試行中的交付紀錄閘門（`DEV_TASK_DELIVERY_GATE_MODE`，預設 off）。完整規則與升級策略見 `plugin/hooks/ADR-0001-gates-over-guidelines.md`。
+逃生口 `DEV_TASK_SKIP_GATE="<原因>"`（相容舊名 `DEV_TASK_SKIP_POC_GATE`），只作用於上面九道，一律留痕到 gate ledger。另有試行中的交付紀錄閘門（`DEV_TASK_DELIVERY_GATE_MODE`，預設 off）。完整規則與升級策略見 `plugin/hooks/ADR-0001-gates-over-guidelines.md`。
 
 #### cleanup — merge 後收尾
 
@@ -588,7 +590,7 @@ PR opened / updated
 
 1、2、4、5 的 workflow 正本在 monorepo，由 `sync-claude-config` 同步到各 sub-repo（f2e、server、ai-backend、storage、worker、admin-ui、infra、mcp）。CI 通常 2–5 分鐘跑完；AI review 有 25 分鐘 job 上限。
 
-**PR evidence gate** 是本機 `pre-pr-gate.sh` 的 CI 版，涵蓋 Codex／手動 gh 開的 PR，但只看 PR body：驗證報告連結＋核心旅程矩陣（或「核心旅程不適用」），以及 closing keyword（#364，不吃分支前綴、`evidence-exempt` 或 bot 豁免）；本機那八道閘門它不重做。模式由 repo variable `PR_EVIDENCE_GATE_MODE` 決定：**f2e、server 是 `block`，而且列為 dev 分支的 required check**；root 與其他 repo 未設定＝`warn`，只出警告。
+**PR evidence gate** 是本機 `pre-pr-gate.sh` 的 CI 版，涵蓋 Codex／手動 gh 開的 PR，但只看 PR body：驗證報告連結＋核心旅程矩陣（或「核心旅程不適用」）＋適用時的「### 讀取權限驗證」，以及 closing keyword（#364，不吃分支前綴、`evidence-exempt` 或 bot 豁免）；本機其他閘門它不重做。模式由 repo variable `PR_EVIDENCE_GATE_MODE` 決定：**f2e、server 是 `block`，而且列為 dev 分支的 required check**；root 與其他 repo 未設定＝`warn`，只出警告。
 
 **monorepo root 另有**：`test-integrity`、`pack-regression`、`scorer-regression`、`regression`（main 的 required checks）。**f2e 另有**第三方檢查：SonarCloud、Vercel、CodeQL、GitGuardian。
 
