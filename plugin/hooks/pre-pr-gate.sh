@@ -142,21 +142,29 @@ EOF
   fi
 fi
 
+# Read-access claims must be checked before core-journey N/A can skip its matrix.
+if read_access_problems=$(python3 "$HOOKS_DIR/check-read-access-evidence.py" --scope task --file "$task_md" 2>&1); then
+  :
+else
+  gate_fail "pr-read-access-evidence-missing" "$task_md" "❌ $read_access_problems"
+fi
+
 # --- 閘門 3：核心旅程矩陣（#188：畫面驗過了，使用者建不了場次）---
-if grep -qE '^核心旅程不適用[：:]' "$task_md"; then
-  na_reason=$(grep -m1 -E '^核心旅程不適用[：:]' "$task_md" | sed -E 's/^核心旅程不適用[：:][[:space:]]*//')
+verify_journeys=$(python3 "$HOOKS_DIR/check-read-access-evidence.py" --scope task --file "$task_md" --emit-section)
+if printf '%s\n' "$verify_journeys" | grep -qE '^核心旅程不適用[：:]'; then
+  na_reason=$(printf '%s\n' "$verify_journeys" | grep -m1 -E '^核心旅程不適用[：:]' | sed -E 's/^核心旅程不適用[：:][[:space:]]*//')
   if [ -z "$na_reason" ] || echo "$na_reason" | grep -qE '^<.*>$'; then
     gate_fail "pr-journey-matrix-missing" "$task_md" \
       "❌ task.md 寫了「核心旅程不適用」但沒有具體原因。要寫清楚 diff 為什麼沒碰任何 form／mutation／controller，例如「純 CSS 對齊，diff 未碰任何 form／mutation／controller」"
   fi
   log_gate_event "pr-journey-matrix-na" "$task_md" "pass:$na_reason" "dev-task"
 else
-  matrix_rows=$(section_body "$task_md" '^### 核心旅程矩陣' '^(#|##|###) ' \
+  matrix_rows=$(printf '%s\n' "$verify_journeys" | section_body - '^### 核心旅程矩陣' '^(#|##|###) ' \
     | sed -E 's/^[[:space:]]+//' | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' || true)
   # 模板佔位列不算已填：<…> 裡含非 ASCII（<建立 X>、<輸入>）或 <file:line>；真實輸入如 <script> 不受影響
   matrix_rows=$(echo "$matrix_rows" | LC_ALL=C grep -vE '<([^>|]*[^ -~][^>|]*|file:line)>' || true)
   problems=""
-  if ! grep -q '^### 核心旅程矩陣' "$task_md"; then
+  if ! printf '%s\n' "$verify_journeys" | grep -q '^### 核心旅程矩陣'; then
     problems="task.md 沒有「### 核心旅程矩陣」區塊"
   elif [ -z "$matrix_rows" ]; then
     problems="矩陣沒有任何已填的旅程列（模板佔位列不算）"
@@ -166,7 +174,7 @@ else
       { j=$3; t=$4; gsub(/^[ \t]+|[ \t]+$/, "", j); gsub(/^[ \t]+|[ \t]+$/, "", t)
         if (j == "") next
         seen[j]=1; if (t ~ /正常/) ok[j]=1; if (t ~ /錯誤路徑/) err[j]=1 }
-      END { for (j in seen) { if (!ok[j]) printf "旅程「%s」缺「正常」列（真實輸入送出成功）；", j; if (!err[j]) printf "旅程「%s」缺「錯誤路徑」列（server 會拒絕的輸入，訊息顯示、輸入保留）；", j } }')
+      END { for (j in seen) { if (!ok[j]) printf "旅程「%s」缺「正常」列（真實輸入送出成功）；", j; if (!err[j]) printf "旅程「%s」缺「錯誤路徑」列（寫入須 server 拒絕輸入；讀取須驗證拒絕存取且不含私人資料）；", j } }')
     [ -z "$pair_problems" ] || problems="$pair_problems"
     if echo "$matrix_rows" | grep -qE '⬜|❌'; then
       problems="${problems:+${problems}；}有 ⬜／❌ 列（未驗或未過）"
@@ -177,9 +185,9 @@ else
   if [ -n "$problems" ]; then
     gate_fail "pr-journey-matrix-missing" "$task_md" "$(cat <<EOF
 ❌ 核心旅程矩陣沒過：$problems
-   verify 階段必須對每條「建立／編輯／刪除／送出」旅程：一列真實輸入送出成功、一列 server 拒絕的輸入失敗且訊息顯示；「實際」欄寫攔到的 HTTP 狀態碼。
+   verify 階段每條寫入或讀取權限旅程需正常與錯誤路徑；寫入驗訊息與輸入保留，讀取驗拒絕存取及回應不含私人資料；「實際」欄寫攔到的 HTTP 狀態碼。
    格式與輸入目錄見 $PLUGIN_ROOT/skills/dev-task/references/journey-matrix.md
-   任務真的沒有寫入路徑時，在 task.md「## 驗證」底下寫一行：核心旅程不適用：<具體原因>
+   任務沒有寫入、權限／隱私／篩選讀取變更時，才可在「## 驗證」寫核心旅程不適用：<具體原因>
    例外：DEV_TASK_SKIP_GATE="<原因>"（會留痕）
 EOF
 )"
@@ -234,6 +242,12 @@ EOF
 elif ! printf '%s\n' "$evidence_section" | grep -qE 'https?://|核心旅程不適用[：:]'; then
   gate_fail "pr-body-evidence-missing" "$task_md" \
     "❌ PR body「## 驗證證據」裡沒有驗證報告連結（https://…），也沒有「核心旅程不適用：<原因>」聲明。"
+fi
+
+if read_access_problems=$(printf '%s\n' "$body_text" | python3 "$HOOKS_DIR/check-read-access-evidence.py" --scope pr 2>&1); then
+  :
+else
+  gate_fail "pr-read-access-evidence-missing" "$task_md" "❌ PR body：$read_access_problems"
 fi
 
 # --- 閘門 6：前端手寫驗證規則要能編譯、要對得到 server 規則（#188 根因）---
