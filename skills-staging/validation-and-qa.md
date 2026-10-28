@@ -54,7 +54,7 @@ description: 你觀察到以下任一狀態時載入：準備宣告「改完了/
 
 ### V6. AI review 的採信標準
 
-- 事實：每個 PR 有最多三個 AI reviewer（GPT-4o-mini code-review workflow、Gemini Code Assist、本地 code-review skill）。歷史顯示它們抓得到真問題（`043e9e6` 的 5 修）也產 false positive。
+- 事實：每個 PR 有最多三個 AI reviewer（GPT-4o-mini code-review workflow、Gemini Code Assist、本地 review-change skill）。歷史顯示它們抓得到真問題（`043e9e6` 的 5 修）也產 false positive。
 - 步驟：用 collect-pr-feedback skill 的分級（必須修/建議修/可忽略）；🔴 High 必須處理或書面反駁，不可靜默忽略（merge 條件之一是無未處理 High）。
 - 完成定義：每條 High/Medium 有處理或有理由。
 

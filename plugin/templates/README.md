@@ -8,12 +8,12 @@
 
 可用 [request-feature](../skills/request-feature/SKILL.md) 開卡（Claude Code `/daodao:request-feature`；Codex 讀 `.agents/skills/request-feature/`）。例如：「用 request-feature 根據這份需求開 Issue，先放 Todo」。skill 會讀本目錄模板、查重、發布與回讀；本目錄本身不執行自動化。
 
-1. 描述想法、操作問題，或提供 Issue／PRD／FRD／POC／分支。使用 [prd-generation](../skills/prd-generation/SKILL.md) 查核現況並以 [requirements-doc.md](requirements-doc.md) 起草一份 PRD；不要求提出者逐格填寫。既有 FRD 沿用原內容與 ID。
+1. 描述想法、操作問題，或提供 Issue／PRD／FRD／POC／分支。使用 [draft-prd](../skills/draft-prd/SKILL.md) 查核現況並以 [requirements-doc.md](requirements-doc.md) 起草一份 PRD；不要求提出者逐格填寫。既有 FRD 沿用原內容與 ID。
 2. AI 先完成適用檢核、自審並修訂，交付草稿、檢核摘要、限制與待決策事項；人負責審核原意與產品取捨，不按角色分配檢查工作。AI 依審核意見修訂並重查受影響內容，每輪只補問一兩個關鍵決策。repo、技術版本與交接資訊由工具或開發補充，任務指派用 GitHub Assignees，不另填負責人表。
 3. 已要求開卡時，由 request-feature 將同份需求摘要放入 [central-issue.md](central-issue.md)；母卡底下的子卡用 [child-issue.md](child-issue.md)；[subtask-issue.md](subtask-issue.md) 只當單一 sub-repo 的工程交接筆記。Todo 可保留缺項，需求確認不等於啟動開發。
 4. 開發另補技術設計與任務；驗證結果使用 [acceptance-report.md](acceptance-report.md)，交付用 [pull-request.md](pull-request.md) 與 [issue-status-comment.md](issue-status-comment.md)。
 
-操作異常改用 [report-bug](../skills/report-bug/SKILL.md) 與 [bug-issue.md](bug-issue.md)：描述位置、操作、實際與期待結果，skill 起草並查核；不要求先知道 repo 或根因。Codex 對應產物位於 `.agents/skills/prd-generation/`、`.agents/skills/report-bug/`。
+操作異常改用 [report-bug](../skills/report-bug/SKILL.md) 與 [bug-issue.md](bug-issue.md)：描述位置、操作、實際與期待結果，skill 起草並查核；不要求先知道 repo 或根因。Codex 對應產物位於 `.agents/skills/draft-prd/`、`.agents/skills/report-bug/`。
 
 建立／修改遠端 Issue、Google Docs、Drive 與 PR 仍依該次任務授權與專案流程。複製範本本身不會派工，也不代表已發布文件。
 

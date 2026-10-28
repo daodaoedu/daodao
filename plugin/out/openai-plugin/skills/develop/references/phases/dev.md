@@ -7,10 +7,10 @@
    - `refactor`（或 task.md 標明零行為／零視覺差異）：動結構之前先釘住現況。UI 用 `references/rect-probe.mjs` 在 `origin/dev` 量一次存成 `$TASK/evidence/rect-before.json`（見 [browser-verify.md §4b](../browser-verify.md)）；邏輯用 characterization test 或現有測試的輸出快照。沒有改前基準就不動結構。先刪死碼與只有單一呼叫者的 wrapper 並單獨 commit，再做重整
    - `feature`：照下面的動作序列
 4. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
-   1. **自行輕量驗證並修訂**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；**有可互動 POC 的 UI phase，這一步就要把 POC 同一畫面開在旁邊，對該 phase 的元件跑一遍 [poc-probe-checklist](../poc-probe-checklist.md) 的基本 probe**（不要等 verify 才第一次量，差異會累積到很難拆）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `pre-commit-check` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。**這個 phase 碰到 form／mutation／controller／DTO 的，快篩就要真的送出一次：一筆真實輸入（中文、大寫、空白）成功、一筆 server 會拒絕的輸入失敗且訊息顯示出來**，先把 [核心旅程矩陣](../journey-matrix.md) 的列開出來，verify 階段再補齊。這是 phase 級的快篩，完整驗收留給 verify 階段
+   1. **自行輕量驗證並修訂**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；**有可互動 POC 的 UI phase，這一步就要把 POC 同一畫面開在旁邊，對該 phase 的元件跑一遍 [poc-probe-checklist](../poc-probe-checklist.md) 的基本 probe**（不要等 verify 才第一次量，差異會累積到很難拆）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `check-commit` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。**這個 phase 碰到 form／mutation／controller／DTO 的，快篩就要真的送出一次：一筆真實輸入（中文、大寫、空白）成功、一筆 server 會拒絕的輸入失敗且訊息顯示出來**，先把 [核心旅程矩陣](../journey-matrix.md) 的列開出來，verify 階段再補齊。這是 phase 級的快篩，完整驗收留給 verify 階段
    2. **契約及測試完整性檢查**：依 [benchmark gates](../benchmark-gates.md) 執行適用 repo 的 schema／API signal 與測試完整性檢查，保留實際結果及限制。
    3. **高風險變更掃描**：跑 `bash plugin/hooks/stop-quality-gate.sh` 看逐檔就緒清單和高風險分類（migration / API / auth / env / CI）。有高風險標記的 phase 在 task.md 備註區補記「⚠ 高風險：<分類>」
-   4. 驗證與 AI 自審通過 → `pre-commit-check` → `format-commit` skill；依專案規則及既有授權確認後 commit
+   4. 驗證與 AI 自審通過 → `check-commit` → `format-commit` skill；依專案規則及既有授權確認後 commit
    5. 更新 task.md 的 checkbox 與 Status
    6. 直接進下一個 phase
    7. 只有驗證**失敗且修不掉**、或發現 scope 之外的問題時才停下來問使用者

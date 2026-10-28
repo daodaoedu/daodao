@@ -19,7 +19,7 @@
 
    一行同時把 Planning board 卡片移到 `In Progress`（不在 board 會先加入）、掛 `human-driving` label，並回讀確認。從 `Need Fix`（dev 冒煙失敗或 PM 驗收退回）接手的卡同樣用這行；PM 退回的先讀他留言指出哪條 AC 沒過。
    - 自動派工 Routine A／B 已於 2026-09-20 退役（#241），`human-driving` 現在只用來在 board 上辨識「有人在做」，不再是防派工閘門
-   - 不要手動 `gh project item-edit`：board 的七欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 **gh-pipeline**（repo 檔案 `gh-pipeline/SKILL.md`，未隨本包出貨）
+   - 不要手動 `gh project item-edit`：board 的七欄語意與 option id 統一放在 `bin/pipeline/types.ts`，見 **move-board-card**（repo 檔案 `move-board-card/SKILL.md`，未隨本包出貨）
    - 不要跟 `human-coding` 混淆：那是 Routine B 時代 sub-repo 鏡像 issue 的移交標記，已不再使用
 2. **跟其他任務防撞**：對每個目標 repo 檢查 in-flight 工作：
    - `git worktree list`（在 `projects/<repo>` 內）→ 已有任務在做同一個 repo 時，比對雙方 scope 是否碰同一片檔案

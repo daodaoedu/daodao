@@ -10,16 +10,16 @@
 
 | 階段 | Skill | AI 先完成的工作 | 人審核的內容 |
 |---|---|---|---|
-| 需求 | prd-generation、product-status-check | 讀來源、對照現況、補流程規則與驗收、自審草稿 | 原意、範圍及產品取捨 |
+| 需求 | draft-prd、check-product-status | 讀來源、對照現況、補流程規則與驗收、自審草稿 | 原意、範圍及產品取捨 |
 | Bug | report-bug | 整理現象、查現況與重複卡、區分事實與推測 | 問題描述與預期行為 |
 | 開卡／拆任務 | request-feature、break-down-plan | 同版需求到任務對照、相依、查重與發布預覽 | 工作範圍與尚未授權的發布／啟動 |
 | 開發 | develop | 隔離工作目錄、技術規劃、實作、適用測試與自審修正 | 未決產品行為及必要例外 |
 | 驗收 | develop verify | 逐原 FR／TP／AC 驗證、POC 差異、核心旅程矩陣（含錯誤路徑 HTTP 碼）、Google 文件報告 | 結果、POC 差異決策與未解差異是否可接受 |
-| 提交 | pre-commit-check、format-commit | 依實際變更檢查、修正、產生 commit 範圍與訊息 | 按 AGENTS 確認具體提交 |
-| 審查 | code-review、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
+| 提交 | check-commit、format-commit | 依實際變更檢查、修正、產生 commit 範圍與訊息 | 按 AGENTS 確認具體提交 |
+| 審查 | review-change、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
 | 通知 | notify-related-issue | 核對 PR／Issue 狀態、草擬有證據的更新、查重 | 尚未授權的留言／關閉操作 |
-| 合併收尾 | post-merge-wrapup、develop cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
-| board | gh-pipeline | Planning board 七欄語意（含 PM 驗收的 Acceptance）、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
+| 合併收尾 | verify-deploy、develop cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
+| board | move-board-card | Planning board 七欄語意（含 PM 驗收的 Acceptance）、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
 
 ## 四平台的 skill 來源
 

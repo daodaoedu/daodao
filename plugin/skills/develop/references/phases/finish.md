@@ -14,7 +14,7 @@
 4. **Clean-context spec audit** — 先讀 [spec audit 輸入規則](../spec-audit.md)，用 `scripts/build-spec-audit.py` 產生固定版本的 audit pack，包含 diff、task.md 驗收契約、已確認 decisions.md／既有 design.md，以及適用 REVIEW.md。不得只傳 diff＋AC 而省略產品決策和實作約束。spawn 全新、不帶開發對話的獨立 subagent；依 pack 逐原 FR／TP／AC／決策與約束標 PASS / FAIL / UNCERTAIN 並附證據。FAIL 先修復，UNCERTAIN 由 AI 補查；必要執行證據不足不得標 PASS。需求／決策或 head 改變後重建 pack，重驗受影響項目。獨立 agent 不可用標未驗證，不以自審冒稱完成。
 
 5. 交付紀錄目前為試行，`DEV_TASK_DELIVERY_GATE_MODE` 預設 `off`，不得讓未完成的收集器阻擋其他 session。需試行時先定位 gate 的**絕對路徑**：Claude plugin 安裝目錄的 `hooks/check-agent-delivery.py` 或 daodao root 的 `plugin/hooks/check-agent-delivery.py`；確認檔案存在後存為 `DELIVERY_CHECKER`，不得從 task repo 用相對 `plugin/hooks/...` 執行。在 `$TASK/agent-handoff.<repo>.json` 保存此 repo 的紀錄（放 repo 外），使用最後 commit HEAD、與 PR 實際 base branch 的 merge-base；填 owned_paths、writes、claims、questions、recurrences。writes 是最終 Git diff 的檔案清單，可以从 Git 產生，**不代表完整寫入操作**。verified claim 的 evidence 需檔案 ref／sha256。執行 `python3 "$DELIVERY_CHECKER" --repo "$PWD" --artifact "$TASK/agent-handoff.<repo>.json" --base <merge-base-sha>`。沒有完整 trace 時必須填 `trace_status: unavailable`（或 partial）與 `trace_reason`，只能回報 manifest 核對通過、操作 trace 未驗證。客戶端 trace 有 Bash／未知工具時不能照 diff 補造，也不強迫重寫舊檔來湊紀錄。`import-agent-trace.py` 可匯入 Claude Write／Edit targets，Bash／未知工具會標 partial；必須先跑真實任務、確認包含 Bash 的操作能被完整觀測，再決定是否啟用 `--require-trace`。現有任務不可回溯製造 trace。新 macOS／Linux 任務可在派工前用 `record-agent-writes.py --repo <task-repo> --output <task>/trace.json --stop-file <task>/trace.stop` 啟動獨立原生 observer（macOS FSEvents／Linux inotify）（macOS 使用 repo 外 venv，安裝 `scripts/agent-trace/requirements.txt` 的 watchdog 6.0.0；Linux 不需額外 Python 套件），確認 ready sidecar 才派工；完成測試和 commit 後建立 stop-file，等 recorder 結束，再核對完整 trace。它不要求禁止 Bash；unsupported 平台、事件掉失或收集開始過晚都不得假稱完整。試行模式 `warn` 只留診斷，`block` 核對 manifest，`DEV_TASK_REQUIRE_TRACE=1` 才強制完整 trace；啟用 block 仍需明確決策與客戶端實測。
-6. Push 前跑 `code-review` skill
+6. Push 前跑 `review-change` skill
 7. Push（rebase 過需 force push 時先問使用者）
 8. 開 PR：
 
@@ -45,7 +45,7 @@ gh pr create --base dev \
 ```
 
 - **base 是 `dev`**（main 只收 dev/hotfix/release）；daodao-worker、daodao-infra 沒有 `dev`，base 用 `main`，步驟 2 的 rebase 也改對 `origin/main`
-- PR body 用獨立一行 `Refs daodaoedu/daodao#<n>` 引用中央 issue（root 與 sub-repo 都寫完整 `owner/repo#n`，`board.ts audit` 靠這行認定實作 PR）。**不要寫 `Closes`／`Fixes`／`Resolves`（含過去式、加冒號、接 issue URL）**：PR merge 時 GitHub 會自動關中央 issue，board 內建 `Item closed → Done` 把卡移到 Done，跳過 dev 冒煙與 PM 驗收（#333、#335、#337 就這樣被關）。中央卡只由 PM 驗收通過（或 `acceptance:engineering` 卡由 post-merge-wrapup 冒煙通過）後關閉。CI 的 `pr-evidence-gate` 會偵測這類寫法並報錯
+- PR body 用獨立一行 `Refs daodaoedu/daodao#<n>` 引用中央 issue（root 與 sub-repo 都寫完整 `owner/repo#n`，`board.ts audit` 靠這行認定實作 PR）。**不要寫 `Closes`／`Fixes`／`Resolves`（含過去式、加冒號、接 issue URL）**：PR merge 時 GitHub 會自動關中央 issue，board 內建 `Item closed → Done` 把卡移到 Done，跳過 dev 冒煙與 PM 驗收（#333、#335、#337 就這樣被關）。中央卡只由 PM 驗收通過（或 `acceptance:engineering` 卡由 verify-deploy 冒煙通過）後關閉。CI 的 `pr-evidence-gate` 會偵測這類寫法並報錯
 - **PR body 必須有「## 驗證證據」區塊**：驗證報告連結 + 核心旅程矩陣（證據欄可省）。沒有寫入路徑的任務把 task.md 那行 `核心旅程不適用：<原因>` 原樣放進來。CI 的 `pr-evidence-gate` 會讀這段（模式看 repo variable `PR_EVIDENCE_GATE_MODE`：daodao-f2e、daodao-server 為 `block` 且是 dev 的 required check，其餘 repo 未設定＝warn）；本機 `pre-pr-gate.sh` 也會擋。body 一律用 `--body-file`，不要 `--body "..."`（會產生字面 `\n`）
 - body 沿用 Why／How 格式：`auto-pr-description` workflow 在 PR 開啟時會用 Workers AI 重寫沒有這兩段的 body；它看到「## 驗證證據」會跳過，但 Why／How 仍是全 repo 的 PR 格式
 - 跨 repo 時在各 PR body 互相引用並標注 merge 順序：
@@ -70,7 +70,7 @@ gh issue comment <n> --repo daodaoedu/<repo> --body "$(cat <<'EOF'
 - PR: [<repo>#<n>](<url>)（跨 repo 時全部列出 + merge 順序；連結用 Markdown 語法，勿裸貼 URL 接全形標點）
 - 驗證報告（Google 文件，含截圖）: [Task <n> 驗證報告](<verify 階段產出的 doc url>)
 - 瀏覽器驗證：<通過項目摘要，對應 task.md 驗證區塊；引用核心旅程 J-ID，例：J-01 建立場次 201、J-02 大寫 slug 被擋、J-03 重複 slug 409 訊息可見>
-- 尚未在 dev 環境冒煙：merge 部署後由 post-merge-wrapup 重跑核心旅程，通過前不視為可用
+- 尚未在 dev 環境冒煙：merge 部署後由 verify-deploy 重跑核心旅程，通過前不視為可用
 - Known incomplete scope: <每項附子 issue 連結 [#<n>](<url>)；未授權開卡的寫（待開卡：<原因>）；沒有就寫 none>
 EOF
 )"
@@ -83,7 +83,7 @@ EOF
      pnpm -s tsx bin/pipeline/board.ts set <n> review
      ```
 
-     merged 之後卡**留在 Review**，要等 post-merge-wrapup 的 dev 冒煙通過才移 `Acceptance` 交給 PM 驗收，PM 關 issue 才算 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
+     merged 之後卡**留在 Review**，要等 verify-deploy 的 dev 冒煙通過才移 `Acceptance` 交給 PM 驗收，PM 關 issue 才算 `Done`；sub-repo PR 用 `Refs` 不會觸發 GitHub 內建 workflow，Routine C 已退役，所以這一步不做就沒有人會移卡
 11. 之後用 `collect-pr-feedback` skill 收集回饋修正
 
 ---

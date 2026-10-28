@@ -20,15 +20,15 @@ Claude.ai 的 sandbox 有檔案系統也能跑指令，但那是一個空的暫�
 | Skill | 收錄 | 備註 |
 |---|---|---|
 | break-down-plan | ✅ | 完整 |
+| check-product-status | ✅ | 降級：filesystem、bash |
 | collect-pr-feedback | ✅ | 降級：filesystem、bash |
+| draft-prd | ✅ | 降級：filesystem |
 | notify-related-issue | ✅ | 完整 |
-| prd-generation | ✅ | 降級：filesystem |
-| product-status-check | ✅ | 降級：filesystem、bash |
 | report-bug | ✅ | 降級：filesystem |
 | request-feature | ✅ | 完整 |
-| code-review | ❌ | 缺必要能力：bash、filesystem、git |
+| check-commit | ❌ | 缺必要能力：bash、filesystem、runtests |
 | develop | ❌ | 缺必要能力：bash、filesystem、git、worktree、runtests |
 | format-commit | ❌ | 缺必要能力：git |
-| gh-pipeline | ❌ | 缺必要能力：bash |
-| post-merge-wrapup | ❌ | 缺必要能力：bash、filesystem、git |
-| pre-commit-check | ❌ | 缺必要能力：bash、filesystem、runtests |
+| move-board-card | ❌ | 缺必要能力：bash |
+| review-change | ❌ | 缺必要能力：bash、filesystem、git |
+| verify-deploy | ❌ | 缺必要能力：bash、filesystem、git |

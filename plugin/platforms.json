@@ -100,14 +100,14 @@
     }
   },
   "skills": {
-    "prd-generation": {
+    "draft-prd": {
       "requires": [],
       "optional": [
         "filesystem",
         "gh"
       ]
     },
-    "product-status-check": {
+    "check-product-status": {
       "requires": [],
       "optional": [
         "filesystem",
@@ -156,7 +156,7 @@
         "bash"
       ]
     },
-    "pre-commit-check": {
+    "check-commit": {
       "requires": [
         "bash",
         "filesystem",
@@ -164,7 +164,7 @@
       ],
       "optional": []
     },
-    "code-review": {
+    "review-change": {
       "requires": [
         "bash",
         "filesystem",
@@ -175,7 +175,7 @@
         "subagent"
       ]
     },
-    "post-merge-wrapup": {
+    "verify-deploy": {
       "requires": [
         "bash",
         "filesystem",
@@ -186,7 +186,7 @@
         "runtests"
       ]
     },
-    "gh-pipeline": {
+    "move-board-card": {
       "requires": [
         "bash",
         "gh"

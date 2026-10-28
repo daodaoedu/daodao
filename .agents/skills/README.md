@@ -8,18 +8,18 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | Skill | 收錄 | 備註 |
 |---|---|---|
 | break-down-plan | ✅ | 完整 |
-| code-review | ✅ | 完整 |
+| check-commit | ✅ | 完整 |
+| check-product-status | ✅ | 完整 |
 | collect-pr-feedback | ✅ | 完整 |
 | develop | ✅ | 降級：browser、drive |
+| draft-prd | ✅ | 完整 |
 | format-commit | ✅ | 完整 |
-| gh-pipeline | ✅ | 完整 |
+| move-board-card | ✅ | 完整 |
 | notify-related-issue | ✅ | 完整 |
-| post-merge-wrapup | ✅ | 完整 |
-| prd-generation | ✅ | 完整 |
-| pre-commit-check | ✅ | 完整 |
-| product-status-check | ✅ | 完整 |
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |
+| review-change | ✅ | 完整 |
+| verify-deploy | ✅ | 完整 |
 
 ## 閘門
 

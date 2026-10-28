@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Lint a 「請驗收」 comment before posting it (post-merge-wrapup §2.5 step 5).
+ * Lint a 「請驗收」 comment before posting it (verify-deploy §2.5 step 5).
  *
  * Usage:
  *   pnpm -s tsx bin/pipeline/acceptance-lint.ts <comment.md>
