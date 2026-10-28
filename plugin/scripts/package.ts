@@ -89,7 +89,10 @@ for (const rel of tracked) {
 if (version !== meta.version) {
   const stagedManifest = join(STAGE, 'plugin', '.claude-plugin', 'plugin.json')
   const raw = readFileSync(stagedManifest, 'utf8')
-  writeFileSync(stagedManifest, raw.replace(`"version": "${meta.version}"`, `"version": "${version}"`))
+  const rewritten = raw.replace(`"version": "${meta.version}"`, `"version": "${version}"`)
+  // 沒換到就停：包內版號跟 marketplace 對不上，使用者會一直收不到更新
+  if (rewritten === raw) throw new Error(`包內 plugin.json 找不到 "version": "${meta.version}"，無法改寫版號`)
+  writeFileSync(stagedManifest, rewritten)
 }
 
 // 統一時間戳，讓 zip 可重現
