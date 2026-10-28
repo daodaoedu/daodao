@@ -36,7 +36,7 @@ Ready 前凍結適用規格／AC 與 POC 基準，確認驗收者及執行授權
 | `documentation` | 文件工作；必要時可與 bug 並用 | 開卡者；工作類型 |
 | `repo:<子 repo 名稱>` | 中央卡標示涉及 repo，可複選 | 開卡者；board 篩選與人工判斷責任 repo |
 | `scope:XS`／`scope:S`／`scope:M`／`scope:L` | 選一個規模；程式未指定時預設 M | 開卡者；不是優先順序 |
-| `human-driving` | 本機／人工開發 | 執行者（`/dev-task` start 自動掛）；人工開工標記 |
+| `human-driving` | 本機／人工開發 | 執行者（`/develop` start 自動掛）；人工開工標記 |
 | `auto`、`auto:plan-only`、`auto:auto-pr` | **不再使用**（Routine A／B 已退役） | label 保留不刪；不要再加到新卡 |
 | `needs-spec`、`dispatched` | **不再使用**（原 Routine A 產出） | label 保留不刪；舊卡片仍可能帶有，清理與否不影響流程 |
 | `duplicate`／`invalid`／`wontfix` | 重複、無效或決定不處理 | maintainer；附原因與相關 Issue |
@@ -57,8 +57,8 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 |---|---|---|
 | `Todo` | 已開卡，尚未開始；可保留需求缺項 | open |
 | `Ready for Dev` | 規格、AC、責任 repo 與執行授權齊備；管理狀態，不觸發自動化 | open |
-| `In Progress` | 已開始實作（`/dev-task` start）；`Need Fix` 開修時也移回這裡 | open |
-| `Review` | PR 已開（`/dev-task` finish）；merged 後仍留此欄，直到 post-merge-wrapup 冒煙通過 | open |
+| `In Progress` | 已開始實作（`/develop` start）；`Need Fix` 開修時也移回這裡 | open |
+| `Review` | PR 已開（`/develop` finish）；merged 後仍留此欄，直到 post-merge-wrapup 冒煙通過 | open |
 | `Acceptance` | 全部必要 repo 合併 + dev 冒煙通過（post-merge-wrapup `set <n> accept`，自動 assign PM＋交接留言），等 PM 對照 AC 驗收 | open |
 | `Need Fix` | post-merge-wrapup 的 dev 冒煙任一 ❌ 或未冒煙，或 PM 驗收退回：待修 | open |
 | `Done` | PM 驗收通過並關 issue（內建 `Item closed → Done`）；掛 `acceptance:engineering` 的工程驗收卡冒煙通過後由 post-merge-wrapup 關；無部署需求依事先定義的替代條件 | closed（PM 關；工程驗收卡由 post-merge-wrapup 關） |
@@ -99,7 +99,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 - **只有兩層**：母卡 → 子卡，子卡底下不再掛子卡。
 - **子卡一律開在中央 repo**，才會上 board 給 PM 驗收；同一張子卡要動多個 repo 就開多個 PR，不另開 sub-repo 子卡。
 - **母卡不直接掛 PR**：實作都在子卡或獨立卡上。
-- 開新功能時 request-feature 依 AC 一次拆好子卡；dev-task 只在子卡或獨立卡上開工。
+- 開新功能時 request-feature 依 AC 一次拆好子卡；develop 只在子卡或獨立卡上開工。
 
 ### 4.4 狀態與驗收
 
@@ -133,7 +133,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 
 使用[PR 模板](../../plugin/templates/pull-request.md)列中央與子 Issue。需部署後驗證的卡片，預設以一般參照記錄，並在完成驗收後人工 close；避免以 closing keyword 在 merge 時提前結案。若任務契約明定 merge 即滿足全部 Done 條件，才使用自動關閉關聯。中央跨 repo 卡不由單一子 PR 自動關閉。
 
-GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` 不會觸發任何自動移卡，所以 board 回寫由 `/dev-task` finish（Review）與 `/post-merge-wrapup`（Acceptance／Need Fix）執行，Done 由 PM 關 issue 產生；不要為了觸發內建 workflow 而提前用 `Closes` 關卡。
+GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` 不會觸發任何自動移卡，所以 board 回寫由 `/develop` finish（Review）與 `/post-merge-wrapup`（Acceptance／Need Fix）執行，Done 由 PM 關 issue 產生；不要為了觸發內建 workflow 而提前用 `Closes` 關卡。
 
 ## 5. 設定範例
 
@@ -159,7 +159,7 @@ Parent: daodaoedu/daodao#123
 | 現況 | 管理方式／待實作 |
 |---|---|
 | 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/break-down-plan`；要恢復自動派工需另開卡重新設計 |
-| `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、request-feature 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
+| `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | develop start／finish、post-merge-wrapup、request-feature 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
 | Routine C 已退役 | merged 後卡留 Review，`/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（交 PM）／Need Fix，PM 關 issue 才 Done；沒有 cron |
 | 內建 workflow 目標欄位 API 讀不到 | 2026-09-20 於設定頁確認並把「Pull request merged」由 Done 改為 Review；之後若再改只能在設定頁看 |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；`board.ts audit` 檢查第三層與子卡不在中央 repo，`Parent:` 文字一致性尚未檢查 |

@@ -25,7 +25,7 @@ OpenAI 有 Claude plugin 轉投的官方路徑（platform.openai.com/plugins）�
 | break-down-plan | ✅ | 完整 |
 | code-review | ✅ | 完整 |
 | collect-pr-feedback | ✅ | 完整 |
-| dev-task | ✅ | 降級：browser、drive、hooks |
+| develop | ✅ | 降級：browser、drive、hooks |
 | format-commit | ✅ | 完整 |
 | gh-pipeline | ✅ | 完整 |
 | notify-related-issue | ✅ | 完整 |

@@ -1,8 +1,8 @@
 # 島島阿學開發工作流程
 
-> 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日退役自動派工 Routine A／B（#241）與 merge 回寫 Routine C；board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回，所有開發走人工 `/dev-task`。
+> 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日退役自動派工 Routine A／B（#241）與 merge 回寫 Routine C；board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回，所有開發走人工 `/develop`。
 >
-> 最後全面校正：2026-10-28。逐段對照 `plugin/skills/` 正本、`plugin/hooks/`、monorepo 與各 sub-repo 的 workflow、ruleset 與 package.json；涵蓋到 2026-10-23 merge 的變更（PR #309 dev-task 拆階段、#315 工程驗收、#387 Need Fix 分流與每日 board audit〔issue #338〕、#365 closing keyword 攔截〔issue #364〕、#351／#363／#371／#388／#391 CI review 改版）。各步驟細節以 `plugin/skills/` 正本為準，本文只寫全貌；本文的 `/x` 都是指 `/daodao:x`。
+> 最後全面校正：2026-10-28。逐段對照 `plugin/skills/` 正本、`plugin/hooks/`、monorepo 與各 sub-repo 的 workflow、ruleset 與 package.json；涵蓋到 2026-10-23 merge 的變更（PR #309 develop 拆階段、#315 工程驗收、#387 Need Fix 分流與每日 board audit〔issue #338〕、#365 closing keyword 攔截〔issue #364〕、#351／#363／#371／#388／#391 CI review 改版）。各步驟細節以 `plugin/skills/` 正本為準，本文只寫全貌；本文的 `/x` 都是指 `/daodao:x`。
 
 ## 簡介
 
@@ -39,7 +39,7 @@ flowchart TD
     B --> E["人類審查 PRD<br/>流程 → 規則 → 驗收 → 待決策"]
     E --> E2["/request-feature 開中央 issue（母卡／子卡）<br/>掛 Planning board、決定驗收方式"]
     A4 -- "scope S：只寫 AC" --> E2
-    E2 --> F["/dev-task<br/>worktrees/編號-slug/ 隔離開發<br/>start → dev → verify → finish"]
+    E2 --> F["/develop<br/>worktrees/編號-slug/ 隔離開發<br/>start → dev → verify → finish"]
     F --> G["Hooks 自動保護 + format"]
     G --> H["Commit<br/>pre-commit-check skill + format-commit skill"]
     H --> I["Push<br/>code-review skill"]
@@ -54,7 +54,7 @@ flowchart TD
     O --> P{需要修正？}
     P -- 是 --> Q[修正 → commit → push] --> O
     P -- 否 --> R[Merge 到 dev → CD 部署 dev 環境]
-    R --> S["/dev-task cleanup<br/>dev 冒煙 → 移除 worktree、branch、任務資料夾"]
+    R --> S["/develop cleanup<br/>dev 冒煙 → 移除 worktree、branch、任務資料夾"]
     S --> T["/post-merge-wrapup<br/>docs/product 狀態、驗收證據"]
 
     Q -. 遇到錯誤 .-> U["寫文章記錄<br/>quidproquo.cc（個人 /post skill）"]
@@ -84,7 +84,7 @@ flowchart TD
 
 code-review 的引擎缺哪一個就記「未執行」，不會整個失敗；四個都裝 review 覆蓋率最高。
 
-同一套 13 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`dev-task`、`code-review`、`pre-commit-check`、`format-commit`、`post-merge-wrapup`、`gh-pipeline` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
+同一套 13 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`develop`、`code-review`、`pre-commit-check`、`format-commit`、`post-merge-wrapup`、`gh-pipeline` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
 
 ### 0.2 GitHub CLI（gh）
 
@@ -113,9 +113,9 @@ gh repo list daodaoedu --limit 5
 | **pnpm** | 10.15+（f2e／admin-ui 鎖 10.20.0） | monorepo root `pnpm@10.15.1`、f2e／admin-ui `pnpm@10.20.0`；server 的映像仍是 `pnpm@9.1.0` |
 | **Python** | 3.12 + uv | daodao-ai-backend 用 `uv` 管依賴（`uv.lock`），映像為 Python 3.12 |
 | **Docker** | latest | 本地 DB 與部分子專案開發需要 |
-| **Git** | 支援 `git worktree` | `/daodao:dev-task` 以 worktree 隔離每個 issue |
+| **Git** | 支援 `git worktree` | `/daodao:develop` 以 worktree 隔離每個 issue |
 | **jq** | latest | `pre-pr-gate` hook 必需，缺了會直接擋下 `gh pr create` |
-| **rclone** | latest | dev-task verify 上傳驗證報告截圖到 Google Drive（一次性設定見 `plugin/skills/dev-task/references/verify-report.md`） |
+| **rclone** | latest | develop verify 上傳驗證報告截圖到 Google Drive（一次性設定見 `plugin/skills/develop/references/verify-report.md`） |
 
 ```bash
 # 確認版本
@@ -135,7 +135,7 @@ node -v && pnpm -v && python3 --version && uv --version && docker --version && g
      ```
 
      marketplace 放在 GitHub Pages、plugin 本體是 release zip（163KB），不 clone repo。不要改用 `github.com/.../releases/...` 網址：`marketplace add` 會把 github.com 網址當成 git repo 去 clone 而失敗
-2. **Skills** — 指令帶命名空間：`/daodao:dev-task`、`/daodao:request-feature`……本文寫 `/dev-task` 時都是指 `/daodao:dev-task`（`/code-review` 尤其要注意，Claude Code 另有同名的內建 skill）
+2. **Skills** — 指令帶命名空間：`/daodao:develop`、`/daodao:request-feature`……本文寫 `/develop` 時都是指 `/daodao:develop`（`/code-review` 尤其要注意，Claude Code 另有同名的內建 skill）
 3. **Hooks** — 六支，註冊在 `plugin/hooks/hooks.json`，隨 plugin 生效：session-start、pre-write-guard、test-integrity-guard、pre-pr-gate、post-write-format、stop-quality-gate；完整說明見 [Phase 3.3](#33-開發中的自動化hooks)。改了 `plugin/` 正本要等 plugin 發版、更新後才生效
 4. **改 plugin 的人** — 用本機 marketplace：`claude plugin marketplace add ./` 再 `claude plugin install daodao@daodao-dev`；正本改完跑 `pnpm plugin:build` 重產各平台產物，產物不手改
 
@@ -151,7 +151,7 @@ claude plugin details daodao@daodao   # 應列出 13 skills 與 hooks
 |------------|------|---------|
 | **daodao-pg-dev／daodao-pg-prod** | 唯讀查詢 dev／prod DB（經 SSH tunnel） | 專案 `.mcp.json`（已宣告）；需在 shell 設 `DAODAO_MCP_DIR`（daodao-mcp clone 的位置）、`DAODAO_PG_DEV_URL`、`DAODAO_PG_PROD_URL`，連線字串向管理者索取，不寫進 repo |
 | **notion** | 讀 Notion 舊文件 | 專案 `.mcp.json`（已宣告）；需設 `NOTION_TOKEN` |
-| **playwright** | dev-task verify 的瀏覽器驗收（`browser-verify.md` 指定） | 個人自行安裝 |
+| **playwright** | develop verify 的瀏覽器驗收（`browser-verify.md` 指定） | 個人自行安裝 |
 | **Google Drive** | 下載 POC、建立驗證報告文件 | 個人自行安裝 |
 | **Figma** | 有 Figma 連結時用 `get_screenshot` 取設計稿 | 個人自行安裝 |
 
@@ -192,9 +192,9 @@ pnpm run lint && pnpm run typecheck
 
 最正式的需求來源。提出者用白話描述「誰、在哪個情境、遇到什麼問題、希望怎麼改善」即可，不用填 repo、API、SHA、負責人；由 `/prd-generation` 查核現況、起草、補洞（見 Phase 2）。
 
-**新需求只寫一份 PRD**，功能行為與驗收都在裡面，不再另外要求 FRD；大型需求可以連結子 PRD。**既有 FRD 仍然有效**：沿用原文件、決策與 FR／TP 識別碼，不為了改名重新搬寫。PRD 的驗收情境（TP）之後就是 `/dev-task` verify 階段逐條驗收的清單。
+**新需求只寫一份 PRD**，功能行為與驗收都在裡面，不再另外要求 FRD；大型需求可以連結子 PRD。**既有 FRD 仍然有效**：沿用原文件、決策與 FR／TP 識別碼，不為了改名重新搬寫。PRD 的驗收情境（TP）之後就是 `/develop` verify 階段逐條驗收的清單。
 
-**工程審閱**：PRD／FRD 送工程審閱後常有定案（例如「統一 90 天／3 段／50 字上限」）。定案要回寫 PRD；來不及回寫時，記進中央 issue 的決策區塊，`/dev-task` 的驗收契約以它為準（見 Phase 2）。
+**工程審閱**：PRD／FRD 送工程審閱後常有定案（例如「統一 90 天／3 段／50 字上限」）。定案要回寫 PRD；來不及回寫時，記進中央 issue 的決策區塊，`/develop` 的驗收契約以它為準（見 Phase 2）。
 
 ### 1.2 設計師出 Figma 設計稿
 
@@ -205,7 +205,7 @@ pnpm run lint && pnpm run typecheck
 
 ### 1.3 在分支開發 Prototype（POC）
 
-有些需求用文字和設計稿很難說清楚，特別是互動體驗或技術可行性。直接在分支上做 prototype（常見是可互動的 HTML 原型），用 code 回答「這樣行不行」。`/prd-generation` 會以唯讀 diff 辨認 POC 展示的行為，記成候選需求：假 API、localStorage、假成功提示不代表正式服務已存在，權限、資料保存、失敗處理仍要在 PRD 補洞。有可互動原型的任務，`/dev-task` verify 會做 POC 並排比對（見 Phase 3）。
+有些需求用文字和設計稿很難說清楚，特別是互動體驗或技術可行性。直接在分支上做 prototype（常見是可互動的 HTML 原型），用 code 回答「這樣行不行」。`/prd-generation` 會以唯讀 diff 辨認 POC 展示的行為，記成候選需求：假 API、localStorage、假成功提示不代表正式服務已存在，權限、資料保存、失敗處理仍要在 PRD 補洞。有可互動原型的任務，`/develop` verify 會做 POC 並排比對（見 Phase 3）。
 
 ### 1.4 放置位置
 
@@ -238,24 +238,24 @@ pnpm run lint && pnpm run typecheck
 | 誰寫 | 提出者描述，`/prd-generation` 查核起草、自審修訂，人審核確認 | `/request-feature` 從對話與已定稿 PRD 推斷 |
 | 回答什麼 | 要做什麼、為什麼、流程、規則、驗收條件（FR／TP／AC） | 現在做到哪、誰在做、本卡驗收契約（Acceptance snapshot） |
 | 位置 | 草稿在任務目錄或 `docs/plans/requirements/`；既有功能文件在 `docs/product/<功能>/` | daodaoedu/daodao issue + Planning board |
-| 誰消費 | `/request-feature` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start／finish、`/post-merge-wrapup` 的 board 回寫 |
+| 誰消費 | `/request-feature` 的輸入、`/develop` verify 的檢查清單 | `/develop` start／finish、`/post-merge-wrapup` 的 board 回寫 |
 
 ### 判定表
 
 | scope | 條件 | 規格要求 | 進入方式 |
 |---|---|---|---|
-| **L / M** | 跨 repo（storage + server + f2e）、改資料模型、有關鍵待確認事項、需求與工程審閱有落差需定案 | **PRD 必須定稿**：含流程、規則、驗收與待決策清單（`/prd-generation`）；工程定案回寫 PRD 或記進 issue 決策區塊；issue body 的 Acceptance snapshot 指向該 PRD 版本 | Phase 2 → Phase 2.5 開卡 → Phase 3 `/dev-task` |
-| **S** | 單 repo、工程決策少、範圍明確 | issue body 寫 **Acceptance Criteria** 即可，不必另寫 PRD | Phase 2.5 開卡 → `/dev-task` |
+| **L / M** | 跨 repo（storage + server + f2e）、改資料模型、有關鍵待確認事項、需求與工程審閱有落差需定案 | **PRD 必須定稿**：含流程、規則、驗收與待決策清單（`/prd-generation`）；工程定案回寫 PRD 或記進 issue 決策區塊；issue body 的 Acceptance snapshot 指向該 PRD 版本 | Phase 2 → Phase 2.5 開卡 → Phase 3 `/develop` |
+| **S** | 單 repo、工程決策少、範圍明確 | issue body 寫 **Acceptance Criteria** 即可，不必另寫 PRD | Phase 2.5 開卡 → `/develop` |
 | **XS / bug** | 原因明確的修正、文案、樣式 | 不需要 spec，不需要 issue | 路徑 A 直接修 → Phase 4 |
 | **CI / skill / 文件** | 只動 monorepo 自身的 `.github/`、`plugin/`、`bin/`、`docs/` | issue 寫 AC（給自己追蹤），通常掛 `acceptance:engineering` | monorepo 開 branch → PR 到 main（不直接 push main） |
 
 L/M 的新功能開成**母卡＋子卡**：母卡＝一份 PRD，只放目標、AC 總表與子卡清單；子卡＝可單獨驗收的一塊、約一週內做完，開在中央 repo，只有兩層（見 Phase 2.5）。
 
-判斷 L/M 的訊號只要中一個就算：跨 repo、要 migration、有關鍵待確認事項、需求需要工程定案。定案一定要有文字落點——實踐建立流程（#141）的「統一 90 天／3 段／逐段行動同 50 字」定案當時沒回寫需求文件，只留在工程規格裡；現在這類定案回寫 PRD，或至少記進中央 issue 的決策區塊，讓 `/dev-task` 的驗收契約抓得到。
+判斷 L/M 的訊號只要中一個就算：跨 repo、要 migration、有關鍵待確認事項、需求需要工程定案。定案一定要有文字落點——實踐建立流程（#141）的「統一 90 天／3 段／逐段行動同 50 字」定案當時沒回寫需求文件，只留在工程規格裡；現在這類定案回寫 PRD，或至少記進中央 issue 的決策區塊，讓 `/develop` 的驗收契約抓得到。
 
 ### 自動派工現況
 
-自動派工 Routine A／B 已於 2026-09-20 退役（#241）：OpenSpec 退役後 Routine A 的 spec gate 失去輸入、只會退卡，Routine B 從未穩定跑通。**Ready for Dev 現在只是管理狀態**，不會觸發任何自動化；所有開發走人工 `/dev-task`。舊 prompt 封存於 `docs/archive/automation/`，要恢復自動派工需另開卡重新設計。
+自動派工 Routine A／B 已於 2026-09-20 退役（#241）：OpenSpec 退役後 Routine A 的 spec gate 失去輸入、只會退卡，Routine B 從未穩定跑通。**Ready for Dev 現在只是管理狀態**，不會觸發任何自動化；所有開發走人工 `/develop`。舊 prompt 封存於 `docs/archive/automation/`，要恢復自動派工需另開卡重新設計。
 
 ---
 
@@ -287,11 +287,11 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 1. **問題與範圍** — 為誰解決什麼、包含／不包含，「不做什麼」也寫清楚
 2. **現況與希望改動** — `product-status-check` 查到的目前行為與期待的改變
 3. **使用流程與功能規則（FR）** — 操作步驟、每一步的系統行為、欄位限制、權限、例外與錯誤處理；工程審閱定案（例如「90 天／3 段／50 字」）直接寫在這
-4. **驗收情境（TP）** — 每條寫前提、操作、預期結果，含反面條件（不顯示什麼、不出現什麼）；這份清單就是 `/dev-task` verify 的檢查清單
+4. **驗收情境（TP）** — 每條寫前提、操作、預期結果，含反面條件（不顯示什麼、不出現什麼）；這份清單就是 `/develop` verify 的檢查清單
 5. **待確認與變更** — 分「關鍵待確認」（開工前要定）與「可延後」，加變更紀錄
 6. **查核與交接附錄** — 由 skill／開發補充來源、查核證據與確認基準
 
-技術設計（API、資料模型、跨 repo 拆分）不寫進 PRD；由 `/dev-task` start 的 repo 判定與 task.md phases 承接。
+技術設計（API、資料模型、跨 repo 拆分）不寫進 PRD；由 `/develop` start 的 repo 判定與 task.md phases 承接。
 
 ### 2.4 人類審查
 
@@ -308,7 +308,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 ## Phase 2.5：開卡（request-feature）
 
-規格確認後，用 `/request-feature` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
+規格確認後，用 `/request-feature` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/develop` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
 
 ```
 /request-feature（從對話推斷欄位，互動確認一次）
@@ -323,15 +323,15 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 草稿先存本機（任務目錄的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`），預覽後發布；對話中已明確授權建立的，不再重複詢問。開卡前先查既有相關卡，避免重複。
 
-**母卡與子卡**（[GitHub Issue 管理規範 §4](automation/github-issue-management.md#4-母卡子卡pr-與相依關係)）：開新功能（一份 PRD）時，母卡只放目標、AC 總表與子卡清單，並依 AC 一次拆好子卡——子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張對應母卡的部分 AC、約一週內做完，body 保留 `Parent: daodaoedu/daodao#N` 行。只有兩層；技術債、後續改進開獨立卡寫「相關：#n」，不掛子卡。`/dev-task` 只在子卡或獨立卡開工，不在母卡上開工。單一 repo 的工程交接可用 `subtask-issue.md` 開在 sub-repo，只當交接筆記，不掛 sub-issue、不上 board。
+**母卡與子卡**（[GitHub Issue 管理規範 §4](automation/github-issue-management.md#4-母卡子卡pr-與相依關係)）：開新功能（一份 PRD）時，母卡只放目標、AC 總表與子卡清單，並依 AC 一次拆好子卡——子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張對應母卡的部分 AC、約一週內做完，body 保留 `Parent: daodaoedu/daodao#N` 行。只有兩層；技術債、後續改進開獨立卡寫「相關：#n」，不掛子卡。`/develop` 只在子卡或獨立卡開工，不在母卡上開工。單一 repo 的工程交接可用 `subtask-issue.md` 開在 sub-repo，只當交接筆記，不掛 sub-issue、不上 board。
 
 開卡時同時決定**誰驗收**，只問一句：PM 在 dev 環境操作，看得出改前改後的差別嗎？看得出來（畫面改動、使用者感受得到的後端行為、使用者回報的 bug）→ PM 驗收，不掛 label（預設）；看不出來（skill／hook／CI／board 等開發流程、只在 dev 存在的端點、零差異重構）→ 掛 `acceptance:engineering`，理由寫進 body 的「驗收方式」一行；判斷不了就預設 PM。開發中發現判斷錯了，直接加或拔 label。
 
-開發模式只有一種：人工 `/dev-task`。`human-driving` label 由 `/dev-task` start 自動掛上，作為 board 上的人工開工標記。`auto`／`auto:plan-only`／`auto:auto-pr` 等派工 labels 已隨 Routine A／B 退役（#241）不再使用，label 保留不刪。開卡預設 Todo；Ready for Dev 只是管理狀態。
+開發模式只有一種：人工 `/develop`。`human-driving` label 由 `/develop` start 自動掛上，作為 board 上的人工開工標記。`auto`／`auto:plan-only`／`auto:auto-pr` 等派工 labels 已隨 Routine A／B 退役（#241）不再使用，label 保留不刪。開卡預設 Todo；Ready for Dev 只是管理狀態。
 
 ---
 
-## Phase 3：開發（dev-task）
+## Phase 3：開發（develop）
 
 開發不在 `projects/<repo>` 裡做——那裡只當建立 worktree 的來源，保留它目前的分支與工作檔案；就算不在預設分支或有未提交變更，也不擋開工。每個 issue 在 `worktrees/<issue#>-<slug>/` 有自己的隔離資料夾，多個 session 可同時開發不同 issue 互不干擾。
 
@@ -351,7 +351,7 @@ daodao/
 
 ### 3.1 五個階段
 
-`/dev-task` 依使用者輸入判斷進入哪個階段。`SKILL.md` 只做階段路由，每個階段的步驟與完成條件在 `plugin/skills/dev-task/references/phases/<階段>.md`，一次只讀當前階段；接手時依 task.md Status 決定階段（`planning` → start、`implementing` → dev 或 verify、`verified` → finish、`in-review` → 等 merge 後 cleanup）。實跑卡住（登入、toast、寄信、DB、GraphQL 限流）先查 `references/gotchas.md`。
+`/develop` 依使用者輸入判斷進入哪個階段。`SKILL.md` 只做階段路由，每個階段的步驟與完成條件在 `plugin/skills/develop/references/phases/<階段>.md`，一次只讀當前階段；接手時依 task.md Status 決定階段（`planning` → start、`implementing` → dev 或 verify、`verified` → finish、`in-review` → 等 merge 後 cleanup）。實跑卡住（登入、toast、寄信、DB、GraphQL 限流）先查 `references/gotchas.md`。
 
 | 說什麼 | 階段 | 做什麼 |
 |---|---|---|
@@ -589,7 +589,7 @@ Push 到遠端並開 PR 後，GitHub Actions 會自動觸發下列檢查：
 
 ```
 PR opened / updated
-  ├── 1. Auto PR Description — 自動產生 PR 標題和描述（dev-task 開的 PR 會跳過）
+  ├── 1. Auto PR Description — 自動產生 PR 標題和描述（develop 開的 PR 會跳過）
   ├── 2. AI Code Review — Cloudflare Workers AI 審查 diff
   ├── 3. CI — 各 repo 自己的 lint／typecheck／test（見 6.4）
   ├── 4. PR evidence gate — 讀 PR body「## 驗證證據」，並攔指向中央 issue 的 closing keyword
@@ -606,14 +606,14 @@ PR opened / updated
 
 | 項目 | 說明 |
 |------|------|
-| 觸發時機 | PR opened；body 已有「## 驗證證據」（dev-task 開的 PR）、`auto/*` 分支、`[auto]` 開頭標題或掛 `code-review` label 時跳過 |
+| 觸發時機 | PR opened；body 已有「## 驗證證據」（develop 開的 PR）、`auto/*` 分支、`[auto]` 開頭標題或掛 `code-review` label 時跳過 |
 | 引擎 | Cloudflare Workers AI（GLM 4.7 Flash，Gemma 4 26B fallback） |
 | 效果 | 根據最多 50 筆 commit subject 產生繁體中文的 Why / How 描述，**覆寫整個標題與 body** |
 | 設定檔 | `.github/workflows/auto-pr-description.yml`（monorepo 單一來源，sync 派發） |
 
 需要在 GitHub Actions secrets 設定 `CLOUDFLARE_WORKERS_AI_ACCOUNT_ID` 與 `CLOUDFLARE_WORKERS_AI_API_TOKEN`；缺 secrets 時只出警告並跳過。
 
-它是給手動開、沒寫內文的 PR 一個起點；走 dev-task 的 PR 自己寫 body（Why／How＋驗證證據），不會被覆寫。
+它是給手動開、沒寫內文的 PR 一個起點；走 develop 的 PR 自己寫 body（Why／How＋驗證證據），不會被覆寫。
 
 ### 6.3 AI Code Review
 
@@ -729,7 +729,7 @@ dev 環境 merge 後自動部署；prod、worker、正式版 App 需要另開 PR
 
 merge 不是終點。少了收尾，worktree 會堆積、`docs/product` 的狀態標示會腐爛（文件寫「規劃中」但功能早已上線）、中央卡永遠停在 In Progress。
 
-### 8.1 `/dev-task` cleanup
+### 8.1 `/develop` cleanup
 
 PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
@@ -755,7 +755,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 ### 8.3 Board 與 issue
 
-board 七欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/dev-task` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Acceptance（assign PM＋交接留言 @PM）、失敗或未冒煙 → Need Fix；`/collect-pr-feedback` 也可能移 Need Fix；PM 驗收通過關 issue → Done（內建 `Item closed → Done`），AC 沒過 → Need Fix；工程驗收卡冒煙通過由 post-merge-wrapup 關 issue → Done。沒有移卡 cron；PR 一律用 `Refs` 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 `Refs`。七欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
+board 七欄由流程各步驟寫回（`bin/pipeline/board.ts set`）：`/develop` start → In Progress、finish → Review（merged 後仍留 Review）、`/post-merge-wrapup` 冒煙通過 → Acceptance（assign PM＋交接留言 @PM）、失敗或未冒煙 → Need Fix；`/collect-pr-feedback` 也可能移 Need Fix；PM 驗收通過關 issue → Done（內建 `Item closed → Done`），AC 沒過 → Need Fix；工程驗收卡冒煙通過由 post-merge-wrapup 關 issue → Done。沒有移卡 cron；PR 一律用 `Refs` 不用 `Closes` 關中央卡（見 Phase 3 finish），內建 workflow 也認不到 `Refs`。七欄語意見 [gh-pipeline skill](../plugin/skills/gh-pipeline/SKILL.md)。
 
 ```
 單張卡（子卡，或沒有子卡的卡）
@@ -777,8 +777,8 @@ Todo → In Progress → Review → Acceptance → Done
 |---|---|---|
 | Todo | PM（排優先順序） | `/request-feature` |
 | Ready for Dev | 工程師 | 人工（選用的管理狀態，不觸發任何自動化） |
-| In Progress | 工程師 | `/dev-task` start |
-| Review | 人類 reviewer（review／merge） | `/dev-task` finish；merged 後仍留這裡 |
+| In Progress | 工程師 | `/develop` start |
+| Review | 人類 reviewer（review／merge） | `/develop` finish；merged 後仍留這裡 |
 | Acceptance | PM（`peggy1213-create`） | `/post-merge-wrapup` 冒煙通過：`board.ts` assign PM，skill 另發交接留言 @PM |
 | Done | — | PM 驗收通過關 issue，自動移；工程驗收卡由 `/post-merge-wrapup` 關 |
 | Need Fix | 工程師 | 冒煙失敗，或 PM 退回且寫出哪條 AC 失敗＋看到什麼 |
@@ -861,7 +861,7 @@ Todo → In Progress → Review → Acceptance → Done
 | **需求** | Figma + Figma MCP | UI 設計稿與 `get_screenshot` 對照 |
 | **規格** | prd-generation + product-status-check skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 確認（L/M 必要；OpenSpec 已退役） |
 | **開卡** | request-feature skill | 中央 issue（母卡／子卡）+ Planning board（共用模板、Acceptance snapshot、驗收方式） |
-| **開發** | dev-task skill | issue 隔離 worktree（start → dev → verify → finish → cleanup）；projects/ 只當 worktree 來源 |
+| **開發** | develop skill | issue 隔離 worktree（start → dev → verify → finish → cleanup）；projects/ 只當 worktree 來源 |
 | **開發** | hooks（六支） | session 狀態注入、寫檔保護與格式化、測試完整性、發 PR 閘門、Stop 品質清單 |
 | **品質** | Biome / ESLint / Black + Ruff | Lint + Format |
 | **品質** | TypeScript / Pylint | 型別檢查 / 靜態分析 |
@@ -909,12 +909,12 @@ Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for De
 寫 PRD（/prd-generation 定稿）→ /request-feature 開卡（board Todo）
         ↓ 人工確認規格 OK
    Status → Ready for Dev            ← 管理狀態，選用
-        ↓ /dev-task start（board In Progress + human-driving、開 worktree）
+        ↓ /develop start（board In Progress + human-driving、開 worktree）
    人工／AI 協作實作 → verify → 發 PR（board Review）
         ↓ 人工
    review + merge                    ← 品質最後把關；卡留 Review
         ↓ /post-merge-wrapup dev 冒煙
-   ✅ board Acceptance（交 PM）／❌ board Need Fix → 下次 /dev-task start 移回 In Progress
+   ✅ board Acceptance（交 PM）／❌ board Need Fix → 下次 /develop start 移回 In Progress
         ↓ PM 在 dev 驗收                ← 產品最後把關
    ✅ PM 關 issue → Done／❌ AC 沒過 → Need Fix
    （acceptance:engineering 卡：冒煙 ✅ 後由 post-merge-wrapup 關 issue → Done）
@@ -922,16 +922,16 @@ Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for De
 
 ### 9.3 手動版
 
-`/break-down-plan` 把已確認計畫的未完成任務（沿用 FR／TP／AC ID）批次開成子 issue（可驗收的子卡開在中央 repo，sub-repo 只放工程交接筆記），先檢核與預覽，依授權才發布；發布後仍由人工 `/dev-task` 開工，不會有任何 routine 接手。
+`/break-down-plan` 把已確認計畫的未完成任務（沿用 FR／TP／AC ID）批次開成子 issue（可驗收的子卡開在中央 repo，sub-repo 只放工程交接筆記），先檢核與預覽，依授權才發布；發布後仍由人工 `/develop` 開工，不會有任何 routine 接手。
 
 ### 9.4 限制
 
 | 限制 | 應對 |
 |---|---|
 | 沒有自動派工 | 要恢復需另開卡重新設計（不再讀 OpenSpec，改讀 issue 驗收契約） |
-| 高風險 repo（storage、infra） | migration／IaC 由人工 `/dev-task` 做 |
+| 高風險 repo（storage、infra） | migration／IaC 由人工 `/develop` 做 |
 | 複雜設計決策 | 留在 Phase 2 由人類定案，寫進 PRD 或中央 issue 決策區塊 |
-| 同一區域多人並行 | `/dev-task` start 的防撞檢查 + `human-driving` |
+| 同一區域多人並行 | `/develop` start 的防撞檢查 + `human-driving` |
 
 ---
 

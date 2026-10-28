@@ -1,6 +1,6 @@
 # docs/automation — 自動化 Pipeline 文件索引
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 request-feature／dev-task／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 request-feature／develop／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
 
 這個目錄包含 **GitHub Board／Issue／PR** 自動化與開發流程的操作與維護文件。
 
@@ -30,8 +30,8 @@
 
 Product 在中央 repo [daodaoedu/daodao](https://github.com/daodaoedu/daodao/issues)
 開 feature issue 並掛上 [Planning board](https://github.com/orgs/daodaoedu/projects/10)。
-開發由人工 `/dev-task` 在隔離 worktree 進行（start 時自動掛 `human-driving`），
-PR 開了由 `/dev-task` finish 移 Review；合併後 `/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（assign PM＋交接留言）或 Need Fix；PM 驗收通過關 issue，內建 workflow 移 Done。
+開發由人工 `/develop` 在隔離 worktree 進行（start 時自動掛 `human-driving`），
+PR 開了由 `/develop` finish 移 Review；合併後 `/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（assign PM＋交接留言）或 Need Fix；PM 驗收通過關 issue，內建 workflow 移 Done。
 
 **沒有自動派工**：`Ready for Dev` 只是管理狀態；`auto`／`auto:*`／`needs-spec`／`dispatched` 等 labels 不再使用（保留不刪）。
 

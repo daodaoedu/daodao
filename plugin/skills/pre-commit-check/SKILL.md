@@ -41,8 +41,8 @@ format/lint 過了 ≠ 行為對了。依 staged 變更的類型跑對應驗證�
 | 有對應測試的程式碼（`__tests__/`、`*.test.*` 存在或同 PR 新增） | 跑該測試套件（如 `pnpm vitest run <dir>`） |
 | CI workflow（`.github/workflows/*.yml`） | YAML parse 驗證；有 `workflow_dispatch` + `dry_run` 的，註記「push 後需 dry-run 一次」 |
 | shell script（`*.sh`） | `bash -n` 語法檢查；有對應 `test-*.sh` fixture 就跑 |
-| DB migration / SQL | 本地 DB apply + 冪等重跑（見 dev-task 規範） |
-| UI 元件 | 瀏覽器快篩（見 dev-task Phase 2；此處不重複） |
+| DB migration / SQL | 本地 DB apply + 冪等重跑（見 develop 規範） |
+| UI 元件 | 瀏覽器快篩（見 develop Phase 2；此處不重複） |
 | skill / prompt / 純文件 | 檢查文內引用的檔案路徑、指令、label 名稱實際存在（`ls` / `gh label list` 抽查） |
 
 找不到任何可執行驗證的變更 → 在 commit 訊息或回報中明說「本變更以 X 方式驗證」或「無可執行驗證」，不可默默略過。

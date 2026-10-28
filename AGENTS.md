@@ -20,6 +20,7 @@ daodao 是一個 monorepo，各子專案職責如下：
 
 - **新功能必須附測試**：每個新增的純邏輯函式（utility、validation、service logic）都要有對應的測試
 - **修 bug 必須附 regression test**：先寫一個會失敗的測試重現 bug，再修復讓測試通過
+- **測試要斷言使用者看得到的行為**：用兩種假想修改自審——(a) 把行為弄壞（回錯值、少做或多做一次副作用），測試仍通過就是無效測試；(b) 行為不變、只改內部結構，測試卻失敗，表示綁定了實作。預期值從需求推導，不從被測程式跑出來的結果複製。寫不出好測試時改用重現腳本或核心旅程矩陣的列，不硬寫只測 mock 的測試
 - **不需要測 UI 元件**：React 元件、頁面 layout、CSS 樣式不需要寫測試
 - **測試放在 `__tests__/` 目錄**：跟被測檔案同層或在 `src/__tests__/`
 
@@ -64,7 +65,7 @@ commit 時必須依序執行：
 | 開 issue、開卡、新增任務 | `plugin/skills/request-feature/SKILL.md` |
 | 收到想法、Issue、PRD／FRD、POC 或開發分支，要整理需求 | `plugin/skills/prd-generation/SKILL.md` |
 | 使用者遇到操作異常，或開發／CI 錯誤要追蹤 | `plugin/skills/report-bug/SKILL.md` |
-| 開始開發 issue、接手任務、發 PR | `plugin/skills/dev-task/SKILL.md` |
+| 開始開發 issue、接手任務、發 PR | `plugin/skills/develop/SKILL.md` |
 | 收集 PR feedback、看 PR review | `plugin/skills/collect-pr-feedback/SKILL.md` |
 | PR merged 後收尾 | `plugin/skills/post-merge-wrapup/SKILL.md` |
 | 移動 Planning board 卡片狀態 | `plugin/skills/gh-pipeline/SKILL.md` |

@@ -98,7 +98,7 @@ fi
 AUTO_PR_WORKFLOW="$SCRIPT_DIR/../workflows/auto-pr-description.yml"
 if [ -f "$AUTO_PR_WORKFLOW" ]; then
   grep -Fq "grep -q '^## 驗證證據'" "$AUTO_PR_WORKFLOW" \
-    || fail "auto-pr-description.yml 必須在 body 已含「## 驗證證據」時跳過，否則會覆寫 dev-task 寫好的證據"
+    || fail "auto-pr-description.yml 必須在 body 已含「## 驗證證據」時跳過，否則會覆寫 develop 寫好的證據"
 fi
 
 grep -Fq 'git status --porcelain -- .claude .github/workflows .github/scripts' "$WORKFLOW" \

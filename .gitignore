@@ -16,7 +16,7 @@ daodao-admin-ui/
 .gstack/
 .refact/
 
-# dev-task 平行開發專區（worktree / clone，見 plugin/skills/dev-task/）
+# develop 平行開發專區（worktree / clone，見 plugin/skills/develop/）
 worktrees/
 
 # session 工作暫存（plan/review/驗證產物，不入版控）

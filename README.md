@@ -51,7 +51,7 @@ git submodule update --remote
 |-------|------|
 | `/prd-generation` | 需求查核與 PRD 起草（OpenSpec 已於 2026-09-20 退役，`/openspec-*` 不再使用） |
 | `/request-feature` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$request-feature` 或明確讀取 skill |
-| `/dev-task` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
+| `/develop` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
 | `/post-merge-wrapup` | merge 後更新 docs/product 與驗收狀態 |
 | `/format-commit` | 結構化 commit message（Why / How） |
 | `/pre-commit-check` | Commit 前自動品質檢查與修復 |

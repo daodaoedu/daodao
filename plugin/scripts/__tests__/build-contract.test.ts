@@ -139,8 +139,8 @@ describe('.agents/skills 產物', () => {
     }
   })
 
-  it('dev-task 的 references 有一起帶過去（那裡沒有 plugin 載入器）', () => {
-    expect(existsSync(join(target, 'dev-task', 'references', 'layout-probe.mjs'))).toBe(true)
+  it('develop 的 references 有一起帶過去（那裡沒有 plugin 載入器）', () => {
+    expect(existsSync(join(target, 'develop', 'references', 'layout-probe.mjs'))).toBe(true)
   })
 })
 
@@ -202,7 +202,7 @@ describe('build 的刪除護欄', () => {
     const r = buildWithTarget('plugin/skills/')
     expect(r.blocked).toBe(true)
     expect(r.stderr).toMatch(/canonical|拒絕刪除/)
-    expect(existsSync(join(PLUGIN_ROOT, 'skills', 'dev-task', 'SKILL.md'))).toBe(true)
+    expect(existsSync(join(PLUGIN_ROOT, 'skills', 'develop', 'SKILL.md'))).toBe(true)
   })
 
   it('target 指向 repo 根目錄會被拒絕', () => {

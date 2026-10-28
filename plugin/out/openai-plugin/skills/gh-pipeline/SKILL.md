@@ -10,7 +10,7 @@ description: 島島阿學 Planning Board 狀態操作與稽核：七欄語意（
 
 # gh-pipeline
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 request-feature／dev-task／post-merge-wrapup 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 request-feature／develop／post-merge-wrapup 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
 
 Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
@@ -32,10 +32,10 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 |---|---|---|---|
 | `Todo` | 已開卡，還沒人做 | request-feature（`board.ts set <n> todo`） | PM |
 | `Ready for Dev` | PRD／AC 定稿可開工；選用，允許空 | 人工，需使用者要求 | 工程師 |
-| `In Progress` | 有 worktree／branch 在跑 | dev-task start（`set <n> wip --add-label human-driving`） | 工程師 |
-| `Review` | PR 已開，等 code review／merge；merged 後留在這裡直到 dev 冒煙 | dev-task finish（`set <n> review`） | 工程師（AI review 引擎＋人類 reviewer 核准） |
+| `In Progress` | 有 worktree／branch 在跑 | develop start（`set <n> wip --add-label human-driving`） | 工程師 |
+| `Review` | PR 已開，等 code review／merge；merged 後留在這裡直到 dev 冒煙 | develop finish（`set <n> review`） | 工程師（AI review 引擎＋人類 reviewer 核准） |
 | `Acceptance` | 已 merge、部署 dev、AI 冒煙通過，**等 PM 對照 AC 驗收** | post-merge-wrapup 冒煙通過（`set <n> accept`，自動 assign PM）＋交接留言 @PM | PM（`peggy1213-create`） |
-| `Need Fix` | dev 冒煙失敗，或 PM 驗收退回且寫出**哪條 AC 失敗＋看到什麼**，待修（受阻、新增要求不進這欄，見下方分流） | post-merge-wrapup（`set <n> needfix`）或 PM 退回；開修時 dev-task start 移回 In Progress | 工程師 |
+| `Need Fix` | dev 冒煙失敗，或 PM 驗收退回且寫出**哪條 AC 失敗＋看到什麼**，待修（受阻、新增要求不進這欄，見下方分流） | post-merge-wrapup（`set <n> needfix`）或 PM 退回；開修時 develop start 移回 In Progress | 工程師 |
 | `Done` | 符合 Definition of Done；issue closed | PM 關 issue（內建 `Item closed → Done` 自動移卡）；工程驗收卡（`acceptance:engineering`）由 post-merge-wrapup 冒煙通過後關；收尾時拔 `human-driving` | — |
 
 **Definition of Done**：AC 全部符合＋已部署到 dev＋驗收通過。預設由 PM 驗收；掛 `acceptance:engineering` 的卡由 dev 冒煙通過＋證據留言即算驗收（見下方「誰驗收」）。merge 不等於 Done；沒掛這個 label 的卡，AI 冒煙通過也不等於 Done。
@@ -99,7 +99,7 @@ request-feature 開卡時判斷並掛 label，理由寫進 body 的「驗收方�
 
 **GitHub 內建 workflow（board 設定頁，API 只讀得到名稱）**：`Item added → Todo`、`Item closed → Done`、`Auto-close issue`（設 Done 就 close issue）、`Pull request linked / merged`、`Auto-add (sub-)issues` 七個都開著。它們只認**同 repo** 用 closing keyword 連結的 PR；所有 PR（含 root）依 `docs/workflow.md` 用 `Refs daodaoedu/daodao#N`，所以不會自動移卡，也不會在 merge 時關卡跳過驗收（closing keyword 由 `pr-evidence-gate` 攔，#364）——這就是 2026-09-20 前卡片全堆在 In Progress 的原因。各 workflow 目標欄位（2026-09-20 於設定頁確認）：Item added → Todo、PR linked → In Progress、**PR merged → Review**（原本是 Done，同日改掉以配合「merged 留 Review」）、Item closed → Done。這些只影響同 repo PR，仍以 skill 的 `board.ts set` 為準。
 
-**Labels 現況**：`human-driving` 是人工開工標記（dev-task start 掛；卡到 Done 後拔，`audit` 會列出殘留）。`acceptance:blocked` 是驗收受阻標記（PM 測不了時掛、工程排除後拔，見「Need Fix 只收 AC 失敗」）。`board-audit` 只掛在每日 audit 的固定報告 issue。`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched`／`spec-pending`／`human-coding`／`manual` 等派工 labels **不再使用**（label 本身保留不刪；2026-09-20 已從活躍卡片整批移除，`audit` 會把殘留當「死 label」列出）。
+**Labels 現況**：`human-driving` 是人工開工標記（develop start 掛；卡到 Done 後拔，`audit` 會列出殘留）。`acceptance:blocked` 是驗收受阻標記（PM 測不了時掛、工程排除後拔，見「Need Fix 只收 AC 失敗」）。`board-audit` 只掛在每日 audit 的固定報告 issue。`auto`／`auto:plan-only`／`auto:auto-pr`／`needs-spec`／`dispatched`／`spec-pending`／`human-coding`／`manual` 等派工 labels **不再使用**（label 本身保留不刪；2026-09-20 已從活躍卡片整批移除，`audit` 會把殘留當「死 label」列出）。
 
 ## board.ts — 移卡與稽核 CLI
 
