@@ -58,7 +58,7 @@ repo 的 `.claude/settings.json` 已宣告這個 marketplace，所以開過本 r
 claude plugin install daodao --marketplace https://daodaoedu.github.io/daodao/marketplace.json
 ```
 
-裝完**重開 session** 才載入；skill 會是 `/daodao:dev-task` 這種帶命名空間的形式。
+裝完**重開 session** 才載入；skill 會是 `/daodao:develop` 這種帶命名空間的形式。
 `claude plugin details daodao@daodao` 可確認 13 skills + 6 hooks 都在。
 
 沒辦法讓別人「自動」裝好——官方明講 repo 設定啟用外部來源 plugin 不會幫別人安裝，
@@ -203,7 +203,7 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
 | Drive 報告 | ✅ | ❌ | ❌ | ❌ |
 
-Claude.ai 少掉的 6 個是 `dev-task`、`code-review`、`pre-commit-check`、`post-merge-wrapup`、
+Claude.ai 少掉的 6 個是 `develop`、`code-review`、`pre-commit-check`、`post-merge-wrapup`、
 `gh-pipeline`、`format-commit`——全都需要使用者的 checkout。Claude.ai 的 sandbox 有檔案系統也能跑
 指令，但那是一個空的暫時環境，不是專案。
 

@@ -46,7 +46,7 @@ routes → controllers → services → Prisma ORM → PostgreSQL
 
 ### 2.2 Gate / Harness 設計
 
-daodao 的 dev-task 流程有多層 gate，但治理目標不同於實驗：
+daodao 的 develop 流程有多層 gate，但治理目標不同於實驗：
 
 | 階段 | Gate | 驗什麼 |
 |---|---|---|
@@ -113,7 +113,7 @@ daodao 的 dev-task 流程有多層 gate，但治理目標不同於實驗：
 
 ### 4.4 修補迴路的成本意識
 
-**現狀**：dev-task Phase 2 已有「同一項失敗 2 次就停」的 circuit breaker。
+**現狀**：develop Phase 2 已有「同一項失敗 2 次就停」的 circuit breaker。
 
 **借鏡**：實驗數據清楚顯示修補輪數與總成本的非線性關係（Haiku 40 輪 → 177M cache read）。daodao 的 circuit breaker 是對的設計，但目前只在 Phase 2 有。
 
@@ -151,10 +151,10 @@ daodao 的 dev-task 流程有多層 gate，但治理目標不同於實驗：
 |---|---|---|---|
 | **Plan** (L2) | intent.md：需求發起人跟 Claude 對話產出結構化 proto-spec，版控追溯 | **已做到且超越**：OpenSpec proposal.md = 問題陳述 + FRD 缺口分析 + 已確認產品決策，版控在 `openspec/changes/<slug>/` | Playbook 的 intent.md 只有「問題 + 預期結果 + 限制」；OpenSpec proposal 還包含「現況程式碼實查 vs FRD 逐條對照」 |
 | **Design** (L3) | 需求與設計合併成單一 session，套用 skill 載入組織標準，產出 spec.md | **已做到且超越**：OpenSpec design.md = 完整設計決策（資料模型、API contract、正規化規則、migration SQL），單一 session 從 proposal 推導 | 沒有標準化的組織規範 skill（品牌、資安、合規、UX）供 design session 載入 |
-| **Build** (L4) | Plan mode 先寫 plan.md，commit 後才進 auto mode 實作 | **已做到且超越**：OpenSpec tasks.md = 分 Phase 的實作計畫，每個 task 有涉及檔案、驗收條件、工時預估；dev-task Phase 1 再轉成 task.md manifest | Playbook 的 plan.md 只列檔案和順序；OpenSpec tasks.md 細到每個 task 的 AC |
+| **Build** (L4) | Plan mode 先寫 plan.md，commit 後才進 auto mode 實作 | **已做到且超越**：OpenSpec tasks.md = 分 Phase 的實作計畫，每個 task 有涉及檔案、驗收條件、工時預估；develop Phase 1 再轉成 task.md manifest | Playbook 的 plan.md 只列檔案和順序；OpenSpec tasks.md 細到每個 task 的 AC |
 | **Build** (L5) | CLAUDE.md 記錄慣例、架構、常見錯誤 | **已做到**：monorepo 有 CLAUDE.md，各 skill 有參考文件 | 架構約束沒寫進去（見 §4.1） |
-| **Build** (L6) | Skills 編碼組織規範 | **已做到且超越**：dev-task、code-review、request-feature、gh-pipeline、pre-commit-check 等 30+ skills | — |
-| **Build** (L7) | 平行 session + worktree 隔離 + subagent | **已做到且超越**：dev-task 的 worktree 隔離是核心設計，Phase 4 用 clean-context subagent 做 spec audit | — |
+| **Build** (L6) | Skills 編碼組織規範 | **已做到且超越**：develop、code-review、request-feature、gh-pipeline、pre-commit-check 等 30+ skills | — |
+| **Build** (L7) | 平行 session + worktree 隔離 + subagent | **已做到且超越**：develop 的 worktree 隔離是核心設計，Phase 4 用 clean-context subagent 做 spec audit | — |
 | **Test** (L8) | Feedback loop：agent 每一步自我驗證，hook 保護迴圈不被弱化 | **已做到**：Phase 2 每個 phase 的自動驗證序列（起 dev server → 瀏覽器/curl → pre-commit-check → commit） | 缺「測試失敗時修 code 不修 test」的 hook 保護（L8 的核心治理） |
 | **Test** (L9) | CI Evals：收集真實任務做回歸測試，CLAUDE.md/skill 改動時自動跑，pass rate 掉了擋 merge | **沒做到** | 完全缺失——CLAUDE.md 和 skill 的改動目前沒有行為回歸驗證 |
 | **Deploy** (L10) | AI PR review + REVIEW.md + review comment 自動修正迴圈 | **部分做到**：4-engine code review（本地 push 前跑）+ CI code-review.yml；但沒有 REVIEW.md，沒有 PR comment → 自動修正迴圈 | 缺 REVIEW.md（定義 review pass 和嚴重程度分類）；review 只在本地跑，PR 上沒有自動修正迴圈 |
@@ -185,7 +185,7 @@ daodao 的 dev-task 流程有多層 gate，但治理目標不同於實驗：
 **Playbook 的做法**：收集 20-50 個真實任務（prompt + 驗收條件），CLAUDE.md 或 `.claude/` 改動時在 CI 自動跑一輪，pass rate 掉了擋 merge。每個線上事故變成永久的 eval。
 
 **daodao 落地方式**：
-1. 從最近 20 個已完成的 dev-task 中，取 task.md 的 prompt + 驗收契約當 eval 案例
+1. 從最近 20 個已完成的 develop 中，取 task.md 的 prompt + 驗收契約當 eval 案例
 2. 寫 `evals/check.sh`：用 `claude -p` 非互動式跑每個案例，比對產出是否滿足 AC
 3. 在 CI 加一個 job：當 PR 改到 `CLAUDE.md`、`.claude/skills/`、`.claude/hooks/` 時觸發
 4. 先手動跑幾次驗證鑑別力，確認有效後設為 merge check
@@ -220,8 +220,8 @@ daodao 在幾個面向比 Playbook 走得更遠，值得保留和強化：
 | **Phase 級自我驗證** (L8) | 把驗證步驟收攏成單一命令，commit 前跑 | Phase 2 每個 phase 有獨立的驗證序列（瀏覽器/curl + `stop-quality-gate.sh` + `pre-commit-check`），不是一次跑完所有 | 分層更細——早發現早修，不累積到最後 |
 | **視覺驗證** (L8) | 提供瀏覽器工具讓 Claude 截圖 | Phase 3 的 POC probe checklist + getComputedStyle 量測 + 並排截圖 + Google 文件驗證報告 | 不只截圖比對，還有量化的 CSS 屬性差異表 |
 | **Clean-context 審計** (L10) | 寫程式的 agent 不能自己批准自己的 PR | Phase 4 的 spec auditor 是一個全新的 subagent，只看 diff + 驗收契約，完全看不到開發對話 | Playbook 講的是「不同身份」，daodao 做的是「不同 context」——更強的隔離 |
-| **Worktree 隔離** (L7) | 多個 session 用 git worktree 隔離 | dev-task 完整的 worktree 管理（防撞檢查、clone mode fallback、port offset、env 複製、跨 repo 統一 branch） | 生產級的隔離方案，不只是 `git worktree add` |
-| **Hook 治理** (L11) | PreToolUse hook 擋危險操作 | `pre-pr-gate.sh` 攔 `gh pr create` 驗 task.md 狀態 + POC 比對；`stop-quality-gate.sh` 每個 phase 跑 | Hook 跟 dev-task 流程深度整合，不只是通用防護 |
+| **Worktree 隔離** (L7) | 多個 session 用 git worktree 隔離 | develop 完整的 worktree 管理（防撞檢查、clone mode fallback、port offset、env 複製、跨 repo 統一 branch） | 生產級的隔離方案，不只是 `git worktree add` |
+| **Hook 治理** (L11) | PreToolUse hook 擋危險操作 | `pre-pr-gate.sh` 攔 `gh pr create` 驗 task.md 狀態 + POC 比對；`stop-quality-gate.sh` 每個 phase 跑 | Hook 跟 develop 流程深度整合，不只是通用防護 |
 | **誤判管理** (L10) | 建立 nit 上限 | `.github/review-knowledge/false-positives.jsonl` 誤判知識庫，CI 和本地 review 共用 | 系統化的誤判記錄和回饋，不只是上限控制 |
 
 ### 6.4 完整優先順序（合併實驗借鏡 + Playbook 缺口）
@@ -274,7 +274,7 @@ daodao 在幾個面向比 Playbook 走得更遠，值得保留和強化：
 | **Stripe Minions** | Slack emoji 一句話 | Blueprint（確定性節點 + Agent 節點交替）+ CI 最多修 2 輪 | **零文件** |
 | **Spotify Honk** | 自然語言描述（Git 版控的 prompt） | Verification loop + formatter/linter/build/test | 一段文字 |
 | **Coinbase Cloudbot** | Slack 一句話 | Agent council 交叉審 + auto-merge | **零文件** |
-| **daodao OpenSpec** | proposal.md + design.md + tasks.md | dev-task 五階段 + 多層 gate | **中位數 ~400 行，最大 1517 行** |
+| **daodao OpenSpec** | proposal.md + design.md + tasks.md | develop 五階段 + 多層 gate | **中位數 ~400 行，最大 1517 行** |
 
 Stripe 的原話：**"The walls matter more than the model"**——護牆（harness）比模型重要。但這裡可以延伸：**護牆也比文件重要。**
 
@@ -299,7 +299,7 @@ Stripe 的原話：**"The walls matter more than the model"**——護牆（harn
 #### proposal.md → 合併進 issue body，不再獨立存檔
 
 proposal 做的是「FRD 要什麼 vs code 現在有什麼」的缺口分析。這個工作有價值，但：
-- dev-task Phase 1 本來就會讀 issue + FRD + grep code 做同樣的事
+- develop Phase 1 本來就會讀 issue + FRD + grep code 做同樣的事
 - Stripe/Spotify 讓 agent 在執行時自己做分析，不預先寫文件
 - 預先寫的好處是「分析結果被 review 過，錯了可以在動手前修正」——但 daodao 是一人團隊，review 的人就是自己
 
@@ -319,11 +319,11 @@ design.md 裡混了三種內容：
 
 **處置**：design.md 改名 `decisions.md`，只寫產品決策和實作約束，砍掉所有實作細節。
 
-#### tasks.md → 砍掉，由 dev-task Phase 1 的 task.md 取代
+#### tasks.md → 砍掉，由 develop Phase 1 的 task.md 取代
 
-dev-task Phase 1 已經會從 issue + FRD 建 task.md manifest（含 phases、驗收契約）。tasks.md 和 task.md 是重複的——一個在 OpenSpec 裡，一個在 worktree 裡。
+develop Phase 1 已經會從 issue + FRD 建 task.md manifest（含 phases、驗收契約）。tasks.md 和 task.md 是重複的——一個在 OpenSpec 裡，一個在 worktree 裡。
 
-**處置**：砍掉。dev-task Phase 1 從 issue + FRD + decisions.md 自己拆 phase 和 AC。
+**處置**：砍掉。develop Phase 1 從 issue + FRD + decisions.md 自己拆 phase 和 AC。
 
 #### 最終形態：一份 decisions.md（~50-80 行）
 
@@ -477,7 +477,7 @@ Layer 1: .claude/hooks/
 └── [NEW] test-protection  ← bug fix branch 攔 test 編輯
 
 Layer 2: .claude/skills/
-├── dev-task/  ← Phase 2 快篩 + Phase 3 verify
+├── develop/  ← Phase 2 快篩 + Phase 3 verify
 │   ├── [NEW] storage phase 後跑 check_schema_sync.py
 │   ├── [NEW] server phase 後跑 openapi:generate + diff
 │   └── Phase 4 spec auditor [UPGRADE] 接 decisions.md

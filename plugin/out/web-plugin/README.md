@@ -27,7 +27,7 @@ Claude.ai 的 sandbox 有檔案系統也能跑指令，但那是一個空的暫�
 | report-bug | ✅ | 降級：filesystem |
 | request-feature | ✅ | 完整 |
 | code-review | ❌ | 缺必要能力：bash、filesystem、git |
-| dev-task | ❌ | 缺必要能力：bash、filesystem、git、worktree、runtests |
+| develop | ❌ | 缺必要能力：bash、filesystem、git、worktree、runtests |
 | format-commit | ❌ | 缺必要能力：git |
 | gh-pipeline | ❌ | 缺必要能力：bash |
 | post-merge-wrapup | ❌ | 缺必要能力：bash、filesystem、git |

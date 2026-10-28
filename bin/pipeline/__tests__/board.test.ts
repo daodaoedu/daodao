@@ -64,7 +64,7 @@ describe("auditCards", () => {
     }
   });
 
-  it("sends a card with an open PR to Review, per the dev-task finish contract", () => {
+  it("sends a card with an open PR to Review, per the develop finish contract", () => {
     const findings = auditCards(
       [card({ status: "Todo", prs: [pr("daodao-f2e#1008", "open")] })],
       DEAD_LABELS,

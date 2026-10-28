@@ -195,7 +195,7 @@
         "filesystem"
       ]
     },
-    "dev-task": {
+    "develop": {
       "requires": [
         "bash",
         "filesystem",

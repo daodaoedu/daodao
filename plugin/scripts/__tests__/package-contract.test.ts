@@ -79,7 +79,7 @@ describe('release zip', () => {
 
   it('skills、hooks、templates 都在包裡', () => {
     const listing = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
-    expect(listing).toContain('plugin/skills/dev-task/SKILL.md')
+    expect(listing).toContain('plugin/skills/develop/SKILL.md')
     expect(listing).toContain('plugin/hooks/hooks.json')
     expect(listing).toContain('plugin/hooks/pre-pr-gate.sh')
     expect(listing).toContain('plugin/templates/central-issue.md')

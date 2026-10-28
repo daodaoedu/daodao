@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreToolUse hook (Bash): 發 PR 前的 dev-task 驗收閘門
+# PreToolUse hook (Bash): 發 PR 前的 develop 驗收閘門
 #
 # 攔 `gh pr create`：cwd（或指令裡的 cd 路徑）在 worktrees/<task>/ 底下且有 task.md 時，依序檢查：
 #   1. pr-status-not-verified   task.md Status 已離開 implementing／planning
@@ -48,11 +48,11 @@ for candidate in "$cwd" $cd_paths $wt_paths; do
       ;;
   esac
 done
-[ -z "$task_dir" ] && exit 0          # 不在 dev-task 任務內，不管
+[ -z "$task_dir" ] && exit 0          # 不在 develop 任務內，不管
 task_md="$task_dir/task.md"
 if [ ! -f "$task_md" ]; then
   if [ "${DEV_TASK_DELIVERY_GATE_MODE:-off}" = block ]; then
-    echo "❌ dev-task 目錄缺 task.md，無法核對交付契約" >&2
+    echo "❌ develop 目錄缺 task.md，無法核對交付契約" >&2
     exit 2
   fi
   exit 0
@@ -79,11 +79,11 @@ skip_reason="${DEV_TASK_SKIP_GATE:-${DEV_TASK_SKIP_POC_GATE:-}}"
 gate_fail() {
   local rule="$1" target="$2" message="$3"
   if [ -n "$skip_reason" ]; then
-    log_gate_event "$rule" "$target" "skip:$skip_reason" "dev-task"
+    log_gate_event "$rule" "$target" "skip:$skip_reason" "develop"
     return 0
   fi
   printf '%s\n' "$message" >&2
-  log_gate_event "$rule" "$target" "block" "dev-task"
+  log_gate_event "$rule" "$target" "block" "develop"
   exit 2
 }
 
@@ -101,7 +101,7 @@ section_body() {
 status_line=$(awk '/^## Status/{getline; print; exit}' "$task_md" | tr -d '[:space:]')
 if [ -z "$status_line" ] || echo "$status_line" | grep -qiE '^(implementing|planning)'; then
   gate_fail "pr-status-not-verified" "$task_md" \
-    "❌ task.md Status 仍是「${status_line:-空}」：verify 階段沒跑完不能發 PR（dev-task Phase 3 → Status: verified 後再進 finish）"
+    "❌ task.md Status 仍是「${status_line:-空}」：verify 階段沒跑完不能發 PR（develop Phase 3 → Status: verified 後再進 finish）"
 fi
 
 # --- 閘門 2：有可互動 HTML 原型的 UI repo，必須做過 POC 並排量測比對 ---
@@ -135,7 +135,7 @@ if [ "$has_poc" = 1 ] && [ "$is_ui_repo" = 1 ]; then
    1. $task_dir/notes/poc-compare/report.md（getComputedStyle 量測差異表）
    2. task.md「驗證」區塊有「### POC 比對」差異表，且剩餘差異已用 AskUserQuestion 給使用者確認、寫下「POC 差異決策已確認」
    3. notes/poc-compare/coverage.json 的 required 類別全部有 probe（目前缺：${cov_missing:-無}）；真的沒有的類別在 config.mjs categories.na 寫理由
-   做法見 $PLUGIN_ROOT/skills/dev-task/references/poc-compare.md
+   做法見 $PLUGIN_ROOT/skills/develop/references/poc-compare.md
    真的不適用時：DEV_TASK_SKIP_GATE="<原因>" 再跑一次（會留痕）
 EOF
 )"
@@ -157,7 +157,7 @@ if printf '%s\n' "$verify_journeys" | grep -qE '^核心旅程不適用[：:]'; t
     gate_fail "pr-journey-matrix-missing" "$task_md" \
       "❌ task.md 寫了「核心旅程不適用」但沒有具體原因。要寫清楚 diff 為什麼沒碰任何 form／mutation／controller，例如「純 CSS 對齊，diff 未碰任何 form／mutation／controller」"
   fi
-  log_gate_event "pr-journey-matrix-na" "$task_md" "pass:$na_reason" "dev-task"
+  log_gate_event "pr-journey-matrix-na" "$task_md" "pass:$na_reason" "develop"
 else
   matrix_rows=$(printf '%s\n' "$verify_journeys" | section_body - '^### 核心旅程矩陣' '^(#|##|###) ' \
     | sed -E 's/^[[:space:]]+//' | grep -E '^\|' | grep -vE '^\|[[:space:]]*(ID|-+)[[:space:]]*\|' | grep -vE '^\|[[:space:]-]*\|[[:space:]-]*\|' || true)
@@ -186,7 +186,7 @@ else
     gate_fail "pr-journey-matrix-missing" "$task_md" "$(cat <<EOF
 ❌ 核心旅程矩陣沒過：$problems
    verify 階段每條寫入或讀取權限旅程需正常與錯誤路徑；寫入驗訊息與輸入保留，讀取驗拒絕存取及回應不含私人資料；「實際」欄寫攔到的 HTTP 狀態碼。
-   格式與輸入目錄見 $PLUGIN_ROOT/skills/dev-task/references/journey-matrix.md
+   格式與輸入目錄見 $PLUGIN_ROOT/skills/develop/references/journey-matrix.md
    任務沒有寫入、權限／隱私／篩選讀取變更時，才可在「## 驗證」寫核心旅程不適用：<具體原因>
    例外：DEV_TASK_SKIP_GATE="<原因>"（會留痕）
 EOF
@@ -273,7 +273,7 @@ evidence_section=$(printf '%s\n' "$body_text" | awk '/^## 驗證證據/{f=1; nex
 if ! printf '%s\n' "$body_text" | grep -q '^## 驗證證據'; then
   gate_fail "pr-body-evidence-missing" "$task_md" "$(cat <<EOF
 ❌ PR body 缺「## 驗證證據」區塊${body_file_note}。需要：驗證報告連結 + 核心旅程矩陣摘要（或 task.md 那行「核心旅程不適用：<原因>」）。
-   用 --body-file <notes/pr-body-<repo>.md>，範本見 dev-task references/phases/finish.md 步驟 8「開 PR」。
+   用 --body-file <notes/pr-body-<repo>.md>，範本見 develop references/phases/finish.md 步驟 8「開 PR」。
 EOF
 )"
 elif ! printf '%s\n' "$evidence_section" | grep -qE 'https?://|核心旅程不適用[：:]'; then
@@ -296,7 +296,7 @@ done
 if [ "$is_ui_repo" = 1 ] && [ -d "$task_dir/$repo_dir" ]; then
   if [ -z "$parity_script" ] || ! command -v python3 >/dev/null 2>&1; then
     echo "⚠️  找不到 scripts/check-validation-parity.py 或 python3，前端驗證規則對齊未檢查（記錄為 pr-fe-parity-unavailable）" >&2
-    log_gate_event "pr-fe-parity-unavailable" "$task_dir/$repo_dir" "warn" "dev-task"
+    log_gate_event "pr-fe-parity-unavailable" "$task_dir/$repo_dir" "warn" "develop"
   else
   # base 由腳本自動判斷（remote HEAD → origin/dev → origin/main），不寫死 origin/dev
   parity_json=$(python3 "$parity_script" --repo "$task_dir/$repo_dir" --base auto --task-md "$task_md" --json 2>/dev/null || true)
@@ -314,7 +314,7 @@ EOF
     fi
     if [ "$unmatched" != "0" ]; then
       echo "⚠️  前端有 $unmatched 條手寫驗證規則在 openapi.json 找不到對應（可能前後端擋的不一樣）。請在核心旅程矩陣填 BE 規則來源並用錯誤輸入實測；明細：python3 scripts/check-validation-parity.py --repo $task_dir/$repo_dir --task-md $task_md" >&2
-      log_gate_event "pr-fe-rule-unmatched" "$task_dir/$repo_dir" "warn" "dev-task"
+      log_gate_event "pr-fe-rule-unmatched" "$task_dir/$repo_dir" "warn" "develop"
     fi
   fi
   fi
@@ -351,7 +351,7 @@ if [ "$is_ui_repo" = 1 ]; then
       gate_fail "pr-layout-probe-missing" "$task_md" \
         "❌ task.md 寫了「版面探針不適用」但沒有具體原因。UI repo 的 diff 沒碰任何頁面／版面時才適用，要寫清楚（例如「只改 i18n 字串，無 tsx／css 變更」）"
     fi
-    log_gate_event "pr-layout-probe-na" "$task_md" "pass" "dev-task"
+    log_gate_event "pr-layout-probe-na" "$task_md" "pass" "develop"
   else
     probe_rows=$(section_body "$task_md" '^### 版面探針' '^(#|##|###) ' | grep -E '^\|' | grep -vE '^\|[[:space:]-]*\|' | grep -v '^| 寬度' || true)
     probe_problem=""
@@ -367,7 +367,7 @@ $(printf '%s\n' "$probe_rows" | grep '❌' | cut -c1-160 | sed 's/^/   /')"
       gate_fail "pr-layout-probe-missing" "$task_md" "$(cat <<EOF
 ❌ 版面探針沒過：$probe_problem
    在 ${task_dir}/${repo_dir}/apps/product（f2e）或 ${task_dir}/${repo_dir}（admin-ui）底下跑：
-     node $PLUGIN_ROOT/skills/dev-task/references/layout-probe.mjs --base http://localhost:<port> \\
+     node $PLUGIN_ROOT/skills/develop/references/layout-probe.mjs --base http://localhost:<port> \\
        --routes <任務碰到的每條 route> --cookie "auth_token=<dev-login token>" --out $task_dir/evidence/verify-layout-probe
    把產出的 verify-layout-probe.md 貼進 task.md「## 驗證」底下；❌ 先修再重跑。
    diff 沒碰任何頁面／版面時，在「## 驗證」底下寫一行：版面探針不適用：<具體原因>
@@ -387,7 +387,7 @@ esac
 # warn 以 subprocess 執行 block，保留診斷但不把缺 trace 包裝成完成。
 if [ "$delivery_mode" = warn ]; then
   if DEV_TASK_DELIVERY_GATE_MODE=block bash "$0"; then exit 0; fi
-  log_gate_event "pr-delivery-pilot" "$task_md" "warn:delivery-unverified" "dev-task"
+  log_gate_event "pr-delivery-pilot" "$task_md" "warn:delivery-unverified" "develop"
   echo "⚠️ delivery gate 試行未通過；不代表已驗證操作 trace" >&2
   exit 0
 fi
@@ -466,17 +466,17 @@ if [ -z "$base_ref" ]; then
   exit 2
 fi
 delivery_base=$(git -C "$delivery_repo" merge-base HEAD "$base_ref") || {
-  log_gate_event "pr-delivery-unverified" "$delivery_artifact" "block:merge-base" "dev-task"
+  log_gate_event "pr-delivery-unverified" "$delivery_artifact" "block:merge-base" "develop"
   echo "❌ delivery gate：無法計算 merge-base；先 fetch 並確認 PR base" >&2
   exit 2
 }
 delivery_args=(--repo "$delivery_repo" --artifact "$delivery_artifact" --base "$delivery_base")
 if [ "${DEV_TASK_REQUIRE_TRACE:-0}" = 1 ]; then delivery_args+=(--require-trace); fi
 if ! python3 "$HOOKS_DIR/check-agent-delivery.py" "${delivery_args[@]}"; then
-  log_gate_event "pr-delivery-unverified" "$delivery_artifact" "block" "dev-task"
+  log_gate_event "pr-delivery-unverified" "$delivery_artifact" "block" "develop"
   echo "❌ delivery gate：任務紀錄、Git diff 或 capture 不一致；不能發 PR" >&2
   exit 2
 fi
-log_gate_event "pr-delivery-manifest-verified" "$delivery_artifact" "pass:git-and-evidence-only" "dev-task"
+log_gate_event "pr-delivery-manifest-verified" "$delivery_artifact" "pass:git-and-evidence-only" "develop"
 
 exit 0

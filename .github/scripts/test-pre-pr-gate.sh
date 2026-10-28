@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression tests for plugin/hooks/pre-pr-gate.sh（dev-task 發 PR 閘門）。
+# Regression tests for plugin/hooks/pre-pr-gate.sh（develop 發 PR 閘門）。
 # 每個案例建一個假的 worktrees/<n>-<slug>/task.md，模擬 Claude PreToolUse 的 CLAUDE_TOOL_INPUT。
 set -euo pipefail
 
@@ -125,9 +125,9 @@ pr_cmd() {  # $1=repo path $2=body file
 }
 
 # ---------------------------------------------------------------- 案例
-# 0. 不在 dev-task 任務內 → 不管
+# 0. 不在 develop 任務內 → 不管
 code=$(run_hook "$SANDBOX/elsewhere" "gh pr create --base dev --title t --body b")
-expect_pass "非 dev-task 目錄不攔" "$code"
+expect_pass "非 develop 目錄不攔" "$code"
 mkdir -p "$SANDBOX/root/worktrees/99-missing-task/daodao-server"
 code=$(run_hook "$SANDBOX/root/worktrees/99-missing-task/daodao-server" 'gh pr create --base dev --title t --body b')
 expect_block "block 模式缺 task.md" "$code" "task.md"
