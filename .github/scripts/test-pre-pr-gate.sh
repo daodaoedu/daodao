@@ -509,6 +509,28 @@ t=$(make_task daodao-server "$(task_md verified "$READ_MATRIX" '- none')")
 printf '%s\n' "$READ_BODY" > "$t/notes/body.md"
 code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
 expect_pass "task與body完整讀取權限證據" "$code"
+# Inline bodies end at the final table row, without a trailing newline.
+for body_option in '--body' '-b'; do
+  inline_arg="$body_option '$READ_BODY'"
+  code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t $inline_arg")
+  expect_pass "inline $body_option 完整讀取權限證據無尾端換行" "$code"
+done
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t --body \"$READ_BODY\"")
+expect_pass "inline double-quoted body 無尾端換行" "$code"
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t --body '
+$READ_BODY'")
+expect_pass "inline body 開頭換行且末列無換行" "$code"
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title '--body' --body '$READ_BODY'")
+expect_pass "quoted title --body 不當成 body option" "$code"
+for separator in ';' '&&' $'\n'; do
+  code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t${separator} echo --body '$READ_BODY'")
+  expect_block "後續 command body 不補 PR body ($separator)" "$code" "缺「## 驗證證據」"
+done
+literal_body="$READ_BODY
+\$(touch $SANDBOX/body-must-not-execute)"
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t --body '$literal_body'")
+expect_pass "body command substitution 僅當文字" "$code"
+[ ! -e "$SANDBOX/body-must-not-execute" ] || fail "inline body 被執行"
 printf '%s\n' "$GOOD_BODY" | grep -v '^讀取權限驗證' > "$t/notes/body.md"
 code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
 expect_block "task完整不能補PR body缺讀取宣告" "$code" "PR body："

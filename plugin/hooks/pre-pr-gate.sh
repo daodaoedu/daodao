@@ -230,7 +230,44 @@ if [ -n "$body_file" ]; then
     body_file_note="（--body-file 指向的檔案找不到：${body_file}；改讀指令字串）"
   fi
 else
-  body_text="$cmd"                          # --body "..." 或 heredoc：內容就在指令裡
+  # Decode literal shell arguments without evaluating substitutions or commands.
+  # Reading the entire command leaks the closing quote into the final Markdown row.
+  body_text=$(python3 - "$cmd" <<'PYBODY'
+import shlex, sys
+command = sys.argv[1]
+try:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=';&|\n')
+    lexer.whitespace = ' \t\r'
+    lexer.whitespace_split = True
+    lexer.commenters = ''
+    tokens = list(lexer)
+    start = next(i for i in range(len(tokens)-2) if tokens[i:i+3] == ['gh', 'pr', 'create'])
+    args = tokens[start+3:]
+    value_options = {'--title', '-t', '--base', '-B', '--head', '-H', '--repo', '-R',
+                     '--label', '-l', '--reviewer', '-r', '--assignee', '-a', '--project', '-p',
+                     '--milestone', '-m', '--template', '-T', '--recover'}
+    body = None
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token and all(char in ';&|\n' for char in token):
+            break
+        if token in ('--body', '-b'):
+            body = args[i+1]
+            break
+        if token.startswith('--body='):
+            body = token[len('--body='):]
+            break
+        if token.startswith('-b') and len(token) > 2:
+            body = token[2:]
+            break
+        i += 2 if token in value_options else 1
+    # Keep the existing inline-heredoc path; never evaluate its shell syntax.
+    print(command if body is not None and body.startswith('$(') else (body or ''))
+except (ValueError, StopIteration, IndexError):
+    print(command)
+PYBODY
+)
 fi
 evidence_section=$(printf '%s\n' "$body_text" | awk '/^## 驗證證據/{f=1; next} f && /^## /{exit} f')
 if ! printf '%s\n' "$body_text" | grep -q '^## 驗證證據'; then
