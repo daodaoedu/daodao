@@ -7,9 +7,8 @@
  *   pnpm plugin:bump major     0.1.0 → 1.0.0
  *   pnpm plugin:bump 1.2.3     直接指定
  *
- * 為什麼要有這支：版號是使用者收不收得到更新的唯一訊號。
- * marketplace entry 宣告了 version，Claude Code 就以它判斷要不要重抓 archive；
- * 沒 bump 就改 zip，已安裝的人會一直用舊的快取，而且 release workflow 會直接跳過發佈。
+ * 日常發版不用跑這支：release workflow 以 plugin.json 的 major.minor 加上 run number
+ * 自動產生版號，合進 main 就發。只有要升 minor／major 時才需要手動 bump。
  */
 
 import { execFileSync } from 'node:child_process'

@@ -4,7 +4,9 @@ name: Publish plugin release
 # 從 repo 裝 marketplace 會 git clone 整個 monorepo（12MB）只為了拿 163KB 的 plugin。
 # archive 來源是單純 HTTPS 下載，使用者不需要 git 也不需要 npm。
 #
-# 觸發：main 上 plugin/ 有變更。版本沒變就只驗證不發佈（避免同版本覆蓋已釘 sha256 的資產）。
+# 觸發：main 上 plugin/ 有變更就發新版。版號自動產生：major.minor 取 plugin.json，
+# patch 用這個 workflow 的 run number——合 PR 就等於發版，不需要人記得 bump。
+# 同一個 run 重跑（run number 不變）會撞到已發佈的 tag 而跳過，不覆蓋已釘 sha256 的資產。
 
 on:
   push:
@@ -43,8 +45,11 @@ jobs:
 
       - name: Read version
         id: meta
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
         run: |
-          VERSION=$(jq -r .version plugin/.claude-plugin/plugin.json)
+          BASE=$(jq -r .version plugin/.claude-plugin/plugin.json | cut -d. -f1,2)
+          VERSION="$BASE.$RUN_NUMBER"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=plugin-v$VERSION" >> "$GITHUB_OUTPUT"
 
@@ -55,10 +60,10 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
         run: |
           # 已發佈的 zip 其 sha256 被 marketplace.json 釘住，重發同版本會讓已安裝的人對不上。
-          # 要發新版就先在 plugin/.claude-plugin/plugin.json 把 version 往上加。
+          # 只有 Re-run 同一個 run 才會走到這裡（run number 不變）。
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::$TAG 已存在，跳過發佈。要發新版請先 bump plugin.json 的 version。"
+            echo "::notice::$TAG 已存在，跳過發佈。要重發請從 Actions 手動觸發新的 run。"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
@@ -69,7 +74,7 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          pnpm plugin:package --url \
+          pnpm plugin:package --version "$VERSION" --url \
             "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/daodao-plugin-${VERSION}.zip"
           ls -l plugin/out/release/
 
@@ -104,7 +109,7 @@ jobs:
 
           archive sha256: \`${SHA}\`
 
-          zip 是可重現的：同一份 commit 在本機跑 \`pnpm plugin:package\` 會得到同一個 sha256。
+          zip 是可重現的：同一份 commit 在本機跑 \`pnpm plugin:package --version ${VERSION}\` 會得到同一個 sha256。
           EOF
           )"
           echo "- 發佈 $TAG" >> "$GITHUB_STEP_SUMMARY"

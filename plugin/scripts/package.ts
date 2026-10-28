@@ -4,6 +4,7 @@
  *
  *   pnpm plugin:package                本機打包，marketplace 指向 latest release
  *   pnpm plugin:package --url <url>    指定 archive URL（CI 用，指向這次 release 的實際位址）
+ *   pnpm plugin:package --version <v>  以 <v> 當發佈版號（CI 用，見下方說明）
  *
  * 為什麼要這個：marketplace 從 GitHub repo 安裝會 git clone 整個 monorepo（12MB）
  * 只為了拿 plugin（163KB）。archive source 是單純的 HTTPS 下載，不需要 git 也不需要 npm。
@@ -32,10 +33,20 @@ const STAGE = join(PLUGIN_ROOT, 'out', '.stage')
 const EPOCH = '200001010000'
 
 const meta = JSON.parse(readFileSync(join(PLUGIN_ROOT, '.claude-plugin', 'plugin.json'), 'utf8'))
-const version: string = meta.version
-const zipName = `daodao-plugin-${version}.zip`
 
 const args = process.argv.slice(2)
+
+/**
+ * 發佈版號由 CI 決定（major.minor 取 plugin.json，patch 用 workflow run number），
+ * 不靠人手動 bump：2026-10-09 到 10-28 合了 25 個改 plugin 的 commit，沒有一個記得 bump，
+ * release 全被跳過，使用者一直停在舊版。覆寫時連包裡的 plugin.json 一起改，
+ * 讓 zip 內外的版號一致。
+ */
+const versionIdx = args.indexOf('--version')
+const version: string = versionIdx !== -1 ? args[versionIdx + 1] : meta.version
+if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`版號格式不對：${version}`)
+const zipName = `daodao-plugin-${version}.zip`
+
 const urlIdx = args.indexOf('--url')
 const archiveUrl =
   urlIdx !== -1
@@ -73,6 +84,15 @@ for (const rel of tracked) {
   const dest = join(STAGE, 'plugin', rel)
   mkdirSync(dirname(dest), { recursive: true })
   cpSync(join(PLUGIN_ROOT, rel), dest)
+}
+
+if (version !== meta.version) {
+  const stagedManifest = join(STAGE, 'plugin', '.claude-plugin', 'plugin.json')
+  const raw = readFileSync(stagedManifest, 'utf8')
+  const rewritten = raw.replace(`"version": "${meta.version}"`, `"version": "${version}"`)
+  // 沒換到就停：包內版號跟 marketplace 對不上，使用者會一直收不到更新
+  if (rewritten === raw) throw new Error(`包內 plugin.json 找不到 "version": "${meta.version}"，無法改寫版號`)
+  writeFileSync(stagedManifest, rewritten)
 }
 
 // 統一時間戳，讓 zip 可重現
