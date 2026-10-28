@@ -126,7 +126,16 @@ node -v && pnpm -v && python3 --version && uv --version && docker --version && g
 
 流程的 skills 與 hooks 都包在 **daodao plugin** 裡，正本在 `plugin/`，由 GitHub release 發布：
 
-1. **安裝 plugin（每人一次）** — 本 repo 的 `.claude/settings.json` 已宣告 marketplace（指向 release、開 `autoUpdate`），在 repo 內開 Claude Code 後跑 `/plugin install daodao@daodao`，重開 session。不在 repo 裡的人先 `claude plugin marketplace add https://github.com/daodaoedu/daodao/releases/latest/download/marketplace.json`
+1. **安裝 plugin（每人一次，不需要 clone repo）**，裝完重開 session：
+   - **有本 repo（或任一子專案）**：`.claude/settings.json` 已宣告 marketplace（指向 release、開 `autoUpdate`），在 repo 內開 Claude Code 跑 `/plugin install daodao@daodao` 即可
+   - **沒有 repo**：先加 marketplace 再裝，兩行都要跑：
+
+     ```bash
+     claude plugin marketplace add https://github.com/daodaoedu/daodao/releases/latest/download/marketplace.json
+     claude plugin install daodao@daodao
+     ```
+
+     網址較長是因為走 release zip（163KB）；改用 `daodaoedu/daodao` 簡寫會 clone 整個 monorepo
 2. **Skills** — 指令帶命名空間：`/daodao:dev-task`、`/daodao:gh-card`……本文寫 `/dev-task` 時都是指 `/daodao:dev-task`（`/code-review` 尤其要注意，Claude Code 另有同名的內建 skill）
 3. **Hooks** — 六支，註冊在 `plugin/hooks/hooks.json`，隨 plugin 生效：session-start、pre-write-guard、test-integrity-guard、pre-pr-gate、post-write-format、stop-quality-gate；完整說明見 [Phase 3.3](#33-開發中的自動化hooks)。改了 `plugin/` 正本要等 plugin 發版、更新後才生效
 4. **改 plugin 的人** — 用本機 marketplace：`claude plugin marketplace add ./` 再 `claude plugin install daodao@daodao-dev`；正本改完跑 `pnpm plugin:build` 重產各平台產物，產物不手改
