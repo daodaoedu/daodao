@@ -9,7 +9,7 @@ _REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$_REPO_ROOT"
 [ -s "$_REVIEW_INPUT" ] || { echo "拒絕執行：請先完成步驟 0。" >&2; exit 1; }
 # 明確指定模型，不吃 ~/.codex/config.toml 的預設；整條鏈可用 CODEX_REVIEW_MODELS 覆寫
-_CODEX_REVIEW_MODELS=${CODEX_REVIEW_MODELS:-"gpt-6.1-sol gpt-6-sol"}
+_CODEX_REVIEW_MODELS=${CODEX_REVIEW_MODELS:-"gpt-6.1-terra gpt-6-luna"}
 _CODEX_OUT="$_REVIEW_TMP_DIR/codex.txt"
 _CODEX_USED=""
 for _m in $_CODEX_REVIEW_MODELS; do
@@ -29,17 +29,17 @@ done
 
 - Codex 與 OMP、OpenCode、Claude 必須共用步驟 0 的 `_REVIEW_INPUT`；Codex 可額外讀 repo
   驗證證據，但不得跳過共同 Context Pack。
-- 模型鏈（2026-10-09 依 [Codex Models](https://learn.chatgpt.com/docs/models) 查證，CLI 0.159.2 ChatGPT 登入實測可用）：
-  1. `gpt-6.1-sol`（主力：官方建議的複雜 coding 模型，near-Astra、成本低於 Astra）
-  2. `gpt-6-sol`（備援：openai/codex#49703 回報部分 ChatGPT 帳號在 CLI 0.159.2 對 `gpt-6.1-sol` 回 400 not supported）
+- 模型鏈（2026-10-29 改，CLI 0.165.0 ChatGPT 登入實測可用）：
+  1. `gpt-6.1-terra`（主力）
+  2. `gpt-6-luna`（備援：`gpt-6.1-terra` 不可用時）
 - 什麼情況改用什麼（依官方定位；用 `CODEX_REVIEW_MODELS` 覆寫）：
 
   | 模型 | 官方定位 | 建議 |
   |---|---|---|
-  | `gpt-6.1-sol` | near-Astra、成本低於 Astra；官方建議的複雜 coding 模型 | review 主力（預設） |
-  | `gpt-6-sol` | 上一版 Sol，能力與效率平衡 | 備援：`gpt-6.1-sol` 回 400 not supported 時 |
+  | `gpt-6.1-terra` | — | review 主力（預設） |
+  | `gpt-6-luna` | 最省，單純／大量／重複任務 | 備援：`gpt-6.1-terra` 不可用時 |
+  | `gpt-6.1-sol`／`gpt-6-sol` | near-Astra、成本低於 Astra；官方建議的複雜 coding 模型 | 2026-10-29 前的預設，需要時手動 `CODEX_REVIEW_MODELS` 指定 |
   | `gpt-6-astra` | 最強，最困難的端到端工作 | 不預設；高風險 PR（auth、migration、金流）想要最深檢查時手動 `CODEX_REVIEW_MODELS="gpt-6-astra"` |
-  | `gpt-6-luna` | 最省，單純／大量／重複任務 | 不用於 review |
   | `gpt-5.6-*` | 上一代，過渡期仍可選 | 不用 |
   | `gpt-5.5` | 2026-10-14 自 Codex 退役 | 不可用；設定檔或腳本有的要換掉 |
 
@@ -123,7 +123,7 @@ OpenCode 沒有獨立的 `review` 子命令；使用官方支援 scripting／aut
 _REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$_REPO_ROOT"
 # 主力 + fallback（空白分隔，依序嘗試；整條鏈可用 OPENCODE_REVIEW_MODELS 覆寫）
-_OPENCODE_REVIEW_MODELS=${OPENCODE_REVIEW_MODELS:-"opencode/muse-spark-1.3-contributor-free opencode/nemotron-3-ultra-free opencode/mimo-v2.5-free"}
+_OPENCODE_REVIEW_MODELS=${OPENCODE_REVIEW_MODELS:-"opencode/glm-5.3-flash-free opencode/nemotron-3.5-super-vl-free opencode/deepseek-v4.1-flash-free"}
 for _m in $_OPENCODE_REVIEW_MODELS; do
   case "$_m" in
     openrouter/*:free|opencode/*-free) ;;
@@ -165,10 +165,11 @@ done
 - timeout: 300000（5 分鐘）
 - 若 `opencode` 不存在：告知用戶 `npm install -g opencode-ai`
 - 若 auth 失敗：執行 `opencode auth login -p opencode`
-- fallback 鏈（皆已用真實 patch 實測，回報 severity 正確）：
-  1. `opencode/muse-spark-1.3-contributor-free`（主力）
-  2. `opencode/nemotron-3-ultra-free`
-  3. `opencode/mimo-v2.5-free`
+- fallback 鏈（2026-10-29 改；三個都實測可回應，尚未跑漏報 fixture）：
+  1. `opencode/glm-5.3-flash-free`（主力）
+  2. `opencode/nemotron-3.5-super-vl-free`
+  3. `opencode/deepseek-v4.1-flash-free`
+- 2026-10-29 前的鏈：`opencode/muse-spark-1.3-contributor-free` → `opencode/nemotron-3-ultra-free` → `opencode/mimo-v2.5-free`
 - 全鏈走 opencode zen provider（不經 OpenRouter），與 OMP 鏈的 provider 完全分離
 - `OPENCODE_REVIEW_MODELS` 只接受 `openrouter/*:free` 或 `opencode/*-free`；不接受 `opencode/big-pickle` 或任何無 free 標記的 model ID
 - 已知不可用：`opencode/jev-1.13-free`（Endpoint is unavailable）、`openrouter/z-ai/glm-5.2:free`（無 tool use endpoint）
