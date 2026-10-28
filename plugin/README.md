@@ -90,13 +90,26 @@ zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version 
 
 ### Codex
 
-`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、`$REPO_ROOT` 三層）。
-**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前 hooks 不會執行，
-那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。
+適用 Codex CLI、IDE 擴充與 ChatGPT 桌面版。
+
+**有本 repo**：不用裝。`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、
+`$REPO_ROOT` 三層）。**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前
+hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。
+
+**沒有 repo**：加 marketplace 再裝，用 `--sparse` 只抓需要的目錄（約 400KB，不 clone 整個 monorepo）：
+
+```bash
+codex plugin marketplace add daodaoedu/daodao --sparse .agents/plugins --sparse plugin/out/openai-plugin
+codex plugin add daodao@daodao-local
+```
+
+- Codex 的 marketplace 只接受本機路徑或 git，不吃 `marketplace.json` 網址，所以不能用 Claude Code 那個 Pages 網址
+- marketplace 名稱叫 `daodao-local`（取自 `.agents/plugins/marketplace.json`），雖然名字有 local，這就是給大家裝的那份
+- 這樣裝的只有 13 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
 
 ### ChatGPT
 
-- **桌面版 / Codex CLI / IDE**：跟 Codex 共用 `.agents/skills/`，開 repo 就有，不用裝。
+- **桌面版 / Codex CLI / IDE**：跟 Codex 同一套，有 repo 不用裝，沒有 repo 照上面 [Codex](#codex) 的兩行指令。
 - **網頁版與行動版**：**repo marketplace 到不了**。OpenAI 文件寫明 `.agents/plugins/marketplace.json`
   與個人 marketplace 只有桌面版與 Codex CLI 讀得到。要進網頁／行動版只有兩條路：
 
@@ -162,7 +175,8 @@ pnpm plugin:bump minor    # 或 major；產物版號會一起更新，走正常 
 | 平台 | 怎麼收到更新 |
 |---|---|
 | Claude Code | marketplace 已開 `autoUpdate`，session 啟動後十分鐘內背景更新，跳出提示後跑 `/reload-plugins`；要立刻更新就 `/plugin update daodao@daodao` |
-| Codex／ChatGPT 桌面 | `.agents/skills/` 在 repo 裡，`git pull` 就是更新 |
+| Codex／ChatGPT 桌面（有 repo） | `.agents/skills/` 在 repo 裡，`git pull` 就是更新 |
+| Codex／ChatGPT 桌面（沒有 repo） | `codex plugin marketplace upgrade` 重抓 marketplace。Codex 版 `plugin.json` 的版號不隨自動發版遞增，版號沒變時是否會重裝新內容尚未驗證；拿不到新內容就 `codex plugin remove daodao@daodao-local` 後重新 `add` |
 | ChatGPT 工作區 | 匯入的 marketplace 每日自動同步，管理員也可以按 **Sync now** |
 | claude.ai | 從 repository 加的 marketplace 會跟著 repo 更新；手動傳的 zip 要自己重傳 |
 
