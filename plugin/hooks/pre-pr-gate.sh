@@ -117,13 +117,19 @@ if [ "$has_poc" = 1 ] && [ "$is_ui_repo" = 1 ]; then
   grep -q 'POC 差異決策已確認' "$task_md" || ok=0
   # probe 涵蓋率：poc-report.py 產的 coverage.json，required 類別缺一不可（config.mjs 的 categories.na 可豁免並留理由）
   cov="$task_dir/notes/poc-compare/coverage.json"
-  cov_missing=""
+  cov_missing=""; cov_unresolved=""
   if [ -s "$cov" ]; then
     # jq 解析失敗或沒有 missing 陣列 → 不能當成「沒有缺漏」，明確標記並擋下（AI review #225 抓到的 fail-open）
     if cov_missing=$(jq -er '.missing | if type == "array" then join(", ") else error("missing 不是陣列") end' "$cov" 2>/dev/null); then
       [ -z "$cov_missing" ] || ok=0
     else
       cov_missing="(coverage.json 無法解析或缺 missing 陣列，請重跑 poc-report.py)"; ok=0
+    fi
+    # 兩邊都量不到的 probe＝選擇器沒對到，不能當成一致；舊版 poc-report 沒有這個欄位，要重跑
+    if cov_unresolved=$(jq -er '.unresolved | if type == "array" then join("、") else error("unresolved 不是陣列") end' "$cov" 2>/dev/null); then
+      [ -z "$cov_unresolved" ] || ok=0
+    else
+      cov_unresolved="(coverage.json 缺 unresolved 陣列，請用新版 poc-report.py 重跑)"; ok=0
     fi
   else
     cov_missing="(沒有 coverage.json，請跑 poc-report.py)"; ok=0
@@ -135,6 +141,7 @@ if [ "$has_poc" = 1 ] && [ "$is_ui_repo" = 1 ]; then
    1. $task_dir/notes/poc-compare/report.md（getComputedStyle 量測差異表）
    2. task.md「驗證」區塊有「### POC 比對」差異表，且剩餘差異已用 AskUserQuestion 給使用者確認、寫下「POC 差異決策已確認」
    3. notes/poc-compare/coverage.json 的 required 類別全部有 probe（目前缺：${cov_missing:-無}）；真的沒有的類別在 config.mjs categories.na 寫理由
+   4. coverage.json 沒有未解析的 probe（目前：${cov_unresolved:-無}）；選擇器沒對到元素就修 config.mjs 的選擇器，不要刪 probe
    做法見 $PLUGIN_ROOT/skills/develop/references/poc-compare.md
    真的不適用時：DEV_TASK_SKIP_GATE="<原因>" 再跑一次（會留痕）
 EOF

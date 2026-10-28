@@ -25,6 +25,8 @@ jobs:
           python3 -m pip install PyYAML==6.0.2
           python3 -m unittest discover -s scripts/__tests__ -p 'test_required_workflow_triggers.py' -v
           python3 -m unittest discover -s scripts/__tests__ -p 'test_collect_gate_protection.py' -v
+      - name: POC report regression
+        run: python3 -m unittest discover -s scripts/__tests__ -p 'test_poc_report.py' -v
       - name: Issue draft checker regression
         run: python3 -m unittest discover -s scripts/__tests__ -p 'test_check_issue_draft.py' -v
       - name: Agent handoff contract regression

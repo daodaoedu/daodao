@@ -296,7 +296,7 @@ t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
 POC 差異決策已確認" '- none')")
 printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
 mkdir -p "$t/poc" "$t/notes/poc-compare"; : > "$t/poc/x.dc.html"; echo report > "$t/notes/poc-compare/report.md"
-echo '{"missing":[]}' > "$t/notes/poc-compare/coverage.json"
+echo '{"missing":[],"unresolved":[]}' > "$t/notes/poc-compare/coverage.json"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_pass "POC coverage 無缺漏" "$code"
 echo 'not json' > "$t/notes/poc-compare/coverage.json"
@@ -308,6 +308,12 @@ expect_block "POC coverage.json 缺 missing" "$code" "無法解析"
 echo '{"missing":["modal"]}' > "$t/notes/poc-compare/coverage.json"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_block "POC coverage 有缺漏" "$code" "目前缺：modal"
+echo '{"missing":[],"unresolved":["home · button.typo"]}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage 有未解析的 probe" "$code" "home · button.typo"
+echo '{"missing":[]}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage 是舊版（缺 unresolved）" "$code" "缺 unresolved"
 
 # 9d. jq 不在時對 gh pr create 一律擋下（fail closed），非發 PR 指令照常放行
 # run_hook 自己也用 jq 組 payload，所以先用真 jq 組好，再用壞掉的 jq shim 跑 hook

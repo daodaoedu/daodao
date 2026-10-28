@@ -6,7 +6,8 @@
 讀 $TASK/notes/poc-compare/<checkpoint>-poc.json / -impl.json，輸出：
   report-tables.md   每檢查點一張差異表（✅ 一致 / ❌ 量到差異 / ⚠️ 量到但視覺等價或無法直接比）
   diff-items.json    所有差異列 + 影響分數（給整理差異摘要用）
-  coverage.json      probe 類別涵蓋率（required / present / missing / na），pre-pr-gate 會讀
+  coverage.json      probe 類別涵蓋率（required / present / missing / na / unresolved），pre-pr-gate 會讀；
+                     兩邊都量不到的 probe（選擇器沒對到）列進 unresolved，不算涵蓋
   evidence/compare-<checkpoint>.png  左 POC / 右實作 的同寬、頂端對齊合成圖（給 Google 文件與肉眼核對）
 """
 import argparse, glob, json, os, re, sys
@@ -105,20 +106,26 @@ def load(cp, side):
 
 cps = sorted({os.path.basename(f).rsplit("-poc.json", 1)[0] for f in glob.glob(os.path.join(OUT, "*-poc.json")) if not os.path.basename(f).startswith("all-")})
 tables, items = [], []
-totals = {"probes": 0, "ok": 0, "bad": 0, "warn": 0, "missing": 0}
-present = set()
+totals = {"probes": 0, "ok": 0, "bad": 0, "warn": 0, "missing": 0, "unresolved": 0}
+present, unresolved = set(), []
 for cp in cps:
     A, B = load(cp, "poc"), load(cp, "impl")
     if A is None or B is None: continue
     rows, n_ok = [], 0
     for k in A:
-        pre = k.split(".")[0]; present.add(aliases.get(pre, pre))
         ma, mb = A.get(k), B.get(k)
-        if ma is None and mb is None: continue
+        # 兩邊都量不到＝選擇器沒對到元素，不是「一致」；這個 probe 不能替它的類別算涵蓋
+        if ma is None and mb is None:
+            rows.append((k, "未解析（選擇器沒對到）", "—", "—", "❌")); unresolved.append(f"{cp} · {k}"); totals["unresolved"] += 1
+            continue
+        pre = k.split(".")[0]; present.add(aliases.get(pre, pre))
         totals["probes"] += 1
         if ma is None or mb is None:
-            rows.append((k, "存在", "—" if ma is None else "有", "有" if ma is None else "—", "⚠️")); totals["missing"] += 1
-            items.append({"cp": cp, "key": k, "prop": "存在", "poc": "—" if ma is None else "有", "impl": "有" if ma is None else "—", "status": "⚠️"})
+            # POC 有、實作沒有＝缺元件（❌）；只有實作有的多餘元素維持 ⚠️ 交人判斷
+            st = "❌" if mb is None else "⚠️"
+            rows.append((k, "存在", "—" if ma is None else "有", "有" if ma is None else "—", st)); totals["missing"] += 1
+            items.append({"cp": cp, "key": k, "prop": "存在", "poc": "—" if ma is None else "有", "impl": "有" if ma is None else "—", "status": st})
+            if st == "❌": totals["bad"] += 1
             continue
         diffs = []
         is_full = bool(FULLWIDTH.search(k)); buttonish = bool(BUTTONISH.search(k))
@@ -174,7 +181,7 @@ os.makedirs(OUT, exist_ok=True)
 open(os.path.join(OUT, "report-tables.md"), "w").write("\n\n".join(tables) + "\n")
 json.dump({"totals": totals, "items": items}, open(os.path.join(OUT, "diff-items.json"), "w"), ensure_ascii=False, indent=1)
 missing = [c for c in required if c not in present and c not in na]
-coverage = {"required": required, "present": sorted(present), "na": na, "missing": missing, "checkpoints": cps}
+coverage = {"required": required, "present": sorted(present), "na": na, "missing": missing, "unresolved": unresolved, "checkpoints": cps}
 json.dump(coverage, open(os.path.join(OUT, "coverage.json"), "w"), ensure_ascii=False, indent=1)
 
 # --- 並排合成圖：同寬縮放、頂端對齊、上方標題列 ---------------------------------------------------------
@@ -195,6 +202,8 @@ if not args.no_composite:
     except ImportError:
         print("（沒有 Pillow，略過合成圖：pip3 install pillow）", file=sys.stderr)
 
+n_all = totals["probes"] + totals["unresolved"]
+print(f"checkpoint {len(cps)} 個，probe 解析 {totals['probes']}/{n_all}" + (f"，未解析：{'、'.join(unresolved)}" if unresolved else ""))
 print(json.dumps(totals, ensure_ascii=False))
 print("coverage:", "OK" if not missing else f"缺 {missing}", "| na:", na or "-")
 bad = [i for i in items if i["status"] == "❌"]
