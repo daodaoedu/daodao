@@ -3,7 +3,7 @@
  *
  * Routine A／B were retired on 2026-09-20 (#241) and Routine C (board-sync)
  * the same day: board status is now written by the
- * dev-task / post-merge-wrapup / gh-card skills through bin/pipeline/board.ts.
+ * dev-task / post-merge-wrapup / request-feature skills through bin/pipeline/board.ts.
  * Historical prompts and templates live under docs/archive/automation/.
  */
 import {

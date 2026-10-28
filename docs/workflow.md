@@ -33,11 +33,11 @@ flowchart TD
     BUG -- "Bug / 小改動" --> BUGPATH{"問題複雜度？"}
     BUGPATH -- "原因明確" --> BUGA["路徑 A：截圖貼給<br/>Claude Code 直接修"]
     BUGA --> H
-    BUGPATH -- "需要調查" --> BUGB["路徑 B：/file-bug-issue<br/>查核後開卡"]
+    BUGPATH -- "需要調查" --> BUGB["路徑 B：/report-bug<br/>查核後開卡"]
     BUGB -- "已開卡、原因明確" --> F
     BUGB -- "其實是新需求" --> B
     B --> E["人類審查 PRD<br/>流程 → 規則 → 驗收 → 待決策"]
-    E --> E2["/gh-card 開中央 issue（母卡／子卡）<br/>掛 Planning board、決定驗收方式"]
+    E --> E2["/request-feature 開中央 issue（母卡／子卡）<br/>掛 Planning board、決定驗收方式"]
     A4 -- "scope S：只寫 AC" --> E2
     E2 --> F["/dev-task<br/>worktrees/編號-slug/ 隔離開發<br/>start → dev → verify → finish"]
     F --> G["Hooks 自動保護 + format"]
@@ -135,7 +135,7 @@ node -v && pnpm -v && python3 --version && uv --version && docker --version && g
      ```
 
      marketplace 放在 GitHub Pages、plugin 本體是 release zip（163KB），不 clone repo。不要改用 `github.com/.../releases/...` 網址：`marketplace add` 會把 github.com 網址當成 git repo 去 clone 而失敗
-2. **Skills** — 指令帶命名空間：`/daodao:dev-task`、`/daodao:gh-card`……本文寫 `/dev-task` 時都是指 `/daodao:dev-task`（`/code-review` 尤其要注意，Claude Code 另有同名的內建 skill）
+2. **Skills** — 指令帶命名空間：`/daodao:dev-task`、`/daodao:request-feature`……本文寫 `/dev-task` 時都是指 `/daodao:dev-task`（`/code-review` 尤其要注意，Claude Code 另有同名的內建 skill）
 3. **Hooks** — 六支，註冊在 `plugin/hooks/hooks.json`，隨 plugin 生效：session-start、pre-write-guard、test-integrity-guard、pre-pr-gate、post-write-format、stop-quality-gate；完整說明見 [Phase 3.3](#33-開發中的自動化hooks)。改了 `plugin/` 正本要等 plugin 發版、更新後才生效
 4. **改 plugin 的人** — 用本機 marketplace：`claude plugin marketplace add ./` 再 `claude plugin install daodao@daodao-dev`；正本改完跑 `pnpm plugin:build` 重產各平台產物，產物不手改
 
@@ -217,7 +217,7 @@ pnpm run lint && pnpm run typecheck
 
 **路徑 A：直接修** — 原因明確、範圍小。把截圖、錯誤訊息、重現步驟貼給 Claude Code，修完直接進 Phase 4（commit → PR），不開卡、不寫 spec。PR body 仍要有「## 驗證證據」（或不適用聲明），PR evidence gate 會檢查。
 
-**路徑 B：`/file-bug-issue` 通報** — 原因不明、需要調查，或要交給別人修。通報者只要描述現象、附截圖或 log；skill 自行定位子專案、查核 codebase 與重複卡、起草後交人審閱，依授權開到 `daodaoedu/daodao`。草稿存在任務的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`。詳見後面的 [Bug 追蹤](#bug-追蹤)。
+**路徑 B：`/report-bug` 通報** — 原因不明、需要調查，或要交給別人修。通報者只要描述現象、附截圖或 log；skill 自行定位子專案、查核 codebase 與重複卡、起草後交人審閱，依授權開到 `daodaoedu/daodao`。草稿存在任務的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`。詳見後面的 [Bug 追蹤](#bug-追蹤)。
 
 `docs/troubleshooting/` 是舊的分析案例存放處（`auth-error/`、`android-oauth-login-fix.md` 等），新的問題不再往這裡放。
 
@@ -235,10 +235,10 @@ pnpm run lint && pnpm run typecheck
 
 | | PRD / FRD | 中央 issue |
 |---|---|---|
-| 誰寫 | 提出者描述，`/prd-generation` 查核起草、自審修訂，人審核確認 | `/gh-card` 從對話與已定稿 PRD 推斷 |
+| 誰寫 | 提出者描述，`/prd-generation` 查核起草、自審修訂，人審核確認 | `/request-feature` 從對話與已定稿 PRD 推斷 |
 | 回答什麼 | 要做什麼、為什麼、流程、規則、驗收條件（FR／TP／AC） | 現在做到哪、誰在做、本卡驗收契約（Acceptance snapshot） |
 | 位置 | 草稿在任務目錄或 `docs/plans/requirements/`；既有功能文件在 `docs/product/<功能>/` | daodaoedu/daodao issue + Planning board |
-| 誰消費 | `/gh-card` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start／finish、`/post-merge-wrapup` 的 board 回寫 |
+| 誰消費 | `/request-feature` 的輸入、`/dev-task` verify 的檢查清單 | `/dev-task` start／finish、`/post-merge-wrapup` 的 board 回寫 |
 
 ### 判定表
 
@@ -306,16 +306,16 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 
 ---
 
-## Phase 2.5：開卡（gh-card）
+## Phase 2.5：開卡（request-feature）
 
-規格確認後，用 `/gh-card` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
+規格確認後，用 `/request-feature` 在 **daodaoedu/daodao** 開一張中央 issue 並掛上 Planning board。這張卡是之後所有狀態的指標：`/dev-task` 從這裡讀需求並移 In Progress／Review，`/post-merge-wrapup` 冒煙後移 Acceptance（交 PM 驗收）／Need Fix，PM 關 issue 才 Done。
 
 ```
-/gh-card（從對話推斷欄位，互動確認一次）
+/request-feature（從對話推斷欄位，互動確認一次）
   Title    功能名稱（中文，與 board 既有卡片同風格）
-  Body     plugin/templates/central-issue.md：任務索引與責任、目標與範圍、
-           驗收契約（Acceptance snapshot：PRD／FRD 版本與 FR／TP／AC ID、驗收方式、Done 條件）、
-           執行政策與狀態、跨 repo 交付索引
+  Body     plugin/templates/central-issue.md：目標與範圍、子卡、
+           驗收契約（FR／TP／AC ID、驗收方式、Done 條件）、狀態；
+           附錄 A 需求來源（PRD／FRD 版本、Acceptance snapshot）、B 驗收環境、C 交付紀錄
   Labels   scope:XS|S|M|L、repo:<sub-repo>（可多個）、bug／enhancement／documentation、
            acceptance:engineering（工程驗收卡才掛）
   Status   Todo（預設）：發布後 `pnpm -s tsx bin/pipeline/board.ts set <n> todo` 掛板並回讀
@@ -403,7 +403,7 @@ daodao/
 
 前置：task.md Status = `verified`。
 
-0. **Deferred items 先開卡再發 PR**：task.md「## Deferred items」每項要有 issue `#n` 或 `（待開卡：<原因>）`，依 `publish-tasks` 開卡。本卡範圍內沒做完的開子 issue——本任務是子卡時掛到**它的母卡**（只有兩層），是獨立卡時掛本任務；範圍外的後續改進開獨立 issue（寫「#n 的後續改進」），不掛子卡關係，否則母卡永遠關不掉。task.md 在 cleanup 會被刪，只留在 comment 的「之後再做」等於消失（#171 → #188 的第二個根因）
+0. **Deferred items 先開卡再發 PR**：task.md「## Deferred items」每項要有 issue `#n` 或 `（待開卡：<原因>）`，依 `break-down-plan` 開卡。本卡範圍內沒做完的開子 issue——本任務是子卡時掛到**它的母卡**（只有兩層），是獨立卡時掛本任務；範圍外的後續改進開獨立 issue（寫「#n 的後續改進」），不掛子卡關係，否則母卡永遠關不掉。task.md 在 cleanup 會被刪，只留在 comment 的「之後再做」等於消失（#171 → #188 的第二個根因）
 
 對每個有變更的 repo：
 
@@ -435,7 +435,7 @@ daodao/
 #### cleanup — merge 後收尾
 
 1. 確認**所有 repo** 的 PR merged（跨 repo 少一支就不算）
-2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `file-bug-issue` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
+2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `report-bug` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
 3. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪；clone 模式先確認沒有未 push 的 commit）
 4. 接 `/post-merge-wrapup`：更新 `docs/product` 功能狀態，依冒煙結果移卡（見 Phase 8）；`Done` 只由驗收通過產生，這裡不提前移
 5. `ls worktrees/` 掃其他已 merge 未收尾的任務
@@ -734,7 +734,7 @@ merge 不是終點。少了收尾，worktree 會堆積、`docs/product` 的狀�
 PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 1. 確認所有 repo 的 PR merged（`gh pr view`）
-2. **dev 冒煙**（通過前不刪任務資料夾）：CD 跑到該 revision 後，用核心旅程矩陣在 dev 重跑全部正常列＋至少一列錯誤路徑，結果回寫 issue comment；失敗走 `file-bug-issue` 並標「已合併，dev 冒煙未過」，沒過不往下
+2. **dev 冒煙**（通過前不刪任務資料夾）：CD 跑到該 revision 後，用核心旅程矩陣在 dev 重跑全部正常列＋至少一列錯誤路徑，結果回寫 issue comment；失敗走 `report-bug` 並標「已合併，dev 冒煙未過」，沒過不往下
 3. 每個 repo：`git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`（只更新 origin/dev，不動 `projects/` 的本機分支）
 4. `rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 issue comment 才刪；task.md 其他值得留的內容先摘要進 comment；clone 模式先確認沒有未 push 的 commit）
 5. 接 `/post-merge-wrapup`
@@ -775,7 +775,7 @@ Todo → In Progress → Review → Acceptance → Done
 
 | 欄位 | 球在誰手上 | 誰移卡 |
 |---|---|---|
-| Todo | PM（排優先順序） | `/gh-card` |
+| Todo | PM（排優先順序） | `/request-feature` |
 | Ready for Dev | 工程師 | 人工（選用的管理狀態，不觸發任何自動化） |
 | In Progress | 工程師 | `/dev-task` start |
 | Review | 人類 reviewer（review／merge） | `/dev-task` finish；merged 後仍留這裡 |
@@ -805,13 +805,13 @@ Todo → In Progress → Review → Acceptance → Done
 
 ## Bug 追蹤
 
-使用者遇到操作異常，或開發／CI 過程中遇到無法立即修復的錯誤時，使用 `/file-bug-issue` skill 整理成 bug 草稿、查核後開成 GitHub issue，避免遺忘或阻塞其他工作。
+使用者遇到操作異常，或開發／CI 過程中遇到無法立即修復的錯誤時，使用 `/report-bug` skill 整理成 bug 草稿、查核後開成 GitHub issue，避免遺忘或阻塞其他工作。
 
 ### 流程
 
 ```
 遇到操作異常、截圖、對話或 CI 錯誤
-  → /file-bug-issue
+  → /report-bug
     1. 先從已有資訊整理草稿：現象、重現步驟、預期與實際、截圖／log；最多問 1–2 個關鍵問題
     2. skill 自行查核現況與重複卡、判定 repo 與可能根因——不問通報者 repo、SHA、負責人、根因
     3. AI 自審修訂 → 人審核草稿
@@ -860,7 +860,7 @@ Todo → In Progress → Review → Acceptance → Done
 | **需求** | PRD（既有 FRD 沿用） | 一份文件含功能行為與驗收（FR／TP） |
 | **需求** | Figma + Figma MCP | UI 設計稿與 `get_screenshot` 對照 |
 | **規格** | prd-generation + product-status-check skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 確認（L/M 必要；OpenSpec 已退役） |
-| **開卡** | gh-card skill | 中央 issue（母卡／子卡）+ Planning board（共用模板、Acceptance snapshot、驗收方式） |
+| **開卡** | request-feature skill | 中央 issue（母卡／子卡）+ Planning board（共用模板、Acceptance snapshot、驗收方式） |
 | **開發** | dev-task skill | issue 隔離 worktree（start → dev → verify → finish → cleanup）；projects/ 只當 worktree 來源 |
 | **開發** | hooks（六支） | session 狀態注入、寫檔保護與格式化、測試完整性、發 PR 閘門、Stop 品質清單 |
 | **品質** | Biome / ESLint / Black + Ruff | Lint + Format |
@@ -883,8 +883,8 @@ Todo → In Progress → Review → Acceptance → Done
 | **收尾** | notify-related-issue skill | 依實際 PR 與驗收狀態草擬關聯 issue 更新，明確授權才留言或關閉 |
 | **收尾** | product-status-drift workflow | 每週一檢查 docs/product 狀態標示與實際落差，發到 Discord |
 | **board** | gh-pipeline skill + `bin/pipeline/board.ts` | 七欄語意；`board.ts set／remove／audit`，各 skill 自己移卡；`audit` 每日 09:00 由 `board-audit.yml` 排程跑（只讀）；Routine A／B／C 已於 2026-09-20 退役，見 Phase 9 |
-| **拆卡** | publish-tasks skill | 把已確認計畫的未完成任務批次開成子 issue（可驗收子卡開在中央 repo；sub-repo 只放工程交接筆記），人工發布，不觸發自動化 |
-| **Bug 追蹤** | file-bug-issue skill | 操作異常或無法立即修復的錯誤整理成草稿，查核後開成 GitHub issue |
+| **拆卡** | break-down-plan skill | 把已確認計畫的未完成任務批次開成子 issue（可驗收子卡開在中央 repo；sub-repo 只放工程交接筆記），人工發布，不觸發自動化 |
+| **Bug 追蹤** | report-bug skill | 操作異常或無法立即修復的錯誤整理成草稿，查核後開成 GitHub issue |
 | **記錄** | /post（個人 skill）→ quidproquo.cc | 踩坑經驗記錄與知識分享 |
 
 ---
@@ -906,7 +906,7 @@ Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for De
 ### 9.2 人類在流程裡的位置
 
 ```
-寫 PRD（/prd-generation 定稿）→ /gh-card 開卡（board Todo）
+寫 PRD（/prd-generation 定稿）→ /request-feature 開卡（board Todo）
         ↓ 人工確認規格 OK
    Status → Ready for Dev            ← 管理狀態，選用
         ↓ /dev-task start（board In Progress + human-driving、開 worktree）
@@ -922,7 +922,7 @@ Phase 1–8 是「人類觸發、AI 執行」。Phase 9 原本把 **Ready for De
 
 ### 9.3 手動版
 
-`/publish-tasks` 把已確認計畫的未完成任務（沿用 FR／TP／AC ID）批次開成子 issue（可驗收的子卡開在中央 repo，sub-repo 只放工程交接筆記），先檢核與預覽，依授權才發布；發布後仍由人工 `/dev-task` 開工，不會有任何 routine 接手。
+`/break-down-plan` 把已確認計畫的未完成任務（沿用 FR／TP／AC ID）批次開成子 issue（可驗收的子卡開在中央 repo，sub-repo 只放工程交接筆記），先檢核與預覽，依授權才發布；發布後仍由人工 `/dev-task` 開工，不會有任何 routine 接手。
 
 ### 9.4 限制
 

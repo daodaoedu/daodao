@@ -149,6 +149,18 @@ describe('產物與 canonical 同步', () => {
     const r = execFileSync('pnpm', ['-s', 'plugin:check'], { cwd: REPO_ROOT, encoding: 'utf8' })
     expect(r).toContain('同步')
   })
+
+  it('templates/ 底下的 __pycache__ 不會被打包（CI 先跑 Python 測試再 check）', () => {
+    const cache = join(PLUGIN_ROOT, 'templates', '__pycache__')
+    const created = !existsSync(cache)
+    if (created) execFileSync('python3', ['-c', 'import py_compile; py_compile.compile("plugin/templates/check-issue-draft.py")'], { cwd: REPO_ROOT })
+    try {
+      const r = execFileSync('pnpm', ['-s', 'plugin:check'], { cwd: REPO_ROOT, encoding: 'utf8' })
+      expect(r).toContain('同步')
+    } finally {
+      if (created) rmSync(cache, { recursive: true, force: true })
+    }
+  })
 })
 
 

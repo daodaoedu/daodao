@@ -56,8 +56,11 @@ const errors: string[] = []
 
 // ---------------------------------------------------------------- helpers
 
+// 執行期快取（例如跑過 templates/check-issue-draft.py 的測試後產生的 __pycache__）不是正本，不能進產物。
+const IGNORED_ENTRIES = new Set(['__pycache__', '.DS_Store'])
+
 function walk(dir: string): string[] {
-  return readdirSync(dir).flatMap((e) => {
+  return readdirSync(dir).filter((e) => !IGNORED_ENTRIES.has(e)).flatMap((e) => {
     const full = join(dir, e)
     return statSync(full).isDirectory() ? walk(full) : [full]
   })
@@ -405,7 +408,7 @@ function buildClaudeAi(platform: Platform): OutFile[] {
       '',
       '1. Claude.ai → Settings → Capabilities，開啟「Code execution and file creation」。',
       '2. Customize → Skills → 「+」→「Upload a skill」，逐一上傳 zip。',
-      '3. zip 的根必須是 skill 資料夾本身（`gh-card.zip → gh-card/SKILL.md`），',
+      '3. zip 的根必須是 skill 資料夾本身（`request-feature.zip → request-feature/SKILL.md`），',
       '   檔案散在 zip 根目錄會上傳失敗。`pnpm plugin:zip` 已經照這個結構打包。',
       '',
       'frontmatter 只留 Agent Skills 標準允許的欄位；多一個欄位 claude.ai 會直接拒絕上傳。',

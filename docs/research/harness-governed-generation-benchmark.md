@@ -153,7 +153,7 @@ daodao 的 dev-task 流程有多層 gate，但治理目標不同於實驗：
 | **Design** (L3) | 需求與設計合併成單一 session，套用 skill 載入組織標準，產出 spec.md | **已做到且超越**：OpenSpec design.md = 完整設計決策（資料模型、API contract、正規化規則、migration SQL），單一 session 從 proposal 推導 | 沒有標準化的組織規範 skill（品牌、資安、合規、UX）供 design session 載入 |
 | **Build** (L4) | Plan mode 先寫 plan.md，commit 後才進 auto mode 實作 | **已做到且超越**：OpenSpec tasks.md = 分 Phase 的實作計畫，每個 task 有涉及檔案、驗收條件、工時預估；dev-task Phase 1 再轉成 task.md manifest | Playbook 的 plan.md 只列檔案和順序；OpenSpec tasks.md 細到每個 task 的 AC |
 | **Build** (L5) | CLAUDE.md 記錄慣例、架構、常見錯誤 | **已做到**：monorepo 有 CLAUDE.md，各 skill 有參考文件 | 架構約束沒寫進去（見 §4.1） |
-| **Build** (L6) | Skills 編碼組織規範 | **已做到且超越**：dev-task、code-review、gh-card、gh-pipeline、pre-commit-check 等 30+ skills | — |
+| **Build** (L6) | Skills 編碼組織規範 | **已做到且超越**：dev-task、code-review、request-feature、gh-pipeline、pre-commit-check 等 30+ skills | — |
 | **Build** (L7) | 平行 session + worktree 隔離 + subagent | **已做到且超越**：dev-task 的 worktree 隔離是核心設計，Phase 4 用 clean-context subagent 做 spec audit | — |
 | **Test** (L8) | Feedback loop：agent 每一步自我驗證，hook 保護迴圈不被弱化 | **已做到**：Phase 2 每個 phase 的自動驗證序列（起 dev server → 瀏覽器/curl → pre-commit-check → commit） | 缺「測試失敗時修 code 不修 test」的 hook 保護（L8 的核心治理） |
 | **Test** (L9) | CI Evals：收集真實任務做回歸測試，CLAUDE.md/skill 改動時自動跑，pass rate 掉了擋 merge | **沒做到** | 完全缺失——CLAUDE.md 和 skill 的改動目前沒有行為回歸驗證 |
@@ -303,7 +303,7 @@ proposal 做的是「FRD 要什麼 vs code 現在有什麼」的缺口分析。�
 - Stripe/Spotify 讓 agent 在執行時自己做分析，不預先寫文件
 - 預先寫的好處是「分析結果被 review 過，錯了可以在動手前修正」——但 daodao 是一人團隊，review 的人就是自己
 
-**處置**：關鍵的缺口發現和產品決策寫進 issue body（gh-card 開卡時帶入），不再開獨立的 proposal.md。agent 在 Phase 1 自己做完整的 code 實查。
+**處置**：關鍵的缺口發現和產品決策寫進 issue body（request-feature 開卡時帶入），不再開獨立的 proposal.md。agent 在 Phase 1 自己做完整的 code 實查。
 
 #### design.md → 只留產品決策，砍掉實作細節
 

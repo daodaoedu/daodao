@@ -4,7 +4,7 @@
 
 
 schemaVersion: 1
-templateVersion: 1
+templateVersion: 2
 
 Parent: daodaoedu/daodao#<中央號碼>
 
@@ -29,14 +29,12 @@ Parent: daodaoedu/daodao#<中央號碼>
 |---|---|---|---|---|
 | <本 repo 與相依 repos> | <完整 SHA> | <完整 SHA> | <URL> | <值或 N/A 理由> |
 
-- Run ID／acceptance key／patch digest：<值>
 - 真實串接：<環境、seed、角色、request/response、同 ID 回讀、reload 證據>
 - UI／POC：<尺寸、語系、截圖、並排圖、差異與核准記錄；不適用附理由>
 - 翻譯／API／migration／品質檢查：<結果、執行 URLs>
 - 獨立 review：<reviewer、受驗 SHA、finding disposition>
 - 驗收報告／manifest／Drive 證據：<URLs 與 digests>
 - 人工簽核：<pending/approved/rejected、批准者／時間／GitHub record／acceptance key>
-- 額度：<Claude/Codex 狀態、觀測時間、耗盡影響與接手方式>
 - 阻塞／未完成／下一步：<none 或原因、責任人、成果位置>
 - Merge／部署／smoke：<實際階段與證據；本卡完成不代表中央 Done>
 - 回報同步：<pending/synced/report-pending、中央／子卡摘要 URL、回讀時間>
