@@ -48,4 +48,4 @@ gh issue edit <num> --repo daodaoedu/daodao --add-label human-driving
 
 ### 想派工到 sub-repo
 
-自動派工已退役。用 `/publish-tasks`（批次子 issue，人工發布）或 `/dev-task` 直接開工；要恢復自動派工需另開卡重新設計。
+自動派工已退役。用 `/break-down-plan`（批次子 issue，人工發布）或 `/dev-task` 直接開工；要恢復自動派工需另開卡重新設計。

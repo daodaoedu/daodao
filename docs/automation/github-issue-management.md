@@ -14,10 +14,10 @@
 | 使用者目標／跨 repo 需求 | `daodaoedu/daodao` 中央 Issue，使用[中央模板](../../plugin/templates/central-issue.md)並加入 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) |
 | 功能底下可單獨驗收的一塊（子卡） | `daodaoedu/daodao`，`gh issue create --parent <母卡>`，規則見 §4 |
 | 單一 repo 的工程交接（選用） | 對應子 repo，使用[子任務模板](../../plugin/templates/subtask-issue.md)；只當交接筆記，**不掛 sub-issue 關係、不上 board**，body 用 `Refs daodaoedu/daodao#N` 指回中央卡 |
-| Bug／CI 錯誤 | 依 [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
+| Bug／CI 錯誤 | 依 [report-bug](../../plugin/skills/report-bug/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
 | 同 repo 小任務 | 可直接以一張 Issue 關聯 PR，不為形式另拆子卡 |
 
-一般開卡使用 [gh-card](../../plugin/skills/gh-card/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
+一般開卡使用 [request-feature](../../plugin/skills/request-feature/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
 
 開卡時填目標與範圍、責任 repo／負責人、可驗收 AC、相依任務及 Done 條件。需求缺項填「待確認：原因／責任人／下一步」，執行後才產生的 SHA、run、PR、報告填「尚未開始／尚未產生」。不要為了開卡捏造版本或證據。
 
@@ -99,7 +99,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 - **只有兩層**：母卡 → 子卡，子卡底下不再掛子卡。
 - **子卡一律開在中央 repo**，才會上 board 給 PM 驗收；同一張子卡要動多個 repo 就開多個 PR，不另開 sub-repo 子卡。
 - **母卡不直接掛 PR**：實作都在子卡或獨立卡上。
-- 開新功能時 gh-card 依 AC 一次拆好子卡；dev-task 只在子卡或獨立卡上開工。
+- 開新功能時 request-feature 依 AC 一次拆好子卡；dev-task 只在子卡或獨立卡上開工。
 
 ### 4.4 狀態與驗收
 
@@ -158,8 +158,8 @@ Parent: daodaoedu/daodao#123
 
 | 現況 | 管理方式／待實作 |
 |---|---|
-| 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/publish-tasks`；要恢復自動派工需另開卡重新設計 |
-| `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、gh-card 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
+| 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/break-down-plan`；要恢復自動派工需另開卡重新設計 |
+| `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、request-feature 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
 | Routine C 已退役 | merged 後卡留 Review，`/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（交 PM）／Need Fix，PM 關 issue 才 Done；沒有 cron |
 | 內建 workflow 目標欄位 API 讀不到 | 2026-09-20 於設定頁確認並把「Pull request merged」由 Done 改為 Review；之後若再改只能在設定頁看 |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；`board.ts audit` 檢查第三層與子卡不在中央 repo，`Parent:` 文字一致性尚未檢查 |

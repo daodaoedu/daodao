@@ -1,7 +1,7 @@
 # Phase 5: cleanup — merge 後收尾
 
 1. 確認所有 PR 已 merge（`gh pr view <link>`）
-1a. **部署後冒煙，通過前不刪任務資料夾**：merge 不等於可用（#179 是使用者在 dev 撞到的）。依 `post-merge-wrapup` skill 的「目標環境冒煙」段，用 task.md 的核心旅程矩陣在部署後的 dev 環境（dev 前端 + server-dev，或對應環境）重跑全部正常列 + 至少一列錯誤路徑，把「dev 冒煙」表回寫到 issue comment；冒煙失敗走 `file-bug-issue`，並在 comment 標明「已合併，dev 冒煙未過」。沒有部署證據（CD run 尚未跑到該 revision）就先停在這一步，不宣稱可用
+1a. **部署後冒煙，通過前不刪任務資料夾**：merge 不等於可用（#179 是使用者在 dev 撞到的）。依 `post-merge-wrapup` skill 的「目標環境冒煙」段，用 task.md 的核心旅程矩陣在部署後的 dev 環境（dev 前端 + server-dev，或對應環境）重跑全部正常列 + 至少一列錯誤路徑，把「dev 冒煙」表回寫到 issue comment；冒煙失敗走 `report-bug`，並在 comment 標明「已合併，dev 冒煙未過」。沒有部署證據（CD run 尚未跑到該 revision）就先停在這一步，不宣稱可用
 2. 移除 worktree 與 branch：
 
 ```bash

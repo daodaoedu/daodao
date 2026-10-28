@@ -1,6 +1,6 @@
 # docs/automation — 自動化 Pipeline 文件索引
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 gh-card／dev-task／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C 皆已退役，沒有任何 cron；board 狀態由 request-feature／dev-task／post-merge-wrapup 呼叫 `bin/pipeline/board.ts` 寫回（見 [gh-pipeline skill](../../plugin/skills/gh-pipeline/SKILL.md)）；舊 prompt 與模板封存於 [../archive/automation/](../archive/automation/README.md)。OpenSpec 已於 #237 退役（`docs/archive/openspec/`）。下文仍提到 Routine A／B 的文件屬歷史提案或設計審查，不是現行指示。
 
 這個目錄包含 **GitHub Board／Issue／PR** 自動化與開發流程的操作與維護文件。
 

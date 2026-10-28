@@ -15,7 +15,7 @@ PROJECT_FILES = (
     'plugin/templates/bug-issue.md',
     'plugin/templates/requirements-doc.md',
 )
-SKILLS = ('file-bug-issue', 'gh-card', 'prd-generation', 'product-status-check')
+SKILLS = ('report-bug', 'request-feature', 'prd-generation', 'product-status-check')
 
 
 def safe_relative(raw):

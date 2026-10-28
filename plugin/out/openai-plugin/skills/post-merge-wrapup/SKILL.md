@@ -45,7 +45,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 | J-03 | 建立場次 | 錯誤路徑 | ✅ 409 訊息可見 | ... |
 ```
 
-   全部 ✅ 只代表 AI 冒煙通過，docs/product 標「dev 冒煙通過，待 PM 驗收」；PM 驗收通過後才標「已驗收」（見 §2.6）。任一 ❌ → 走 `file-bug-issue` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。僅工具、登入、環境或 installer 前提不足時記「未冒煙／受阻：<原因>」，不算行為 FAIL 或可用：初次交驗前留 Review 並列出待排除前提；已在 Acceptance 則依 §2.6 留 Acceptance、掛 `acceptance:blocked`。
+   全部 ✅ 只代表 AI 冒煙通過，docs/product 標「dev 冒煙通過，待 PM 驗收」；PM 驗收通過後才標「已驗收」（見 §2.6）。任一 ❌ → 走 `report-bug` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。僅工具、登入、環境或 installer 前提不足時記「未冒煙／受阻：<原因>」，不算行為 FAIL 或可用：初次交驗前留 Review 並列出待排除前提；已在 Acceptance 則依 §2.6 留 Acceptance、掛 `acceptance:blocked`。
 
 5. **回寫 Planning board 並交給 PM**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
 

@@ -205,7 +205,7 @@ if [ -n "$deferred" ]; then
 ❌ task.md「## Deferred items」有項目沒開子 issue、也沒寫明待開卡原因：
 $(echo "$unlinked" | sed 's/^/   /')
    task.md 會在 cleanup 被刪，只留在 comment 裡的「之後再做」等於消失（#171 的「驗證紅框」就這樣變成 #188）。
-   依 publish-tasks skill 在授權範圍開子 issue 後補 #<n>；沒有授權就寫「（待開卡：<原因>）」交人決定。
+   依 break-down-plan skill 在授權範圍開子 issue 後補 #<n>；沒有授權就寫「（待開卡：<原因>）」交人決定。
 EOF
 )"
   fi

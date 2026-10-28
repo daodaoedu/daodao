@@ -10,7 +10,7 @@ description: 島島阿學 Planning Board 狀態操作與稽核：七欄語意（
 
 # gh-pipeline
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 gh-card／dev-task／post-merge-wrapup 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 request-feature／dev-task／post-merge-wrapup 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
 
 Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
@@ -30,7 +30,7 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 
 | Status | 意思 | 誰移 | 球在誰手上 |
 |---|---|---|---|
-| `Todo` | 已開卡，還沒人做 | gh-card（`board.ts set <n> todo`） | PM |
+| `Todo` | 已開卡，還沒人做 | request-feature（`board.ts set <n> todo`） | PM |
 | `Ready for Dev` | PRD／AC 定稿可開工；選用，允許空 | 人工，需使用者要求 | 工程師 |
 | `In Progress` | 有 worktree／branch 在跑 | dev-task start（`set <n> wip --add-label human-driving`） | 工程師 |
 | `Review` | PR 已開，等 code review／merge；merged 後留在這裡直到 dev 冒煙 | dev-task finish（`set <n> review`） | 工程師（AI review 引擎＋人類 reviewer 核准） |
@@ -52,7 +52,7 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 - 看不出來 → 工程驗收，掛 `acceptance:engineering`：開發流程與工具（skill、hook、CI、board）；只在 dev 存在的端點；刻意零差異的重構（靠量測證明沒變）；不改變輸出的後端內部調整。
 - 判斷不了 → 預設 PM 驗收。
 
-gh-card 開卡時判斷並掛 label，理由寫進 body 的「驗收方式」；開發中發現判斷錯了，直接加或拔 label。工程驗收卡冒煙通過後由 post-merge-wrapup 留證據並關 issue，不進 Acceptance；`audit` 會列出誤進 Acceptance 的工程驗收卡。
+request-feature 開卡時判斷並掛 label，理由寫進 body 的「驗收方式」；開發中發現判斷錯了，直接加或拔 label。工程驗收卡冒煙通過後由 post-merge-wrapup 留證據並關 issue，不進 Acceptance；`audit` 會列出誤進 Acceptance 的工程驗收卡。
 
 ### Acceptance 欄的規則（Kanban Guide 2025.5 的 SLE）
 

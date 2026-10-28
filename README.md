@@ -50,15 +50,15 @@ git submodule update --remote
 | Skill | 用途 |
 |-------|------|
 | `/prd-generation` | 需求查核與 PRD 起草（OpenSpec 已於 2026-09-20 退役，`/openspec-*` 不再使用） |
-| `/gh-card` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$gh-card` 或明確讀取 skill |
+| `/request-feature` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$request-feature` 或明確讀取 skill |
 | `/dev-task` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
 | `/post-merge-wrapup` | merge 後更新 docs/product 與驗收狀態 |
 | `/format-commit` | 結構化 commit message（Why / How） |
 | `/pre-commit-check` | Commit 前自動品質檢查與修復 |
 | `/code-review` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
 | `/collect-pr-feedback` | 收集 PR 上所有 review 回饋（含收割 `/fp` 回覆進誤判知識庫） |
-| `/file-bug-issue` | 無法立即修復的 bug 開成 GitHub issue |
-| `/publish-tasks` | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布；自動派工已退役） |
+| `/report-bug` | 無法立即修復的 bug 開成 GitHub issue |
+| `/break-down-plan` | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布；自動派工已退役） |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
 快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，Planning board 狀態怎麼流（自動派工與 Routine C 皆已退役，改由各 skill 呼叫 `bin/pipeline/board.ts`）見 [gh-pipeline skill](plugin/skills/gh-pipeline/SKILL.md)。

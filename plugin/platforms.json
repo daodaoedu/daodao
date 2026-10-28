@@ -114,20 +114,20 @@
         "bash"
       ]
     },
-    "file-bug-issue": {
+    "report-bug": {
       "requires": [],
       "optional": [
         "filesystem",
         "gh"
       ]
     },
-    "gh-card": {
+    "request-feature": {
       "requires": [],
       "optional": [
         "gh"
       ]
     },
-    "publish-tasks": {
+    "break-down-plan": {
       "requires": [],
       "optional": [
         "gh"
