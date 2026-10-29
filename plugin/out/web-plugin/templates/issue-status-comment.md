@@ -41,6 +41,7 @@ templateVersion: 1
 
 - 「驗收步驟」只放 PM 在畫面上做得到、看得到的操作與預期：點哪裡、填什麼、重新打開後畫面顯示什麼。不寫 API、HTTP 方法（PUT／GET…）、送出內容（body／request／response）、回讀、regression test、log、curl、console，也不給 server-dev 或 `/api/` 網址。
 - API 送出內容與回讀、regression test、CI、log 一律放「工程證據（已驗，PM 不需重做）」，每項附冒煙留言、PR 或 CI 連結。
+- App 暫不驗收（2026-10-29 起，沒有可安裝測試版）：PM 步驟只寫網頁，App 步驟放「已知限制／這次沒做的」並註明「App 暫不驗收」；只改 App 的卡不交 PM，改走 `acceptance:engineering`（見 move-board-card「誰驗收」）。
 - AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。
 - issue 內文驗收契約的「必須證據」欄若寫了 API 回讀或測試，PM 會照著要；所以「對照的 AC」要寫明那些由工程提供、PM 依畫面判定。
 - 第一行的隱藏標記 `<!-- daodao:acceptance-request -->`、標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具（**test-acceptance**（`skills/test-acceptance/SKILL.md`，未隨本包出貨））靠標記找出這則留言，缺任一個就判 BLOCKED（#245、#346）。標記在 GitHub 上看不到，不影響 PM 閱讀。
