@@ -94,7 +94,10 @@ _INTENT="$_REVIEW_TMP_DIR/intent.md"
 {
   gh pr view --json title,body -q '"PR: " + .title + "\n\n" + .body' 2>/dev/null || true
   git log --format='- %s%n%b' "$_MERGE_BASE..HEAD"
-} > "$_INTENT"
+  git diff --quiet HEAD -- 2>/dev/null || echo '- （另有尚未 commit 的變更，沒有對應的意圖描述）'
+} | sed 's#</intent#\&lt;/intent#g' > "$_INTENT"
+# 沒有 PR、gh 失敗、也沒有 commit 時不能讓 intent 靜默變空
+grep -q '[^[:space:]]' "$_INTENT" || echo '（沒有 PR 說明與 commit 訊息：意圖未知，不要假設任何刪除或改名是刻意的）' > "$_INTENT"
 
 _REVIEW_POLICY="$_REVIEW_TMP_DIR/review-policy.md"
 if ! git show "$_BASE_REF:REVIEW.md" > "$_REVIEW_POLICY" 2>/dev/null; then
