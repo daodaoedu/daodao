@@ -1,8 +1,10 @@
 # 燈塔多組織切換架構
 
-- 日期：2026-10-23
-- 狀態：隔離分支已實作，完成本機 Chrome 代表旅程驗證；尚未合併、部署或通過整體驗收
-- 關聯：[#276 Admin 組織設定](https://github.com/daodaoedu/daodao/issues/276)、[#374 第 15 項](https://github.com/daodaoedu/daodao/issues/374)
+日期：2026-10-23  
+狀態：架構提案，尚未實作或驗收  
+關聯：[#276 Admin 組織設定](https://github.com/daodaoedu/daodao/issues/276)、[#374 第 15 項](https://github.com/daodaoedu/daodao/issues/374)
+
+版本銜接：[#393](https://github.com/daodaoedu/daodao/pull/393) 已合併的文件記錄 query 參數版本在隔離分支完成實作與本機 Chrome 代表旅程驗證，當時尚未合併相關程式、部署或通過整體驗收。本提案改採組織路徑，並新增舊網址導向與重要操作確認條件；上述既有驗證不代表此路徑方案已實作或驗收。
 
 ## 1. 目標與核心規則
 
@@ -70,7 +72,7 @@ flowchart TD
     Session -->|是| Login[讀取已驗證帳號]
     Login --> Membership[API 回傳本人所屬組織與狀態]
     Membership --> Resolve[解析目前組織]
-    URL[URL 中的 organizationId] --> Resolve
+    URL[URL 路徑中的組織 ID] --> Resolve
     Last[後端保存的帳號上次組織] --> Resolve
     Resolve --> Context[燈塔共用組織狀態]
     Switcher[導覽列組織切換器] -->|更新 URL| URL
@@ -91,17 +93,25 @@ flowchart TD
 
 ## 4. 目前組織的唯一依據
 
-建議採用 **URL 中的 `organizationId` 作為一般組織頁目前組織的依據**，前台共用狀態從 URL 與有效成員清單推導。後端依帳號保存上次選擇，供進入未指定組織的入口時自動恢復，包含換裝置後登入的情境。瀏覽器快取只作加速，不能作為唯一保存來源。系列／場次資源頁則先驗證目標資源，再以實際歸屬正規化 URL，優先序見第 6 節。
+建議採用 **URL 路徑中的組織 ID 作為一般組織頁目前組織的依據**，前台共用狀態從 URL 與有效成員清單推導。後端依帳號保存上次選擇，供進入未指定組織的入口時自動恢復，包含換裝置後登入的情境。瀏覽器快取只作加速，不能作為唯一保存來源。系列／場次資源頁維持現有網址，以資源實際歸屬決定組織，見第 6 節。
 
 ```text
-/en/lighthouse?organizationId=2
-/en/lighthouse/programs?organizationId=2
-/en/lighthouse/templates?organizationId=2
-/en/lighthouse/organization?organizationId=2
-/en/lighthouse/archive?organizationId=2
+/en/lighthouse/o/2                 總覽
+/en/lighthouse/o/2/programs        系列與場次列表
+/en/lighthouse/o/2/templates       模板庫
+/en/lighthouse/o/2/organization    組織設定
+/en/lighthouse/o/2/archive         封存
+/en/lighthouse/programs/{programId}/cohorts/{cohortId}/...   場次頁（不變）
 ```
 
-上述 URL 為提案，尚未代表現有頁面已支援此參數。語系切換、導覽及瀏覽器上一頁／下一頁都應保留或恢復對應的組織。
+**為何放路徑而非 query 參數**：
+
+- 現有語系切換為 `router.replace(pathname, { locale })`（`components/layout/sidebar/language-pill-toggle.tsx:18`），只保留路徑、不帶 query；放 `?organizationId=` 會在切語系時遺失。
+- 放在路徑時，`[organizationId]` layout 直接取得參數，站內連結由 layout 參數組成，不必每個連結手動補 query。
+- 業界常見做法亦同：Clerk 官方指南建議多組織 app 把組織放在路徑（`/orgs/:slug/...`，亦可用組織 ID），並由 middleware 依路徑同步目前組織；Supabase 的組織頁放在組織路徑、專案頁以專案 ID 反查組織，與本提案的組織頁／場次頁分工相同。
+- 使用組織 ID 而非 slug：組織目前沒有 slug 欄位，本輪不新增。
+
+舊網址（`/lighthouse`、`/lighthouse/programs`、`/lighthouse/templates`、`/lighthouse/organization`、`/lighthouse/archive`）視為「未指定組織的入口」，由 middleware 依下表規則 redirect 到對應的組織路徑，既有書籤與信件連結不失效。上述 URL 為提案，現有頁面尚未支援。語系切換、導覽及瀏覽器上一頁／下一頁都應保留或恢復對應的組織。
 
 | 進入情境 | 選擇規則 |
 |---|---|
@@ -119,7 +129,7 @@ flowchart TD
 
 ### 4.1 在 middleware 補上組織參數
 
-f2e `middleware.ts` 每次進入燈塔頁已呼叫 `/api/v1/lighthouse/organizations`。未指定組織的一般組織頁在此一併讀取帳號上次組織，依上表規則直接 redirect 成帶 `organizationId` 的網址；頁面因此不會先以「無組織」狀態渲染再換網址，也不多一次請求。場次／系列深層連結不在 middleware 補參數，依第 6 節由頁面以資源歸屬決定。middleware 取得上次組織失敗時不擋頁，退回「第一個可管理組織」規則。
+f2e `middleware.ts` 每次進入燈塔頁已呼叫 `/api/v1/lighthouse/organizations`。未指定組織的入口（含上節的舊網址）在此一併讀取帳號上次組織，依上表規則直接 redirect 到 `/lighthouse/o/{organizationId}/...`；頁面因此不會先以「無組織」狀態渲染再換網址，也不多一次請求。場次／系列深層連結不經此 redirect，依第 6 節由頁面以資源歸屬決定。middleware 取得上次組織失敗時不擋頁，退回「第一個可管理組織」規則。
 
 ### 4.2 上次組織的寫入規則
 
@@ -168,7 +178,8 @@ sequenceDiagram
 
 - **表單與寫入**：有未儲存內容時，提醒使用者選擇取消切換或放棄內容；寫入尚在進行時暫停切換。每個送出的操作固定使用提交當下的組織／資源 ID。
 - **導航守門**：切換器、站內連結及瀏覽器上一頁／下一頁造成的組織變更，統一經過上述確認與寫入等待流程；取消時保留原組織、表單及 URL。刷新或離站則依瀏覽器支援提供未儲存提示，不承諾瀏覽器一定顯示提示或能攔截關閉；重新載入後以已驗證的 URL 重新建立狀態。
-- **快取與延遲回應**：組織查詢的 key 必須包含組織 ID，並隔離不同登入帳號的資料。A 的較晚回應不能覆蓋 B 的畫面；登出或換帳號時清除舊帳號的私有快取。
+- **快取與延遲回應**：組織查詢的 key 必須包含組織 ID，並隔離不同登入帳號的資料。A 的較晚回應不能覆蓋 B 的畫面；登出或換帳號時清除舊帳號的私有快取。現況已具備大部分：`packages/api` 的組織查詢 key 已含 `organizationId` 參數，登出時清空整個 SWR 快取（`hooks/use-logout-redirect.ts:16-22`）；本輪只需確保新頁面沿用，並以 AC-04 驗收。
+- **重要操作的目的地確認**：發訊息給學員、邀請成員等送出後難以撤回的操作，確認畫面再次顯示組織與場次名稱，不只依賴頁首。開啟中的這類視窗在組織切換時關閉，不改綁到新組織後送出。
 - **表單重建**：切換組織時重建設定表單、驗證狀態及編輯視窗，避免 uncontrolled input 的 `defaultValue` 留著上一個組織的內容。
 - **AI key**：切換後清除尚未送出的 key 輸入及測試結果，重新取得目標組織的設定狀態。前端不保存或回顯已儲存的完整 key。
 
@@ -176,7 +187,7 @@ sequenceDiagram
 
 場次／系列已有自己的組織歸屬。直接開啟深層連結時，以後端驗證後的資源歸屬決定組織，不能拿上次選擇的組織覆蓋它。
 
-若 URL 寫 `organizationId=A`，但目標場次屬 B，先由後端檢查使用者能否管理該場次。有權管理 B 時，把 URL 與目前組織修正為 B；沒有權限時拒絕存取，不改查 A 的其他資源。一般組織頁的 query 參數規則不先行阻擋此資源授權流程。站內導航到此連結仍須先處理原頁未儲存內容。
+場次頁網址不含組織 ID，因此不會出現「網址寫 A、場次屬 B」的矛盾。開啟場次頁時先由後端檢查使用者能否管理該場次：有權時，目前組織設為場次所屬的 B（不寫入上次組織，見第 4.2 節）；沒有權限時拒絕存取，不改查其他組織的資源。站內導航到此連結仍須先處理原頁未儲存內容。
 
 ```mermaid
 flowchart TD
@@ -219,10 +230,11 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | `daodao-f2e` 燈塔共用外框 | 加入目前組織狀態、組織名稱及切換器 |
 | 其餘五個直接取首筆的元件 | 改用共用選擇 |
 | 查詢、表單及導覽 | 帶入目前組織、隔離快取、處理未儲存內容及深層連結 |
-| 燈塔站內連結 | 改用共用的連結產生函式自動帶目前組織（純邏輯，附測試）；場次頁的返回與編輯連結帶場次實際所屬組織。現有未帶組織的連結見下表 |
+| 燈塔路由 | 一般組織頁移到 `app/[locale]/(lighthouse)/lighthouse/o/[organizationId]/`；場次頁路徑不變；舊網址由 middleware redirect |
+| 燈塔站內連結 | 改用共用的連結產生函式，由 layout 的組織參數組成（純邏輯，附測試）；場次頁的返回與編輯連結帶場次實際所屬組織。現有未帶組織的連結見下表 |
 | `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；發起人快覽的組織名稱規則修正（見下方）；補跨組織 regression tests |
 | `daodao-storage` | 新增最小 migration 保存帳號上次的燈塔組織（例：`users` 加可為空、指向組織的欄位，組織刪除時設為空）。已查核無可沿用欄位：`users` 無設定類欄位，`user_preferences` 是推薦用的偏好選項關聯表。上次組織的跨裝置恢復納入本輪 |
-| `daodao-f2e` middleware | 未指定組織的一般組織頁讀取上次組織並 redirect 補參數（第 4.1 節）；登入守門行為不變 |
+| `daodao-f2e` middleware | 未指定組織的入口與舊網址讀取上次組織並 redirect 到組織路徑（第 4.1 節）；登入守門行為不變 |
 | 文案 | 切換器、停權、無權限、無可用組織等新狀態補中英文文案，需通過 f2e ICU 文案檢查（#311） |
 | `daodao-admin-ui` | 保留平台管理員全組織管理；本輪不在此處實作前台切換器 |
 
@@ -264,11 +276,13 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | AC-09 | 組織停權、成員資格被移除或組織查詢失敗（dev 可用 user 301 指定組織 3） | 顯示對應狀態，不使用舊快取繼續管理或靜默換組織 |
 | AC-10 | 從 A 的 AI key 設定切到 B | 清除未提交輸入與測試狀態，僅顯示 B 的設定狀態 |
 | AC-11 | 帳號加入 A、B，在 B 的場次頁發訊息 | 訊息模板的列表、新增、刪除都作用在 B，A 的模板不受影響 |
-| AC-12 | 帳號在裝置一用切換器選 B，再於裝置二登入並開啟燈塔首頁 | 自動進入 B；網址帶 B 的 `organizationId`，畫面不先閃過其他組織 |
-| AC-13 | 未登入直接開啟帶 `organizationId` 的燈塔管理連結 | 顯示登入頁，不洩露燈塔內容；登入成功後返回原網址（含組織參數）並檢查權限 |
+| AC-12 | 帳號在裝置一用切換器選 B，再於裝置二登入並開啟燈塔首頁 | 自動進入 `/lighthouse/o/{B}`，畫面不先閃過其他組織 |
+| AC-13 | 未登入直接開啟 `/lighthouse/o/{B}/...` 燈塔管理連結 | 顯示登入頁，不洩露燈塔內容；登入成功後返回原網址（含組織路徑）並檢查權限 |
 | AC-14 | 登入失效、已登入無權限或服務故障 | 登入失效才導向登入；其餘顯示對應狀態，不造成登入迴圈 |
 | AC-15 | 上次組織寫入失敗或使用者換帳號 | 不擋操作、不假稱保存成功；待處理寫入不得跨帳號執行 |
 | AC-18 | 上次選 A，從摘要信開啟 B 的場次後，再直接開啟燈塔首頁 | 仍進入 A；深層連結不改寫上次組織 |
+| AC-19 | 開啟舊網址（`/lighthouse`、`/lighthouse/programs` 等）或舊書籤 | redirect 到上次組織（或第一個可管理組織）對應的 `/lighthouse/o/{id}/...` 頁面 |
+| AC-20 | 在 B 的場次發訊息給學員或邀請成員 | 確認畫面顯示 B 與場次名稱；確認前切換組織時，視窗關閉且未送出 |
 | AC-16 | 在 B 的任一管理頁點導覽、場次返回、編輯場次或成果頁的組織設定連結 | 一律停留在對應的組織（場次相關連結為場次所屬組織），不回到預設組織 |
 | AC-17 | 多組織發起人在 A、B 各有公開活動，分別從 A、B 的活動卡點開發起人快覽 | 各自顯示該卡所屬組織名稱；不顯示停權組織；未帶場次且主辦多個組織時不顯示組織名稱 |
 
@@ -281,7 +295,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | 1 | `cohort-focus` 訊息模板改用場次所屬組織 | f2e（必要時 server 先補第 6 節欄位） | 第 6 節欄位；不等切換器，可最先上 |
 | 2 | 上次組織欄位 migration | storage | 無 |
 | 3 | 場次回應加組織欄位、上次組織 API、發起人快覽修正 | server | 2 |
-| 4 | 共用組織狀態、middleware 補參數、連結產生函式、切換器、文案 | f2e | 3 |
+| 4 | 燈塔路由移到組織路徑、共用組織狀態、middleware redirect、連結產生函式、切換器、文案 | f2e | 3 |
 
 第 1 項若需要第 6 節欄位，server 欄位可先單獨上，不必等 migration。各子卡依 dev-task 流程開發；母卡等子卡全部驗收後才關。
 
