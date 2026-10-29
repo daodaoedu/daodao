@@ -38,7 +38,7 @@ format/lint 過了 ≠ 行為對了。依 staged 變更的類型跑對應驗證�
 
 | 變更類型 | 必跑驗證 |
 |---|---|
-| 有對應測試的程式碼（`__tests__/`、`*.test.*` 存在或同 PR 新增） | 跑該測試套件（如 `pnpm vitest run <dir>`） |
+| 有對應測試的程式碼（`__tests__/`、`*.test.*` 存在或同 PR 新增） | 跑該測試套件（如 `pnpm vitest run <dir>`）；bug fix 的 regression test 要先在修正前跑過一次並看到失敗 |
 | CI workflow（`.github/workflows/*.yml`） | YAML parse 驗證；有 `workflow_dispatch` + `dry_run` 的，註記「push 後需 dry-run 一次」 |
 | shell script（`*.sh`） | `bash -n` 語法檢查；有對應 `test-*.sh` fixture 就跑 |
 | DB migration / SQL | 本地 DB apply + 冪等重跑（見 develop 規範） |

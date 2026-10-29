@@ -1,7 +1,0 @@
-{
-  "base": "b4e5996e15ef2356e94e7e12bbd2edf45f3f447f",
-  "test_diff_sha256": "0f592671c05d75615c0e0480fba915ece4fbb2d7a237619416642d53aef72e60",
-  "reviewer": "vincentxuu",
-  "reason": "skill 改名：board.test.ts 2 行與 test_review_runner.py 1 行僅把 post-merge-wrapup／code-review 字串改為 verify-deploy／review-change，對應程式字串同步改名，斷言邏輯不變",
-  "evidence": "chore/rename-skills-verb 分支 diff（PR 建立後見 PR 頁面）"
-}

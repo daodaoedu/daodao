@@ -10,8 +10,10 @@
 
 ## 步驟 6.5：套用誤判知識庫的確定性過濾
 
+（filter 一律用 base 版本的腳本與知識庫。PR 本身若改了過濾規則，它的新規則不會在自己的 review 生效；要看效果，另外拿 HEAD 版本對同一份輸出跑一次比對。）
+
 對 OMP／OpenCode／Claude 的表格輸出各跑一次共用的 filter（Codex 是自由文字，由 AI 逐項比對證據）。
-C 類（自承無法確認）直接 drop、D 類（假設性）High/Medium 降為 Low；被動到的列在 report 裡，呈現時標註「已由知識庫過濾」：
+C 類（自承無法確認）直接 drop、G 類（「請確認／需同步」的提醒，沒指出具體過時位置）直接 drop、D 類（假設性）High/Medium 降為 Low。auth、權限、個資、migration／schema、金流、資料刪除、併發相關的列一律保留原樣（report 的 `exempted`），交人判斷。被動到的列在 report 裡，呈現時標註「已由知識庫過濾」：
 
 ```bash
 if [ -f "$_KNOWLEDGE_SCRIPT" ]; then
@@ -40,26 +42,27 @@ fi
 
 （只處理實際存在的輸出；過濾與 verify 是輔助分類，AI 仍須以目前程式碼確認每項保留或排除的理由，不可把過濾結果直接當作無缺陷證據。grep 查到同名識別字不等於 finding 一定錯，被移除的列仍要看一眼命中位置。）
 
-## 步驟 7：Cross-model 分析
+## 步驟 7：覆蓋表
 
-比較四個引擎的發現：
+四個引擎各看不同焦點，同意的數量不是重點，先確認每個焦點都有人看過：
 
 ```
-CROSS-MODEL ANALYSIS:
-  四者都發現: [所有引擎共同回報的問題]
-  三者共識: [任三個引擎都回報的問題]
-  兩者共識: [任兩個引擎都回報的問題]
-  只有 Codex 發現: [Codex 獨有]
-  只有 OMP 發現: [OMP 獨有]
-  只有 OpenCode 發現: [OpenCode 獨有]
-  只有 Claude 發現: [Claude 獨有]
-  共識問題數: N / 總計 M
+COVERAGE:
+  跨檔契約（Codex）:               完成／未執行（原因）／改由 <引擎> 重跑
+  REVIEW.md 安全與資料契約（Claude）: 完成／未執行（原因）／改由 <引擎> 重跑
+  diff 內邏輯（OMP、OpenCode）:      完成／未執行（原因）
+  覆蓋缺口: [沒有任何引擎完成的焦點，或引擎完成了但讀不到該焦點需要的檔案；不能寫成通過]
 ```
+
+同一焦點有兩個引擎時，可以參考兩邊是否都回報同一問題，但只用來排序。
 
 ## 步驟 8：處理問題
 
 - AI 對每個 finding 檢查目前程式碼、觸發條件、需求與測試；共識數只供排序，單一引擎也可能找到真實重大問題。
 - 分為已確認缺陷、待產品決策、證據不足、誤判／不適用，附具體依據；不按模型數量或嚴重度自動接受／忽略。
+- 嚴重度對照 REVIEW.md：引擎的 High＝P0／P1、Medium＝P2、Low＝P3。**只有已確認、有觸發案例、而且違反意圖或 REVIEW.md 約束的 P0／P1 才阻擋交付**；提醒型與假設型最高 P3，不阻擋。
+- 判成已確認的 P0／P1，本機有工具時附重現指令與輸出（失敗的測試、重現腳本或 curl）；做不到就標「靜態推論」，交人時和有重現證據的分開列。
+- 結論只用三種，依序判斷：`BLOCKED`（有覆蓋缺口，或有未解的已確認 P0／P1）→ `ISSUES`（沒有 P0／P1，但有已確認的 P2／P3，全部列出）→ `PASS`（每個焦點都完成，沒有任何已確認問題）。
 - 有修復授權時，直接修正範圍內已確認缺陷並跑適用檢查；bug 先加 regression test。只有 review 授權時交付具體修正建議。
 - 人審核 AI 已查核的結論與未定取捨，不固定逐條詢問「是否修」。修正後重新核對 diff 與原問題，舊 snapshot 的結論不視為新程式碼已通過。
 - Commit、push、merge 及遠端留言仍遵守既有明確授權與目標 repo 流程，不因 review 完成自動執行。
@@ -71,7 +74,7 @@ CROSS-MODEL ANALYSIS:
 ```bash
 node "$_REPO_ROOT/../../.github/scripts/review-knowledge.cjs" record --db auto \
   --source local --engine <codex|omp|opencode|claude> --repo <repo> --pr <n> \
-  --pattern <A-F> --severity <High|Medium|Low> --file '<path:line>' \
+  --pattern <A-G> --severity <High|Medium|Low> --file '<path:line>' \
   --finding '<finding 原文摘要>' --why '<為什麼錯，附 path:line 證據>' \
   --evidence '<path:line>' --action <none|context|drop|downgrade> \
   [--sample '<那一列表格原文>' --expected <keep|drop|downgrade>]
@@ -80,7 +83,7 @@ node "$_REPO_ROOT/../../.github/scripts/review-knowledge.cjs" record --db auto \
 - `--db auto` 會從 cwd 往上找 daodao monorepo 的 `.github/review-knowledge/false-positives.jsonl`（worktrees/ 與 projects/ 底下都找得到）；腳本路徑不在時改用 monorepo 內的絕對路徑
 - 樣態定義與對策見 monorepo `.github/review-knowledge/README.md`
 - 記錄先保留本機，commit／push 依既有明確授權與 repo 流程；不能為收集誤判自動 push main。同步是否發生需查當次 workflow 證據。
-- 若 finding 觸發了新的確定性規則（改了 `UNVERIFIABLE_RE`／`HYPOTHETICAL_RE`），必須附 `--sample` + `--expected`，`node review-knowledge.cjs test` 要綠
+- 若 finding 觸發了新的確定性規則（改了 `UNVERIFIABLE_RE`／`HYPOTHETICAL_RE`／`REMINDER_RE`／`HIGH_RISK_RE`），必須附 `--sample` + `--expected`，`node review-knowledge.cjs test` 要綠
 
 ## 收尾
 
