@@ -147,14 +147,43 @@
 
 ## 3. 建議下一步
 
-1. **blast-radius 的確定度梯度併進 review-change／develop finish**（S）
-   - 為什麼：daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以把同樣做法延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。
-   - 怎麼做：改 `findings.md`／`finish.md` 各一段，PR 模板加一欄。
-2. **feature map 定期稽核（maintain-verification-skill）**（M）
-   - 為什麼：PM 驗收與 develop verify 都依賴 feature map，而 feature map 只靠「改 UI 時順手更新」。#419 已有一次性的 `path:line` 比對腳本，可以做成像 `board-audit.yml` 的排程：比對 `path:line` 與 `data-testid` 是否仍存在，加一輪 live 抽測，最多開一支修正 PR。這能直接減少 #277／#282 這類 BLOCKED。
-3. **「等你決定」彙整（ketchup）**（S）
-   - 為什麼：人類 reviewer 同時面對多張卡、多支 PR，還有 PM 驗收；`board.ts audit` 只看狀態，沒有列出「卡在誰、要決定什麼、決定所需資訊」。可以加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結。
-4. **子 repo 的型別紀律規範（type-system-discipline）**（M）
-   - 為什麼：#418 明確留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。可以補窮舉檢查（`satisfies never`）、ID 類 branded type、在 zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件，先拿過去的事故證明 lint 會失敗。
-5. **correct 的定期掃描**（M）
-   - 為什麼：防線機制已經有了，但候選來源只有「人發現第二次」。`analyze-ledger.sh` 已在累積閘門紀錄，`verify-deploy` §3.5 也有閘門候選。可以每兩週做一次：彙整 ledger 與 §3.5 的草稿，找出反覆出現的類別，再依 `agent-learning-loop.md` 的流程提出候選規則，人核准後才實作。
+「部分採用」32 項與「未採用」24 項、「不適用」2 項，依跟這個 repo 的關係分成四類。分類是依 repo 現況與過去事故做的判斷，不是 pstack 本身的分級；看法不同可以改列。
+
+### 3.1 值得做（10 項）
+
+先做 S 級的 6 項：blast-radius、「等你決定」彙整、worktree 跨任務稽核、migrate-callers 規則、動工前重述目標、註解審查，都是改 skill 文件或加一支小腳本，可以一次一個 PR。
+
+| # | 項目 | 為什麼 | 工作量 |
+|---|---|---|---|
+| 1 | blast-radius（部分採用） | daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。改 `findings.md`／`finish.md` 各一段，PR 模板加一欄 | S |
+| 2 | maintain-verification-skill：feature map 定期稽核（部分採用） | PM 驗收與 develop verify 都依賴 feature map，而它只靠「改 UI 時順手更新」。#419 已有一次性的 `path:line` 比對腳本，可以做成像 `board-audit.yml` 的排程：比對 `path:line` 與 `data-testid` 是否仍存在，加一輪 live 抽測，最多開一支修正 PR，減少 #277／#282 這類 BLOCKED。排程前先手動跑一次 | M |
+| 3 | ketchup：「等你決定」彙整（未採用） | 人類 reviewer 同時面對多張卡、多支 PR 與 PM 驗收；`board.ts audit` 只看狀態，沒有列出卡在誰、要決定什麼、決定所需資訊。加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結 | S |
+| 4 | type-system-discipline、typescript-best-practices（部分採用） | #418 留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。補窮舉檢查（`satisfies never`）、ID 類 branded type、zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件先拿過去事故證明 lint 會失敗 | M |
+| 5 | correct 的定期掃描（correct 已採用，這是延伸） | 防線機制已有，但候選來源只有「人發現第二次」。`analyze-ledger.sh` 已累積閘門紀錄，`verify-deploy` §3.5 也有閘門候選。每兩週彙整一次，找出反覆出現的類別，依 `agent-learning-loop.md` 提出候選規則，人核准後才實作。排程前先手動跑一次 | M |
+| 6 | worktree-cleanup：跨任務稽核（部分採用） | 2026-10-10 批次移除 worktree 時，因任務資料夾共用 git metadata 弄壞 #233、#214；`cleanup.md` 只處理單一任務。加一支唯讀稽核腳本，移除前列出重複的 gitdir 與孤兒 worktree | S |
+| 7 | migrate-callers-then-delete-legacy-apis（部分採用） | #411 改名時已這樣做（不留轉介 skill），但沒寫成規則；寫進 develop `refactor` 分支，避免之後留下轉介或舊 API | S |
+| 8 | in-your-own-words：動工前重述目標（未採用） | 開發前先用一句話確認對象、環境與交付形式，目前沒寫進 develop 流程；寫進 `start.md`，重述與 issue 不一致時先問 | S |
+| 9 | comment-sicko、no-comments：註解審查（未採用） | review-change 四引擎的焦點都不看註解品質（敘述式註解、註解掉的程式、workaround 說明）；在 review 焦點或 check-commit 加一條 | S |
+| 10 | runtime-forensics、trace-forensics：線上問題追查（未採用） | report-bug 會查 `git log`／`git blame`，但沒有看 log 與執行紀錄的固定方法；依 dev／prod 問題的頻率決定要不要做 | M |
+
+### 3.2 部分採用、現況夠用（26 項）
+
+poteto-agent、architect、autonomous-run、benny reproduce-and-fix-issues、benny triage-issue-reports、eval playbook、exhaust-the-design-space、feature playbook、figure-it-out、foundational-thinking、how、investigation、laziness-protocol、minimize-reader-load、model-the-domain、multi-phase-plan、poteto-help、poteto-mode（路由）、recall、reflect、setup-pstack、shipping、show-me-your-work、subtract-before-you-add、swarm、why。
+
+核心機制都已經有，缺的多半是寫成通用規則或更完整的版本（缺什麼見對照表）。不是目前的痛點，碰到問題再補。
+
+### 3.3 刻意不做（8 項）
+
+| 項目 | 原因 |
+|---|---|
+| autopilot-full／autopilot-stack、orchestrate | 2026-09-20 刻意退役排程與自動派工，所有變更都走人審 PR |
+| hillclimb | 需要誤判紀錄當迭代基準，誤判紀錄已於 2026-10-29 停止收集 |
+| unslop、technical-writing | 使用者的全域 skill 已有 write-for-reader（在 repo 外） |
+| automate-me | 個人偏好放在 repo 外的 memory |
+| setup-benny、make-bot-ui（不適用） | 依賴 Slack／Cursor automation 或特定 webhook |
+
+### 3.4 關係不大或成本太高（12 項）
+
+create-formal-verification-skill、maintain-formal-verification-skill、statechart、arena、prototype、experience-first、outcome-oriented-execution、ketchup-video、teach、bro、sharpen、指南「共用程式先寫 README」。
+
+形式驗證要 TLA+ 這類工具，這個 repo 沒有需要證明的複雜並行邏輯；arena 要同時跑多個方案，費用高；其餘多是寫作風格或教學用途。
