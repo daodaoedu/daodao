@@ -11,6 +11,12 @@ templateVersion: 1
 - 需求／POC／驗收報告／manifest：<URLs>
 - Run ID／acceptance key／spec digest／POC digest：<值>
 
+## 安全前提
+
+- <這個變更不會弄壞別處，是因為 ___>（第 <1–5> 級：1 只是這樣說／2 指出程式位置／3 推演過壞情況走不到／4 跑過真程式／5 在執行中的 app 重現；附證據）
+- 已排除：<檢查過但不成立的風險與理由；沒有就寫 none>
+- 高風險類別（auth、權限、個資、migration／schema、金流、資料刪除、併發）至少要第 4 級，做不到寫原因
+
 ## 受驗組合與驗證
 
 | Repo | Base SHA | Head SHA | Patch digest（`git patch-id --stable`） | PR／依賴 | Backend image／schema version |
