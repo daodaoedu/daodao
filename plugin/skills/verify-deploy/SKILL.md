@@ -70,7 +70,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
    ```bash
    # 在 daodao root 執行；留言檔放 repo 外的暫存位置
-   pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>.md   # 有 error 就改到通過再發
+   pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>.md   # 有 error 就改到通過再發；warn 是引用的文案在 locale 找不到，逐一確認
    gh issue comment <n> --repo daodaoedu/daodao --body-file <留言檔>.md
    ```
 

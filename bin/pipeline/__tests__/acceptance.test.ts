@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { REQUEST_MARKER, lintAcceptanceComment } from "../acceptance.js";
+import { REQUEST_MARKER, lintAcceptanceComment, lintQuotedCopy } from "../acceptance.js";
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), "fixtures/acceptance");
 const fixture = (name: string) => readFileSync(join(dir, name), "utf8");
@@ -197,5 +197,49 @@ describe("lintAcceptanceComment", () => {
       "- 工程證據（已驗，PM 不需重做）：fixture 帳號 900003 以 dev-login 冒煙通過",
     );
     expect(rules(body)).toEqual([]);
+  });
+});
+
+describe("lintQuotedCopy", () => {
+  const LOCALE = [
+    "歡迎回來島島阿學!",
+    "這是本期的實踐，打卡隱私由教練統一設定。",
+    "已排入 {count} 封邀請信",
+    "{count}",
+    "實踐已成功更新",
+  ];
+  const withSteps = (...steps: string[]) =>
+    [REQUEST_MARKER, "## 🙋 請驗收：x", "@peggy1213-create", "- 驗收步驟：", ...steps.map((t, i) => `  ${i + 1}. ${t}`), "- 工程證據（已驗，PM 不需重做）：none"].join("\n");
+  const quoted = (body: string) => lintQuotedCopy(body, LOCALE).map((f) => f.message.match(/「([^」]*)」/)?.[1]);
+
+  // #346：留言寫全形「！」，畫面上是半形「!」
+  it("warns when quoted copy differs from the locale, even by punctuation", () => {
+    expect(quoted(withSteps("登入後應該看到「歡迎回來島島阿學！」"))).toEqual(["歡迎回來島島阿學！"]);
+  });
+
+  // #333：留言引用的是改版前的舊文案
+  it("warns on stale copy", () => {
+    expect(quoted(withSteps("最上方應該看到「此場次的打卡隱私由帶領人統一設定」"))).toEqual(["此場次的打卡隱私由帶領人統一設定"]);
+  });
+
+  it("accepts copy that is part of a locale string, and fills ICU placeholders", () => {
+    expect(quoted(withSteps("看到「打卡隱私由教練統一設定」", "toast「已排入 3 封邀請信」", "按儲存後出現「實踐已成功更新」"))).toEqual([]);
+  });
+
+  // 只有變數的 locale 值（「{count}」）不能讓任何引號都算找到
+  it("does not let a placeholder-only locale value match everything", () => {
+    expect(quoted(withSteps("看到「完全不存在的文案」"))).toEqual(["完全不存在的文案"]);
+  });
+
+  it("skips URLs and paths, splits on …, and only checks the steps section", () => {
+    const body = withSteps("打開「/practices/create」", "訊息「實踐已成功更新…已排入 2 封邀請信」").replace(
+      "- 工程證據（已驗，PM 不需重做）：none",
+      "- 工程證據（已驗，PM 不需重做）：回傳「internal server error」",
+    );
+    expect(quoted(body)).toEqual([]);
+  });
+
+  it("does nothing when the locale could not be loaded", () => {
+    expect(lintQuotedCopy(withSteps("看到「任何文字」"), [])).toEqual([]);
   });
 });

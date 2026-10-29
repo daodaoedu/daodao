@@ -229,3 +229,44 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
 
   return findings;
 }
+
+/**
+ * Warnings (not errors): text quoted with 「」 in the PM steps should be on-screen copy that exists in
+ * the f2e locale files. Hand-offs quoting stale or mistyped copy sent the PM chasing text that never
+ * appears (#279「本期參與者」, #182, #369). Quotes can also be user input (a practice name the step
+ * types in), so this only warns.
+ *
+ * @param localeValues every string value from the zh-TW locale JSON files
+ */
+export function lintQuotedCopy(body: string, localeValues: string[]): AcceptanceLintFinding[] {
+  const all = body.replace(/\r\n/g, "\n").split("\n");
+  const start = Math.max(0, all.findIndex((l) => /^#{1,6}\s.*請驗收/.test(l)));
+  const lines = all.slice(start);
+  const steps = sectionLines(lines, STEPS_HEADER);
+  if (!steps || localeValues.length === 0) return [];
+  // ICU placeholders ({count}, {name}) stand for any text, so 「已排入 3 封邀請信」 matches 「已排入 {count} 封邀請信」
+  // Anchored, and only for values with real literal text: a bare 「{count}」 would otherwise match every quote
+  const patterns = localeValues
+    .filter((v) => /\{[^}]+\}/.test(v) && v.replace(/\{[^}]+\}/g, "").trim().length >= 2)
+    .map((v) => new RegExp(`^${v.split(/\{[^}]+\}/).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".+?")}$`));
+  const found = (q: string) => localeValues.some((v) => v.includes(q)) || patterns.some((re) => re.test(q));
+  const findings: AcceptanceLintFinding[] = [];
+  for (const i of [steps.headerIdx, ...steps.idx]) {
+    for (const m of lines[i].matchAll(/「([^」]{2,})」/g)) {
+      const q = m[1].trim();
+      // URLs, paths and long free text are not single UI strings
+      if (/https?:|\/|`/.test(q) || q.length > 60) continue;
+      // A quote may join several UI strings with … (「請求資料格式錯誤（主旨：…500 characters）」); check each piece
+      const pieces = q.split(/[…⋯]+/).map((p) => p.trim()).filter((p) => p.length >= 2);
+      const missing = pieces.filter((p) => !found(p));
+      if (missing.length) {
+        findings.push({
+          line: start + i + 1,
+          rule: "quoted-copy-not-in-locale",
+          message: `步驟引用的文案「${missing.join("…")}」在 f2e zh-TW locale 找不到：確認是畫面上的實際文字（不是舊文案或打錯）；若是使用者輸入的內容可以忽略`,
+        });
+      }
+    }
+  }
+  return findings;
+}
