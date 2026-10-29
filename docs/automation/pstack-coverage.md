@@ -8,9 +8,9 @@
 
 | 狀態 | 項目數 |
 |---|---|
-| 已採用 | 36 |
+| 已採用 | 38 |
 | 部分採用 | 31 |
-| 未採用 | 23 |
+| 未採用 | 21 |
 | 不適用 | 2 |
 | 合計 | 92 |
 
@@ -52,7 +52,7 @@
 | prototype playbook | 拋棄式原型用來做設計決策 | 未採用 | POC 由設計端提供，`poc-compare.md` 只做比對；沒有工程端的拋棄式原型流程 | — |
 | swarm | 平行派出 N 個 worker，收齊後彙整成一份報告 | 部分採用 | `parallel-dev.md` 允許對機械子步驟 fan out subagent；review-change 四引擎平行執行並產出覆蓋表。缺：通用的分片、彙整與報告格式 | #415 |
 | tdd | 先寫會失敗的測試再修 | 已採用 | `dev.md` 第 3 步 `fix`（失敗測試單獨 commit 在修正之前）；`AGENTS.md` 規定修 bug 必須附 regression test | #411 |
-| no-comments | 派 Comment Sicko 找出多餘註解並刪掉 | 未採用 | 沒找到註解審查規則 | — |
+| no-comments | 派 Comment Sicko 找出多餘註解並刪掉 | 部分採用 | `plugin/skills/check-commit/SKILL.md` 步驟 2.5：commit 前檢查新增的註解（註解掉的程式、複述程式、workaround 沒原因、TODO 沒卡、密度跟周圍不一致）。缺：獨立 reviewer agent | 本 PR |
 | typescript-best-practices | 編輯 .ts／.tsx 時套用 TS 規範 | 部分採用 | `plugin/hooks/ADR-0001-gates-over-guidelines.md`：`no-any`、裸 `@ts-ignore` 直接阻擋，`as any` 只警告。#418 寫明子 repo 的 TS 規範尚未開 PR | #418 |
 
 ### 驗證與證據
@@ -84,7 +84,7 @@
 | why | 跨各種證據來源（版控、issue、文件、聊天）查設計理由與 regression | 部分採用 | `plugin/skills/report-bug/SKILL.md` 第 29 行（`git log`／`git blame`／`gh pr view`）；1.5a 記設計理由；PRD 模板 §5「不採用的方案」。缺：查聊天、文件等其他證據類別 | #417、#418 |
 | teach | 結合 how 和 why，讓人真正理解 | 未採用 | 沒找到 | — |
 | sharpen | 把任務改得更深而不是更大，再重寫 prompt | 未採用 | 沒找到 | — |
-| in-your-own-words | 先重述使用者的目標與問題 | 未採用 | 沒找到明確的重述步驟（report-bug 會改寫成草稿，但用途是整理通報，不是確認目標） | — |
+| in-your-own-words | 先重述使用者的目標與問題 | 已採用 | `plugin/skills/develop/references/phases/start.md` 1.1 第 0 步：用一句話重述對象、環境、交付物與完成條件，寫進 task.md，對不上先問 | 本 PR |
 | 指南：共用程式先寫 README | 共用程式先寫 README 再實作 | 未採用 | 沒找到 | — |
 
 ### 學習與回顧
@@ -119,7 +119,7 @@
 | guard-the-context-window | 大量輸出交給 subagent，主線只留摘要 | 已採用 | `docs/automation/agent-budget-policy.md` §4；`parallel-dev.md`（唯讀調查用 Explore） | — |
 | laziness-protocol | 偏向刪除，做最小的改動 | 部分採用 | 只在 `dev.md` `refactor` 寫「先刪死碼」；沒有通用的 diff 大小原則 | #411 |
 | make-operations-idempotent | 重跑會收斂到相同的最終狀態 | 已採用 | `finish.md` 第 10 步（marker：先找再 PATCH）；`check-commit` 規定 migration 冪等重跑；`test-acceptance` 報告用 marker 防止重複發布 | #417、#419 |
-| migrate-callers-then-delete-legacy-apis | 同一波遷移完呼叫端並刪掉舊 API，不留相容層 | 部分採用 | #411 實際這樣做（dev-task 改名、不留轉介 skill），但沒寫成規則 | #411 |
+| migrate-callers-then-delete-legacy-apis | 同一波遷移完呼叫端並刪掉舊 API，不留相容層 | 已採用 | `plugin/skills/develop/references/phases/dev.md` refactor：改名或換 API 時同一 PR 遷移所有呼叫端（含文件、skill、設定字串），`git grep` 舊名零命中才刪，不留轉介 | #411、本 PR |
 | minimize-reader-load | 減少讀者要追的層數，收掉只有一個呼叫者的 wrapper | 部分採用 | 只在 `dev.md` `refactor` 提到單一呼叫者的 wrapper | #411 |
 | model-the-domain | 有狀態的邏輯要建模，不散成分支 | 部分採用 | 1.5a 要求狀態 union，追加需求時不再加第二個 boolean。缺：獨立的審查準則 | #418 |
 | never-block-on-the-human | 可回復的工作不問就做 | 已採用 | `dev.md` 第 5–6 步（禁止在 phase 結尾問「要繼續嗎」）；`format-commit` 第 122 行 | — |
@@ -161,9 +161,9 @@
 | 4 | type-system-discipline、typescript-best-practices（部分採用） | #418 留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。補窮舉檢查（`satisfies never`）、ID 類 branded type、zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件先拿過去事故證明 lint 會失敗 | M |
 | 5 | correct 的定期掃描（correct 已採用，這是延伸） | 防線機制已有，但候選來源只有「人發現第二次」。`analyze-ledger.sh` 已累積閘門紀錄，`verify-deploy` §3.5 也有閘門候選。每兩週彙整一次，找出反覆出現的類別，依 `agent-learning-loop.md` 提出候選規則，人核准後才實作。排程前先手動跑一次 | M |
 | 6 | ~~worktree-cleanup：跨任務稽核~~（#426 已做） | 2026-10-10 批次移除 worktree 時，因任務資料夾共用 git metadata 弄壞 #233、#214；`cleanup.md` 只處理單一任務。加一支唯讀稽核腳本，移除前列出重複的 gitdir 與孤兒 worktree | S |
-| 7 | migrate-callers-then-delete-legacy-apis（部分採用） | #411 改名時已這樣做（不留轉介 skill），但沒寫成規則；寫進 develop `refactor` 分支，避免之後留下轉介或舊 API | S |
-| 8 | in-your-own-words：動工前重述目標（未採用） | 開發前先用一句話確認對象、環境與交付形式，目前沒寫進 develop 流程；寫進 `start.md`，重述與 issue 不一致時先問 | S |
-| 9 | comment-sicko、no-comments：註解審查（未採用） | review-change 四引擎的焦點都不看註解品質（敘述式註解、註解掉的程式、workaround 說明）；在 review 焦點或 check-commit 加一條 | S |
+| 7 | ~~migrate-callers-then-delete-legacy-apis~~（已做） | #411 改名時已這樣做（不留轉介 skill），但沒寫成規則；寫進 develop `refactor` 分支，避免之後留下轉介或舊 API | S |
+| 8 | ~~in-your-own-words：動工前重述目標~~（已做） | 開發前先用一句話確認對象、環境與交付形式，目前沒寫進 develop 流程；寫進 `start.md`，重述與 issue 不一致時先問 | S |
+| 9 | ~~comment-sicko、no-comments：註解審查~~（no-comments 已做在 check-commit；獨立 agent 未做） | review-change 四引擎的焦點都不看註解品質（敘述式註解、註解掉的程式、workaround 說明）；在 review 焦點或 check-commit 加一條 | S |
 | 10 | runtime-forensics、trace-forensics：線上問題追查（未採用） | report-bug 會查 `git log`／`git blame`，但沒有看 log 與執行紀錄的固定方法；依 dev／prod 問題的頻率決定要不要做 | M |
 
 ### 3.2 部分採用、現況夠用（26 項）
