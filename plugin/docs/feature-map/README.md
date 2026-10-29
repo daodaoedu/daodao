@@ -15,6 +15,7 @@
 - **前置條件不夠就回報，不降低驗證標準**：資料不足以走完旅程時，該旅程算失敗或受阻，原因寫進該功能的「陷阱」。
 - **只有 dev 環境**：所有網址都是 dev；不在 prod 驗。
 - **手機版只要改 viewport**（Web）：伺服器只用 User-Agent 決定第一次渲染，client 端會立刻依視窗寬度重判並跟著 resize 切換（daodao-f2e `packages/shared/src/providers/device-provider.tsx:46-67`），所以縮 viewport 就夠。要等 `networkidle` 再量，`DOMContentLoaded` 時側欄還沒渲染（2026-10-29 在 `/settings`、`/mine` 實測）。
+- **先關「安裝島島阿學」橫幅**（Web）：新瀏覽器第一次開頁會在畫面底部出現，桌機寬度也會，常擋住精靈的「下一步」或編輯頁的「儲存」。它的關閉鈕跟頁面上的其他「關閉」同名，要限定在橫幅內點（2026-10-29 #141、#357 草稿實跑）。
 - **讀最新的 dev 程式**：本機 `projects/` 底下的 checkout 可能落後 dev 很多，查選擇器時用 `git show origin/dev:<path>`，不要只看本機檔案。
 
 ## 功能索引
