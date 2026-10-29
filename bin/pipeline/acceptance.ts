@@ -52,6 +52,8 @@ const REQUEST_MARKER_RE = /<!--\s*daodao:acceptance-request\s*-->/;
 
 const ENGINEERING_HEADER =/^(?:\s*[-*]\s*|#{1,6}\s+)\**工程證據/;
 const STEPS_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗收步驟/;
+/** #141's hand-off had no cleanup line, so the PM could not tell whether to delete the practices it created. */
+const CLEANUP_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗完收尾/;
 
 /** Numbered step: `1. x`, `1.x`, `1、x`, `1) x`. */
 const STEP_LINE = /^\s*\d+[.)、．]\s*\S/;
@@ -152,6 +154,14 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
       rule: "engineering-evidence-missing",
       message:
         "缺「工程證據（已驗，PM 不需重做）」區塊：列出 API 回讀、regression test 等工程證據連結，沒有就寫 none，讓 PM 知道哪些不必自己驗",
+    });
+  }
+
+  if (!lines.some((l) => CLEANUP_HEADER.test(l))) {
+    findings.push({
+      line: at(0),
+      rule: "cleanup-missing",
+      message: "缺「驗完收尾」：寫出驗收建立的資料要刪除、封存或保留，不會建立資料就寫 none（#141 PM 不知道要不要刪測試實踐）",
     });
   }
 

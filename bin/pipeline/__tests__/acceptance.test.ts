@@ -49,6 +49,7 @@ describe("lintAcceptanceComment", () => {
       "  3. 主旨貼超過 500 字按儲存，應該出現紅色訊息「請求資料格式錯誤（主旨：…500 characters）」", // #292
       "  4. 用手機（或瀏覽器開發者工具設 384×500）打開我的足跡，對話框幾乎滿版", // #163
       "- 工程證據（已驗，PM 不需重做）：none",
+      "- 驗完收尾：none",
     ].join("\n");
     expect(lintAcceptanceComment(body)).toEqual([]);
   });
@@ -62,6 +63,7 @@ describe("lintAcceptanceComment", () => {
       "1、按 Log in 登入，再按「送出」", // unindented 1、 must not end the section
       "2.打開好友請求列表，應該看到加入請求", // bare 請求 is product copy
       "- 工程證據（已驗，PM 不需重做）：none",
+      "- 驗完收尾：none",
     ].join("\n");
     expect(lintAcceptanceComment(body)).toEqual([]);
   });
@@ -81,13 +83,13 @@ describe("lintAcceptanceComment", () => {
   });
 
   it("requires numbered steps", () => {
-    const body = REQUEST_MARKER + "\n## 🙋 請驗收：x\n@peggy1213-create\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none";
+    const body = REQUEST_MARKER + "\n## 🙋 請驗收：x\n@peggy1213-create\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none\n- 驗完收尾：none";
     expect(rules(body)).toEqual(["steps-missing"]);
   });
 
   // The PM's acceptance tool only accepts a comment with both the exact heading and the mention (#245, #346 BLOCKED).
   const handOff = (heading: string, mention: string) =>
-    [REQUEST_MARKER, heading, mention, "- 驗收步驟：", "  1. 打開頁面，應該看到列表", "- 工程證據（已驗，PM 不需重做）：none"].join("\n");
+    [REQUEST_MARKER, heading, mention, "- 驗收步驟：", "  1. 打開頁面，應該看到列表", "- 工程證據（已驗，PM 不需重做）：none", "- 驗完收尾：none"].join("\n");
 
   it("rejects #245/#346-style hand-off without the 「## 🙋 請驗收」 heading", () => {
     const r = rules(handOff("## ✅ dev 冒煙通過，交 PM 驗收", "@peggy1213-create 麻煩驗收："));
@@ -128,7 +130,22 @@ describe("lintAcceptanceComment", () => {
       "1. 打開頁面，應該看到列表",
       "### 工程證據（已驗，PM 不需重做）",
       "- PUT body 與 GET 回讀：https://server-dev.daodao.so/api/v1/x",
+      "### 驗完收尾",
+      "到「我的實踐」刪除這次建立的實踐",
     ].join("\n");
     expect(lintAcceptanceComment(body)).toEqual([]);
+  });
+
+  // #141: the hand-off never said what to do with the practices acceptance creates.
+  it("rejects a hand-off without a 「驗完收尾」 line", () => {
+    const body = handOff("## 🙋 請驗收：x", "@peggy1213-create").replace("\n- 驗完收尾：none", "");
+    expect(rules(body)).toEqual(["cleanup-missing"]);
+  });
+
+  it("does not count 收尾 mentioned only inside a step as the cleanup line", () => {
+    const body = handOff("## 🙋 請驗收：x", "@peggy1213-create")
+      .replace("\n- 驗完收尾：none", "")
+      .replace("  1. 打開頁面，應該看到列表", "  1. 打開頁面，驗完收尾時記得截圖");
+    expect(rules(body)).toContain("cleanup-missing");
   });
 });

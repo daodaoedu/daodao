@@ -37,6 +37,8 @@ PM 專用的測試帳號（不是個人帳號），一個角色一個，不互�
 
 只用一般的登入流程。需要密碼、驗證碼或 Google 再次驗證時暫停該角色的步驟，請使用者自己完成；不在對話裡要密碼，不繞過登入。
 
+**例外：agent 跑草稿模式**（例如在 Claude Code 代跑，瀏覽器登入的不是 PM 測試帳號）時，經使用者同意，可以用工程的 dev-login（`mode=user`，做法見 develop 的 `references/browser-verify.md` §3a）登入**同一個**測試帳號，把 token 設成 `.daodao.so` 網域的 `auth_token` cookie。報告的「測試環境／帳號角色」要寫明「以 dev-login 登入，PM 正式驗收時用 Google 登入」。發布模式一律由 PM 用 Google 登入，不用 dev-login。token 不寫進報告、截圖或 log，用完刪掉。
+
 ## 瀏覽器
 
 每個瀏覽器的登入狀態各自獨立，切換瀏覽器或帳號後都要重新確認登入的是誰（畫面右上角的使用者名稱或設定頁的信箱）。
@@ -51,9 +53,11 @@ PM 專用的測試帳號（不是個人帳號），一個角色一個，不互�
 
 被瀏覽器擋（`ERR_BLOCKED_BY_CLIENT`）→ 先換另一個可用的瀏覽器再試一次；仍被擋就 BLOCKED。
 
+自動化瀏覽器（playwright、headless）預設語系是英文，產品 Web 會導到 `/en/...`。開始前先設 cookie `NEXT_LOCALE=zh-TW`（網域 `app-dev.daodao.so`），或在 context 設 `locale: 'zh-TW'`，再照留言的網址打開；確認網址沒有 `/en/` 前綴、畫面是中文。
+
 ## 截圖與上傳
 
-- 截圖存在 repo 外：`~/.daodao/acceptance-evidence/<issue 號>/<日期>/`，檔名帶步驟編號。清理測試資料時不刪這個資料夾。
+- 截圖與報告草稿存在 repo 外：`~/.daodao/acceptance-evidence/<issue 號>/<日期>/`（截圖放 `shots/`，檔名帶步驟編號；報告草稿叫 `report.md`）。不要放在工具的暫存資料夾，那裡會被清掉。清理測試資料時不刪這個資料夾。
 - GitHub 沒有上傳 issue 附件的公開 API，`gh` 也做不到。上傳方式：用**已登入 `peggy1213-create` 的瀏覽器**打開 issue 留言框，把截圖檔拖進去，取得 `github.com/user-attachments/...` 網址，再放進報告。
 - 客戶端只能「看到」畫面、拿不到截圖檔（#213、#344 都卡在這裡）→ 先試客戶端的存檔功能或另一個瀏覽器的截圖功能；都不行就照 SKILL.md §6 判 BLOCKED（證據無法交付）。
 
