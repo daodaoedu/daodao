@@ -30,7 +30,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
 1. **取得矩陣**：從 PR body「## 驗證證據」或 task.md「### 核心旅程矩陣」取全部旅程列（格式見 develop 的 [journey-matrix.md](../develop/references/journey-matrix.md)）。讀取權限適用時一併取 [角色與資料矩陣](../develop/references/read-access-verification.md)，不可因沒有寫入或新增端點而跳過。PR 寫 `核心旅程不適用` 時先核對 diff 與讀取權限不適用理由；兩類行為都不涉及才記原因後跳過。
 2. **確認部署 revision**：查該 repo CD run 是否已部署合併後 commit（run URL、環境、revision）；跨 repo 依實際依賴（通常 storage → server／AI backend → f2e）逐一記錄環境、revision 與成功 run，全部到位才算環境就緒；不能漏掉列表／搜尋實際呼叫的 AI 服務。未到位就停在「已合併，待部署」，不冒煙、不回報可用。
-3. **重跑旅程**：在部署後環境（dev 前端 + server-dev，或 PR 標明的目標環境）用瀏覽器或 curl 重跑**全部正常列 + 至少一列錯誤路徑**，攔 response 記狀態碼；登入與工具選擇沿用 develop 的 [browser-verify.md](../develop/references/browser-verify.md)。
+3. **重跑旅程**：在部署後環境（dev 前端 + server-dev，或 PR 標明的目標環境）用瀏覽器或 curl 重跑**全部正常列 + 至少一列錯誤路徑**；bug 卡另外照 task.md 的 `REPRO-01` 重跑原本的通報路徑，攔 response 記狀態碼；登入與工具選擇沿用 develop 的 [browser-verify.md](../develop/references/browser-verify.md)。
    - **讀取權限旅程**：沿用同一組 fixture，核對目前登入的實際使用者 ID／角色與 membership，從使用者入口一路走到詳情、打卡／留言等受影響下游。依矩陣重驗本人、同範圍、範圍外、退出／移除及未登入；不適用角色保留具體理由。檢查原始回應的私人內容排除，不只看 200／403。快取適用時先成功讀取、確認命中，再撤權後重讀；期限適用時驗臨界當日與隔日。無法在 dev 安全造出時間邊界時，附真實 DB 邊界測試證據並明列部署後未重做項目，不假稱全旅程通過。
    - **原生 App 才適用**：核對可安裝 preview build／安裝連結、測試裝置與實際版本；OTA success／Expo web 僅是各自證據。無可安裝 build 就記原生步驟受阻，不能交一份無法照做的 App 安裝驗收。初次交驗前留 Review，列出待補的 build／裝置前提；已在 Acceptance 則依 §2.6 留 Acceptance 並掛 `acceptance:blocked`，不當成產品 FAIL。
    - **測試帳號 email 只能用使用者指定的 QA 信箱**（`~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt`，plus 別名 `<base>+qa<issue#>@<domain>`）。dev 走真 SMTP，自己編的地址會把退信灌進維運信箱（#218 實例見 browser-verify.md §3a）。能用 `dev-login mode=user` 登既有帳號就別建新帳號。
@@ -84,6 +84,18 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 2. OpenSpec 已於 2026-09-20 退役（舊 change 封存於 `docs/archive/openspec/`，不再歸檔）；用現有開發文件與 Issue 驗收契約記錄完成與剩餘事項。
 3. 結構、入口或 build 流程有變更時更新適用 codebase-map；服務依賴／schema 流程有變更時，先查 canonical system-map 與實際同步機制，再同步可確認的副本，不假定固定有六份。
 4. 相關 repo／文件不可存取時留下具體路徑、建議修訂與限制；不宣稱跨 repo 已同步。不相關項目標為不適用。
+
+## 3.5 這次該被擋卻沒擋的（符合條件才做）
+
+只在以下情況做：dev 冒煙有 ❌、verify 同一項失敗兩次以上、PM 退回，或這張卡本身是漏到 dev／prod 的 bug。要在 develop cleanup 刪掉任務資料夾**之前**做，task.md 的失敗紀錄是唯一素材。
+
+每條教訓分到三類之一：
+
+1. **能用腳本、lint 或閘門抓到**：寫成 issue 草稿（`notes/issue-drafts/`），標「閘門候選」，指出最適合掛的位置（pre-pr-gate、check-pr-evidence、acceptance-lint 等）。新閘門要先在事故修正前的版本跑出 ❌、修正後 ✅。
+2. **需要判斷、寫不成檢查**：提議一條 develop `gotchas.md` 的「症狀 → 做法（#n）」。
+3. **一次性的**：丟掉，寫一行理由。
+
+清單交人核准後，才開卡或修改 skill；不自動改。§4 報告加一行「經驗整理：閘門候選 N／gotchas N／丟棄 N」，沒觸發就寫「未觸發」。
 
 ## 4. AI 自審後交人審閱
 

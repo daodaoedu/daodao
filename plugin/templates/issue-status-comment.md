@@ -29,7 +29,7 @@ templateVersion: 1
 - 回報同步：<pending/synced/report-pending；Issue/Drive 回讀確認時間>
 - 下一步：<責任人、具體操作；不要把待驗收或已合併寫成 Done>
 
-<!-- 手動使用：將 marker 的 N 換為中央 Issue 號碼，更新同一摘要。子 Issue 留言也引用同一中央編號。未來 reporter 必須驗證最新 run/state version/fencing token 並回讀；本範本尚未提供 upsert/outbox/reconciler。 -->
+<!-- 手動使用：將 marker 的 N 換為中央 Issue 號碼，更新同一摘要。子 Issue 留言也引用同一中央編號。未來 reporter 必須驗證最新 run/state version/fencing token 並回讀；更新同一則留言的做法見 develop finish 步驟 10（marker 查找後 PATCH）。 -->
 
 ---
 

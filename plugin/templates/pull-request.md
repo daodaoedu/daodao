@@ -13,7 +13,7 @@ templateVersion: 1
 
 ## 受驗組合與驗證
 
-| Repo | Base SHA | Head SHA | Patch digest | PR／依賴 | Backend image／schema version |
+| Repo | Base SHA | Head SHA | Patch digest（`git patch-id --stable`） | PR／依賴 | Backend image／schema version |
 |---|---|---|---|---|---|
 | <repo> | <完整 SHA> | <完整 SHA> | <digest> | <URL／順序> | <值或 N/A> |
 
@@ -34,4 +34,4 @@ templateVersion: 1
 - 中央及子 Issue 回寫／報告可讀性：<URLs、回讀時間、pending/synced/report-pending>
 - 合併：人工；本 PR 合併不代表中央任務 Done，須完成契約中的部署與產品驗收。
 
-新增 commit、rebase 或規格／POC 異動後，更新證據與人工簽核；不要沿用舊圖片而只換 SHA。
+新增 commit、rebase 或規格／POC 異動後，先比對 patch-id：值相同只更新 head SHA，證據沿用；值不同只重驗改到的範圍，並更新人工簽核。不要在 patch 已變的情況下沿用舊圖片而只換 SHA。
