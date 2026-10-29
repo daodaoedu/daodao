@@ -148,4 +148,35 @@ describe("lintAcceptanceComment", () => {
       .replace("  1. 打開頁面，應該看到列表", "  1. 打開頁面，驗完收尾時記得截圖");
     expect(rules(body)).toContain("cleanup-missing");
   });
+
+  // PM 只能 Google 登入，fixture 帳號與 dev-login 用不了：16 份 BLOCKED 報告來自交接留言指定了這類帳號
+  const withAccount = (account: string) =>
+    handOff("## 🙋 請驗收：x", "@peggy1213-create").replace("- 驗收步驟：", `- 測試帳號：${account}\n- 驗收步驟：`);
+
+  it("rejects #279's account line: fixture accounts on a QA plus-address", () => {
+    const r = rules(withAccount("加入頁用驗收 fixture「學員」帳號；後台用 fixture「組織管理員」帳號（都是 vincent.xu.work+fixture-… 的既有帳號）"));
+    expect(r).toContain("pm-account-unusable");
+  });
+
+  it("rejects #277's account line: the fixture display name 驗收・組織管理員", () => {
+    expect(rules(withAccount("管理端要用「驗收・組織管理員」（島島驗收組織）登入"))).toContain("pm-account-unusable");
+  });
+
+  it("rejects dev-login and fixture ids in the account section, including indented sub-lines", () => {
+    expect(rules(withAccount("用 dev-login 登入 user 900002"))).toEqual(["pm-account-unusable", "pm-account-unusable"]);
+    expect(rules(withAccount("PM 的一般使用者測試帳號\n  - 團主身分：帳號 900001"))).toEqual(["pm-account-unusable"]);
+  });
+
+  it("accepts PM test accounts, including one added to the fixture org", () => {
+    expect(rules(withAccount("PM 的一般使用者測試帳號"))).toEqual([]);
+    expect(rules(withAccount("PM 的 admin 測試帳號，已加進「島島驗收組織」當團主"))).toEqual([]);
+  });
+
+  it("only checks the account section: fixture wording in the engineering evidence is fine", () => {
+    const body = withAccount("PM 的一般使用者測試帳號").replace(
+      "- 工程證據（已驗，PM 不需重做）：none",
+      "- 工程證據（已驗，PM 不需重做）：fixture 帳號 900003 以 dev-login 冒煙通過",
+    );
+    expect(rules(body)).toEqual([]);
+  });
 });
