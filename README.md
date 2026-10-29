@@ -72,7 +72,7 @@ git submodule update --remote
 ```
 記錄                                   消費
   /review-change 步驟 8 查證為誤判 ──┐      ┌─ CI  code-review.yml：known-FP 進 prompt → filter 在 strict validator 前
-  PR 作者回 /fp <n> <A-F> <why>  ├→ jsonl ┤
+  PR 作者回 /fp <n> <A-G> <why>  ├→ jsonl ┤
   （collect-pr-feedback 收割）   ─┘      └─ 本機 /review-change：known-FP 進 review input → filter 套各引擎輸出
 ```
 

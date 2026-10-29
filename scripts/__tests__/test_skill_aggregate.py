@@ -57,9 +57,12 @@ class AggregateTests(unittest.TestCase):
         artifact = {'case_id': case['id'], 'response': 'Test fixture only',
                     'trace_source': source, 'events': [], 'claims': case['facts'],
                     'requirement_ids': case['approved_ids'],
-                    'unresolved': case['required_unresolved'], 'questions': [],
+                    'unresolved': case['required_unresolved'],
+                    'questions': [{'field': f} for f in case.get('required_question_fields', [])],
                     'trace_provenance': {'client': 'codex', 'sha256': 'a' * 64,
                                          'bytes': 1, 'tool_calls': 0}}
+        if 'expected_dedup_level' in case:
+            artifact['dedup_level'] = case['expected_dedup_level']
         raw = json.dumps(artifact).encode()
         (self.root / 'artifact.json').write_bytes(raw)
         self.manifest['runs'] = [{'run_id': 'completed', 'case_id': case['id'],
