@@ -20,7 +20,17 @@
 5. 交付紀錄目前為試行，`DEV_TASK_DELIVERY_GATE_MODE` 預設 `off`，不得讓未完成的收集器阻擋其他 session。需試行時先定位 gate 的**絕對路徑**：Claude plugin 安裝目錄的 `hooks/check-agent-delivery.py` 或 daodao root 的 `plugin/hooks/check-agent-delivery.py`；確認檔案存在後存為 `DELIVERY_CHECKER`，不得從 task repo 用相對 `plugin/hooks/...` 執行。在 `$TASK/agent-handoff.<repo>.json` 保存此 repo 的紀錄（放 repo 外），使用最後 commit HEAD、與 PR 實際 base branch 的 merge-base；填 owned_paths、writes、claims、questions、recurrences。writes 是最終 Git diff 的檔案清單，可以从 Git 產生，**不代表完整寫入操作**。verified claim 的 evidence 需檔案 ref／sha256。執行 `python3 "$DELIVERY_CHECKER" --repo "$PWD" --artifact "$TASK/agent-handoff.<repo>.json" --base <merge-base-sha>`。沒有完整 trace 時必須填 `trace_status: unavailable`（或 partial）與 `trace_reason`，只能回報 manifest 核對通過、操作 trace 未驗證。客戶端 trace 有 Bash／未知工具時不能照 diff 補造，也不強迫重寫舊檔來湊紀錄。`import-agent-trace.py` 可匯入 Claude Write／Edit targets，Bash／未知工具會標 partial；必須先跑真實任務、確認包含 Bash 的操作能被完整觀測，再決定是否啟用 `--require-trace`。現有任務不可回溯製造 trace。新 macOS／Linux 任務可在派工前用 `record-agent-writes.py --repo <task-repo> --output <task>/trace.json --stop-file <task>/trace.stop` 啟動獨立原生 observer（macOS FSEvents／Linux inotify）（macOS 使用 repo 外 venv，安裝 `scripts/agent-trace/requirements.txt` 的 watchdog 6.0.0；Linux 不需額外 Python 套件），確認 ready sidecar 才派工；完成測試和 commit 後建立 stop-file，等 recorder 結束，再核對完整 trace。它不要求禁止 Bash；unsupported 平台、事件掉失或收集開始過晚都不得假稱完整。試行模式 `warn` 只留診斷，`block` 核對 manifest，`DEV_TASK_REQUIRE_TRACE=1` 才強制完整 trace；啟用 block 仍需明確決策與客戶端實測。
 6. Push 前跑 `review-change` skill
 7. Push（rebase 過需 force push 時先問使用者）
-8. 開 PR：
+8. 開 PR。PR 本文要寫**安全前提**（參考 pstack blast-radius）：這個變更之所以不會弄壞別的地方，通常只靠 1～2 件事，例如「這個 hook 只有 settings 頁用」「舊欄位已經沒有任何呼叫端」。逐一寫出來，並標明證據做到哪一級：
+
+   | 級 | 證據 | 例子 |
+   |---|---|---|
+   | 1 | 只是這樣說 | 「應該沒人用」——單獨不算數 |
+   | 2 | 指出程式位置 | `path:line`，或函式庫原始碼 |
+   | 3 | 推演過壞情況走不到 | 一步步走過失敗路徑，說明在哪一步就停了 |
+   | 4 | 跑過真程式 | 腳本或測試直接呼叫真的函式，前提不成立就會失敗 |
+   | 5 | 在執行中的 app 重現 | 瀏覽器或 dev 環境實際操作 |
+
+   便宜的就往下做；停在哪一級照實寫，做不到就寫「未證明」。改到 REVIEW.md 高風險類別（auth、權限、個資、migration／schema、金流、資料刪除、併發）時，安全前提至少要到第 4 級；做不到要寫明原因，交 review 時列為待查證。搜尋呼叫端只是起點，要看的是 grep 找不到的地方：函式庫實際行為與版本、執行時機（卸載、非同步）、API 回傳的 JSON 與設定檔裡的字串引用。
 
 ```bash
 cat > "$TASK/notes/pr-body-<repo>.md" <<'EOF'
@@ -30,6 +40,10 @@ cat > "$TASK/notes/pr-body-<repo>.md" <<'EOF'
 
 ## How does it address?
 - <實作要點，含跨 repo merge 順序>
+
+## 安全前提
+- <這個變更不會弄壞別處，是因為 ___>（第 <1–5> 級：<證據，例如 path:line、測試名稱、指令輸出>）
+- 已排除：<檢查過但不成立的風險與理由；沒有就寫 none>
 
 ## 驗證證據
 - 驗證報告: [Task <n> 驗證報告](<Google 文件 url>)
