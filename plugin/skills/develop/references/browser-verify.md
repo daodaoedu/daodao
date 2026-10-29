@@ -19,7 +19,13 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 
 1. 目標 port 是任務 worktree 的程序佔用，不是 `projects/` 底下的版本：`lsof -nP -iTCP:<port> -sTCP:LISTEN` 看程序的 cwd
 2. 任務有改 server 時，server port 也是任務版的程序
-3. f2e 的 API URL（`packages/config/generated/env.ts` 的 `NEXT_PUBLIC_API_URL`）指向任務要驗的 server
+3. f2e 的 API URL（`packages/config/generated/env.ts` 的 `NEXT_PUBLIC_API_URL`）指向任務要驗的 server。用腳本檢查，不要只看一眼：
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/skills/develop/references/check-api-url.mjs" --f2e "$TASK/daodao-f2e" --expect http://localhost:<server port>
+   ```
+
+   ❌ 就照印出的指令重新產生；⚠️ 代表 worktree 的 `.env.local` 還是舊 port，下次 lint／typecheck 又會蓋回去，順手改掉。**每次跑完 lint／typecheck 都要再跑一次**（task 138、152、189、295 都是驗到一半掉登入才發現）
 4. 需要登入的流程：token 打 `GET /api/v1/auth/me` 回 200
 5. 公開頁載入後沒有被導到 `/auth/*`
 6. dev server 的啟動時間晚於最後一次改檔，避免 HMR 卡在舊程式

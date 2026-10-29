@@ -14,7 +14,7 @@ POC 比對的陷阱在 [poc-compare.md](poc-compare.md)「`.dc.html` POC 的已�
 
 ### f2e
 
-- **跑完 `pnpm lint`／`pnpm typecheck` 後瀏覽器掉登入**：turbo 會觸發 `packages/config` 的 `generate:env`，把 `generated/env.ts` 的 `NEXT_PUBLIC_API_URL` 蓋回 `http://localhost:4000`，middleware 連不到 worktree 的 server，導去 `/auth/login` 並清掉 cookie。瀏覽器驗證期間先別跑 turbo；跑了就立刻 `cd packages/config && NEXT_PUBLIC_API_URL=http://localhost:<server port> pnpm generate:env`。掉登入時先開公開頁（`/zh-TW/challenges`）重設 cookie，再進目標頁。（#189）
+- **跑完 `pnpm lint`／`pnpm typecheck` 後瀏覽器掉登入**：turbo 會觸發 `packages/config` 的 `generate:env`，把 `generated/env.ts` 的 `NEXT_PUBLIC_API_URL` 蓋回 `http://localhost:4000`，middleware 連不到 worktree 的 server，導去 `/auth/login` 並清掉 cookie。瀏覽器驗證期間先別跑 turbo；跑了就立刻 `cd packages/config && NEXT_PUBLIC_API_URL=http://localhost:<server port> pnpm generate:env`。掉登入時先開公開頁（`/zh-TW/challenges`）重設 cookie，再進目標頁。（#189）先跑 `check-api-url.mjs`（見 browser-verify.md 開跑前檢查第 3 項）確認；根本解法是把 worktree 自己那份 `.env.local` 的 `NEXT_PUBLIC_API_URL` 改成任務的 server port，之後 turbo 重新產生也不會再蓋錯。
 - **畫面顯示 `namespace.key_name` 這種 raw key**：locale 佔位符寫成 i18next 風格 `{{count}}`。next-intl 用 ICU 格式 `{count}`，寫錯不會被 typecheck／lint 抓到，執行時 `INVALID_MESSAGE: MALFORMED_ARGUMENT` 後 fallback 成 key。查法：`grep -n "{{" packages/i18n/src/locales/*.json`。（#273）
 - **practices 的 `/summary`、`/edit` 量到的是詳情頁**：非 owner 會被 `isOwner && isExpired` 導回詳情頁。測試資料用**登入者本人擁有、且 `end_date` 已過**的 practice。dev-login JWT 的 `id` 是 `users.id`（內部整數），`_id` 才是 external UUID，判斷 owner 要用 `users.id` 對 `practices.user_id`。（#240）
 - **不同 route 需要不同身分**：`/auth/onboarding` 要 dev-login `mode=temp` 的新用戶、`/auth/verify-email/pending` 要未登入、`/practices/copy-success` 要帶 `?practiceId=`。rect-probe 的 `routes.json` 每條可指定 `user`／`temp`／`none`。（#239）
