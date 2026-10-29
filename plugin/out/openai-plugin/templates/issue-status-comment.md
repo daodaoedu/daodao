@@ -47,7 +47,7 @@ templateVersion: 1
 - AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。
 - issue 內文驗收契約的「必須證據」欄若寫了 API 回讀或測試，PM 會照著要；所以「對照的 AC」要寫明那些由工程提供、PM 依畫面判定。
 - 第一行的隱藏標記 `<!-- daodao:acceptance-request -->`、標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具（[test-acceptance](../skills/test-acceptance/SKILL.md)）靠標記找出這則留言，缺任一個就判 BLOCKED（#245、#346）。標記在 GitHub 上看不到，不影響 PM 閱讀。
-- 發出前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 不發。
+- 發出前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 不發。`warn [quoted-copy-not-in-locale]` 代表步驟用「」引用的文字在 f2e 的 zh-TW locale 找不到：是畫面文案就對照畫面改正（#346 全形「！」對半形「!」、#333 舊文案「帶領人」已改「教練」）；是使用者輸入的內容或步驟描述就忽略。
 
 ```markdown
 <!-- daodao:acceptance-request -->
