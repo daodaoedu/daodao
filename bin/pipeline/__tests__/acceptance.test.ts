@@ -172,6 +172,25 @@ describe("lintAcceptanceComment", () => {
     expect(rules(withAccount("PM 的 admin 測試帳號，已加進「島島驗收組織」當團主"))).toEqual([]);
   });
 
+  // GitHub 的自動連結會把緊接在後的全形標點吃進網址，PM 點了 404（memory feedback_github_links_cjk_punct）
+  const withUrlLine = (line: string) =>
+    handOff("## 🙋 請驗收：x", "@peggy1213-create").replace("- 驗收步驟：", `- 測試網址：${line}\n- 驗收步驟：`);
+
+  it("rejects a bare URL followed by full-width punctuation", () => {
+    expect(rules(withUrlLine("https://app-dev.daodao.so/practices/create，登入後開始"))).toEqual(["bare-url-cjk-punct"]);
+    expect(rules(withUrlLine("先開 https://app-dev.daodao.so/mine。"))).toEqual(["bare-url-cjk-punct"]);
+    // #354：全形括號包住的網址，GitHub 會把「）」吃進連結
+    expect(rules(withUrlLine("打開開通申請表單（https://tally.so/r/44WXdk）"))).toEqual(["bare-url-cjk-punct"]);
+  });
+
+  it("accepts Markdown links, <url>, and bare URLs followed by a space or ASCII punctuation", () => {
+    expect(rules(withUrlLine("[建立實踐](https://app-dev.daodao.so/practices/create)，登入後開始"))).toEqual([]);
+    expect(rules(withUrlLine("<https://app-dev.daodao.so/mine>。"))).toEqual([]);
+    expect(rules(withUrlLine("https://app-dev.daodao.so/mine 登入後開始"))).toEqual([]);
+    // #354：dev 冒煙段落把 href 寫在反引號裡，不會變成連結
+    expect(rules(withUrlLine("連結 href `https://tally.so/r/44WXdk`、target 正確"))).toEqual([]);
+  });
+
   it("only checks the account section: fixture wording in the engineering evidence is fine", () => {
     const body = withAccount("PM 的一般使用者測試帳號").replace(
       "- 工程證據（已驗，PM 不需重做）：none",
