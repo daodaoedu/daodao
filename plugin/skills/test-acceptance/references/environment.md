@@ -57,7 +57,7 @@ PM 專用的測試帳號（不是個人帳號），一個角色一個，不互�
 
 ## 截圖與上傳
 
-- 截圖存在 repo 外：`~/.daodao/acceptance-evidence/<issue 號>/<日期>/`，檔名帶步驟編號。清理測試資料時不刪這個資料夾。
+- 截圖與報告草稿存在 repo 外：`~/.daodao/acceptance-evidence/<issue 號>/<日期>/`（截圖放 `shots/`，檔名帶步驟編號；報告草稿叫 `report.md`）。不要放在工具的暫存資料夾，那裡會被清掉。清理測試資料時不刪這個資料夾。
 - GitHub 沒有上傳 issue 附件的公開 API，`gh` 也做不到。上傳方式：用**已登入 `peggy1213-create` 的瀏覽器**打開 issue 留言框，把截圖檔拖進去，取得 `github.com/user-attachments/...` 網址，再放進報告。
 - 客戶端只能「看到」畫面、拿不到截圖檔（#213、#344 都卡在這裡）→ 先試客戶端的存檔功能或另一個瀏覽器的截圖功能；都不行就照 SKILL.md §6 判 BLOCKED（證據無法交付）。
 
