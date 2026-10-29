@@ -2,7 +2,13 @@
 
 1. 確認所有 PR 已 merge（`gh pr view <link>`）
 1a. **部署後冒煙，通過前不刪任務資料夾**：merge 不等於可用（#179 是使用者在 dev 撞到的）。依 `verify-deploy` skill 的「目標環境冒煙」段，用 task.md 的核心旅程矩陣在部署後的 dev 環境（dev 前端 + server-dev，或對應環境）重跑全部正常列 + 至少一列錯誤路徑，把「dev 冒煙」表回寫到 issue comment；冒煙失敗走 `report-bug`，並在 comment 標明「已合併，dev 冒煙未過」。沒有部署證據（CD run 尚未跑到該 revision）就先停在這一步，不宣稱可用
-2. 移除 worktree 與 branch：
+2. 移除 worktree 與 branch。**移除前先跑稽核**，有錯誤（❌）就停下，不要 `git worktree remove`：
+
+```bash
+cd "$ROOT" && pnpm -s tsx bin/pipeline/worktree-audit.ts   # 唯讀；exit 1 = 有共用／複製／損壞的 checkout
+```
+
+稽核回報 `shared`（多個 checkout 共用同一份 metadata）或 `copied`（資料夾是複製別的任務來的）時，對其中任何一個 `git worktree remove` 都會刪掉別人在用的 metadata（2026-10-10 移除 240、290 時弄壞了 233、214）。先分辨各自的分支，修法見 [gotchas.md](../gotchas.md)「worktree 共用 metadata」。`orphan-meta` 只是警告，確認沒人在用後可以 `git worktree prune`。
 
 ```bash
 cd "$ROOT/projects/<repo>"
@@ -14,7 +20,7 @@ git fetch origin dev   # 僅更新 origin/dev，不移動 projects/ 的本機分
 3. 刪任務資料夾：`rm -rf "$TASK"`（刪之前確認核心旅程矩陣與 dev 冒煙結果已在 issue comment；task.md 其他有留存價值的內容先摘要進 comment。符合 verify-deploy §3.5 觸發條件的任務，先做完經驗整理再刪，task.md 的失敗紀錄是唯一素材）
 4. 接 `verify-deploy` skill（更新 docs/product 與驗收狀態）；board 卡的 `Acceptance`（交給 PM）／`Need Fix`，以及 `acceptance:engineering` 卡的關閉，由該 skill 依冒煙結果執行，`Done` 只由 PM 驗收通過（關 issue）產生，這裡不要提前移 Done
 5. clone 模式的任務：確認無未 push commit 後 `rm -rf`
-6. **順手掃殘留**：`ls worktrees/` 列出其他任務資料夾，PR 已 merge 的提醒使用者一併收尾，避免堆積
+6. **順手掃殘留**：稽核輸出最後一行列出已經沒有任何 checkout 的任務資料夾（只剩 task.md／證據），`ls worktrees/` 看其他任務，PR 已 merge 的提醒使用者一併收尾，避免堆積。批次清理多個任務時，每移除一批就重跑一次稽核
 
 ---
 
