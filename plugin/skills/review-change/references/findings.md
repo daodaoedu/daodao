@@ -77,8 +77,12 @@ node "$_REPO_ROOT/../../.github/scripts/review-knowledge.cjs" record --db auto \
   --pattern <A-G> --severity <High|Medium|Low> --file '<path:line>' \
   --finding '<finding 原文摘要>' --why '<為什麼錯，附 path:line 證據>' \
   --evidence '<path:line>' --action <none|context|drop|downgrade> \
-  [--sample '<那一列表格原文>' --expected <keep|drop|downgrade>]
+  --sample '<那一列表格原文>' --expected <keep|drop|downgrade>
 ```
+
+- `--sample` 與 `--expected` 必填：沒有 sample 的紀錄不會被 `test` 跑到、也不影響 filter，只是歷史（2026-10-29 盤點 181 筆只有 18 筆帶 sample）。真的沒有表格列（例如 CI structured finding）時改寫 `--no-sample "<原因>"`。
+- `--expected` 填「目前 filter 應該怎麼處理這一列」。filter 還認不出這種誤判時，就要同時改規則並讓它變成 `drop`／`downgrade`，再加一筆 `pr 0`、`expected keep` 的反例，證明規則不會誤殺真正的問題。
+- 每個文字參數都要帶值：`--finding` 後面空著會被當成 true，`record` 會直接拒絕。
 
 - `--db auto` 會從 cwd 往上找 daodao monorepo 的 `.github/review-knowledge/false-positives.jsonl`（worktrees/ 與 projects/ 底下都找得到）；腳本路徑不在時改用 monorepo 內的絕對路徑
 - 樣態定義與對策見 monorepo `.github/review-knowledge/README.md`

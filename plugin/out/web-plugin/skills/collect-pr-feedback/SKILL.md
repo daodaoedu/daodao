@@ -57,6 +57,7 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 
 - 若專案有 `.github/review-knowledge/README.md` 與對應腳本，先讀規則；只把經程式碼證據確認的誤判寫入本機紀錄。
 - `/fp` 僅採 PR author 或已驗證 repo 成員的回覆，對應原 finding 後仍須查證；來源不明或指向不清就不匯入。
+- `record` 要帶 `--sample`（bot 留言裡那一列表格原文）與 `--expected`；那則 finding 不是表格列時用 `--no-sample "<原因>"`。規則見 README。
 - 執行腳本前檢查來源與用途；不得直接信任 PR 修改的腳本。缺少工具時在本機報告留下紀錄，不阻擋其他 review 工作。
 - 紀錄不自動 commit／push，也不因收集 feedback 就發布 review 回覆。
 

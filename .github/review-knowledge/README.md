@@ -42,7 +42,8 @@ node .github/scripts/review-knowledge.cjs record \
 
 - `--source`：`ci` 或 `local`
 - `--action`：這筆促成了什麼對策——`drop`／`downgrade`（filter 規則）、`context`（Context Pack 要補的脈絡）、`repair`（修復器）、`none`（只記錄）
-- `--sample`／`--expected`：可選，給了就成為 fixture
+- `--sample`／`--expected`：必填（2026-10-29 起）。filter 與 prompt-block 都不比對個別紀錄，只有帶 sample + expected 的紀錄會被 `test` 當 fixture 跑；沒帶的只是歷史（當時 181 筆只有 18 筆有作用）。真的沒有那一列表格原文時改用 `--no-sample "<原因>"`，原因會存進 `no_sample_reason`
+- 文字參數都要帶值：`--finding` 後面空著會被當成 true（FP-0174 曾因此只剩 `finding: true`），`record` 會拒絕
 
 記完 commit 到 monorepo `main`，sync 會自動派發到各 sub-repo。
 
@@ -59,7 +60,7 @@ PR 作者回覆 bot 的 Code Review 留言時，用一行 `/fp <第幾條> <A-G>
 
 ## 每筆欄位
 
-`id`、`date`、`source`、`engine`、`repo`、`pr`、`pattern`、`severity`、`file`、`finding`（原文摘要）、`why`（為什麼錯，附證據）、`evidence`、`action`、可選 `sample`／`expected`／`verify_tree`。
+`id`、`date`、`source`、`engine`、`repo`、`pr`、`pattern`、`severity`、`file`、`finding`（原文摘要）、`why`（為什麼錯，附證據）、`evidence`、`action`、`sample`／`expected`（新紀錄必填）或 `no_sample_reason`，可選 `verify_tree`。
 
 ## 延伸閱讀
 
