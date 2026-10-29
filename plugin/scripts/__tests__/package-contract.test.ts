@@ -79,7 +79,7 @@ describe('release zip', () => {
 
   it('skills、hooks、templates 都在包裡', () => {
     const listing = execFileSync('unzip', ['-Z1', zipPath], { encoding: 'utf8' })
-    expect(listing).toContain('plugin/skills/dev-task/SKILL.md')
+    expect(listing).toContain('plugin/skills/develop/SKILL.md')
     expect(listing).toContain('plugin/hooks/hooks.json')
     expect(listing).toContain('plugin/hooks/pre-pr-gate.sh')
     expect(listing).toContain('plugin/templates/central-issue.md')
@@ -170,16 +170,73 @@ describe('settings 指向不需要 clone 的來源', () => {
     expect(mpRelease().plugins[0].version).toBe(version)
   })
 
+  // 2026-10-09 到 10-28 合了 25 個改 plugin 的 commit 都沒人 bump，release 全被跳過。
+  // 版號改由 CI 產生，合 PR 就發版。
+  it('release workflow 自動產生版號，不靠人手動 bump', () => {
+    const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
+    expect(wf).toContain('github.run_number')
+    expect(wf).toMatch(/plugin:package --version "\$VERSION"/)
+  })
+
   it('release workflow 遇到已發佈的版號會跳過，不覆蓋已釘 sha256 的資產', () => {
     const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
     expect(wf).toContain('gh release view')
     expect(wf).toMatch(/exists.*==.*'false'/)
   })
 
+  // release 建好後 Pages 部署失敗，重跑會因 tag 已存在而跳過；要能用已發佈的 marketplace.json
+  // 補部署，而且只限最新版，避免重跑舊 run 把 Pages 退回舊版。
+  it('release workflow 重跑時能補部署 Pages，且只限最新版', () => {
+    const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
+    expect(wf).toContain('gh release download "$TAG" -p marketplace.json')
+    expect(wf).toMatch(/LATEST=.*gh release view --json tagName/)
+    expect(wf).toMatch(/name: Deploy to Pages\n\s+if: steps\.check\.outputs\.publish_pages == 'true'/)
+  })
+
   it('release workflow 存在且會產生 settings 指到的那個資產', () => {
     const wf = readFileSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'), 'utf8')
     expect(existsSync(join(REPO_ROOT, '.github', 'workflows', 'plugin-release.yml'))).toBe(true)
     expect(wf).toContain('marketplace.json')
-    expect(settings.extraKnownMarketplaces.daodao.source.url).toContain('releases/latest/download/marketplace.json')
+    expect(settings.extraKnownMarketplaces.daodao.source.url).toBe('https://daodaoedu.github.io/daodao/marketplace.json')
+    expect(wf).toContain('actions/deploy-pages')
+  })
+
+  // `marketplace add` 看到 github.com 的 https 網址一律當 git repo clone，release 下載網址會
+  // 失敗在 "git over dumb-http ... 403"（2026-10-28 實際踩到）。對外給的網址必須不在 github.com。
+  it('文件與設定給的 marketplace 網址都不在 github.com（否則會被當成 git repo clone）', () => {
+    const files = ['.claude/settings.json', 'plugin/README.md', 'docs/workflow.md', '.github/workflows/plugin-release.yml']
+    for (const f of files) {
+      const text = readFileSync(join(REPO_ROOT, f), 'utf8')
+      expect(text, f).not.toMatch(/https:\/\/github\.com\/[^\s"'`]*marketplace\.json/)
+    }
+  })
+})
+
+// 放最後：這組會用另一個版號重打，覆寫 out/release/marketplace.json。
+describe('--version 覆寫發佈版號', () => {
+  const override = '0.1.9999'
+  const overrideZip = join(RELEASE, `daodao-plugin-${override}.zip`)
+
+  beforeAll(() => {
+    execFileSync('pnpm', ['-s', 'plugin:package', '--version', override], { cwd: REPO_ROOT, encoding: 'utf8' })
+  }, 60_000)
+
+  it('marketplace 宣告覆寫後的版號與對應的 archive', () => {
+    const mp = JSON.parse(readFileSync(join(RELEASE, 'marketplace.json'), 'utf8'))
+    expect(mp.plugins[0].version).toBe(override)
+    expect(mp.plugins[0].source.url).toContain(`plugin-v${override}/daodao-plugin-${override}.zip`)
+  })
+
+  it('包裡的 plugin.json 也是覆寫後的版號，zip 內外一致', () => {
+    const inner = JSON.parse(
+      execFileSync('unzip', ['-p', overrideZip, 'plugin/.claude-plugin/plugin.json'], { encoding: 'utf8' }),
+    )
+    expect(inner.version).toBe(override)
+  })
+
+  it('不合法的版號直接失敗', () => {
+    expect(() =>
+      execFileSync('pnpm', ['-s', 'plugin:package', '--version', 'latest'], { cwd: REPO_ROOT, stdio: 'pipe' }),
+    ).toThrow()
   })
 })

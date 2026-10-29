@@ -173,7 +173,10 @@ def normalize(raw, client, annotations, source='captured-client'):
         if targets:
             event['targets'] = sorted(targets)
         events.append(event)
-    return {key: annotations[key] for key in ('case_id', 'claims', 'requirement_ids', 'unresolved', 'questions')} | {
+    semantic = {key: annotations[key] for key in ('case_id', 'claims', 'requirement_ids', 'unresolved', 'questions')}
+    if isinstance(annotations.get('dedup_level'), str):
+        semantic['dedup_level'] = annotations['dedup_level']
+    return semantic | {
         'response': response, 'trace_source': source, 'events': events,
         'trace_provenance': {'client': client, 'sha256': digest,
                              'bytes': len(raw), 'tool_calls': len(calls)},

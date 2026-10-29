@@ -38,25 +38,28 @@ pnpm plugin:zip      # 打包 claude.ai 上傳用的 zip
 ### Claude Code
 
 **不需要 clone 這個 repo。** 從 GitHub repo 裝 marketplace 會 git clone 整包 monorepo（12MB）
-只為了拿 163KB 的 plugin，所以散佈走 GitHub Release 的 zip（`archive` 來源，純 HTTPS 下載，
-不需要 git 也不需要 npm）。
+只為了拿 163KB 的 plugin，所以 plugin 本體走 GitHub Release 的 zip（`archive` 來源，純 HTTPS
+下載，不需要 git 也不需要 npm），指向它的 `marketplace.json` 發在 GitHub Pages：
+`https://daodaoedu.github.io/daodao/marketplace.json`。
 
-repo 的 `.claude/settings.json` 已宣告 marketplace 指向 release，所以開過本 repo 或任一
+> marketplace 網址不能用 `github.com/.../releases/...`：`claude plugin marketplace add` 看到
+> github.com 的 https 網址一律當成 git repo 去 clone，會失敗在 `git over dumb-http ... 403`。
+
+repo 的 `.claude/settings.json` 已宣告這個 marketplace，所以開過本 repo 或任一
 子專案的人只要：
 
 ```
 /plugin install daodao@daodao
 ```
 
-完全不在這些 repo 裡的人，自己加一次 marketplace（一樣不 clone）：
+完全不在這些 repo 裡的人，一行裝好（第一次會順便加 marketplace，一樣不 clone）：
 
 ```bash
-claude plugin marketplace add https://github.com/daodaoedu/daodao/releases/latest/download/marketplace.json
-claude plugin install daodao@daodao
+claude plugin install daodao --marketplace https://daodaoedu.github.io/daodao/marketplace.json
 ```
 
-裝完**重開 session** 才載入；skill 會是 `/daodao:dev-task` 這種帶命名空間的形式。
-`claude plugin details daodao@daodao` 可確認 13 skills + 4 hooks 都在。
+裝完**重開 session** 才載入；skill 會是 `/daodao:develop` 這種帶命名空間的形式。
+`claude plugin details daodao@daodao` 可確認 13 skills + 6 hooks 都在。
 
 沒辦法讓別人「自動」裝好——官方明講 repo 設定啟用外部來源 plugin 不會幫別人安裝，
 自動的只有 marketplace 註冊，`install` 每人跑一次。
@@ -75,27 +78,38 @@ claude plugin install daodao@daodao-dev
 
 #### 發新版
 
-```bash
-# 1. 在 plugin/.claude-plugin/plugin.json 把 version 往上加
-# 2. 合進 main
-```
+改到 `plugin/` 的 PR 合進 main 就會發版，不需要另外 bump。
 
-`plugin-release.yml` 會打包、算 sha256、建 release、上傳 zip 與 marketplace.json，
-最後**實際下載回來驗 sha256 對不對**才算成功。版本沒往上加會跳過發佈——已發佈的 zip
-其 sha256 被釘住，重發同版本會讓已安裝的人對不上。
+`plugin-release.yml` 自動產生版號（major.minor 取 `plugin.json`，patch 用 workflow
+run number，例如 `0.1.26`），打包、算 sha256、建 release 上傳 zip、把 marketplace.json
+部署到 GitHub Pages，最後**從 Pages 實際下載回來驗版號與 sha256**才算成功。同一個 run 重跑會撞到已發佈的 tag 而跳過——
+已發佈的 zip 其 sha256 被釘住，重發同版本會讓已安裝的人對不上。
 
-zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package` 會得到跟 CI 一樣的 sha256，
-可以自己驗。
+zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version <release 版號>`
+會得到跟 CI 一樣的 sha256，可以自己驗。
 
 ### Codex
 
-`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、`$REPO_ROOT` 三層）。
-**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前 hooks 不會執行，
-那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。
+適用 Codex CLI、IDE 擴充與 ChatGPT 桌面版。
+
+**有本 repo**：不用裝。`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、
+`$REPO_ROOT` 三層）。**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前
+hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。
+
+**沒有 repo**：加 marketplace 再裝，用 `--sparse` 只抓需要的目錄（約 400KB，不 clone 整個 monorepo）：
+
+```bash
+codex plugin marketplace add daodaoedu/daodao --sparse .agents/plugins --sparse plugin/out/openai-plugin
+codex plugin add daodao@daodao-local
+```
+
+- Codex 的 marketplace 只接受本機路徑或 git，不吃 `marketplace.json` 網址，所以不能用 Claude Code 那個 Pages 網址
+- marketplace 名稱叫 `daodao-local`（取自 `.agents/plugins/marketplace.json`），雖然名字有 local，這就是給大家裝的那份
+- 這樣裝的只有 13 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
 
 ### ChatGPT
 
-- **桌面版 / Codex CLI / IDE**：跟 Codex 共用 `.agents/skills/`，開 repo 就有，不用裝。
+- **桌面版 / Codex CLI / IDE**：跟 Codex 同一套，有 repo 不用裝，沒有 repo 照上面 [Codex](#codex) 的兩行指令。
 - **網頁版與行動版**：**repo marketplace 到不了**。OpenAI 文件寫明 `.agents/plugins/marketplace.json`
   與個人 marketplace 只有桌面版與 Codex CLI 讀得到。要進網頁／行動版只有兩條路：
 
@@ -145,23 +159,24 @@ claude.ai → Claude Code 單向下載，沒有反向推送。
 
 ## 更新
 
-改流程的人只做一件事：**bump 版號**。版號是使用者收不收得到更新的唯一訊號——
-marketplace entry 宣告了 `version`，Claude Code 就以它判斷要不要重抓 archive；
-沒 bump 就改 zip，已安裝的人會一直用舊快取，而且 release workflow 會直接跳過發佈。
+改流程的人不需要管版號：改到 `plugin/` 的 PR merge 後，`plugin-release.yml` 自動產生
+新版號、打包、建 release、**下載回來驗 sha256**。版號是使用者收不收得到更新的唯一訊號——
+marketplace entry 宣告了 `version`，Claude Code 就以它判斷要不要重抓 archive。
+
+repo 裡 `plugin.json` 的 patch 不代表實際發佈的版號，要查目前版本看 Releases 頁面。
+只有要升 minor／major 時才手動改：
 
 ```bash
-pnpm plugin:bump          # patch；也可以 minor / major / 直接給 0.3.0
-# 產物版號會一起更新，然後走正常 commit → PR → merge main
+pnpm plugin:bump minor    # 或 major；產物版號會一起更新，走正常 commit → PR → merge main
 ```
-
-merge 後 `plugin-release.yml` 打包、建 release、**下載回來驗 sha256**。
 
 使用者端：
 
 | 平台 | 怎麼收到更新 |
 |---|---|
 | Claude Code | marketplace 已開 `autoUpdate`，session 啟動後十分鐘內背景更新，跳出提示後跑 `/reload-plugins`；要立刻更新就 `/plugin update daodao@daodao` |
-| Codex／ChatGPT 桌面 | `.agents/skills/` 在 repo 裡，`git pull` 就是更新 |
+| Codex／ChatGPT 桌面（有 repo） | `.agents/skills/` 在 repo 裡，`git pull` 就是更新 |
+| Codex／ChatGPT 桌面（沒有 repo） | 自動：Codex 每次啟動在背景檢查 git marketplace，main 有新 commit 就強制重裝已安裝的 plugin，**不看版號**（所以 Codex 版 `plugin.json` 停在 0.1.1 不影響更新）。要立刻更新就 `codex plugin marketplace upgrade` |
 | ChatGPT 工作區 | 匯入的 marketplace 每日自動同步，管理員也可以按 **Sync now** |
 | claude.ai | 從 repository 加的 marketplace 會跟著 repo 更新；手動傳的 zip 要自己重傳 |
 
@@ -188,8 +203,8 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
 | Drive 報告 | ✅ | ❌ | ❌ | ❌ |
 
-Claude.ai 少掉的 6 個是 `dev-task`、`code-review`、`pre-commit-check`、`post-merge-wrapup`、
-`gh-pipeline`、`format-commit`——全都需要使用者的 checkout。Claude.ai 的 sandbox 有檔案系統也能跑
+Claude.ai 少掉的 6 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
+`move-board-card`、`format-commit`——全都需要使用者的 checkout。Claude.ai 的 sandbox 有檔案系統也能跑
 指令，但那是一個空的暫時環境，不是專案。
 
 ## 平台事實（2026-09-21 查證）

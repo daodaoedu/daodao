@@ -57,7 +57,7 @@ description: 你觀察到以下任一狀態時載入：正要在 daodao-storage 
 ## R7. Squash-merge 之後立刻 back-merge
 
 - 觸發：storage 的 dev 被 squash-merge 進 main（或你發現 dev→main PR 出現幽靈 diff）。
-- 步驟：立即向使用者提議做 main→dev 的 back-merge（歷史案例 `3b5c062`），確認後才執行——merge commit 一樣走 repo 的 commit/push 流程（pre-commit-check → format-commit → 使用者確認；push 前問要不要 review）。長壽 dev + squash promotion 必然製造歷史分歧，back-merge 是唯一收斂法，但它本身是一次 push，不豁免流程。
+- 步驟：立即向使用者提議做 main→dev 的 back-merge（歷史案例 `3b5c062`），確認後才執行——merge commit 一樣走 repo 的 commit/push 流程（check-commit → format-commit → 使用者確認；push 前問要不要 review）。長壽 dev + squash promotion 必然製造歷史分歧，back-merge 是唯一收斂法，但它本身是一次 push，不豁免流程。
 - 完成定義：`git log --graph --oneline main dev | head -20` 顯示收斂點。
 
 ## R8. CI 的已知假象

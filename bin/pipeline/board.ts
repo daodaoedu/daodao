@@ -11,9 +11,9 @@
  * needfix / "need fix" | done.
  * `set` adds the issue to the board first if it is not there yet; `set <n> accept` also
  * assigns the PM (PM_LOGIN) so the card shows up in their queue.
- * Called by dev-task (start → In Progress, finish → Review), post-merge-wrapup
+ * Called by develop (start → In Progress, finish → Review), verify-deploy
  * (dev smoke passed → Acceptance, failed → Need Fix), collect-pr-feedback (→ Need Fix)
- * and gh-card (→ Todo). Done comes from the PM closing the issue (built-in workflow).
+ * and request-feature (→ Todo). Done comes from the PM closing the issue (built-in workflow).
  */
 import { auditCards, resolveStatus, type AuditCard } from "./lib.js";
 import {

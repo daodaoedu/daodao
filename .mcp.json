@@ -2,17 +2,17 @@
   "mcpServers": {
     "daodao-pg-prod": {
       "command": "node",
-      "args": ["/Users/xiaoxu/Projects/daodao/daodao-mcp/packages/pg/dist/server.js"],
+      "args": ["${DAODAO_MCP_DIR}/packages/pg/dist/server.js"],
       "env": {
-        "DATABASE_URL": "postgresql://daodao_readonly:***REMOVED***@localhost:5433/daodao",
+        "DATABASE_URL": "${DAODAO_PG_PROD_URL}",
         "SSH_TUNNEL": "daodao:5433:127.0.0.1:15432"
       }
     },
     "daodao-pg-dev": {
       "command": "node",
-      "args": ["/Users/xiaoxu/Projects/daodao/daodao-mcp/packages/pg/dist/server.js"],
+      "args": ["${DAODAO_MCP_DIR}/packages/pg/dist/server.js"],
       "env": {
-        "DATABASE_URL": "postgresql://daodao:***REMOVED***@localhost:5424/daodao",
+        "DATABASE_URL": "${DAODAO_PG_DEV_URL}",
         "DAODAO_MCP_SKIP_ROLE_CHECK": "1",
         "SSH_TUNNEL": "daodao:5424:localhost:5423"
       }

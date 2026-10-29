@@ -42,7 +42,7 @@ make migrate-sql-status-dev                      # migration_history 的 success
 
 ## T5. 「這功能上線了沒」
 
-- 別信 docs/product 的狀態標籤（普遍落後，會讓你重做已上線功能）。跑 hub 的 `product-status-check` skill，或直接：`cd daodao && python scripts/check_product_status.py --verbose`（manifest：`scripts/product_status_manifest.yml`，2026-07-06 校準）。每週一 cron 有 drift 檢查 + Discord 警報。
+- 別信 docs/product 的狀態標籤（普遍落後，會讓你重做已上線功能）。跑 hub 的 `check-product-status` skill，或直接：`cd daodao && python scripts/check_product_status.py --verbose`（manifest：`scripts/product_status_manifest.yml`，2026-07-06 校準）。每週一 cron 有 drift 檢查 + Discord 警報。
 
 ## T6. Discord 是事故時間線
 

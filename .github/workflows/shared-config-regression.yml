@@ -25,6 +25,10 @@ jobs:
           python3 -m pip install PyYAML==6.0.2
           python3 -m unittest discover -s scripts/__tests__ -p 'test_required_workflow_triggers.py' -v
           python3 -m unittest discover -s scripts/__tests__ -p 'test_collect_gate_protection.py' -v
+      - name: POC report regression
+        run: python3 -m unittest discover -s scripts/__tests__ -p 'test_poc_report.py' -v
+      - name: Issue draft checker regression
+        run: python3 -m unittest discover -s scripts/__tests__ -p 'test_check_issue_draft.py' -v
       - name: Agent handoff contract regression
         run: |
           python3 -m unittest discover -s scripts/__tests__ -p 'test_agent_handoff.py' -v
@@ -41,6 +45,7 @@ jobs:
           bash .github/scripts/test-pre-pr-gate.sh
           bash .github/scripts/test-post-write-format.sh
           bash .github/scripts/test-pr-evidence.sh
+          python3 -m unittest discover -s plugin/hooks/__tests__ -p 'test_read_access_evidence.py' -v
           python3 -m unittest discover -s scripts/__tests__ -p 'test_validation_parity.py' -v
 
       - name: Plugin artifacts in sync with canonical skills

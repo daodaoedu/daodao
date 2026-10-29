@@ -54,7 +54,7 @@ jobs:
             echo
             cat audit.md
             echo
-            echo '處理方式見 `plugin/skills/gh-pipeline/SKILL.md`（移卡一律 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`）。本 issue 是自動報告，不放 Planning board、不走驗收。'
+            echo '處理方式見 `plugin/skills/move-board-card/SKILL.md`（移卡一律 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`）。本 issue 是自動報告，不放 Planning board、不走驗收。'
           } > body.md
           if [ -z "$num" ]; then
             if [ "$has_findings" = 1 ]; then

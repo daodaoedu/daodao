@@ -6,7 +6,7 @@
 
 1. Claude.ai → Settings → Capabilities，開啟「Code execution and file creation」。
 2. Customize → Skills → 「+」→「Upload a skill」，逐一上傳 zip。
-3. zip 的根必須是 skill 資料夾本身（`gh-card.zip → gh-card/SKILL.md`），
+3. zip 的根必須是 skill 資料夾本身（`request-feature.zip → request-feature/SKILL.md`），
    檔案散在 zip 根目錄會上傳失敗。`pnpm plugin:zip` 已經照這個結構打包。
 
 frontmatter 只留 Agent Skills 標準允許的欄位；多一個欄位 claude.ai 會直接拒絕上傳。
@@ -19,16 +19,16 @@ Claude.ai 的 sandbox 有檔案系統也能跑指令，但那是一個空的暫�
 
 | Skill | 收錄 | 備註 |
 |---|---|---|
+| break-down-plan | ✅ | 完整 |
+| check-product-status | ✅ | 降級：filesystem、bash |
 | collect-pr-feedback | ✅ | 降級：filesystem、bash |
-| file-bug-issue | ✅ | 降級：filesystem |
-| gh-card | ✅ | 完整 |
+| draft-prd | ✅ | 降級：filesystem |
 | notify-related-issue | ✅ | 完整 |
-| prd-generation | ✅ | 降級：filesystem |
-| product-status-check | ✅ | 降級：filesystem、bash |
-| publish-tasks | ✅ | 完整 |
-| code-review | ❌ | 缺必要能力：bash、filesystem、git |
-| dev-task | ❌ | 缺必要能力：bash、filesystem、git、worktree、runtests |
+| report-bug | ✅ | 降級：filesystem |
+| request-feature | ✅ | 完整 |
+| check-commit | ❌ | 缺必要能力：bash、filesystem、runtests |
+| develop | ❌ | 缺必要能力：bash、filesystem、git、worktree、runtests |
 | format-commit | ❌ | 缺必要能力：git |
-| gh-pipeline | ❌ | 缺必要能力：bash |
-| post-merge-wrapup | ❌ | 缺必要能力：bash、filesystem、git |
-| pre-commit-check | ❌ | 缺必要能力：bash、filesystem、runtests |
+| move-board-card | ❌ | 缺必要能力：bash |
+| review-change | ❌ | 缺必要能力：bash、filesystem、git |
+| verify-deploy | ❌ | 缺必要能力：bash、filesystem、git |

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression tests for plugin/hooks/pre-pr-gate.sh（dev-task 發 PR 閘門）。
+# Regression tests for plugin/hooks/pre-pr-gate.sh（develop 發 PR 閘門）。
 # 每個案例建一個假的 worktrees/<n>-<slug>/task.md，模擬 Claude PreToolUse 的 CLAUDE_TOOL_INPUT。
 set -euo pipefail
 
@@ -21,6 +21,9 @@ make_task() {
   n=$(( $(ls "$SANDBOX/root/worktrees" 2>/dev/null | wc -l) + 100 ))
   local task_dir="$SANDBOX/root/worktrees/$n-case"
   mkdir -p "$task_dir/$repo" "$task_dir/notes"
+  if [ "${3:-}" != raw ] && ! printf '%s\n' "$content" | grep -q '^讀取權限驗證[：:]'; then
+    content=$(printf '%s\n' "$content" | awk '/^## 驗證$/ { print; print "讀取權限驗證：不適用：此案例只測既有寫入旅程，不改讀取權限"; next } { print }')
+  fi
   printf '%s\n' "$content" > "$task_dir/task.md"
   make_delivery "$task_dir/$repo"
   echo "$task_dir"
@@ -91,6 +94,7 @@ GOOD_BODY='## Summary
 x
 
 ## 驗證證據
+讀取權限驗證：不適用：此案例只測既有寫入旅程，不改讀取權限
 - 驗證報告: [Task 1 驗證報告](https://docs.google.com/document/d/abc/edit)
 | ID | 旅程 | 類型 | 輸入 | 預期結果 | 實際 |
 |---|---|---|---|---|---|
@@ -121,9 +125,9 @@ pr_cmd() {  # $1=repo path $2=body file
 }
 
 # ---------------------------------------------------------------- 案例
-# 0. 不在 dev-task 任務內 → 不管
+# 0. 不在 develop 任務內 → 不管
 code=$(run_hook "$SANDBOX/elsewhere" "gh pr create --base dev --title t --body b")
-expect_pass "非 dev-task 目錄不攔" "$code"
+expect_pass "非 develop 目錄不攔" "$code"
 mkdir -p "$SANDBOX/root/worktrees/99-missing-task/daodao-server"
 code=$(run_hook "$SANDBOX/root/worktrees/99-missing-task/daodao-server" 'gh pr create --base dev --title t --body b')
 expect_block "block 模式缺 task.md" "$code" "task.md"
@@ -292,7 +296,7 @@ t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX
 POC 差異決策已確認" '- none')")
 printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
 mkdir -p "$t/poc" "$t/notes/poc-compare"; : > "$t/poc/x.dc.html"; echo report > "$t/notes/poc-compare/report.md"
-echo '{"missing":[]}' > "$t/notes/poc-compare/coverage.json"
+echo '{"missing":[],"unresolved":[]}' > "$t/notes/poc-compare/coverage.json"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_pass "POC coverage 無缺漏" "$code"
 echo 'not json' > "$t/notes/poc-compare/coverage.json"
@@ -304,6 +308,12 @@ expect_block "POC coverage.json 缺 missing" "$code" "無法解析"
 echo '{"missing":["modal"]}' > "$t/notes/poc-compare/coverage.json"
 code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
 expect_block "POC coverage 有缺漏" "$code" "目前缺：modal"
+echo '{"missing":[],"unresolved":["home · button.typo"]}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage 有未解析的 probe" "$code" "home · button.typo"
+echo '{"missing":[]}' > "$t/notes/poc-compare/coverage.json"
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "POC coverage 是舊版（缺 unresolved）" "$code" "缺 unresolved 陣列"
 
 # 9d. jq 不在時對 gh pr create 一律擋下（fail closed），非發 PR 指令照常放行
 # run_hook 自己也用 jq 組 payload，所以先用真 jq 組好，再用壞掉的 jq shim 跑 hook
@@ -479,4 +489,77 @@ code=$(run_hook "$repo" "$(pr_cmd "$repo" "$t/notes/body.md")")
 expect_block "PR base 無共同祖先" "$code" "delivery gate"
 grep -q 'pr-delivery' "$HOME/.cache/daodao-harness/gate-ledger.jsonl" || fail "無共同祖先未留下 delivery ledger"
 
+READ_ACCESS='讀取權限驗證：適用
+### 讀取權限驗證
+- 入口與服務：首頁 AI feed → server 詳情 → 打卡
+- 固定資料：cohort57 owner2 peer3 outsider4 exited5
+- 資料庫驗證：✅ PostgreSQL；指令：pytest tests/read_acl.py；結果：12 passed；證據：evidence/db.log
+- 快取撤權：✅ 先讀後退出，回應不含舊資料；證據：evidence/cache.log
+- 期限邊界：✅ 第90天可讀，第91天拒絕；證據：evidence/expiry.log
+| 角色 | 預期 | 實際 | 資料斷言 | 結果 | 證據 |
+| 本人 | 200 可讀 | HTTP 200 | 包含自己的打卡 | ✅ | evidence/owner.json |
+| 同範圍成員 | 200 可讀 | HTTP 200 | 回應不含私人留言 | ✅ | evidence/peer.json |
+| 範圍外使用者 | 403 拒絕 | HTTP 403 | 回應不含私人資料 | ✅ | evidence/outsider.json |
+| 已退出或移除 | 403 拒絕 | HTTP 403 | 回應不含私人資料 | ✅ | evidence/exited.json |
+| 未登入 | 403 拒絕 | HTTP 403 | 回應不含私人資料 | ✅ | evidence/anonymous.json |'
+t=$(make_task daodao-server "$(task_md verified "$GOOD_MATRIX" '- none')" raw)
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "task缺讀取權限宣告不可放行" "$code" "讀取權限驗證"
+READ_MATRIX="$GOOD_MATRIX
+$READ_ACCESS"
+READ_BODY="## 驗證證據
+- 驗證報告：https://example.test/report
+$READ_MATRIX"
+t=$(make_task daodao-server "$(task_md verified "$READ_MATRIX" '- none')")
+printf '%s\n' "$READ_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_pass "task與body完整讀取權限證據" "$code"
+# Inline bodies end at the final table row, without a trailing newline.
+for body_option in '--body' '-b'; do
+  inline_arg="$body_option '$READ_BODY'"
+  code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t $inline_arg")
+  expect_pass "inline $body_option 完整讀取權限證據無尾端換行" "$code"
+done
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t --body \"$READ_BODY\"")
+expect_pass "inline double-quoted body 無尾端換行" "$code"
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t --body '
+$READ_BODY'")
+expect_pass "inline body 開頭換行且末列無換行" "$code"
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title '--body' --body '$READ_BODY'")
+expect_pass "quoted title --body 不當成 body option" "$code"
+for separator in ';' '&&' $'\n'; do
+  code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t${separator} echo --body '$READ_BODY'")
+  expect_block "後續 command body 不補 PR body ($separator)" "$code" "缺「## 驗證證據」"
+done
+literal_body="$READ_BODY
+\$(touch $SANDBOX/body-must-not-execute)"
+code=$(run_hook "$t/daodao-server" "gh pr create --base dev --title t --body '$literal_body'")
+expect_pass "body command substitution 僅當文字" "$code"
+[ ! -e "$SANDBOX/body-must-not-execute" ] || fail "inline body 被執行"
+printf '%s\n' "$GOOD_BODY" | grep -v '^讀取權限驗證' > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "task完整不能補PR body缺讀取宣告" "$code" "PR body："
+READ_NA="核心旅程不適用：只有GET無寫入
+$READ_ACCESS"
+t=$(make_task daodao-server "$(task_md verified "$READ_NA" '- none')")
+printf '%s\n' "$READ_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "task無寫入聲明不可繞過讀取權限驗證" "$code" "不得用"
+
+OUTSIDE_CORE="$(task_md verified "$READ_ACCESS" '- none')
+## 舊紀錄
+核心旅程不適用：舊版只有純樣式"
+t=$(make_task daodao-server "$OUTSIDE_CORE")
+printf '%s\n' "$READ_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "外章核心NA不可繞過讀取旅程pair" "$code" "核心旅程矩陣"
+FENCED_NA="$(printf '%s\n' "$READ_MATRIX" | sed 's/✅ 201/❌ 500/; s/✅ 400/⬜ 403/')
+\`\`\`
+核心旅程不適用：純 CSS 舊例子
+\`\`\`"
+t=$(make_task daodao-server "$(task_md verified "$FENCED_NA" '- none')")
+printf '%s\n' "$READ_BODY" > "$t/notes/body.md"
+code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
+expect_block "task fenced核心NA不得放過失敗讀取journey" "$code" "⬜／❌"
 echo "✅ pre-pr-gate regression tests passed"

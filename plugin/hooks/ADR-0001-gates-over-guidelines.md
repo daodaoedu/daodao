@@ -15,15 +15,15 @@ Block（exit 2，拒絕編輯）只用於**高信心、低誤報**的規則：
 - `sensitive-file`：`.env` / `.pem` / `.key` 寫入 — 零例外
 - `existing-migration`：修改已存在的 migration SQL — 零例外
 - `credential-leak`：AWS key / GitHub PAT / Slack token — 零例外
-- `pr-status-not-verified`（`pre-pr-gate.sh`，Bash `gh pr create`）：dev-task 任務 task.md Status 仍是 implementing 就發 PR — verify 沒跑完
-- `pr-poc-compare-missing`（同上）：任務有可互動 HTML 原型（`poc/*.dc.html` 或 `index.html + support.js`）卻缺任一項就擋：`notes/poc-compare/report.md`、task.md「### POC 比對」、使用者確認行「POC 差異決策已確認」、`coverage.json` 的 required 類別缺漏（擋「做了但做得淺」）— 2026-09-12 #189 漏做 POC 量測比對、又把可見差異自行放過的教訓；逃生口 `DEV_TASK_SKIP_POC_GATE="<原因>"` 留痕
+- `pr-status-not-verified`（`pre-pr-gate.sh`，Bash `gh pr create`）：develop 任務 task.md Status 仍是 implementing 就發 PR — verify 沒跑完
+- `pr-poc-compare-missing`（同上）：任務有可互動 HTML 原型（`poc/*.dc.html` 或 `index.html + support.js`）卻缺任一項就擋：`notes/poc-compare/report.md`、task.md「### POC 比對」、使用者確認行「POC 差異決策已確認」、`coverage.json` 的 required 類別缺漏（擋「做了但做得淺」）、`coverage.json` 有未解析的 probe 或缺 `unresolved` 欄位（擋「選擇器沒對到卻算通過」）— 2026-09-12 #189 漏做 POC 量測比對、又把可見差異自行放過的教訓；逃生口 `DEV_TASK_SKIP_POC_GATE="<原因>"` 留痕
 - `pr-journey-matrix-missing`（同上）：task.md「### 核心旅程矩陣」缺、沒有「正常」+「錯誤路徑」列、或有 ⬜／❌ 就擋；「核心旅程不適用：<具體原因>」放行並記 `pr-journey-matrix-na` — 2026-09-19 #171 Phase A 驗證全是畫面、四天後 #188「無法建立場次」的教訓：畫面像 POC ≠ 使用者能完成任務
 - `pr-deferred-unlinked`（同上）：task.md「## Deferred items」有項目沒有子 issue `#n` 也沒寫「待開卡：<原因>」就擋 — #171 的「驗證紅框取代 toast」只留在 comment，變成 #188 的第二個根因
 - `pr-body-evidence-missing`（同上）：PR body 缺「## 驗證證據」或裡面沒有報告連結／不適用聲明就擋；CI 版 `pr-evidence-gate.yml` 讀同一段，涵蓋 Codex／手動 gh／pipeline runner
 - `pr-fe-pattern-invalid`（同上，f2e／admin-ui）：`scripts/check-validation-parity.py` 用 node 以 v flag 編譯手寫 HTML `pattern`，編不過就擋 — #188 根因 `[a-z0-9-]+` 被瀏覽器整個忽略；`UNMATCHED`（openapi 找不到同文規則）先 warn 記 `pr-fe-rule-unmatched`
 - `pr-verify-unchecked`（同上）：task.md「## 驗證」還有 `- [ ]` 未勾項目（無「豁免：」）或「需要手動驗證」表就擋 — 2026-09-20 #166→#233 的教訓：6 個 settings 頁面寫「需 Google OAuth 登入」照樣發 PR、merge，evidence 截圖是登入牆；dev-login（#230）已可用，「要登入」不再是理由
 - `pr-layout-probe-missing`（同上，f2e／admin-ui）：task.md 缺「### 版面探針」表、表空、或有 ❌ 就擋；「版面探針不適用：<具體原因>」放行並記 `pr-layout-probe-na` — #233：settings 十五頁 `w-screen` 疊在 `md:pl-[132px]` 上每頁多 132px，肉眼截圖六個月沒人看出，`layout-probe.mjs` 一行 `scrollWidth` 抓到
-- 以上 dev-task 閘門共用逃生口 `DEV_TASK_SKIP_GATE="<原因>"`（`DEV_TASK_SKIP_POC_GATE` 相容），一律留痕
+- 以上 develop 閘門共用逃生口 `DEV_TASK_SKIP_GATE="<原因>"`（`DEV_TASK_SKIP_POC_GATE` 相容），一律留痕
 
 ### CI 側閘門
 - `pr-evidence-gate.yml`（由 sync-claude-config 同步到各 sub-repo）：PR body「## 驗證證據」的 CI 版。預設 `warn`（advisory），repo variable `PR_EVIDENCE_GATE_MODE=block` 升為阻擋；升級後要加進 dev 的「Benchmark required checks」ruleset 才真的擋得住 merge — 2026-09-03 server PR #449 的 schema-drift 紅燈仍被 merge，「閘門存在但不 required」等於沒有

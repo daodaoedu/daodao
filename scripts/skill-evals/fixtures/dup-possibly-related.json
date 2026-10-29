@@ -1,0 +1,41 @@
+{
+  "id": "dup-possibly-related",
+  "prompt": "報名頁按送出會跳出空白的錯誤視窗，什麼字都沒有。幫我開卡，可以直接建。我先搜過 issue，結果放在 issues-snapshot.md。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "reported-failure",
+      "status": "observed",
+      "evidence": "user-report"
+    },
+    {
+      "id": "related-issue-330",
+      "status": "observed",
+      "evidence": "issues-snapshot.md"
+    },
+    {
+      "id": "shared-cause",
+      "status": "unknown",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [],
+  "required_claims": [
+    "reported-failure",
+    "related-issue-330",
+    "shared-cause"
+  ],
+  "required_unresolved": [
+    "dedup-uncertain"
+  ],
+  "expected_dedup_level": "possibly-related",
+  "context": {
+    "issues-snapshot.md": "# 我搜過的 issue（2026-10-27）\n\n- #330 open「報名頁送出後頁面一直轉圈」— 報名頁、送出，沒有錯誤訊息\n- #301 closed「報名成功信件沒寄出」\n"
+  }
+}

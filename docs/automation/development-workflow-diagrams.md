@@ -1,6 +1,6 @@
 # 島島阿學開發流程圖解
 
-> 註（2026-09-20，#241）：自動派工 Routine A／B 與 merge 回寫 Routine C 皆已退役，board 由 skill 呼叫 `bin/pipeline/board.ts` 回寫；下文提到 Routine A 派工、`dispatch.ts`、雙 gate 之處為歷史規劃，現行以人工 `/dev-task` 為準。
+> 註（2026-09-20，#241）：自動派工 Routine A／B 與 merge 回寫 Routine C 皆已退役，board 由 skill 呼叫 `bin/pipeline/board.ts` 回寫；下文提到 Routine A 派工、`dispatch.ts`、雙 gate 之處為歷史規劃，現行以人工 `/develop` 為準。
 
 > 註（2026-09-20）：OpenSpec 已退役，下文提及 OpenSpec change／tasks.md 之處已不適用；規格以 docs/product 與 Issue 驗收契約為準。舊 `openspec/` 已封存於 `docs/archive/openspec/`。
 
@@ -22,11 +22,11 @@ flowchart TB
 
     DOC --> D1["Issue／PR 管理與驗收規劃"]
     DOC --> D2["六份可複用模板"]
-    DOC --> D3["gh-card 更新與 Codex 入口"]
+    DOC --> D3["request-feature 更新與 Codex 入口"]
     DOC --> D4["三種 AI 服務的額度政策"]
 
     OLD --> O1["Routine A 派工／Routine C 回寫"]
-    OLD --> O2["dev-task 本機工作流程"]
+    OLD --> O2["develop 本機工作流程"]
     OLD --> O3["CI、hooks 與 advisory AI review"]
 
     TODO --> T1["雙訂閱 runner、共用執行器與任務鎖"]
@@ -69,13 +69,13 @@ flowchart TD
 - Google Docs 供討論／閱讀，執行使用已核准快照；manifest 記錄實際版本與驗證結果。
 - 同 repo 的小任務可直接由中央 Issue 關聯 PR，不必為形式多拆一張子卡。
 
-開卡使用 [gh-card](../../plugin/skills/gh-card/SKILL.md)。預設 Todo；「建立 Issue」與「啟動自動開發」是不同操作。
+開卡使用 [request-feature](../../plugin/skills/request-feature/SKILL.md)。預設 Todo；「建立 Issue」與「啟動自動開發」是不同操作。
 
 ## 3. 完整目標流程：自動與本機共用驗收
 
 ```mermaid
 flowchart TD
-    START["gh-card：建立 Issue，預設 Todo"] --> SPEC{"需求、AC、POC 與規格齊備？"}
+    START["request-feature：建立 Issue，預設 Todo"] --> SPEC{"需求、AC、POC 與規格齊備？"}
     SPEC -->|否| WAIT["回寫缺項、責任人與下一步"]
     WAIT --> SPEC
     SPEC -->|是| MODE{"選擇開發入口"}
@@ -115,7 +115,7 @@ flowchart TD
 
 ## 4. Bug 通報與修復流程
 
-Bug／CI 錯誤通報由 [gh-card](../../plugin/skills/gh-card/SKILL.md) 分流至 [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md)。開發中可立即處理、且屬於目前任務的錯誤，可在原 Issue／PR 留下重現與修復證據；無法立即修復或需要獨立追蹤時，走 bug 開卡流程。
+Bug／CI 錯誤通報由 [request-feature](../../plugin/skills/request-feature/SKILL.md) 分流至 [report-bug](../../plugin/skills/report-bug/SKILL.md)。開發中可立即處理、且屬於目前任務的錯誤，可在原 Issue／PR 留下重現與修復證據；無法立即修復或需要獨立追蹤時，走 bug 開卡流程。
 
 ```mermaid
 flowchart TD
@@ -123,7 +123,7 @@ flowchart TD
     INFO --> TRIAGE["判斷影響範圍、責任 repo 與優先順序，查找既有 Issue"]
     TRIAGE --> TRACK{"已有對應 Issue，或可在目前任務立即修復？"}
     TRACK -->|是| EXIST["在原 Issue／PR 記錄 bug 與證據"]
-    TRACK -->|否| DRAFT["file-bug-issue：確認目標 repo、整理已嘗試方案與相關檔案、預覽內容"]
+    TRACK -->|否| DRAFT["report-bug：確認目標 repo、整理已嘗試方案與相關檔案、預覽內容"]
     DRAFT --> APPROVE{"使用者確認建立？"}
     APPROVE -->|否| KEEP["保留草稿，依回覆調整"]
     KEEP --> DRAFT

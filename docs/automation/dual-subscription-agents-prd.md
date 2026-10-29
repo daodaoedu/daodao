@@ -296,7 +296,7 @@ flowchart TD
 
 ### Phase 0：安全基線與 auth smoke
 
-- 先校準 Routine B 契約漂移：`gh-pipeline` skill 仍提到已退役的 `state.ts`／`main.sh`／
+- 先校準 Routine B 契約漂移：`move-board-card` skill 仍提到已退役的 `state.ts`／`main.sh`／
   `spec-merged-scan.ts`，但 v2.2 prompt 已改為直接執行；實作前必須選定單一現行 contract。
 - 盤點並補齊八個 sub-repo 的 `agent:*`／`agent:running`／`auto-pr-open` labels；目前不能假設全部存在。
 - 確認各 repo required workflows／rulesets 實際生效；workflow 存在不等於 merge gate 已強制。

@@ -14,10 +14,10 @@
 | 使用者目標／跨 repo 需求 | `daodaoedu/daodao` 中央 Issue，使用[中央模板](../../plugin/templates/central-issue.md)並加入 [Planning #10](https://github.com/orgs/daodaoedu/projects/10) |
 | 功能底下可單獨驗收的一塊（子卡） | `daodaoedu/daodao`，`gh issue create --parent <母卡>`，規則見 §4 |
 | 單一 repo 的工程交接（選用） | 對應子 repo，使用[子任務模板](../../plugin/templates/subtask-issue.md)；只當交接筆記，**不掛 sub-issue 關係、不上 board**，body 用 `Refs daodaoedu/daodao#N` 指回中央卡 |
-| Bug／CI 錯誤 | 依 [file-bug-issue](../../plugin/skills/file-bug-issue/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
+| Bug／CI 錯誤 | 依 [report-bug](../../plugin/skills/report-bug/SKILL.md)確認目標 repo、預覽並依授權發布；跨 repo 才按目標拆中央／子卡 |
 | 同 repo 小任務 | 可直接以一張 Issue 關聯 PR，不為形式另拆子卡 |
 
-一般開卡使用 [gh-card](../../plugin/skills/gh-card/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
+一般開卡使用 [request-feature](../../plugin/skills/request-feature/SKILL.md)。查找既有相關卡片後再建立，避免重複。開卡預設 Todo；設定 Ready 需有對應授權（Ready 只是管理狀態，不會觸發任何自動化）。
 
 開卡時填目標與範圍、責任 repo／負責人、可驗收 AC、相依任務及 Done 條件。需求缺項填「待確認：原因／責任人／下一步」，執行後才產生的 SHA、run、PR、報告填「尚未開始／尚未產生」。不要為了開卡捏造版本或證據。
 
@@ -36,7 +36,7 @@ Ready 前凍結適用規格／AC 與 POC 基準，確認驗收者及執行授權
 | `documentation` | 文件工作；必要時可與 bug 並用 | 開卡者；工作類型 |
 | `repo:<子 repo 名稱>` | 中央卡標示涉及 repo，可複選 | 開卡者；board 篩選與人工判斷責任 repo |
 | `scope:XS`／`scope:S`／`scope:M`／`scope:L` | 選一個規模；程式未指定時預設 M | 開卡者；不是優先順序 |
-| `human-driving` | 本機／人工開發 | 執行者（`/dev-task` start 自動掛）；人工開工標記 |
+| `human-driving` | 本機／人工開發 | 執行者（`/develop` start 自動掛）；人工開工標記 |
 | `auto`、`auto:plan-only`、`auto:auto-pr` | **不再使用**（Routine A／B 已退役） | label 保留不刪；不要再加到新卡 |
 | `needs-spec`、`dispatched` | **不再使用**（原 Routine A 產出） | label 保留不刪；舊卡片仍可能帶有，清理與否不影響流程 |
 | `duplicate`／`invalid`／`wontfix` | 重複、無效或決定不處理 | maintainer；附原因與相關 Issue |
@@ -57,13 +57,13 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 |---|---|---|
 | `Todo` | 已開卡，尚未開始；可保留需求缺項 | open |
 | `Ready for Dev` | 規格、AC、責任 repo 與執行授權齊備；管理狀態，不觸發自動化 | open |
-| `In Progress` | 已開始實作（`/dev-task` start）；`Need Fix` 開修時也移回這裡 | open |
-| `Review` | PR 已開（`/dev-task` finish）；merged 後仍留此欄，直到 post-merge-wrapup 冒煙通過 | open |
-| `Acceptance` | 全部必要 repo 合併 + dev 冒煙通過（post-merge-wrapup `set <n> accept`，自動 assign PM＋交接留言），等 PM 對照 AC 驗收 | open |
-| `Need Fix` | post-merge-wrapup 的 dev 冒煙任一 ❌ 或未冒煙，或 PM 驗收退回：待修 | open |
-| `Done` | PM 驗收通過並關 issue（內建 `Item closed → Done`）；掛 `acceptance:engineering` 的工程驗收卡冒煙通過後由 post-merge-wrapup 關；無部署需求依事先定義的替代條件 | closed（PM 關；工程驗收卡由 post-merge-wrapup 關） |
+| `In Progress` | 已開始實作（`/develop` start）；`Need Fix` 開修時也移回這裡 | open |
+| `Review` | PR 已開（`/develop` finish）；merged 後仍留此欄，直到 verify-deploy 冒煙通過 | open |
+| `Acceptance` | 全部必要 repo 合併 + dev 冒煙通過（verify-deploy `set <n> accept`，自動 assign PM＋交接留言），等 PM 對照 AC 驗收 | open |
+| `Need Fix` | verify-deploy 的 dev 冒煙任一 ❌ 或未冒煙，或 PM 驗收退回：待修 | open |
+| `Done` | PM 驗收通過並關 issue（內建 `Item closed → Done`）；掛 `acceptance:engineering` 的工程驗收卡冒煙通過後由 verify-deploy 關；無部署需求依事先定義的替代條件 | closed（PM 關；工程驗收卡由 verify-deploy 關） |
 
-移卡一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`（七欄 option id、別名與 `PM_LOGIN` 在 `bin/pipeline/types.ts`），`board.ts audit` 定期列出 Status 與 issue／PR／labels 的落差；操作手冊見 [gh-pipeline](../../plugin/skills/gh-pipeline/SKILL.md)。Board 另開著七個 GitHub 內建 workflow（Item added → Todo、Item closed → Done、Auto-close issue、PR linked／merged、Auto-add），但只對**同 repo** closing-keyword 連結的 PR 生效，sub-repo `Refs` 不會觸發，不能依賴它們移卡。
+移卡一律用 `pnpm -s tsx bin/pipeline/board.ts set <n> <status>`（七欄 option id、別名與 `PM_LOGIN` 在 `bin/pipeline/types.ts`），`board.ts audit` 定期列出 Status 與 issue／PR／labels 的落差；操作手冊見 [move-board-card](../../plugin/skills/move-board-card/SKILL.md)。Board 另開著七個 GitHub 內建 workflow（Item added → Todo、Item closed → Done、Auto-close issue、PR linked／merged、Auto-add），但只對**同 repo** closing-keyword 連結的 PR 生效，sub-repo `Refs` 不會觸發，不能依賴它們移卡。
 
 目前沒有獨立的 Blocked、待部署或 Cancelled Status。處理方式如下：
 
@@ -99,7 +99,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 - **只有兩層**：母卡 → 子卡，子卡底下不再掛子卡。
 - **子卡一律開在中央 repo**，才會上 board 給 PM 驗收；同一張子卡要動多個 repo 就開多個 PR，不另開 sub-repo 子卡。
 - **母卡不直接掛 PR**：實作都在子卡或獨立卡上。
-- 開新功能時 gh-card 依 AC 一次拆好子卡；dev-task 只在子卡或獨立卡上開工。
+- 開新功能時 request-feature 依 AC 一次拆好子卡；develop 只在子卡或獨立卡上開工。
 
 ### 4.4 狀態與驗收
 
@@ -133,7 +133,7 @@ Issue 的 open／closed 和 Board Status 分別設定。下表 Status 名稱已�
 
 使用[PR 模板](../../plugin/templates/pull-request.md)列中央與子 Issue。需部署後驗證的卡片，預設以一般參照記錄，並在完成驗收後人工 close；避免以 closing keyword 在 merge 時提前結案。若任務契約明定 merge 即滿足全部 Done 條件，才使用自動關閉關聯。中央跨 repo 卡不由單一子 PR 自動關閉。
 
-GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` 不會觸發任何自動移卡，所以 board 回寫由 `/dev-task` finish（Review）與 `/post-merge-wrapup`（Acceptance／Need Fix）執行，Done 由 PM 關 issue 產生；不要為了觸發內建 workflow 而提前用 `Closes` 關卡。
+GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` 不會觸發任何自動移卡，所以 board 回寫由 `/develop` finish（Review）與 `/verify-deploy`（Acceptance／Need Fix）執行，Done 由 PM 關 issue 產生；不要為了觸發內建 workflow 而提前用 `Closes` 關卡。
 
 ## 5. 設定範例
 
@@ -158,9 +158,9 @@ Parent: daodaoedu/daodao#123
 
 | 現況 | 管理方式／待實作 |
 |---|---|
-| 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/publish-tasks`；要恢復自動派工需另開卡重新設計 |
-| `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | dev-task start／finish、post-merge-wrapup、gh-card 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
-| Routine C 已退役 | merged 後卡留 Review，`/post-merge-wrapup` 依 dev 冒煙結果移 Acceptance（交 PM）／Need Fix，PM 關 issue 才 Done；沒有 cron |
+| 自動派工（Routine A／B）已退役 | 開卡與拆卡全由人工／`/break-down-plan`；要恢復自動派工需另開卡重新設計 |
+| `types.ts` 已含七欄（含 Review／Acceptance／Need Fix）；`board.ts set／audit` 為人工移卡與稽核入口 | develop start／finish、verify-deploy、request-feature 各自負責一步（2026-09-20 起）；未跑 skill 就沒人移卡 |
+| Routine C 已退役 | merged 後卡留 Review，`/verify-deploy` 依 dev 冒煙結果移 Acceptance（交 PM）／Need Fix，PM 關 issue 才 Done；沒有 cron |
 | 內建 workflow 目標欄位 API 讀不到 | 2026-09-20 於設定頁確認並把「Pull request merged」由 Done 改為 Review；之後若再改只能在設定頁看 |
 | `Parent:` 與原生父子關係分開 | 人工建立並回讀兩者；`board.ts audit` 檢查第三層與子卡不在中央 repo，`Parent:` 文字一致性尚未檢查 |
 | PR parser 只認同 repo closing refs | 部署後關卡流程先人工回寫；待支援一般關聯與延後完成 |

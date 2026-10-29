@@ -30,6 +30,6 @@
   ],
   "context": {
     "prototype/app.ts": "",
-    "notes": "No deployment or runtime reproduction evidence supplied. Inspect available context; preserve unknowns."
+    "notes": "我這邊沒有部署紀錄。"
   }
 }

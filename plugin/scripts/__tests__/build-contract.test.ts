@@ -139,8 +139,8 @@ describe('.agents/skills 產物', () => {
     }
   })
 
-  it('dev-task 的 references 有一起帶過去（那裡沒有 plugin 載入器）', () => {
-    expect(existsSync(join(target, 'dev-task', 'references', 'layout-probe.mjs'))).toBe(true)
+  it('develop 的 references 有一起帶過去（那裡沒有 plugin 載入器）', () => {
+    expect(existsSync(join(target, 'develop', 'references', 'layout-probe.mjs'))).toBe(true)
   })
 })
 
@@ -148,6 +148,18 @@ describe('產物與 canonical 同步', () => {
   it('pnpm plugin:check 通過（產物沒有被手改、也沒有忘記重跑）', () => {
     const r = execFileSync('pnpm', ['-s', 'plugin:check'], { cwd: REPO_ROOT, encoding: 'utf8' })
     expect(r).toContain('同步')
+  })
+
+  it('templates/ 底下的 __pycache__ 不會被打包（CI 先跑 Python 測試再 check）', () => {
+    const cache = join(PLUGIN_ROOT, 'templates', '__pycache__')
+    const created = !existsSync(cache)
+    if (created) execFileSync('python3', ['-c', 'import py_compile; py_compile.compile("plugin/templates/check-issue-draft.py")'], { cwd: REPO_ROOT })
+    try {
+      const r = execFileSync('pnpm', ['-s', 'plugin:check'], { cwd: REPO_ROOT, encoding: 'utf8' })
+      expect(r).toContain('同步')
+    } finally {
+      if (created) rmSync(cache, { recursive: true, force: true })
+    }
   })
 })
 
@@ -190,7 +202,7 @@ describe('build 的刪除護欄', () => {
     const r = buildWithTarget('plugin/skills/')
     expect(r.blocked).toBe(true)
     expect(r.stderr).toMatch(/canonical|拒絕刪除/)
-    expect(existsSync(join(PLUGIN_ROOT, 'skills', 'dev-task', 'SKILL.md'))).toBe(true)
+    expect(existsSync(join(PLUGIN_ROOT, 'skills', 'develop', 'SKILL.md'))).toBe(true)
   })
 
   it('target 指向 repo 根目錄會被拒絕', () => {

@@ -103,3 +103,17 @@ test('不再監聽 plugin/ 變更就不給過（plugin 改了不會同步出去�
   assert.notEqual(result.status, 0);
   assert.match(result.stdout + result.stderr, /plugin/);
 });
+
+
+test('讀取權限驗證器只准從 canonical 複製到 CI scripts', () => {
+  const source = 'cp plugin/hooks/check-read-access-evidence.py target/.github/scripts/check-read-access-evidence.py';
+  for (const replacement of [
+    'cp plugin/hooks/check-read-access-evidence.py target/.claude/hooks/check-read-access-evidence.py',
+    'cp plugin/hooks/pre-pr-gate.sh target/.github/scripts/check-read-access-evidence.py',
+    '# ' + source,
+  ]) {
+    const result = runContract({ workflowText: workflow.replace(source, replacement) });
+    assert.notEqual(result.status, 0, replacement);
+    assert.match(result.stdout + result.stderr, /canonical 讀取權限驗證器|逐檔複製/);
+  }
+});

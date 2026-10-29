@@ -6,7 +6,7 @@
 |---|---|---|
 | R1 證據不能越級 | 本機模板當作團隊採用；測試／workflow 存在當作部署或實際可用 | handoff 每條 verified claim 必須有相同階段 evidence，記 revision、時間及證據位置；test 加命令／結果，deployment／usable 加環境／結果 |
 | R2 需求者只回答產品問題 | 多次要求 repo、API、根因與固定負責人；逐格模板增加負擔 | intake 最多兩題，禁止 repo／sha／owner／root-cause 欄位；沿用 skill-evals 的 captured trace 檢查，來源不改寫 |
-| R3 只寫明列的任務檔案 | 共用 dirty checkout 的其他成果被捲入提交／改動 | handoff 的 writes 必須屬於 owned_paths 的明列檔案，禁止絕對路徑與 traversal；dev-task 使用隔離 worktree，提交前另核對真實 Git diff／staged paths |
+| R3 只寫明列的任務檔案 | 共用 dirty checkout 的其他成果被捲入提交／改動 | handoff 的 writes 必須屬於 owned_paths 的明列檔案，禁止絕對路徑與 traversal；develop 使用隔離 worktree，提交前另核對真實 Git diff／staged paths |
 
 ## 第二次發生時
 
@@ -67,7 +67,7 @@ python3 /absolute/daodao/plugin/hooks/check-agent-delivery.py   --repo /absolute
 
 範例只說明介面；raw session 不提交，避免包含私有資訊。partial capture 作診斷，不能作完整 trace 通過依據。已有 `scripts/skill-evals/trace_adapter.py` 偏向技能評估，不能以其輸出自動宣稱 filesystem coverage。
 
-真正完成嚴格 trace pilot，還需獨立觀測 Bash／腳本的寫入（或受控的寫入工具），驗證跨 subagent、產物生成、rename／delete、重試與失敗 attempts，再做真實任務抽樣。現有任務不重寫 diff 製造假 trace，也不要求人繞 hook。非 dev-task、其他 PR API、未啟用 hooks 不受此入口控制；遠端 required checks 尚未設定。
+真正完成嚴格 trace pilot，還需獨立觀測 Bash／腳本的寫入（或受控的寫入工具），驗證跨 subagent、產物生成、rename／delete、重試與失敗 attempts，再做真實任務抽樣。現有任務不重寫 diff 製造假 trace，也不要求人繞 hook。非 develop、其他 PR API、未啟用 hooks 不受此入口控制；遠端 required checks 尚未設定。
 
 ## 可執行的 Bash trace 收集路徑
 

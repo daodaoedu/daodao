@@ -49,31 +49,31 @@ git submodule update --remote
 
 | Skill | 用途 |
 |-------|------|
-| `/prd-generation` | 需求查核與 PRD 起草（OpenSpec 已於 2026-09-20 退役，`/openspec-*` 不再使用） |
-| `/gh-card` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$gh-card` 或明確讀取 skill |
-| `/dev-task` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
-| `/post-merge-wrapup` | merge 後更新 docs/product 與驗收狀態 |
+| `/draft-prd` | 需求查核與 PRD 起草（OpenSpec 已於 2026-09-20 退役，`/openspec-*` 不再使用） |
+| `/request-feature` | 套共用模板開中央／子 Issue，含 AC、POC、後端驗收；Codex 可用 `$request-feature` 或明確讀取 skill |
+| `/develop` | issue 隔離開發：worktrees/<n>-<slug>/ + task.md，start → dev → verify → finish → cleanup |
+| `/verify-deploy` | merge 後更新 docs/product 與驗收狀態 |
 | `/format-commit` | 結構化 commit message（Why / How） |
-| `/pre-commit-check` | Commit 前自動品質檢查與修復 |
-| `/code-review` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
+| `/check-commit` | Commit 前自動品質檢查與修復 |
+| `/review-change` | Push 前本地 code review（四引擎；查證為誤判的 finding 記進誤判知識庫） |
 | `/collect-pr-feedback` | 收集 PR 上所有 review 回饋（含收割 `/fp` 回覆進誤判知識庫） |
-| `/file-bug-issue` | 無法立即修復的 bug 開成 GitHub issue |
-| `/publish-tasks` | 把已確認計畫的未完成任務批次發成 sub-repo 子 issue（人工發布；自動派工已退役） |
+| `/report-bug` | 無法立即修復的 bug 開成 GitHub issue |
+| `/break-down-plan` | 把已確認計畫的未完成任務批次發成中央 repo 的子 issue（人工發布；自動派工已退役） |
 | `/post` | 踩坑經驗記錄，發佈到 quidproquo.cc |
 
-快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，Planning board 狀態怎麼流（自動派工與 Routine C 皆已退役，改由各 skill 呼叫 `bin/pipeline/board.ts`）見 [gh-pipeline skill](plugin/skills/gh-pipeline/SKILL.md)。
+快速導覽與現況盤點見 [docs/development-skills-and-workflow.md](docs/development-skills-and-workflow.md)；完整開發流程見 [docs/workflow.md](docs/workflow.md)；規格要寫到哪一層（FRD / issue AC；OpenSpec 已退役）見其 Phase 1.5，Planning board 狀態怎麼流（自動派工與 Routine C 皆已退役，改由各 skill 呼叫 `bin/pipeline/board.ts`）見 [move-board-card skill](plugin/skills/move-board-card/SKILL.md)。
 
 新增的[Issue → 開發 → 驗收 → 合併流程提案](docs/automation/issue-to-acceptance-workflow.md)涵蓋 Google Docs／Drive、人工與自動入口、Issue 回寫；另有[額度分配政策](docs/automation/agent-budget-policy.md)與[可複用文件模板](plugin/templates/README.md)。這些是待導入設計，不代表自動化已啟用。
 
 ### AI Code Review 誤判知識庫
 
-本機 `/code-review` 與 CI `code-review.yml` 兩個 reviewer 共用同一份誤判紀錄與過濾規則，記一次、兩處受益：
+本機 `/review-change` 與 CI `code-review.yml` 兩個 reviewer 共用同一份誤判紀錄與過濾規則，記一次、兩處受益：
 
 ```
 記錄                                   消費
-  /code-review 步驟 8 查證為誤判 ──┐      ┌─ CI  code-review.yml：known-FP 進 prompt → filter 在 strict validator 前
-  PR 作者回 /fp <n> <A-F> <why>  ├→ jsonl ┤
-  （collect-pr-feedback 收割）   ─┘      └─ 本機 /code-review：known-FP 進 review input → filter 套各引擎輸出
+  /review-change 步驟 8 查證為誤判 ──┐      ┌─ CI  code-review.yml：known-FP 進 prompt → filter 在 strict validator 前
+  PR 作者回 /fp <n> <A-G> <why>  ├→ jsonl ┤
+  （collect-pr-feedback 收割）   ─┘      └─ 本機 /review-change：known-FP 進 review input → filter 套各引擎輸出
 ```
 
 - 單一來源：`.github/review-knowledge/false-positives.jsonl` + 腳本 `.github/scripts/review-knowledge.cjs`（`prompt-block` / `filter` / `record --db auto` / `test`）；sync 派發唯讀副本到各 sub-repo，CI 從 base ref 載入

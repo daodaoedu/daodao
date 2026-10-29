@@ -23,6 +23,7 @@ AI 先查證與修訂已授權的問題，再交人審閱結論與產品取捨�
 - HTTP wire response 使用實際 JSON 型別核對完整 envelope 與 payload；內部 Date、ORM 型別或 Zod strip unknown 不能證明 wire contract／私密欄位未外洩。
 - 資訊曝露需要原始 response 的 negative assertions；加密、金鑰處理與敏感資料日誌依已確認安全約束檢查。
 - Migration／schema 的型別、nullable、default、CHECK、相容性與回復另查；schema sync／OpenAPI diff 是 signal，不是完整正確性證明。
+- 新增或修改的測試要能通過兩種假想修改：把行為弄壞時測試會失敗；行為不變、只改內部結構時測試仍通過。預期值由被測程式自己算出來的測試不算驗證。
 - 變更 test／gate 時檢查有沒有為了變綠而 skip、focus、刪除 assertion 或弱化預期。合理需求變更可以更新測試，但要留下來源決策及本版本審核依據。
 
 ## 輸入與授權
