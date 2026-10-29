@@ -8,8 +8,8 @@
 
 | 狀態 | 項目數 |
 |---|---|
-| 已採用 | 38 |
-| 部分採用 | 31 |
+| 已採用 | 39 |
+| 部分採用 | 30 |
 | 未採用 | 21 |
 | 不適用 | 2 |
 | 合計 | 92 |
@@ -63,7 +63,7 @@
 | maintain-verification-skill | 定期稽核：每個功能派人讀原始碼，再用一個 live session 實際操作，最多開一支修正 PR | 部分採用 | `plugin/docs/feature-map/` 每份檔案標註依據的 dev 版本；規則是改到 UI 時順手更新；test-acceptance 會在報告記下與 feature map 不一致之處。缺：定期稽核 | #419、#420 |
 | visual-parity playbook | 基準就是規格、不能動；用量測判斷是否等價，不靠肉眼 | 已採用 | `plugin/skills/develop/references/poc-compare.md`、`poc-report.py`（`config_sha256` 凍結設定）、`poc-probe-checklist.md`、`layout-probe.mjs`；`pre-pr-gate.sh` 的 `pr-poc-compare-missing` 與 `pr-layout-probe-missing` | #418 |
 | benchmark-checklist | 報數字前先檢查限制因素、重複性，以及工作是否真的有跑 | 已採用 | `dev.md` 第 3 步 `perf`（冷／熱快取、request 是否真的送到 server、差距小於每次之間的變動就算沒有差異） | — |
-| blast-radius | 找出 diff 以外會壞的地方，並用實跑證明安全所依賴的那一個前提 | 部分採用 | `dev.md` `fix`「修完搜一次同樣寫法」；`review-change/references/engines.md` 讓 Codex 負責跨檔契約；`retrieve-context.sh` 的 Context Pack 補 middleware、schema 與刪檔的替代者。缺：pstack 那套「把前提推到實跑等級，並說明停在哪一級」的確定度梯度 | #415 |
+| blast-radius | 找出變更會弄壞的地方，把讓它安全的 1～2 件事用真程式證明 | 已採用 | develop `finish.md` 第 8 步：PR 本文寫「## 安全前提」並標 1～5 級證據，高風險類別至少第 4 級；review-change `findings.md` 步驟 8 核對等級是否相符。缺：大型變更用 arena 多模型交叉 | #430 |
 | interrogate | 讓對手試著打破變更，只保留重跑過能證明的 finding，並列出丟棄清單 | 已採用 | `plugin/skills/review-change/references/findings.md` 步驟 8：P0／P1 要在 review snapshot 重跑重現，交人時附各引擎的丟棄清單。刻意偏離：高風險類別即使無法重現仍阻擋 | #415、#422 |
 | create-formal-verification-skill | 對 bug 代價最高、測試又碰不到的地方產生形式驗證 skill | 未採用 | 沒找到 TLA+／model checking | — |
 | maintain-formal-verification-skill | 程式改了之後同步更新形式模型 | 未採用 | 前一項沒有，這項也就沒有 | — |
@@ -155,7 +155,7 @@
 
 | # | 項目 | 為什麼 | 工作量 |
 |---|---|---|---|
-| 1 | blast-radius（部分採用） | daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。改 `findings.md`／`finish.md` 各一段，PR 模板加一欄 | S |
+| 1 | ~~blast-radius~~（#430 已做） | daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。改 `findings.md`／`finish.md` 各一段，PR 模板加一欄 | S |
 | 2 | maintain-verification-skill：feature map 定期稽核（部分採用） | PM 驗收與 develop verify 都依賴 feature map，而它只靠「改 UI 時順手更新」。#419 已有一次性的 `path:line` 比對腳本，可以做成像 `board-audit.yml` 的排程：比對 `path:line` 與 `data-testid` 是否仍存在，加一輪 live 抽測，最多開一支修正 PR，減少 #277／#282 這類 BLOCKED。排程前先手動跑一次 | M |
 | 3 | ~~ketchup：「等你決定」彙整~~（#428 已做） | 人類 reviewer 同時面對多張卡、多支 PR 與 PM 驗收；`board.ts audit` 只看狀態，沒有列出卡在誰、要決定什麼、決定所需資訊。加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結 | S |
 | 4 | type-system-discipline、typescript-best-practices（部分採用） | #418 留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。補窮舉檢查（`satisfies never`）、ID 類 branded type、zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件先拿過去事故證明 lint 會失敗 | M |
