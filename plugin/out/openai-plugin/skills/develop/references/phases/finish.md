@@ -9,7 +9,11 @@
 對每個有變更的 repo（在任務資料夾內的 worktree 執行）：
 
 1. 確認全部 commit：`git status`
-2. 同步 dev：`git fetch origin dev && git rebase origin/dev`（衝突時列出檔案協助解決）
+2. 同步 dev：`git fetch origin dev && git rebase origin/dev`（衝突時列出檔案協助解決）。rebase 前後各算一次 patch-id，判斷 verify 的證據還算不算數：
+   ```bash
+   git diff "$(git merge-base origin/dev HEAD)" HEAD | git patch-id --stable | cut -d' ' -f1
+   ```
+   verify 通過時的值記在 task.md「## 驗證」。值相同表示 patch 沒變，核心旅程矩陣與驗證報告沿用，只更新 PR body 的 head SHA；值不同就列出改到的檔案，只重跑碰到那些檔案的旅程列和版面探針，其他列保留
 3. 品質檢查：`pnpm run typecheck && pnpm run lint && pnpm test`
 4. **Clean-context spec audit** — 先讀 [spec audit 輸入規則](../spec-audit.md)，用 `scripts/build-spec-audit.py` 產生固定版本的 audit pack，包含 diff、task.md 驗收契約、已確認 decisions.md／既有 design.md，以及適用 REVIEW.md。不得只傳 diff＋AC 而省略產品決策和實作約束。spawn 全新、不帶開發對話的獨立 subagent；依 pack 逐原 FR／TP／AC／決策與約束標 PASS / FAIL / UNCERTAIN 並附證據。FAIL 先修復，UNCERTAIN 由 AI 補查；必要執行證據不足不得標 PASS。需求／決策或 head 改變後重建 pack，重驗受影響項目。獨立 agent 不可用標未驗證，不以自審冒稱完成。
 
@@ -62,10 +66,11 @@ gh pr create --base dev \
 **連結一律用 Markdown 語法 `[文字](url)`，不要裸貼 URL**：GitHub autolink 不把全形標點（（、，。）當網址結尾，`…/pull/231（先 merge）` 會把「（先」吃進連結變 404。發出前掃一次：`grep -nE 'https?://[^ )]*[（）、，；：]'`。
 
 9. 更新 task.md：Status → `in-review`，記下 PR 連結
-10. **回寫 issue 狀態**（必做，不能只開 PR 不回報）：
+10. **回寫 issue 狀態**（必做，不能只開 PR 不回報）。finish 可能因為限流或閘門被擋而重跑，留言要先找再寫，不能每跑一次就多一則：留言第一行放 marker `<!-- daodao-delivery:pr-opened-<repo>#<pr> -->`，先用 `gh api repos/daodaoedu/<repo>/issues/<n>/comments --paginate` 找有這個 marker 的留言；找到就 `gh api -X PATCH repos/daodaoedu/<repo>/issues/comments/<id> -F body=@<body.md>` 更新那一則，找不到才新增，寫完讀回確認。留言內容：
 
 ```bash
 gh issue comment <n> --repo daodaoedu/<repo> --body "$(cat <<'EOF'
+<!-- daodao-delivery:pr-opened-<repo>#<pr> -->
 ## ✅ 驗收完成，已發 PR
 - PR: [<repo>#<n>](<url>)（跨 repo 時全部列出 + merge 順序；連結用 Markdown 語法，勿裸貼 URL 接全形標點）
 - 驗證報告（Google 文件，含截圖）: [Task <n> 驗證報告](<verify 階段產出的 doc url>)
