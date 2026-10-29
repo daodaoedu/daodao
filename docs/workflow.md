@@ -653,7 +653,7 @@ Post            同 head PATCH、新 head POST；超長報告只縮公開留言�
 
 CI 模型只輸出 P1–P3，而且只回報有證據的「新引入 regression」，不負責風格建議（未使用的 import、命名之類不在範圍）。它會誤判也會漏報，所以 finding 一律先查證再處理。
 
-**對誤判的回覆方式**：在 PR 上回 `/fp <第幾條> <A-F> <一句為什麼>`（例：`/fp 1 A route 已掛 authenticate，引用行號指到別的函式`），`collect-pr-feedback` 只採 PR 作者或已驗證成員的回覆，查證後收割進誤判知識庫（見 5.3）。紀錄合併進 monorepo main 並同步後，之後的 review 才會在 `<known_false_positives>` 看到這個樣態（CI 從 PR 的 base SHA 讀知識庫）。
+**對誤判的回覆方式**：在 PR 上回 `/fp <第幾條> <A-G> <一句為什麼>`（例：`/fp 1 A route 已掛 authenticate，引用行號指到別的函式`），`collect-pr-feedback` 只採 PR 作者或已驗證成員的回覆，查證後收割進誤判知識庫（見 5.3）。紀錄合併進 monorepo main 並同步後，之後的 review 才會在 `<known_false_positives>` 看到這個樣態（CI 從 PR 的 base SHA 讀知識庫）。
 
 **Debug**：先看 job summary、head 對應的 coverage 留言與 `ai-review-<pr>-<head>` artifact 中的 manifest／status.json。模型輸出無效或未覆蓋部分會列出原因；沒有留言時另查 posting step 的權限與 API 錯誤，不能把 job success 視為完整審查。
 
@@ -684,7 +684,7 @@ CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有�
     2. 收集 AI Code Review、SonarCloud／Vercel（f2e）與人類 reviewer 的 comment，去重同一根因
     3. AI 逐條對程式碼／測試查證：已確認缺陷／待產品決策／證據不足／已解決或不適用
        - 人類要求與模型 High 都只是待查證訊號，多個模型同意也不等於正確
-       - `/fp <n> <A-F> <why>` 只採 PR 作者或已驗證成員的回覆，查證後 record --source ci（不自動 commit／push）
+       - `/fp <n> <A-G> <why>` 只採 PR 作者或已驗證成員的回覆，查證後 record --source ci（不自動 commit／push）
     4. 有修復授權：修已確認缺陷（bug 先補 regression test）→ 走 check-commit／format-commit commit；
        push 與回覆 reviewer 需另有授權
        只有分析授權：給修正建議與驗證方法，不擅改程式
