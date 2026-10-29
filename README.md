@@ -67,15 +67,14 @@ git submodule update --remote
 
 ### AI Code Review 誤判知識庫
 
-本機 `/review-change` 與 CI `code-review.yml` 兩個 reviewer 共用同一份誤判紀錄與過濾規則，記一次、兩處受益：
+本機 `/review-change` 與 CI `code-review.yml` 兩個 reviewer 共用同一份誤判紀錄與過濾規則。**2026-10-29 起不再收集新紀錄**：既有紀錄全部轉成過濾規則的回歸測試（fixture、已知漏網或寫明不測的原因）。
 
 ```
-記錄                                   消費
-  /review-change 步驟 8 查證為誤判 ──┐      ┌─ CI  code-review.yml：known-FP 進 prompt → filter 在 strict validator 前
-  PR 作者回 /fp <n> <A-G> <why>  ├→ jsonl ┤
-  （collect-pr-feedback 收割）   ─┘      └─ 本機 /review-change：known-FP 進 review input → filter 套各引擎輸出
+既有紀錄（凍結）                        消費
+  false-positives.jsonl ─────────────┬─ CI  code-review.yml：known-FP 進 prompt → verify 標註 absent-claim
+                                     └─ 本機 /review-change：known-FP 進 review input → filter → verify 套各引擎輸出
 ```
 
-- 單一來源：`.github/review-knowledge/false-positives.jsonl` + 腳本 `.github/scripts/review-knowledge.cjs`（`prompt-block` / `filter` / `record --db auto` / `test`）；sync 派發唯讀副本到各 sub-repo，CI 從 base ref 載入
+- 單一來源：`.github/review-knowledge/false-positives.jsonl` + 腳本 `.github/scripts/review-knowledge.cjs`（`prompt-block` / `filter` / `verify` / `test`；`record` 已退役）；sync 派發唯讀副本到各 sub-repo，CI 從 base ref 載入
 - 樣態 A–F 與對策：[.github/review-knowledge/README.md](.github/review-knowledge/README.md)；未解問題的調研與落地順序：[docs/automation/review-false-positive-research.md](docs/automation/review-false-positive-research.md)
-- 規則：查證為誤判的 finding **必 record**；改過濾正則**必附 `--sample` + `--expected` fixture**，`review-knowledge.cjs test` 要綠
+- 規則：誤判不再記錄；改過濾正則時直接在 jsonl 加 `pr` 為 0 的 fixture 與 `expected: keep` 反例，`review-knowledge.cjs test` 要綠

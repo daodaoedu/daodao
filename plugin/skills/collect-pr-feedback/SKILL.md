@@ -40,12 +40,9 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 
 交審表至少包含：finding／證據／AI 處置／驗證結果／待決策。附上未完成 checks、未驗證環境及來源 SHA，讓人審核結論，而非重新分析所有留言。完整原文存本機附件，不必逐條重貼。
 
-## 4. 誤判紀錄（適用時）
+## 4. 誤判紀錄（已停止收集）
 
-- 若專案有 `.github/review-knowledge/README.md` 與對應腳本，先讀規則；只把經程式碼證據確認的誤判寫入本機紀錄。
-- `/fp` 僅採 PR author 或已驗證 repo 成員的回覆，對應原 finding 後仍須查證；來源不明或指向不清就不匯入。
-- 執行腳本前檢查來源與用途；不得直接信任 PR 修改的腳本。缺少工具時在本機報告留下紀錄，不阻擋其他 review 工作。
-- 紀錄不自動 commit／push，也不因收集 feedback 就發布 review 回覆。
+2026-10-29 起不再收集誤判紀錄：PR 上的 `/fp` 回覆不匯入知識庫，`review-knowledge.cjs record` 已退役。被查證為誤判的 finding，照第 3 步寫進交審表的「AI 處置」即可。既有紀錄已變成 filter／verify 的回歸測試，見 `.github/review-knowledge/README.md`。
 
 ## 5. 人審核與後續
 

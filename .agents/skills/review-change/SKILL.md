@@ -125,7 +125,7 @@ fi
 } > "$_REVIEW_INPUT"
 ```
 
-- `<known_false_positives>` 是歷史上已查證的誤判樣態（來源：本機 review 步驟 8 與 PR 上的 `/fp` 回覆），
+- `<known_false_positives>` 是歷史上已查證的誤判樣態（來源：2026-10-29 前本機 review 與 PR 上的 `/fp` 回覆；之後不再收集新紀錄），
   CI 的 code-review.yml 用同一份作為模型脈絡；四個本機 reviewer 都會看到，本機 `filter` 仍在步驟 6.5 輔助分類。新 CI 使用 structured findings 與 coverage 驗證，不再套用會將全數 drop 轉成 clean 的 Markdown filter，原因見 `docs/automation/complete-ci-review.md`。
 
 ## 步驟 1：確認 base branch 與變更範圍
