@@ -1,6 +1,6 @@
 # daodao plugin
 
-島島阿學的開發流程打包成一個可安裝的 plugin：13 個 skill、PR 證據閘門 hooks、Issue／PR 模板。
+島島阿學的開發流程打包成一個可安裝的 plugin：14 個 skill、PR 證據閘門 hooks、Issue／PR 模板。
 支援 Claude Code、Codex、ChatGPT、Claude.ai 四個平台。
 
 ## 單一真相源
@@ -105,7 +105,7 @@ codex plugin add daodao@daodao-local
 
 - Codex 的 marketplace 只接受本機路徑或 git，不吃 `marketplace.json` 網址，所以不能用 Claude Code 那個 Pages 網址
 - marketplace 名稱叫 `daodao-local`（取自 `.agents/plugins/marketplace.json`），雖然名字有 local，這就是給大家裝的那份
-- 這樣裝的只有 13 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
+- 這樣裝的只有 14 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
 
 ### ChatGPT
 
@@ -197,14 +197,14 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | | Claude Code | Codex／ChatGPT 桌面 | ChatGPT 網頁／行動 | Claude.ai 網頁 |
 |---|---|---|---|---|
 | 安裝的東西 | `daodao` | `.agents/skills/`（免裝） | `daodao-web` | `daodao-web` |
-| skill 數 | 13 | 13 | 7 | 7 |
+| skill 數 | 14 | 14 | 8 | 7 |
 | 本機 repo／shell | ✅ | ✅ | ❌ | ❌ |
 | 自動閘門 | ✅ hooks | ✅ 需 `/hooks` 信任 | ❌ | ❌（hooks 只在 Cowork 跑）|
 | 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
 | Drive 報告 | ✅ | ❌ | ❌ | ❌ |
 
-Claude.ai 少掉的 6 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
-`move-board-card`、`format-commit`——全都需要使用者的 checkout。Claude.ai 的 sandbox 有檔案系統也能跑
+Claude.ai 少掉的 7 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
+`move-board-card`、`format-commit`——全都需要使用者的 checkout；以及 `test-acceptance`，要在本機存截圖再上傳。Claude.ai 的 sandbox 有檔案系統也能跑
 指令，但那是一個空的暫時環境，不是專案。
 
 ## 平台事實（2026-09-21 查證）

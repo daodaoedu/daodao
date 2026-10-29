@@ -13,6 +13,19 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 - 依賴後端的頁面：確認本地 docker（server/DB）在跑，或 task.md 備註要連哪個環境
 - **任務本身有改 server**：必須跑「任務資料夾裡的 server worktree」，不是 `projects/daodao-server`——驗到舊版後端等於沒驗。先停掉 projects 版的 server container/process 再起任務版
 
+### 1a. 驗證前的環境檢查
+
+開始驅動瀏覽器之前逐項確認，任一項不對就先修環境，不要拿這個環境的結果當證據：
+
+1. 目標 port 是任務 worktree 的程序佔用，不是 `projects/` 底下的版本：`lsof -nP -iTCP:<port> -sTCP:LISTEN` 看程序的 cwd
+2. 任務有改 server 時，server port 也是任務版的程序
+3. f2e 的 API URL（`packages/config/generated/env.ts` 的 `NEXT_PUBLIC_API_URL`）指向任務要驗的 server
+4. 需要登入的流程：token 打 `GET /api/v1/auth/me` 回 200
+5. 公開頁載入後沒有被導到 `/auth/*`
+6. dev server 的啟動時間晚於最後一次改檔，避免 HMR 卡在舊程式
+
+出錯時對照 [gotchas.md](gotchas.md)「開發與瀏覽器驗證」。這份清單目前是手動逐項確認；同一項第二次出問題時，依 `plugin/hooks/ADR-0001-gates-over-guidelines.md`「新常駐檢查的進場條件」寫成腳本。
+
 ## 2. 展開檢查清單
 
 驗證前先把「要驗什麼」寫成清單，來源優先序：
@@ -24,6 +37,8 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
    - 改動頁面在桌機 + 行動版寬度（390px）下版面正常
    - **版面探針**（見 §4a）：每條 route × 390／1024／1440 無登入牆、無橫向溢出、無出界元素
 4. **核心旅程矩陣**（有寫入路徑就必填，見 [journey-matrix.md](journey-matrix.md)）：任務碰到的每條「建立／編輯／刪除／送出」旅程，至少一列用真實輸入送出成功、一列用 server 會拒絕的輸入送出失敗。「點擊、輸入、送出可走通」不是驗收條件——**用什麼輸入送出、server 回了什麼、畫面顯示了什麼**才是。沒有寫入路徑時寫一行 `核心旅程不適用：<原因>`。
+
+要驗的功能先查 feature map（`plugin/docs/feature-map/README.md`）：到達路徑、穩定選擇器、需要的角色與已知陷阱都在那裡。改到 UI（路徑、按鈕文字、testid）時順手更新對應檔案。
 
 ## 3. 工具選擇
 

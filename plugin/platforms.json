@@ -211,6 +211,15 @@
         "drive",
         "hooks"
       ]
+    },
+    "test-acceptance": {
+      "requires": [
+        "gh",
+        "filesystem"
+      ],
+      "optional": [
+        "browser"
+      ]
     }
   }
 }

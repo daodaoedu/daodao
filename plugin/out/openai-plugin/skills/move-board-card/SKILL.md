@@ -56,7 +56,7 @@ request-feature 開卡時判斷並掛 label，理由寫進 body 的「驗收方�
 
 ### Acceptance 欄的規則（Kanban Guide 2025.5 的 SLE）
 
-- **PM 怎麼操作**：每天看 board 的「PM 驗收」view（篩 `status:Acceptance`）。通過 → 關 issue（卡自動到 Done）；AC 沒過 → 留言寫**哪一條 AC 沒過、看到什麼**、卡移 `Need Fix`（`set <n> needfix`）。測不了、想加新要求時依下方分流，不移 Need Fix。
+- **PM 怎麼操作**：每天看 board 的「PM 驗收」view（篩 `status:Acceptance`），可自己驗，或用 [test-acceptance](../test-acceptance/SKILL.md) 讓 AI 照請驗收留言實測、以 PM 帳號發報告並依下表移卡。通過 → 關 issue（卡自動到 Done）；AC 沒過 → 留言寫**哪一條 AC 沒過、看到什麼**、卡移 `Need Fix`（`set <n> needfix`）。測不了、想加新要求時依下方分流，不移 Need Fix。
 - **不設欄位上限**（2026-10-09 使用者決定）：冒煙通過就移 Acceptance，不排隊。
 - **SLE 2 個工作天**（`ACCEPTANCE_SLE_BUSINESS_DAYS`，以台北時間的週一到週五計算，從卡片移進 Acceptance 起算）：超過由 `audit` 列出並提醒 PM。累積實際 cycle time 後再調整。
 - 驗收者帳號集中在 `bin/pipeline/types.ts` 的 `PM_LOGIN`。
