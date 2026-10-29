@@ -50,6 +50,7 @@ git worktree add "$TASK/<repo>" -b feat/<slug> origin/dev
 注意：
 - 明確從 `origin/dev` 建立任務分支，不使用來源工作目錄的 `HEAD`（daodao-worker、daodao-infra 沒有 `dev`，上面的 `dev` 都換成 `main`）；有未合併任務依賴時，依「平行開發約定」指定依賴分支。
 - `fetch` 與 `worktree add` 會更新共用 Git metadata，但不改動來源工作檔案、暫存區或目前分支。不得為了開工在 `projects/` 執行 `checkout`、`switch`、`pull`、`reset`、`stash`、`clean`，或安裝依賴、自動修復檔案。
+- 每個 repo 一律用 `git worktree add` 建新的 checkout，不要複製舊任務資料夾來開新任務：複製出來的 `.git` 會跟舊任務共用同一份 metadata，之後移除任何一個都會弄壞另一個（見 [gotchas.md](../gotchas.md)「worktree 共用 metadata」）。
 - `fetch` 失敗時先處理錯誤，不得默默改用可能過期的 `origin/dev`。
 - 所有 repo 用**同一個 branch 名稱** `feat/<slug>`（fix 用 `fix/`）
 - git 禁止同一 branch 掛兩個 worktree——若報錯代表該 issue 已有人在做，停下來確認
