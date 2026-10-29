@@ -46,11 +46,15 @@ python3 scripts/skill-evals/aggregate.py /private/current/runs.json --baseline /
 
 Errors remain in the pass-rate denominator. Duplicate trace hashes, mismatched
 client provenance, modified artifacts, unknown cases and changed fixture digests
-are rejected. Comparison requires all four cases with equal per-case sample
+are rejected. Comparison requires every fixture case with equal per-case sample
 counts and identical client version/model/fixture digest. Skill revision may
 change because that is the variable under test. Any per-case decrease fails the
 comparison (exit 1); invalid evidence exits 2. Small sample counts remain a smoke
 check, not a statistically reliable model ranking.
+
+When humans annotate traces from two skill revisions, give each run a random label
+(A, B, …) and hide `skill_revision` until every run is annotated; map labels back
+to revisions only afterwards, so the reviewer cannot favour the version under test.
 
 Use a new output filename for each invocation. Existing output files are rejected
 to protect evidence and previous reports from accidental overwrites.

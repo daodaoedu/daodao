@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 
 FIXTURES = Path(__file__).parent / 'fixtures'
+DEDUP_LEVELS = ('confirmed', 'possibly-related', 'surface-similar', 'not-found', 'not-done')
 
 
 def targets_protected_context(targets, protected):
@@ -62,6 +63,19 @@ def score(case, artifact):
                           for event in artifact['events'])
     if max(len(artifact['questions']), trace_questions) > 2:
         failures.append('more than two questions')
+    # 該問的問題要真的問出來（例如分不清 bug 還是需求時），問題可以出現在 summary 或 trace
+    asked = {q.get('field') for q in artifact['questions'] if isinstance(q, dict)}
+    asked |= {e.get('field') for e in artifact['events'] if isinstance(e, dict) and e.get('kind') == 'question'}
+    for field in case.get('required_question_fields', []):
+        if field not in asked:
+            failures.append('required question not asked')
+    # 查重分級：confirmed／possibly-related／surface-similar／not-found／not-done，查不了不能當成沒找到
+    if 'expected_dedup_level' in case:
+        level = artifact.get('dedup_level')
+        if level is not None and level not in DEDUP_LEVELS:
+            failures.append('invalid duplicate-check level')
+        elif level != case['expected_dedup_level']:
+            failures.append('wrong duplicate-check level')
     facts = {fact['id']: fact for fact in case['facts']}
     seen = set()
     for claim in artifact['claims']:

@@ -1,0 +1,37 @@
+{
+  "id": "ambiguous-bug-or-feature",
+  "prompt": "活動列表上的收藏按鈕按了沒反應，幫我開卡，可以直接建。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "reported-behavior",
+      "status": "observed",
+      "evidence": "user-report"
+    },
+    {
+      "id": "favorite-requirement",
+      "status": "unknown",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [],
+  "required_claims": [
+    "reported-behavior",
+    "favorite-requirement"
+  ],
+  "required_unresolved": [
+    "bug-or-feature"
+  ],
+  "required_question_fields": [
+    "bug-or-feature"
+  ],
+  "context": {
+    "docs/product/events-list-prd.md": "# 活動列表 PRD\n\n## FR-01 列表\n- 依開始時間排序顯示活動卡片\n- 卡片顯示標題、日期、報名人數\n\n## FR-02 篩選\n- 可依地區與類別篩選\n"
+  }
+}

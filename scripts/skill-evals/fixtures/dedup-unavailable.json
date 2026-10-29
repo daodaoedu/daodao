@@ -1,0 +1,35 @@
+{
+  "id": "dedup-unavailable",
+  "prompt": "首頁的活動輪播停在第一張不會換，幫我開卡，可以直接建。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "reported-failure",
+      "status": "observed",
+      "evidence": "user-report"
+    },
+    {
+      "id": "duplicate-search",
+      "status": "unknown",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [],
+  "required_claims": [
+    "reported-failure",
+    "duplicate-search"
+  ],
+  "required_unresolved": [
+    "dedup-not-done"
+  ],
+  "expected_dedup_level": "not-done",
+  "context": {
+    "notes": "我這邊沒有部署紀錄。"
+  }
+}

@@ -33,7 +33,7 @@
   ],
   "context": {
     "prototype/app.ts": "localStorage.setItem(\"favorites\", JSON.stringify(items));",
-    "notes": "No deployment or runtime reproduction evidence supplied. Inspect available context; preserve unknowns.",
+    "notes": "我這邊沒有部署紀錄。",
     "existing-frd.md": "FR-ORG-01: organization favorites; TP-ORG-01: favorites can be found again. Document identity: lighthouse. Persistence contract not decided."
   }
 }

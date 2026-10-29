@@ -17,7 +17,7 @@
 - 來源變更: <差異與決策紀錄；不覆寫原基準>
 
 ## 範圍
-- 類型: feature | fix | refactor（跟 branch 前綴一致）
+- 類型: feature | fix | refactor | perf（跟 branch 前綴一致）
 - Repos: <daodao-f2e, daodao-server, ...>
 - Branch: feat/<slug>
 - 隔離模式: worktree | clone
@@ -44,6 +44,7 @@
 ## 驗證
 <!-- verify 階段填寫，UI 任務必填；格式：狀態 檢查項（截圖檔名） -->
 - 驗證報告: <Google 文件連結，verify 步驟 7 產出>
+- 量測（perf 必填）: <宣稱的指標與情境> → before <中位數（範圍）> / after <中位數（範圍）>，各 <N> 次 A／B 交錯；結論：變快／變慢／沒有可量測差異／無法判定
 - 重現（fix 必填）: <修正前失敗的指令與輸出 evidence/repro-before.txt> → <修正後通過 evidence/repro-after.txt>
 - [ ] <檢查項 1>（evidence/<phase>-<checkpoint>.png）
 - [ ] console 無新增 error

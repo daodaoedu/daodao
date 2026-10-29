@@ -14,11 +14,15 @@ spec.loader.exec_module(evals)
 
 
 def baseline(case):
-    return {'case_id': case['id'], 'response': 'Synthetic scorer control; not an agent completion.',
-            'trace_source': 'synthetic-test', 'events': [],
-            'claims': copy.deepcopy(case['facts']),
-            'requirement_ids': case['approved_ids'][:],
-            'unresolved': case['required_unresolved'][:], 'questions': []}
+    output = {'case_id': case['id'], 'response': 'Synthetic scorer control; not an agent completion.',
+              'trace_source': 'synthetic-test', 'events': [],
+              'claims': copy.deepcopy(case['facts']),
+              'requirement_ids': case['approved_ids'][:],
+              'unresolved': case['required_unresolved'][:],
+              'questions': [{'field': field} for field in case.get('required_question_fields', [])]}
+    if 'expected_dedup_level' in case:
+        output['dedup_level'] = case['expected_dedup_level']
+    return output
 
 
 class SkillEvalScorerTests(unittest.TestCase):
@@ -112,6 +116,34 @@ class SkillEvalScorerTests(unittest.TestCase):
                                   sys.executable, str(adapter)], capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
             self.assertTrue(json.loads(result_file.read_text())['result']['passed'])
+
+    def test_duplicate_check_level_must_match(self):
+        cases = [case for case in self.cases if 'expected_dedup_level' in case]
+        self.assertGreaterEqual(len(cases), 4)
+        for case in cases:
+            with self.subTest(case=case['id']):
+                output = baseline(case)
+                output['dedup_level'] = 'not-found'
+                self.assertIn('wrong duplicate-check level', evals.score(case, output)['failures'])
+                del output['dedup_level']
+                self.assertIn('wrong duplicate-check level', evals.score(case, output)['failures'])
+                output['dedup_level'] = 'maybe'
+                self.assertIn('invalid duplicate-check level', evals.score(case, output)['failures'])
+
+    def test_required_question_must_be_asked(self):
+        case = next(case for case in self.cases if case['id'] == 'ambiguous-bug-or-feature')
+        output = baseline(case)
+        output['questions'] = []
+        self.assertIn('required question not asked', evals.score(case, output)['failures'])
+        output['events'] = [{'kind': 'question', 'field': 'bug-or-feature'}]
+        self.assertTrue(evals.score(case, output)['passed'])
+
+    def test_fixture_prompts_do_not_coach_the_answer(self):
+        for case in self.cases:
+            with self.subTest(case=case['id']):
+                text = case['prompt'] + json.dumps(case['context'], ensure_ascii=False)
+                self.assertNotIn('preserve unknowns', text)
+                self.assertNotIn('Inspect available context', text)
 
     def test_malformed_fails_closed(self):
         case = self.cases[0]

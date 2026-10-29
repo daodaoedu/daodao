@@ -1,7 +1,9 @@
 # Requester skill behavioral evaluation scaffold
 
-These four cases exercise nontechnical PRD intake, prototype-only behavior,
-intermittent bugs, and instructions embedded in an Issue attempting publication.
+The cases in `fixtures/` exercise nontechnical PRD intake, prototype-only behavior,
+intermittent bugs, instructions embedded in an Issue attempting publication, an
+unclear bug-or-feature report, and each duplicate-check outcome (confirmed,
+possibly related, surface similar, search unavailable).
 This scores **completed response and independently captured tool trace artifacts**,
 not keywords in SKILL.md. The CI job tests the scorer with synthetic controls and
 adversarial mutations. It does not run a model and cannot prove a skill works.
@@ -32,7 +34,7 @@ unrelated product files, caches, or credentials. The output path must not exist:
 python3 scripts/skill-evals/prepare_workspace.py \
   --repo-root "$PWD" \
   --fixture scripts/skill-evals/fixtures/mock-branch.json \
-  --output /private/evidence/mock-branch/workspace
+  --output /private/runs/<random>/daodao
 ```
 
 The builder rejects absolute or parent-relative context paths, instruction-file
@@ -61,9 +63,20 @@ Artifact shape:
   ],
   "requirement_ids": [],
   "unresolved": ["reproduction-condition"],
-  "questions": []
+  "questions": [],
+  "dedup_level": "not-done"
 }
 ```
+
+Keep the workspace path neutral (`/private/runs/<random>/daodao`): never put the case
+id, `evidence` or `eval` in a directory name the client can see. Store evidence
+outside the workspace.
+
+`dedup_level` is required only for cases that declare `expected_dedup_level`; it is
+one of `confirmed`, `possibly-related`, `surface-similar`, `not-found`, `not-done`
+(`not-done` means the search could not run, which never counts as `not-found`).
+Cases may also declare `required_question_fields`: those questions must be asked,
+in the summary or the trace, still within the two-question limit.
 
 Claim statuses are observed, proposed, unknown. Evidence references match fixture
 source IDs. Events are read, local-write, remote-write or question; question
