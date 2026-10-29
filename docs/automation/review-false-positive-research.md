@@ -53,6 +53,8 @@
 
 ### 對我們的做法
 
+> 2026-10-29 決定停止收集新誤判（`record` 退役），以下收割方案不再推進；既有紀錄轉成回歸測試，見 `.github/review-knowledge/README.md`。
+
 - `/fp` 收割不等 `collect-pr-feedback`：接進 `review-evals.yml` 週跑，或加 `issue_comment` 觸發的小 workflow 直接 `record --source ci`。
 - 更省力的來源：bot 留言上的 **👎 reaction** 就算一票；週報把 👎 的列拉出來讓人補樣態。
 - 每筆只要求「一句為什麼」，六個欄位由腳本從 PR／表格推導——CodeRabbit 的教訓是格式越簡單記錄越多。

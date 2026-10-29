@@ -549,7 +549,7 @@ git push 前
       步驟 7   cross-model 分析（幾個引擎共同回報）
       步驟 8   AI 逐條用程式碼證據查證，分成 已確認缺陷／待產品決策／證據不足／誤判
                有修復授權才修（bug 先補 regression test），否則給修正建議
-      步驟 8.5 查證為誤判的 → review-knowledge.cjs record --source local（工具缺失時記在本機報告）
+      步驟 8.5 誤判不再記錄（2026-10-29 起，record 已退役），寫進 review 報告與丟棄清單即可
       → commit／push 依既有授權，不因 review 完成自動執行
     → No → 直接 git push
 ```
@@ -572,10 +572,10 @@ git push 前
 | | 位置 |
 |---|---|
 | 紀錄 | `.github/review-knowledge/false-positives.jsonl`（monorepo 單一來源，sync 派發唯讀副本到各 sub-repo） |
-| 腳本 | `.github/scripts/review-knowledge.cjs` — `prompt-block`（彙整已知樣態餵模型）、`filter`（確定性過濾）、`verify`（A 類 absent-claim 到 head tree `git grep` 查反證）、`record --db auto`（從任何 worktree 往上找 monorepo 寫回）、`test`（每筆 `sample`+`expected` 當 fixture） |
+| 腳本 | `.github/scripts/review-knowledge.cjs` — `prompt-block`（彙整已知樣態餵模型）、`filter`（確定性過濾）、`verify`（A 類 absent-claim 到 head tree `git grep` 查反證）、`test`（每筆紀錄必須是 fixture、已知漏網或寫明不測的原因）；`record` 已於 2026-10-29 退役 |
 | 樣態 | A absent-claim（對 diff 外程式碼做「找不到／缺少」斷言）、B deletion、C unverifiable、D hypothetical、E format、F misattribution — 定義與對策見 [.github/review-knowledge/README.md](../.github/review-knowledge/README.md) |
 
-兩條鐵律：**查證為誤判的 finding 要 `record`**；**改 `UNVERIFIABLE_RE`／`HYPOTHETICAL_RE`（或 verify 的 `ABSENT_*_RE`）必附 `--sample` + `--expected`**，`review-knowledge.cjs test` 要綠。紀錄先留在本機；依授權 commit＋push 到 monorepo main 後，`sync-claude-config` 會對各 sub-repo 開同步 PR，required checks 過了才 auto-merge——是否已派發要看該次 workflow。
+**2026-10-29 起不再收集新誤判**：盤點發現 filter 是寫死的樣態規則，181 筆紀錄只有 18 筆真的被測試跑到，所以把既有紀錄全部轉成回歸測試（35 筆 fixture、47 筆已知漏網、103 筆寫明不測的原因），之後不再 `record`。改 `UNVERIFIABLE_RE`／`HYPOTHETICAL_RE`（或 verify 的 `ABSENT_*_RE`）時，直接在 jsonl 加 `pr` 為 0 的 fixture 與 `expected: keep` 反例，`review-knowledge.cjs test` 要綠；合併到 monorepo main 後由 `sync-claude-config` 派發到各 sub-repo。
 
 知識庫解不了的（A 類過半、記錄靠人、關鍵字過濾脆弱）在 [docs/automation/review-false-positive-research.md](automation/review-false-positive-research.md) 有文獻對照與落地順序（#168 Context Pack 補脈絡、#169 verify 後置查證，兩者都已上線）。
 
@@ -653,7 +653,7 @@ Post            同 head PATCH、新 head POST；超長報告只縮公開留言�
 
 CI 模型只輸出 P1–P3，而且只回報有證據的「新引入 regression」，不負責風格建議（未使用的 import、命名之類不在範圍）。它會誤判也會漏報，所以 finding 一律先查證再處理。
 
-**對誤判的回覆方式**：在 PR 上回 `/fp <第幾條> <A-G> <一句為什麼>`（例：`/fp 1 A route 已掛 authenticate，引用行號指到別的函式`），`collect-pr-feedback` 只採 PR 作者或已驗證成員的回覆，查證後收割進誤判知識庫（見 5.3）。紀錄合併進 monorepo main 並同步後，之後的 review 才會在 `<known_false_positives>` 看到這個樣態（CI 從 PR 的 base SHA 讀知識庫）。
+**對誤判的回覆方式**：在 PR 上回 `/fp <第幾條> <A-G> <一句為什麼>`（例：`/fp 1 A route 已掛 authenticate，引用行號指到別的函式`），`collect-pr-feedback` 只採 PR 作者或已驗證成員的回覆並查證，結論寫進交審表；2026-10-29 起不再收割進誤判知識庫（既有紀錄已轉成回歸測試，見 5.3）。
 
 **Debug**：先看 job summary、head 對應的 coverage 留言與 `ai-review-<pr>-<head>` artifact 中的 manifest／status.json。模型輸出無效或未覆蓋部分會列出原因；沒有留言時另查 posting step 的權限與 API 錯誤，不能把 job success 視為完整審查。
 
@@ -684,7 +684,7 @@ CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有�
     2. 收集 AI Code Review、SonarCloud／Vercel（f2e）與人類 reviewer 的 comment，去重同一根因
     3. AI 逐條對程式碼／測試查證：已確認缺陷／待產品決策／證據不足／已解決或不適用
        - 人類要求與模型 High 都只是待查證訊號，多個模型同意也不等於正確
-       - `/fp <n> <A-G> <why>` 只採 PR 作者或已驗證成員的回覆，查證後 record --source ci（不自動 commit／push）
+       - `/fp <n> <A-G> <why>` 只採 PR 作者或已驗證成員的回覆，查證後寫進交審表（2026-10-29 起不再 record）
     4. 有修復授權：修已確認缺陷（bug 先補 regression test）→ 走 check-commit／format-commit commit；
        push 與回覆 reviewer 需另有授權
        只有分析授權：給修正建議與驗證方法，不擅改程式
