@@ -240,19 +240,27 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
 export function getIssueComments(
   numbers: number[],
   last = 15
-): Map<number, Array<{ createdAt: string; body: string }>> {
-  const result = new Map<number, Array<{ createdAt: string; body: string }>>();
+): Map<number, Array<{ createdAt: string; body: string; url: string; author?: string }>> {
+  const result = new Map<number, Array<{ createdAt: string; body: string; url: string; author?: string }>>();
   for (let i = 0; i < numbers.length; i += 20) {
     const fields = numbers
       .slice(i, i + 20)
-      .map((n) => `i${n}: issue(number: ${n}) { number comments(last: ${last}) { nodes { createdAt body } } }`)
+      .map((n) => `i${n}: issue(number: ${n}) { number comments(last: ${last}) { nodes { createdAt body url author { login } } } }`)
       .join("\n");
     const query = `query { repository(owner: "${OWNER}", name: "${CENTRAL_REPO}") { ${fields} } }`;
     const out = sh(`gh api graphql -f query='${query}'`);
     const repo = (JSON.parse(out) as { data: { repository: Record<string, unknown> } }).data.repository;
     for (const raw of Object.values(repo)) {
-      const node = raw as { number: number; comments: { nodes: Array<{ createdAt: string; body: string }> } } | null;
-      if (node) result.set(node.number, node.comments.nodes);
+      const node = raw as {
+        number: number;
+        comments: { nodes: Array<{ createdAt: string; body: string; url: string; author: { login: string } | null }> };
+      } | null;
+      if (node) {
+        result.set(
+          node.number,
+          node.comments.nodes.map((c) => ({ createdAt: c.createdAt, body: c.body, url: c.url, author: c.author?.login })),
+        );
+      }
     }
   }
   return result;

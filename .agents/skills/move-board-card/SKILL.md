@@ -10,7 +10,7 @@ description: 島島阿學 Planning Board 狀態操作與稽核：七欄語意（
 
 # move-board-card
 
-> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 request-feature／develop／verify-deploy 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
+> **退役註記（2026-09-20）**：自動派工 Routine A／B（#241）與 merge 回寫 Routine C（同日稍後）皆已退役，`bin/pipeline/` 只剩 `board.ts` 這支人工 CLI（另有 `worktree-audit.ts` 稽核 worktree）。舊 prompt、pipeline 總覽與運維手冊封存於 `docs/archive/automation/`（索引見該目錄 `README.md`）。板上狀態現在由 request-feature／develop／verify-deploy 各自呼叫 `board.ts` 寫回，沒有任何移卡 cron。唯一排程是只讀的 `board.ts audit`（見下方「每日 audit 排程」），它不移卡。
 
 Monorepo root: `/Users/xiaoxu/Projects/daodao`
 
@@ -108,12 +108,14 @@ request-feature 開卡時判斷並掛 label，理由寫進 body 的「驗收方�
 pnpm -s tsx bin/pipeline/board.ts set <issue#> <status> [--add-label x] [--remove-label y] [--dry-run]
 pnpm -s tsx bin/pipeline/board.ts remove <issue#>            # 從 board 移除（issue 保留），例：Review 彙整報告卡
 pnpm -s tsx bin/pipeline/board.ts audit [--json] [--stale-days 3]
+pnpm -s tsx bin/pipeline/board.ts pending [--json]            # 唯讀：誰在等誰決定什麼
 ```
 
 - status 接受別名：`todo` / `ready` / `wip`／`in-progress` / `review` / `accept`／`acceptance` / `needfix` / `done`（大小寫、`-`、`_`、空白互通）
 - `set` 不在 board 會先 `item-add`；改完回讀 Status，不一致直接 exit 1
 - `set <n> accept` 會順便 assign `PM_LOGIN` 並回讀 assignee；交接留言內容隨卡片不同，由 verify-deploy 另外發
 - `audit` 把每張卡的 Status 對 issue open／closed、關聯 PR、labels 比對，列出：卡片沒有 Status、Done 但 issue open、issue closed 卻卡在任一 open 欄（Todo／Ready／In Progress／Review／Acceptance／Need Fix）、有 open PR 卻沒到 Review、PR 全 merged 卻 N 天沒移 Review、Review 的 PR 全 merged 卻 N 天沒跑 verify-deploy、Acceptance 未指派 PM、Acceptance 超過 SLE、母卡已 close 仍有子卡未關、母卡在 Acceptance 但子卡未全關、出現第三層子卡、子卡不在中央 repo（母卡 Review 的 merged-stale 建議改成「等子卡關閉」）、Review 沒 PR、死 label、Done 仍掛 `human-driving`、Need Fix 超過 24 小時沒有 AC 失敗留言（或留言其實是驗收受阻）、母卡子卡全關卻未進 Acceptance、`acceptance:blocked` 超過 48 小時。留言只對 Need Fix 卡另外查（`getIssueComments`，從移進欄位前 24 小時起算）：同一行有 AC ID＋FAIL／未通過／❌、且那行不是受阻列，才算 AC 失敗留言；「🙋 請驗收」交接留言不算退回。Acceptance 的 SLE 與 Review 的「merged 後停留天數」都用 Status 欄位值的 `updatedAt`（移進欄位的時間），不用 issue `updatedAt`（留言會刷新它）。中央 repo 的 PR 只有**真正 link**（closing keyword 或 Development 面板，GraphQL `ConnectedEvent`），或 `Refs daodaoedu/daodao#N` 行明確指向本卡，才算實作；只在內文順手提到卡號的 docs PR（`CrossReferencedEvent`）不算——這樣 root-only 的工作仍抓得到，docs PR 順手提到的卡不會被誤判。sub-repo PR 若在標題（`— daodao#N`）或 `Refs`／`Closes`／`Fixes` 行**明確指向別張卡**，對本卡只算提及、不算實作（例：#218 的 PR 在內文列出後續卡 #244、#247）；沒有任何標記的舊 PR 仍照算。純函式 `auditCards` 在 `lib.ts`，測試 `bin/pipeline/__tests__/board.test.ts`
+- `pending` 列出 Review／Acceptance／Need Fix 每張卡在等誰（reviewer／工程／PM）、要決定什麼、最新證據連結，同一組裡等越久越前面（參考 pstack ketchup）：Review 有開著的 PR 等 reviewer 審查合併；PR 都合併了等工程跑 verify-deploy；Acceptance 等 PM 照最新請驗收留言驗收，掛 `acceptance:blocked` 的改成等工程排除；Need Fix 等工程，附最新 AC 失敗留言（找不到就提醒確認退回原因）。母卡的子卡還沒全關時在等子卡，不列出。`audit` 是找狀態落差，`pending` 是排今天要處理什麼；純函式 `pendingDecisions` 在 `lib.ts`，測試 `bin/pipeline/__tests__/pending.test.ts`
 - 不要用 `gh project item-list` 批次查：它每次拉全部欄位，跑十幾次就撞 Projects rate limit（2026-09-20 實測）；`board.ts` 走精簡 GraphQL（`listBoardItemsLite`、`findBoardItemForIssue`）
 - GraphQL 額度是**使用者 PAT 共用的 5000/hr**，Actions 裡的 Sync Shared Config 也用同一顆；大批操作前先 `gh api rate_limit --jq .resources.graphql`
 

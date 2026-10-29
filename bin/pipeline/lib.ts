@@ -14,6 +14,7 @@ import {
   CENTRAL_REPO,
   ENGINEERING_ACCEPTANCE_LABEL,
   NEED_FIX_COMMENT_GRACE_HOURS,
+  OWNER,
   PM_LOGIN,
 } from "./types.js";
 
@@ -311,4 +312,88 @@ export function auditCards(
     }
   }
   return out;
+}
+
+// ── Pending decisions (pure) ────────────────────────────────────────────
+
+/** A card in Review / Acceptance / Need Fix with what `pendingDecisions` needs to say who it waits on. */
+export interface PendingCard {
+  number: number;
+  title: string;
+  status: string | null;
+  labels: string[];
+  /** When the card entered its column (ISO), null if unknown. */
+  statusUpdatedAt: string | null;
+  prs: Array<{ ref: string; state: "open" | "merged" | "closed" }>;
+  subIssues: { total: number; completed: number };
+  /** Recent issue comments, oldest first. */
+  comments: Array<{ createdAt: string; body: string; url?: string; author?: string }>;
+}
+
+export type PendingWaitsOn = "pm" | "engineer" | "reviewer";
+
+export interface PendingDecision {
+  number: number;
+  title: string;
+  status: string;
+  waitsOn: PendingWaitsOn;
+  /** What the person has to decide or do, in one line. */
+  decision: string;
+  /** Latest comment / PR that carries what they need to decide. */
+  evidence: { label: string; url: string } | null;
+  /** Business days since the card entered its column. */
+  waitingDays: number | null;
+}
+
+const REQUEST_MARKER_RE = /<!--\s*daodao:acceptance-request\s*-->|## 🙋 請驗收/;
+const prUrl = (ref: string) => {
+  const [repo, n] = ref.split("#");
+  return `https://github.com/${OWNER}/${repo}/pull/${n}`;
+};
+
+/**
+ * Who each Review / Acceptance / Need Fix card is waiting on and what they need to decide,
+ * with the latest evidence link (pstack ketchup). Cards waiting only on automation or on
+ * sub-issues are left out — this lists decisions people owe, not every card.
+ */
+export function pendingDecisions(cards: PendingCard[], now: Date): PendingDecision[] {
+  const out: PendingDecision[] = [];
+  const latest = (c: PendingCard, pred: (body: string, author?: string) => boolean) => {
+    const hit = [...c.comments].reverse().find((m) => pred(m.body, m.author));
+    return hit?.url ? hit : null;
+  };
+  for (const c of cards) {
+    const waitingDays = c.statusUpdatedAt ? businessDaysSince(c.statusUpdatedAt, now) : null;
+    const base = { number: c.number, title: c.title, status: c.status ?? "", waitingDays };
+    if (c.status === "Review") {
+      const open = c.prs.filter((p) => p.state === "open");
+      if (open.length) {
+        out.push({ ...base, waitsOn: "reviewer", decision: `審查並決定是否合併 ${open.map((p) => p.ref).join("、")}`,
+          evidence: { label: open[0].ref, url: prUrl(open[0].ref) } });
+      } else if (!c.prs.length) {
+        out.push({ ...base, waitsOn: "engineer", decision: "在 Review 但沒有關聯 PR：確認是否該移欄", evidence: null });
+      } else if (c.subIssues.total === 0 || c.subIssues.completed === c.subIssues.total) {
+        const merged = c.prs.filter((p) => p.state === "merged");
+        out.push({ ...base, waitsOn: "engineer", decision: "PR 已合併：跑 verify-deploy（dev 冒煙）後交 PM 或移 Need Fix",
+          evidence: merged[0] ? { label: merged[0].ref, url: prUrl(merged[0].ref) } : null });
+      }
+      // parent card with open sub-issues waits on the sub-issues, not on a person
+    } else if (c.status === "Acceptance") {
+      if (c.labels.includes(BLOCKED_ACCEPTANCE_LABEL)) {
+        const hit = latest(c, (b) => classifyReturnComment(b) === "blocked");
+        out.push({ ...base, waitsOn: "engineer", decision: "驗收受阻：排除後拔 label、@PM 重新驗收",
+          evidence: hit ? { label: "受阻說明", url: hit.url! } : null });
+      } else {
+        const hit = latest(c, (b) => REQUEST_MARKER_RE.test(b));
+        out.push({ ...base, waitsOn: "pm", decision: hit ? "照請驗收留言驗收：通過關 issue、AC 沒過移 Need Fix" : "驗收（找不到請驗收留言，可能要工程補）",
+          evidence: hit ? { label: "請驗收留言", url: hit.url! } : null });
+      }
+    } else if (c.status === "Need Fix") {
+      const hit = latest(c, (b) => classifyReturnComment(b) === "ac-fail");
+      out.push({ ...base, waitsOn: "engineer", decision: hit ? "修 AC 失敗後重新請驗收" : "Need Fix 但找不到 AC 失敗留言：確認退回原因",
+        evidence: hit ? { label: "AC 失敗留言", url: hit.url! } : null });
+    }
+  }
+  const order: Record<PendingWaitsOn, number> = { reviewer: 0, engineer: 1, pm: 2 };
+  return out.sort((a, b) => order[a.waitsOn] - order[b.waitsOn] || (b.waitingDays ?? 0) - (a.waitingDays ?? 0));
 }

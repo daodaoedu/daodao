@@ -8,9 +8,9 @@
 
 | 狀態 | 項目數 |
 |---|---|
-| 已採用 | 35 |
+| 已採用 | 36 |
 | 部分採用 | 31 |
-| 未採用 | 24 |
+| 未採用 | 23 |
 | 不適用 | 2 |
 | 合計 | 92 |
 
@@ -94,7 +94,7 @@
 | correct | 把 agent 反覆犯的錯變成不可能再犯：依序考慮架構、型別、lint、test，最後才是文件；並證明檢查會在真實的過去錯誤上失敗 | 已採用 | `plugin/docs/ai-human-review-workflow.md` 第 44 行；`docs/automation/agent-learning-loop.md`（R1–R3、`agent-handoff.json`）；`ADR-0001` 進場條件（事故修正前跑出 ❌、修正後 ✅）。缺：主動掃描歷史對話找出重複錯誤（文件寫明目前不做） | #418 |
 | reflect | 三個平行 reviewer 檢視整段對話，把學到的東西各自對應到某個 skill 的具體修改 | 部分採用 | `plugin/skills/verify-deploy/SKILL.md` §3.5（教訓分成閘門候選、gotchas、丟棄三類，人核准後才改）。只在冒煙失敗、失敗兩次、PM 退回時觸發，不審整段對話 | #417 |
 | recall | 從對話紀錄、即時狀態與共享紀錄重建工作脈絡 | 部分採用 | `session-start.sh` 注入 worktree 與 task.md 狀態；task.md「接手點」。缺：從對話紀錄與 issue／事故紀錄彙整成簡報 | #411 |
-| ketchup | 整理上次訊息之後的進度，列出每件等人決定的事與決定所需資訊 | 未採用 | 沒找到；`bin/pipeline/board.ts audit` 只稽核 board 狀態 | — |
+| ketchup | 整理上次訊息之後的進度，列出每件等人決定的事與決定所需資訊 | 已採用 | `bin/pipeline/board.ts pending`（`lib.ts` 的 `pendingDecisions`）：Review／Acceptance／Need Fix 每張卡在等誰、要決定什麼、最新證據連結。只看 board，不含對話進度 | #428 |
 | ketchup-video | 同 ketchup，改用附字幕的投影片影片呈現 | 未採用 | 沒找到 | — |
 | show-me-your-work | 長時間工作每個決策記一列 TSV（做了什麼、為什麼、證據、結果） | 部分採用 | task.md 有備註、「偏離紀錄」「來源變更」欄；`plugin/hooks/analyze-ledger.sh` 統計閘門紀錄。缺：每個決策一列的格式；task.md 在 cleanup 時會被刪掉 | — |
 | automate-me | 把使用者的工作偏好寫成個人的 -mode skill | 未採用 | repo 裡沒有（偏好放在 repo 外的個人 memory） | — |
@@ -157,7 +157,7 @@
 |---|---|---|---|
 | 1 | blast-radius（部分採用） | daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。改 `findings.md`／`finish.md` 各一段，PR 模板加一欄 | S |
 | 2 | maintain-verification-skill：feature map 定期稽核（部分採用） | PM 驗收與 develop verify 都依賴 feature map，而它只靠「改 UI 時順手更新」。#419 已有一次性的 `path:line` 比對腳本，可以做成像 `board-audit.yml` 的排程：比對 `path:line` 與 `data-testid` 是否仍存在，加一輪 live 抽測，最多開一支修正 PR，減少 #277／#282 這類 BLOCKED。排程前先手動跑一次 | M |
-| 3 | ketchup：「等你決定」彙整（未採用） | 人類 reviewer 同時面對多張卡、多支 PR 與 PM 驗收；`board.ts audit` 只看狀態，沒有列出卡在誰、要決定什麼、決定所需資訊。加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結 | S |
+| 3 | ~~ketchup：「等你決定」彙整~~（#428 已做） | 人類 reviewer 同時面對多張卡、多支 PR 與 PM 驗收；`board.ts audit` 只看狀態，沒有列出卡在誰、要決定什麼、決定所需資訊。加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結 | S |
 | 4 | type-system-discipline、typescript-best-practices（部分採用） | #418 留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。補窮舉檢查（`satisfies never`）、ID 類 branded type、zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件先拿過去事故證明 lint 會失敗 | M |
 | 5 | correct 的定期掃描（correct 已採用，這是延伸） | 防線機制已有，但候選來源只有「人發現第二次」。`analyze-ledger.sh` 已累積閘門紀錄，`verify-deploy` §3.5 也有閘門候選。每兩週彙整一次，找出反覆出現的類別，依 `agent-learning-loop.md` 提出候選規則，人核准後才實作。排程前先手動跑一次 | M |
 | 6 | ~~worktree-cleanup：跨任務稽核~~（#426 已做） | 2026-10-10 批次移除 worktree 時，因任務資料夾共用 git metadata 弄壞 #233、#214；`cleanup.md` 只處理單一任務。加一支唯讀稽核腳本，移除前列出重複的 gitdir 與孤兒 worktree | S |
