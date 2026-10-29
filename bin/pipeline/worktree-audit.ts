@@ -12,7 +12,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { auditWorktrees, type Checkout, type WorktreeMeta } from "./worktree.js";
+import { auditWorktrees, emptyTaskDirs, type Checkout, type WorktreeMeta } from "./worktree.js";
 
 const argv = process.argv.slice(2);
 const json = argv.includes("--json");
@@ -53,8 +53,10 @@ const toMeta = (dir: string): WorktreeMeta => {
 };
 const metas: WorktreeMeta[] = [...metaDirs].map(toMeta);
 
-// Checkouts: worktrees/<task>/<repo>, .claude/worktrees/<name>, and wherever a metadata dir points
+// Checkouts: worktrees/<task>/<repo>, worktrees/<name> itself (some were added straight under worktrees/,
+// e.g. worktrees/rename-develop), .claude/worktrees/<name>, and wherever a metadata dir points
 const candidates = new Set<string>([
+  ...children(path.join(root, "worktrees")),
   ...children(path.join(root, "worktrees")).flatMap(children),
   ...children(path.join(root, ".claude", "worktrees")),
   ...metas.filter((m) => m.backPointerExists && m.backPointer).map((m) => path.dirname(m.backPointer!)),
@@ -79,7 +81,7 @@ for (const c of checkouts) {
 const findings = auditWorktrees(checkouts, metas);
 // Task folders that no longer hold any checkout (only task.md / evidence left): cleanup step 6 candidates
 const taskDirs = children(path.join(root, "worktrees"));
-const emptyTasks = taskDirs.filter((t) => !checkouts.some((c) => c.path.startsWith(t + path.sep)));
+const emptyTasks = emptyTaskDirs(taskDirs, checkouts);
 const errors = findings.filter((f) => f.severity === "error");
 
 if (json) {
