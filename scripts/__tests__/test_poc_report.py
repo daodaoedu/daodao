@@ -77,6 +77,14 @@ class PocReportTests(unittest.TestCase):
         self.assertTrue(any(u.startswith('b · ') for u in coverage['unresolved']))
         self.assertIn('checkpoint 量到 1/2', stdout)
 
+    def test_coverage_records_the_config_it_was_measured_with(self):
+        import hashlib
+        coverage, _, _, _ = self.run_report(
+            {'card.title': probe(), 'button.save': probe('儲存'), 'dialog.box': probe()},
+            {'card.title': probe(), 'button.save': probe('儲存'), 'dialog.box': probe()})
+        config = Path(coverage['config_path']).read_bytes()
+        self.assertEqual(coverage['config_sha256'], hashlib.sha256(config).hexdigest())
+
     def test_fully_resolved_matching_probes_stay_clean(self):
         coverage, items, _, _ = self.run_report(
             {'card.title': probe(), 'button.save': probe('儲存'), 'dialog.box': probe()},
