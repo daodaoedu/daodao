@@ -32,7 +32,8 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 2. **確認部署 revision**：查該 repo CD run 是否已部署合併後 commit（run URL、環境、revision）；跨 repo 依實際依賴（通常 storage → server／AI backend → f2e）逐一記錄環境、revision 與成功 run，全部到位才算環境就緒；不能漏掉列表／搜尋實際呼叫的 AI 服務。未到位就停在「已合併，待部署」，不冒煙、不回報可用。
 3. **重跑旅程**：在部署後環境（dev 前端 + server-dev，或 PR 標明的目標環境）用瀏覽器或 curl 重跑**全部正常列 + 至少一列錯誤路徑**；bug 卡另外照 task.md 的 `REPRO-01` 重跑原本的通報路徑，攔 response 記狀態碼；登入與工具選擇沿用 develop 的 [browser-verify.md](../develop/references/browser-verify.md)。
    - **讀取權限旅程**：沿用同一組 fixture，核對目前登入的實際使用者 ID／角色與 membership，從使用者入口一路走到詳情、打卡／留言等受影響下游。依矩陣重驗本人、同範圍、範圍外、退出／移除及未登入；不適用角色保留具體理由。檢查原始回應的私人內容排除，不只看 200／403。快取適用時先成功讀取、確認命中，再撤權後重讀；期限適用時驗臨界當日與隔日。無法在 dev 安全造出時間邊界時，附真實 DB 邊界測試證據並明列部署後未重做項目，不假稱全旅程通過。
-   - **原生 App 才適用**：核對可安裝 preview build／安裝連結、測試裝置與實際版本；OTA success／Expo web 僅是各自證據。無可安裝 build 就記原生步驟受阻，不能交一份無法照做的 App 安裝驗收。初次交驗前留 Review，列出待補的 build／裝置前提；已在 Acceptance 則依 §2.6 留 Acceptance 並掛 `acceptance:blocked`，不當成產品 FAIL。
+   - **原生 App 才適用**：核對可安裝 preview build／安裝連結、測試裝置與實際版本；OTA success／Expo web 僅是各自證據。
+   - **2026-10-29 起 App 暫不由 PM 驗收**（沒有可安裝測試版，避免卡片一直卡在 Acceptance）：只改 App 的卡改走工程驗收——補掛 `acceptance:engineering`，冒煙（Expo web 或模擬器）全部 ✅ 就依第 5 步留「工程驗收通過」留言並關 issue，不進 Acceptance。網頁＋App 混合的卡照常交 PM，但交接留言的 PM 步驟只寫網頁，App 步驟放「已知限制／這次沒做的」並註明「App 暫不驗收」。規則見 move-board-card「誰驗收」。
    - **測試帳號 email 只能用使用者指定的 QA 信箱**（`~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt`，plus 別名 `<base>+qa<issue#>@<domain>`）。dev 走真 SMTP，自己編的地址會把退信灌進維運信箱（#218 實例見 browser-verify.md §3a）。能用 `dev-login mode=user` 登既有帳號就別建新帳號。
    - **冒煙完清理測試資料**：本次新建的 QA 帳號先退訂 `PUT /users/me isSubscribeEmail=false`，再停用 `PUT /admin/users/<external_id>/status {"isActive":false}`；沿用共用 fixture／既有帳號時不停用或重設他人資料。刪掉本次建立的實踐等排程來源並回讀；清不掉的用明顯測試命名並在 comment 標明。
 4. **回寫**：在對應 issue comment 追加「dev 冒煙」表：

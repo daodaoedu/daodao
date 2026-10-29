@@ -78,6 +78,7 @@ description: "PM 驗收：對 Planning board 上 Status=Acceptance 的 daodao is
 - **錯誤情境**：無效輸入、指定的錯誤文字、取消與復原。照規格出現預期錯誤就是 PASS。
 - **對照的 AC**：讀留言引用的 AC，對應到檢查項。沒有編號就照留言的標準，不自編 AC 編號。工程證據區的項目（API 回讀、測試、CI）不用重做。
 - **已知限制／這次沒做的**：照留言排除，排除項的問題不算失敗。
+- **App 步驟（2026-10-29 起暫不驗收）**：留言裡要在 App 上操作的步驟，一律列進報告的「已知限制／本次未驗收範圍」，寫明「App 暫不驗收」，不判 BLOCKED，也不算在必測項裡。其餘網頁步驟照常判定。整張卡**只有** App 步驟時，沒有可實測的必測項，不能判 PASS：不發報告、不移卡，在對話裡說明「本卡只有 App 步驟，App 暫不驗收，照 move-board-card『誰驗收』應改走工程驗收（`acceptance:engineering`）」，請使用者或工程處理，不要讓卡片一直停在 Acceptance。詳見 [environment.md](references/environment.md)「App」。
 - **驗完收尾**：保留清理順序與預期結果。
 
 查 [feature map](../../docs/feature-map/README.md) 對應功能的檔案，取得到達路徑、穩定的選擇器與前置條件。留言與 feature map 不一致時以留言為準，差異寫進報告「已知限制」段，供之後更新 feature map。

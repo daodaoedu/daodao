@@ -51,6 +51,7 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 - 看得出來 → PM 驗收（預設，不掛 label）：畫面或版面改動；後端改動但使用者感受得到（收到的信、列表內容、錯誤訊息）；使用者回報的 bug。
 - 看不出來 → 工程驗收，掛 `acceptance:engineering`：開發流程與工具（skill、hook、CI、board）；只在 dev 存在的端點；刻意零差異的重構（靠量測證明沒變）；不改變輸出的後端內部調整。
 - 判斷不了 → 預設 PM 驗收。
+- **App（2026-10-29 起暫不由 PM 驗收）**：目前沒有可安裝的 App 測試版，PM 沒辦法在 App 上操作。只改 App 的卡走工程驗收（掛 `acceptance:engineering`，用 Expo web／模擬器冒煙＋證據留言即可關）；網頁＋App 都有改的卡照常 PM 驗收，但只驗網頁，App 步驟寫在交接留言的「已知限制」。恢復 App 驗收時拿掉這條。
 
 request-feature 開卡時判斷並掛 label，理由寫進 body 的「驗收方式」；開發中發現判斷錯了，直接加或拔 label。工程驗收卡冒煙通過後由 verify-deploy 留證據並關 issue，不進 Acceptance；`audit` 會列出誤進 Acceptance 的工程驗收卡。
 
