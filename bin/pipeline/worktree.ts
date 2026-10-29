@@ -95,3 +95,18 @@ export function auditWorktrees(checkouts: Checkout[], metas: WorktreeMeta[]): Wo
   const order: Record<WorktreeFindingKind, number> = { shared: 0, copied: 1, broken: 2, "orphan-meta": 3 };
   return findings.sort((a, b) => order[a.kind] - order[b.kind] || (a.meta ?? "").localeCompare(b.meta ?? ""));
 }
+
+/**
+ * Task folders under worktrees/ that hold no checkout anymore (only task.md / evidence left).
+ * A folder counts as holding a checkout when it is one itself (worktrees/<name> added directly)
+ * or contains one (worktrees/<task>/<repo>).
+ */
+export function emptyTaskDirs(taskDirs: string[], checkouts: Checkout[]): string[] {
+  return taskDirs.filter((t) => {
+    const dir = trimSlash(t);
+    return !checkouts.some((c) => {
+      const p = trimSlash(c.path);
+      return p === dir || p.startsWith(`${dir}/`);
+    });
+  });
+}

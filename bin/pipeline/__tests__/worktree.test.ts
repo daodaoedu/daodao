@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { auditWorktrees, type Checkout, type WorktreeMeta } from "../worktree.js";
+import { auditWorktrees, emptyTaskDirs, type Checkout, type WorktreeMeta } from "../worktree.js";
 
 const ROOT = "/repo";
 const checkout = (task: string, repo: string, gitdir: string): Checkout => ({
@@ -69,5 +69,23 @@ describe("auditWorktrees", () => {
       meta(`${ROOT}/.git/worktrees/s`, `${a.path}/.git`),
     ];
     expect(auditWorktrees([broken, copy, b, a], metas).map((f) => f.kind)).toEqual(["shared", "copied", "broken", "orphan-meta"]);
+  });
+});
+
+describe("emptyTaskDirs", () => {
+  const dir = (name: string) => `${ROOT}/worktrees/${name}`;
+
+  it("任務資料夾裡有 checkout（worktrees/<task>/<repo>）不算空殼", () => {
+    expect(emptyTaskDirs([dir("214-sidebar-popup-clip")], [checkout("214-sidebar-popup-clip", "daodao", "/m")])).toEqual([]);
+  });
+
+  // 2026-10-29：worktrees/rename-develop 這類直接放在 worktrees/ 底下的 checkout 曾被列成空殼
+  it("資料夾本身就是 checkout（worktrees/<name>）也不算空殼", () => {
+    expect(emptyTaskDirs([dir("rename-develop")], [{ path: dir("rename-develop"), gitdir: "/m" }])).toEqual([]);
+  });
+
+  it("只剩 task.md／證據的資料夾列為空殼；名稱是前綴的別的資料夾不算它的 checkout", () => {
+    const tasks = [dir("166-settings-menu"), dir("166-settings")];
+    expect(emptyTaskDirs(tasks, [checkout("166-settings-menu", "daodao-f2e", "/m")])).toEqual([dir("166-settings")]);
   });
 });
