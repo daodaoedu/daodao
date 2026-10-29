@@ -5,6 +5,7 @@
 3. **依 task.md 的「類型」先做第一步**（在第一個改動之前，不是做完再補）：
    - `fix`：第一個 phase 固定是重現。在實際出問題的介面（瀏覽器／curl）重現，修正前的輸出存成 `$TASK/evidence/repro-before.txt`（或截圖）。有便宜的測試入口就寫一個會失敗的測試，**單獨 commit 在修正之前**；沒有就寫重現腳本或 [核心旅程矩陣](../journey-matrix.md) 的列，並在 task.md 寫一句為什麼不寫測試。重現不了就不寫修正碼，回到 task.md 記錄已試過的條件。修正前先判斷觸發狀態本身合不合法，決定修在源頭還是下游；修完搜一次同樣寫法在 repo 其他地方有沒有出現。被證據推翻的假設，連同它帶進來的程式碼一起 revert，不留「可能有幫助」的防禦碼
    - `refactor`（或 task.md 標明零行為／零視覺差異）：動結構之前先釘住現況。UI 用 `references/rect-probe.mjs` 在 `origin/dev` 量一次存成 `$TASK/evidence/rect-before.json`（見 [browser-verify.md §4b](../browser-verify.md)）；邏輯用 characterization test 或現有測試的輸出快照。沒有改前基準就不動結構。先刪死碼與只有單一呼叫者的 wrapper 並單獨 commit，再做重整
+   - `perf`：第一個 phase 固定是量測，不讀程式碼猜瓶頸。先在 task.md 寫下要宣稱的那句話（例如「活動列表 LCP p50 在 4G throttle 下從 X 降到 Y」），在 `origin/dev` 量基準存成 `$TASK/evidence/perf-before.json`；沒有基準就不動程式。修完後兩邊各跑至少 5 次、A／B 交錯，報中位數與範圍；差距小於每次之間的變動就算沒有可量測差異。確認工作真的有跑（沒有錯誤回應、request 真的送到 server、快取是冷是熱）。結論只能是四種之一：變快、變慢、沒有可量測差異、無法判定
    - `feature`：照下面的動作序列
 4. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
    1. **自行輕量驗證並修訂**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；**有可互動 POC 的 UI phase，這一步就要把 POC 同一畫面開在旁邊，對該 phase 的元件跑一遍 [poc-probe-checklist](../poc-probe-checklist.md) 的基本 probe**（不要等 verify 才第一次量，差異會累積到很難拆）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `check-commit` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。**這個 phase 碰到 form／mutation／controller／DTO 的，快篩就要真的送出一次：一筆真實輸入（中文、大寫、空白）成功、一筆 server 會拒絕的輸入失敗且訊息顯示出來**，先把 [核心旅程矩陣](../journey-matrix.md) 的列開出來，verify 階段再補齊。這是 phase 級的快篩，完整驗收留給 verify 階段

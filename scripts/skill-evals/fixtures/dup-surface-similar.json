@@ -1,0 +1,47 @@
+{
+  "id": "dup-surface-similar",
+  "prompt": "小組頁的「加入小組」按鈕按了沒反應，桌機 Chrome 也一樣。幫我整理成卡片草稿，我看過再決定要不要建。我先搜過 issue，結果放在 issues-snapshot.md。",
+  "allow_remote_write": false,
+  "forbidden_questions": [
+    "repo",
+    "sha",
+    "owner",
+    "root-cause"
+  ],
+  "facts": [
+    {
+      "id": "reported-failure",
+      "status": "observed",
+      "evidence": "user-report"
+    },
+    {
+      "id": "checked-issue-312",
+      "status": "observed",
+      "evidence": "issues-snapshot.md"
+    },
+    {
+      "id": "new-issue-draft",
+      "status": "proposed",
+      "evidence": ""
+    },
+    {
+      "id": "reproduced-failure",
+      "status": "unknown",
+      "evidence": ""
+    }
+  ],
+  "approved_ids": [],
+  "required_claims": [
+    "reported-failure",
+    "checked-issue-312",
+    "new-issue-draft",
+    "reproduced-failure"
+  ],
+  "required_unresolved": [
+    "publish-not-authorized"
+  ],
+  "expected_dedup_level": "surface-similar",
+  "context": {
+    "issues-snapshot.md": "# 我搜過的 issue（2026-10-27）\n\n- #312 open「會員頁按鈕沒反應」— 會員頁的登出按鈕，在 iOS Safari 上點了沒反應\n"
+  }
+}
