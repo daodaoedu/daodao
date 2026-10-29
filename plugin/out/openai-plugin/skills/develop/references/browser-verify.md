@@ -38,6 +38,8 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
    - **版面探針**（見 §4a）：每條 route × 390／1024／1440 無登入牆、無橫向溢出、無出界元素
 4. **核心旅程矩陣**（有寫入路徑就必填，見 [journey-matrix.md](journey-matrix.md)）：任務碰到的每條「建立／編輯／刪除／送出」旅程，至少一列用真實輸入送出成功、一列用 server 會拒絕的輸入送出失敗。「點擊、輸入、送出可走通」不是驗收條件——**用什麼輸入送出、server 回了什麼、畫面顯示了什麼**才是。沒有寫入路徑時寫一行 `核心旅程不適用：<原因>`。
 
+要驗的功能先查 feature map（`plugin/docs/feature-map/README.md`）：到達路徑、穩定選擇器、需要的角色與已知陷阱都在那裡。改到 UI（路徑、按鈕文字、testid）時順手更新對應檔案。
+
 ## 3. 工具選擇
 
 **一律使用 `playwright` MCP**（`mcp__playwright__*`），不使用 `claude-in-chrome` MCP。

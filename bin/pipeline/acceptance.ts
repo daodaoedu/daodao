@@ -43,6 +43,13 @@ const TECH_URL = /https?:\/\/(?:server-dev\.|server\.|[^\s)]*\/api\/)[^\s)]*/i;
 const REQUIRED_HEADING = /^## 🙋 請驗收/;
 export const PM_MENTION = "@peggy1213-create";
 
+/**
+ * Hidden marker the acceptance tool (plugin/skills/test-acceptance) keys on, so it does not have
+ * to guess which comment is the spec from visible wording or the author's role.
+ */
+export const REQUEST_MARKER = "<!-- daodao:acceptance-request -->";
+const REQUEST_MARKER_RE = /<!--\s*daodao:acceptance-request\s*-->/;
+
 const ENGINEERING_HEADER =/^(?:\s*[-*]\s*|#{1,6}\s+)\**工程證據/;
 const STEPS_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗收步驟/;
 
@@ -99,6 +106,14 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
       line: headingIdx >= 0 ? headingIdx + 1 : 1,
       rule: "pm-mention-missing",
       message: `缺「${PM_MENTION}」：PM 驗收工具要求同一則留言同時有請驗收標題與這個標記，沒有會判 BLOCKED（#245、#346）`,
+    });
+  }
+
+  if (!REQUEST_MARKER_RE.test(body)) {
+    findings.push({
+      line: 1,
+      rule: "request-marker-missing",
+      message: `缺隱藏標記「${REQUEST_MARKER}」：PM 驗收工具（test-acceptance）靠它找出這則請驗收留言，放在留言第一行`,
     });
   }
 

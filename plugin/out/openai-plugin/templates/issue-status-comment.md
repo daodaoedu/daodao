@@ -43,16 +43,17 @@ templateVersion: 1
 - API 送出內容與回讀、regression test、CI、log 一律放「工程證據（已驗，PM 不需重做）」，每項附冒煙留言、PR 或 CI 連結。
 - AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。
 - issue 內文驗收契約的「必須證據」欄若寫了 API 回讀或測試，PM 會照著要；所以「對照的 AC」要寫明那些由工程提供、PM 依畫面判定。
-- 標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具只認這兩者同時存在的留言，缺一個就判 BLOCKED（#245、#346）。
+- 第一行的隱藏標記 `<!-- daodao:acceptance-request -->`、標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具（[test-acceptance](../skills/test-acceptance/SKILL.md)）靠標記找出這則留言，缺任一個就判 BLOCKED（#245、#346）。標記在 GitHub 上看不到，不影響 PM 閱讀。
 - 發出前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 不發。
 
 ```markdown
+<!-- daodao:acceptance-request -->
 ## 🙋 請驗收：<功能一句話>
 
 @peggy1213-create 開發完成，已部署到 dev，AI 冒煙也通過了，請幫忙驗收。
 
 - 測試網址：<直接點進對應頁面的 dev 網址>
-- 測試帳號：<用哪個帳號／角色登入；不貼密碼>
+- 測試帳號：<PM 的 admin 測試帳號或一般使用者測試帳號（見 test-acceptance environment.md）；要團主／團友身分就寫該帳號已加進哪個組織／場次。不指定 fixture 帳號（PM 只能 Google 登入，用不了 dev-login）；不貼密碼>
 - 驗收步驟（只看畫面）：
   1. <操作>，應該看到 <結果>（對應 AC-01）
   2. <操作>，應該看到 <結果>（對應 AC-02）

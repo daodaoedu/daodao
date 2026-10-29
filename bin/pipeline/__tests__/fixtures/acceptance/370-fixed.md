@@ -1,3 +1,4 @@
+<!-- daodao:acceptance-request -->
 ## 🙋 請驗收：網頁實踐詳情／編輯頁支援自訂天數、頻率、每次時間
 
 @peggy1213-create 開發完成，已部署到 dev，AI 冒煙也通過了，請幫忙驗收。

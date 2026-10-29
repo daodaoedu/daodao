@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { lintAcceptanceComment } from "../acceptance.js";
+import { REQUEST_MARKER, lintAcceptanceComment } from "../acceptance.js";
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), "fixtures/acceptance");
 const fixture = (name: string) => readFileSync(join(dir, name), "utf8");
@@ -40,6 +40,7 @@ describe("lintAcceptanceComment", () => {
 
   it("does not treat ordinary Chinese UI wording as technical", () => {
     const body = [
+      REQUEST_MARKER,
       "## 🙋 請驗收：x",
       "@peggy1213-create 請幫忙驗收。",
       "- 驗收步驟：",
@@ -54,6 +55,7 @@ describe("lintAcceptanceComment", () => {
 
   it("accepts Chinese-style numbering and UI words that look technical (review findings)", () => {
     const body = [
+      REQUEST_MARKER,
       "## 🙋 請驗收：x",
       "@peggy1213-create 請幫忙驗收。",
       "- 驗收步驟：",
@@ -79,13 +81,13 @@ describe("lintAcceptanceComment", () => {
   });
 
   it("requires numbered steps", () => {
-    const body = "## 🙋 請驗收：x\n@peggy1213-create\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none";
+    const body = REQUEST_MARKER + "\n## 🙋 請驗收：x\n@peggy1213-create\n- 驗收步驟：照著用\n- 工程證據（已驗，PM 不需重做）：none";
     expect(rules(body)).toEqual(["steps-missing"]);
   });
 
   // The PM's acceptance tool only accepts a comment with both the exact heading and the mention (#245, #346 BLOCKED).
   const handOff = (heading: string, mention: string) =>
-    [heading, mention, "- 驗收步驟：", "  1. 打開頁面，應該看到列表", "- 工程證據（已驗，PM 不需重做）：none"].join("\n");
+    [REQUEST_MARKER, heading, mention, "- 驗收步驟：", "  1. 打開頁面，應該看到列表", "- 工程證據（已驗，PM 不需重做）：none"].join("\n");
 
   it("rejects #245/#346-style hand-off without the 「## 🙋 請驗收」 heading", () => {
     const r = rules(handOff("## ✅ dev 冒煙通過，交 PM 驗收", "@peggy1213-create 麻煩驗收："));
@@ -106,8 +108,20 @@ describe("lintAcceptanceComment", () => {
     expect(lintAcceptanceComment(handOff("## 🙋 請驗收：x", "@peggy1213-create 請幫忙驗收。"))).toEqual([]);
   });
 
+  // test-acceptance keys on the hidden marker instead of guessing the spec from wording or author role.
+  it("rejects a hand-off without the hidden acceptance-request marker", () => {
+    const body = handOff("## 🙋 請驗收：x", "@peggy1213-create 請幫忙驗收。").replace(REQUEST_MARKER + "\n", "");
+    expect(rules(body)).toEqual(["request-marker-missing"]);
+  });
+
+  it("rejects a misspelled marker", () => {
+    const body = handOff("## 🙋 請驗收：x", "@peggy1213-create").replace(REQUEST_MARKER, "<!-- daodao:acceptance-report -->");
+    expect(rules(body)).toEqual(["request-marker-missing"]);
+  });
+
   it("supports heading-style sections and allows API wording inside the engineering block", () => {
     const body = [
+      REQUEST_MARKER,
       "## 🙋 請驗收：x",
       "@peggy1213-create 請幫忙驗收。",
       "### 驗收步驟",

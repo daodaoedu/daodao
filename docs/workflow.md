@@ -84,7 +84,7 @@ flowchart TD
 
 review-change 的引擎缺哪一個就記「未執行」，不會整個失敗；四個都裝 review 覆蓋率最高。
 
-同一套 13 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
+同一套 14 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版只收其中 8 個、Claude.ai 只收 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程，ChatGPT 網頁版另含 PM 驗收；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
 
 ### 0.2 GitHub CLI（gh）
 
@@ -853,7 +853,7 @@ Todo → In Progress → Review → Acceptance → Done
 
 | 階段 | 工具 | 用途 |
 |------|------|------|
-| **前置** | Claude Code + daodao plugin | 主力 AI 開發工具；plugin 提供 13 個 skills 與 6 支 hooks（`/daodao:<skill>`） |
+| **前置** | Claude Code + daodao plugin | 主力 AI 開發工具；plugin 提供 14 個 skills 與 6 支 hooks（`/daodao:<skill>`） |
 | **前置** | Codex CLI／OMP／OpenCode | review-change 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`） |
 | **前置** | GitHub CLI（gh） | PR、issue、CI 狀態、Planning board 操作 |
 | **前置** | MCP：playwright、Google Drive、Figma、daodao-pg-dev／prod | 瀏覽器驗收、驗證報告、設計稿、唯讀查 DB |

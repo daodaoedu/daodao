@@ -19,6 +19,7 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |
 | review-change | ✅ | 完整 |
+| test-acceptance | ✅ | 降級：browser |
 | verify-deploy | ✅ | 完整 |
 
 ## 閘門

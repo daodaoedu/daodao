@@ -14,6 +14,7 @@
 | Bug | report-bug | 整理現象、查現況與重複卡、區分事實與推測 | 問題描述與預期行為 |
 | 開卡／拆任務 | request-feature、break-down-plan | 同版需求到任務對照、相依、查重與發布預覽 | 工作範圍與尚未授權的發布／啟動 |
 | 開發 | develop | 隔離工作目錄、技術規劃、實作、適用測試與自審修正 | 未決產品行為及必要例外 |
+| PM 驗收 | test-acceptance | 對 Status=Acceptance 的卡，依最新「## 🙋 請驗收」留言逐步實測、截圖，以 peggy1213-create 發報告並移 Done／Need Fix／Review | 驗收結論與受阻項目 |
 | 驗收 | develop verify | 逐原 FR／TP／AC 驗證、POC 差異、核心旅程矩陣（含錯誤路徑 HTTP 碼）、Google 文件報告 | 結果、POC 差異決策與未解差異是否可接受 |
 | 提交 | check-commit、format-commit | 依實際變更檢查、修正、產生 commit 範圍與訊息 | 按 AGENTS 確認具體提交 |
 | 審查 | review-change、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
@@ -23,7 +24,7 @@
 
 ## 四平台的 skill 來源
 
-上述 13 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版讀 `.agents/skills/`，ChatGPT 網頁／行動版讀 `plugin/out/openai-plugin/`，Claude.ai 上傳 `plugin/out/web-plugin/` 打包的 zip（只收 7 個不需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
+上述 14 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版讀 `.agents/skills/`，ChatGPT 網頁／行動版讀 `plugin/out/openai-plugin/`，Claude.ai 上傳 `plugin/out/web-plugin/` 打包的 zip（只收 7 個不需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
 
 Codex 有自己的 hooks（`.codex/hooks.json`，與 Claude Code 指向同一批腳本），但**首次使用要先 `/hooks` 信任**才會觸發；沒信任就等同沒有閘門，須主動執行相同檢查並保留輸出。ChatGPT 與 Claude.ai 沒有閘門機制，一律由 skill 內文逐項執行。工具不可用標限制；缺少獨立 agent 不把自審冒稱獨立 review。檔案存在不證明各客戶端端到端實測通過。
 
