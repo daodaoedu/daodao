@@ -29,9 +29,10 @@
 ## 測試帳號與前置條件
 - 角色：講師或團主＝已登入，且 `GET /api/v1/lighthouse/organizations` 回傳至少一個組織（middleware 判斷，apps/product/src/middleware.ts:21-46）。不是看使用者 roles。
 - middleware 規則（只比對 `/lighthouse` 與 `/en/lighthouse`，apps/product/src/middleware.ts:18）：
-  - 沒有 `auth_token` cookie 或 API 401 → 302 到 `/auth/login?redirect=<原路徑>`（apps/product/src/middleware.ts:65-67）。
-  - API 403 或組織清單為空 → 302 到 `/lighthouse/access-required`（apps/product/src/middleware.ts:68-71）。
-  - API 失敗或回應格式不符 → 302 到 `/lighthouse/access-required?reason=unavailable`（apps/product/src/middleware.ts:57-62）。
+  - 沒有 `auth_token` cookie 或 API 401 → 307 到 `/auth/login?redirect=<原路徑>`（apps/product/src/middleware.ts:65-67）。
+  - API 403 或組織清單為空 → 307 到 `/lighthouse/access-required`（apps/product/src/middleware.ts:68-71）。
+  - API 失敗或回應格式不符 → 307 到 `/lighthouse/access-required?reason=unavailable`（apps/product/src/middleware.ts:57-62）。
+  - 轉址都是 `NextResponse.redirect(url)` 沒指定狀態碼，Next 預設 307（apps/product/src/middleware.ts:62、72），不是 302。
 - 一般使用者（沒有組織）可用來驗證「無權限」路徑；temp 使用者會被導 onboarding。
 - 資料前置：組織內要有系列＋場次才看得到總覽卡片與場次分頁；儀表板／動態／焦點要有成員加入並打卡才有資料；成果 AI 摘要「自己的 AI API」需先在組織設定存 API key。
 - 程式只取第一個組織（`organizations?.[0]`，apps/product/src/components/lighthouse/lighthouse-overview.tsx:93、apps/product/src/components/lighthouse/programs-manager.tsx:1587、apps/product/src/components/lighthouse/organization-settings.tsx:35、apps/product/src/components/lighthouse/templates-manager.tsx:39、apps/product/src/components/lighthouse/archive-manager.tsx:27、apps/product/src/components/lighthouse/cohort-focus.tsx:50），沒有組織切換器；測試帳號最好只屬於一個組織。
@@ -48,7 +49,7 @@
 | 總覽空狀態 | `getByText('還沒有任何場次，先到「系列與場次」建立一個。')`（`overview_empty`） | apps/product/src/components/lighthouse/lighthouse-overview.tsx:117；packages/i18n/src/locales/zh-TW/lighthouse.json:494 |
 | 總覽場次卡進入 | `getByRole('link', { name: '管理本場次：<場次名>' })` | apps/product/src/components/lighthouse/lighthouse-overview.tsx:32；packages/i18n/src/locales/zh-TW/lighthouse.json:333 |
 | 建立系列 | `getByRole('button', { name: '建立系列' })` → `getByPlaceholder('系列名稱')` → `getByRole('button', { name: '建立', exact: true })` | apps/product/src/components/lighthouse/programs-manager.tsx:1622-1641；packages/i18n/src/locales/zh-TW/lighthouse.json:294、299、357 |
-| 建立場次 | `getByRole('button', { name: '建立場次' })`；表單送出按鈕同名（type=submit） | apps/product/src/components/lighthouse/programs-manager.tsx:1540-1543、943-949；packages/i18n/src/locales/zh-TW/lighthouse.json:307 |
+| 建立場次 | 每張系列卡各有一個：先限定系列卡，再 `getByRole('button', { name: '建立場次' })`；表單打開時這顆按鈕變成「收起」（`close`，lighthouse.json:358）；表單送出按鈕同名（type=submit） | apps/product/src/components/lighthouse/programs-manager.tsx:1540-1543、943-949；packages/i18n/src/locales/zh-TW/lighthouse.json:307 |
 | 場次名稱欄位 | `getByLabel('場次名稱')`（label htmlFor=`<prefix>-name`，name="displayName"） | apps/product/src/components/lighthouse/programs-manager.tsx:376-384；packages/i18n/src/locales/zh-TW/lighthouse.json:322 |
 | 立即發佈開關 | 文字「建立後立即發佈並產生邀請連結」旁的 `getByRole('switch')`（Switch 與文字同在 span 內，沒有 label 關聯，`getByLabel` 取不到） | apps/product/src/components/lighthouse/programs-manager.tsx:928-933；packages/i18n/src/locales/zh-TW/lighthouse.json:329 |
 | 場次卡（系列頁） | `locator('#cohort-<cohortId>')` | apps/product/src/components/lighthouse/programs-manager.tsx:1165 |
@@ -62,15 +63,15 @@
 | 名單：email 清單 | `locator('#invite-emails')`（name="emails"） | apps/product/src/components/lighthouse/cohort-roster.tsx:243-244 |
 | 名單：CSV 上傳 | `locator('#invite-csv')`（type=file） | apps/product/src/components/lighthouse/cohort-roster.tsx:252-253 |
 | 名單：預覽名單 → 寄出邀請 | `getByRole('button', { name: '預覽名單' })` → `getByRole('button', { name: '寄出邀請' })` | apps/product/src/components/lighthouse/cohort-roster.tsx:259-261、326；packages/i18n/src/locales/zh-TW/lighthouse.json:379、392 |
-| 名單：重置加入連結／暫停加入 | `getByRole('button', { name: '重置加入連結' })`／`'暫停加入'`（會跳確認框） | apps/product/src/components/lighthouse/cohort-roster.tsx:173、185；packages/i18n/src/locales/zh-TW/lighthouse.json:396、397 |
+| 名單：重置加入連結／暫停加入 | `getByRole('button', { name: '重置加入連結' })`／`'暫停加入'`；會跳確認框，確認按鈕與觸發按鈕同名，要在 `getByRole('dialog')` 內點；暫停後按鈕變成「重新開放加入」（`joining_resume`，lighthouse.json:496） | apps/product/src/components/lighthouse/cohort-roster.tsx:173、185；packages/i18n/src/locales/zh-TW/lighthouse.json:396、397 |
 | 邀請連結 QR | `locator('canvas[aria-label="加入本場次的 QR code"]')`（canvas 沒有 role，不能用 getByRole('img')） | apps/product/src/components/lighthouse/join-code.tsx:52-55；packages/i18n/src/locales/zh-TW/lighthouse.json:364 |
-| 複製邀請連結 | `getByRole('button', { name: '複製連結' })`（名單頁用 hideCopyButton，按鈕在 programs 頁） | apps/product/src/components/lighthouse/join-code.tsx:71；apps/product/src/components/lighthouse/cohort-roster.tsx:286；packages/i18n/src/locales/zh-TW/lighthouse.json:365 |
+| 複製邀請連結 | `getByRole('button', { name: '複製連結' })`：系列與場次頁在 JoinCode 內；名單頁有自己的「複製連結」按鈕（JoinCode 的那顆被 `hideCopyButton` 隱藏），暫停加入時 disabled | apps/product/src/components/lighthouse/join-code.tsx:71；apps/product/src/components/lighthouse/cohort-roster.tsx:274-283、286；packages/i18n/src/locales/zh-TW/lighthouse.json:365 |
 | 今日焦點分頁 | `getByRole('tablist', { name: '今日焦點' })` 內 `getByRole('tab', { name: /需要鼓勵/ })`／`/值得慶祝/`，`aria-selected` | apps/product/src/components/lighthouse/cohort-focus.tsx:134-158；packages/i18n/src/locales/zh-TW/lighthouse.json:547-548 |
 | 寫訊息給學員 | `getByRole('button', { name: '寫訊息給 <暱稱>' })` | apps/product/src/components/lighthouse/cohort-focus.tsx:104-110；packages/i18n/src/locales/zh-TW/lighthouse.json:580 |
 | 訊息內容／送出 | `getByRole('textbox', { name: '寫下你想說的話…' })` → `getByRole('button', { name: '送出' })`（內容空白時 disabled） | apps/product/src/components/lighthouse/cohort-message-dialogs.tsx:284、298-304；packages/i18n/src/locales/zh-TW/lighthouse.json:576-577 |
 | 看打卡紀錄／訊息紀錄 | `getByRole('button', { name: '查看 <暱稱> 的打卡紀錄' })`／`'查看與 <暱稱> 的訊息紀錄'` | apps/product/src/components/lighthouse/cohort-focus.tsx:91-96、117-121；packages/i18n/src/locales/zh-TW/lighthouse.json:562、565 |
 | 動態統計／篩選／空狀態 | `getByTestId('activity-stats')`、`getByTestId('activity-filters')`、`getByTestId('activity-empty')` | apps/product/src/components/lighthouse/cohort-activity.tsx:147、208、324 |
-| 動態搜尋 | `getByRole('textbox', { name: '搜尋成員、實踐或關鍵字' })` | apps/product/src/components/lighthouse/cohort-activity.tsx:219-220；packages/i18n/src/locales/zh-TW/lighthouse.json:9 |
+| 動態搜尋 | `getByRole('searchbox', { name: '搜尋成員、實踐或關鍵字' })`（`type="search"`，role 是 searchbox 不是 textbox） | apps/product/src/components/lighthouse/cohort-activity.tsx:215-220；packages/i18n/src/locales/zh-TW/lighthouse.json:9 |
 | 動態類型篩選 | `getByRole('combobox', { name: '類型' })` | apps/product/src/components/lighthouse/cohort-activity.tsx:255；packages/i18n/src/locales/zh-TW/lighthouse.json:15 |
 | 活動明細對話框 | `getByTestId('activity-detail')` | apps/product/src/components/lighthouse/cohort-activity-detail-dialog.tsx:76 |
 | 成果：階段／概況 | `getByTestId('outcome-phase')`、`getByTestId('outcome-overview')` | apps/product/src/components/lighthouse/cohort-outcome.tsx:138、167 |
@@ -80,18 +81,18 @@
 | 產生／重新產生 AI 摘要 | `getByRole('button', { name: /產生 AI 摘要/ })` | apps/product/src/components/lighthouse/cohort-outcome-summary.tsx:229-242；packages/i18n/src/locales/zh-TW/lighthouse.json:61-62 |
 | 編輯／儲存摘要 | `getByRole('button', { name: '編輯摘要' })`、`getByRole('button', { name: '儲存摘要' })` | apps/product/src/components/lighthouse/cohort-outcome-summary.tsx:209-248；packages/i18n/src/locales/zh-TW/lighthouse.json:66-67 |
 | 成果報告頁 | `getByTestId('outcome-report')`；列印 `getByTestId('outcome-report-print')`（「列印／儲存 PDF」） | apps/product/src/components/lighthouse/cohort-outcome-report.tsx:57、74-80；packages/i18n/src/locales/zh-TW/lighthouse.json:97 |
-| 模板：建立 | `getByRole('button', { name: '建立模板' })` | apps/product/src/components/lighthouse/templates-manager.tsx:75-81、126-131；packages/i18n/src/locales/zh-TW/lighthouse.json:440 |
-| 模板搜尋 | `getByRole('textbox', { name: '搜尋模板名稱、標籤或資源…' })` | apps/product/src/components/lighthouse/templates-manager.tsx:96；packages/i18n/src/locales/zh-TW/lighthouse.json:104 |
+| 模板：建立 | `getByRole('button', { name: '建立模板' })`；模板庫空的時候 header 與空狀態各有一顆，加 `.first()` 或限定 `header` | apps/product/src/components/lighthouse/templates-manager.tsx:75-81、126-131；packages/i18n/src/locales/zh-TW/lighthouse.json:440 |
+| 模板搜尋 | `getByRole('searchbox', { name: '搜尋模板名稱、標籤或資源…' })`（`type="search"`） | apps/product/src/components/lighthouse/templates-manager.tsx:91-96；packages/i18n/src/locales/zh-TW/lighthouse.json:104 |
 | 模板卡 | `getByTestId('template-<templateId>')`；卡內 `getByRole('button', { name: '編輯' })` | apps/product/src/components/lighthouse/template-card.tsx:230、242-247 |
-| 模板編輯器 | `getByTestId('template-editor')`；`getByRole('button', { name: '儲存草稿' })`、`'下一步 ›'` | apps/product/src/components/lighthouse/template-editor-dialog.tsx:287、652、662-663；packages/i18n/src/locales/zh-TW/lighthouse.json:189、192 |
-| 組織設定欄位 | `locator('#organization-name')`、`#organization-bio`、`#organization-link`；儲存 `getByRole('button', { name: '儲存' })` | apps/product/src/components/lighthouse/organization-settings.tsx:119-151 |
+| 模板編輯器 | `getByTestId('template-editor')`；`getByRole('button', { name: '儲存草稿' })`、`'下一步 ›'` | apps/product/src/components/lighthouse/template-editor-dialog.tsx:287、652、666-669；packages/i18n/src/locales/zh-TW/lighthouse.json:189、192 |
+| 組織設定欄位 | `locator('#organization-name')`、`#organization-bio`、`#organization-link`；儲存要限定在組織表單內：`locator('form').filter({ has: page.locator('#organization-name') }).getByRole('button', { name: '儲存' })`（同頁 AI key 卡也有一顆「儲存」，直接 `getByRole` 會撞 strict mode） | apps/product/src/components/lighthouse/organization-settings.tsx:119-151、228；apps/product/src/components/lighthouse/organization-ai-key-card.tsx:218-224 |
 | 新增組織成員（停用） | `getByRole('textbox', { name: 'email' })`、`getByRole('button', { name: '新增成員' })` 兩者皆 disabled（title「即將推出新增組織成員功能」） | apps/product/src/components/lighthouse/organization-settings.tsx:175-194；packages/i18n/src/locales/zh-TW/lighthouse.json:215-216、463 |
 | AI key 狀態 | `getByTestId('ai-key-status')`；欄位 `#organization-ai-provider`、`#organization-ai-key` | apps/product/src/components/lighthouse/organization-ai-key-card.tsx:156、174、191 |
-| 封存分頁 | `getByRole('tablist', { name: '封存' })` 內 `getByRole('tab')`；恢復 `getByRole('button', { name: '恢復' })` | apps/product/src/components/lighthouse/archive-manager.tsx:88-96、166；packages/i18n/src/locales/zh-TW/lighthouse.json:250、258 |
+| 封存分頁 | `getByRole('tablist', { name: '封存' })` 內 `getByRole('tab')`；恢復 `getByRole('button', { name: '恢復' })` | apps/product/src/components/lighthouse/archive-manager.tsx:88-96、164；packages/i18n/src/locales/zh-TW/lighthouse.json:250、258 |
 | 無權限頁 | `getByText('燈塔尚未為你開通')`（`?reason=unavailable` 時為「暫時無法確認你的燈塔權限」）、`getByRole('link', { name: '回到首頁' })` | apps/product/src/components/lighthouse/lighthouse-membership-guard.tsx:30-59；packages/i18n/src/locales/zh-TW/lighthouse.json:285、287、288 |
 
 ## 怎樣算成功（可觀察的結果與證據）
-- 權限：講師帳號開 `/lighthouse` 停在原路徑並顯示 `navigation[name=燈塔主要導覽]`；一般帳號 302 到 `/lighthouse/access-required` 並看到「燈塔尚未為你開通」；未登入 302 到 `/auth/login?redirect=%2Flighthouse`。用 network 看第一個 document 回應的 status 與 Location。
+- 權限：講師帳號開 `/lighthouse` 停在原路徑並顯示 `navigation[name=燈塔主要導覽]`；一般帳號 307 到 `/lighthouse/access-required` 並看到「燈塔尚未為你開通」；未登入 307 到 `/auth/login?redirect=%2Flighthouse`。用 network 看第一個 document 回應的 status 與 Location。
 - 建立場次（開立即發佈）：系列頁出現 `#cohort-<id>`，有邀請連結／QR；複製連結 toast「邀請連結已複製」（packages/i18n/src/locales/zh-TW/lighthouse.json:366）；用學員帳號開該連結能走完 cohort-student.md 的加入流程。
 - 邀請成員：預覽名單後按「寄出邀請」，toast「已排入 N 封邀請信」（有已加入者時為「已排入 N 封邀請信，M 位已加入者已略過」；`lighthouse.invitation_sent_count`／`invitation_sent_with_skipped`，apps/product/src/components/lighthouse/cohort-roster.tsx:132-137，packages/i18n/src/locales/zh-TW/lighthouse.json:382-383）；可在 admin email history 查寄送紀錄。
 - 寫訊息：toast「訊息已送出」（packages/i18n/src/locales/zh-TW/lighthouse.json:578），該學員的訊息紀錄數字 +1。
@@ -106,6 +107,5 @@
 - 燈塔 shell 桌機用左側 `aside`（`hidden md:flex`），手機用頂部 header（`md:hidden`），兩邊各有一份同名 navigation／「回主頁」連結，Playwright 需加 `.filter({ visible: true })` 或固定 viewport。
 - 只讀第一個組織，沒有組織切換器：測試帳號屬於多個組織時只會看到最早加入的那個（server 依建立順序由舊到新排序，已在 app-dev 確認）。
 - 「匯出學員成果紀錄」按鈕停用並標「coming soon」（`coming_soon_badge`，apps/product/src/components/lighthouse/cohort-outcome.tsx:101-109），不是功能壞掉。組織設定的「新增成員」同樣停用、即將推出。
-- 名單頁的 JoinCode 設 `hideCopyButton`，在名單頁找不到「複製連結」按鈕；複製在系列與場次頁。
 - 「封存」的 i18n key `nav_archive` 位置與其他 nav key 不連續（packages/i18n/src/locales/zh-TW/lighthouse.json:203），比對時以實際字串「封存」為準。
 - 建立系列／場次、寄邀請、送訊息、AI 摘要都會寫入 dev 資料或寄出真實信件；AI 摘要可能消耗平台 AI 額度。
