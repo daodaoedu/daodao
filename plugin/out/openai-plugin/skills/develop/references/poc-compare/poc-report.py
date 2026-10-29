@@ -5,8 +5,10 @@
 
 讀 $TASK/notes/poc-compare/<checkpoint>-poc.json / -impl.json，輸出：
   report-tables.md   每檢查點一張差異表（✅ 一致 / ❌ 量到差異 / ⚠️ 量到但視覺等價或無法直接比）
-  diff-items.json    所有差異列 + 影響分數（給整理差異摘要用）
-  coverage.json      probe 類別涵蓋率（required / present / missing / na），pre-pr-gate 會讀
+  diff-items.json    所有差異列 + 影響分數（給整理差異摘要用）。totals：probes＝至少一邊量到的 probe；
+                     unresolved＝兩邊都量不到；ok＝完全一致；missing＝只有一邊存在；bad／warn＝❌／⚠️ 列數（含存在、未解析列）
+  coverage.json      probe 類別涵蓋率（required / present / missing / na / unresolved），pre-pr-gate 會讀；
+                     兩邊都量不到的 probe（選擇器沒對到）列進 unresolved，不算涵蓋
   evidence/compare-<checkpoint>.png  左 POC / 右實作 的同寬、頂端對齊合成圖（給 Google 文件與肉眼核對）
 """
 import argparse, glob, json, os, re, sys
@@ -105,20 +107,33 @@ def load(cp, side):
 
 cps = sorted({os.path.basename(f).rsplit("-poc.json", 1)[0] for f in glob.glob(os.path.join(OUT, "*-poc.json")) if not os.path.basename(f).startswith("all-")})
 tables, items = [], []
-totals = {"probes": 0, "ok": 0, "bad": 0, "warn": 0, "missing": 0}
-present = set()
+totals = {"probes": 0, "ok": 0, "bad": 0, "warn": 0, "missing": 0, "unresolved": 0}
+present, unresolved, skipped_cps = set(), [], []
 for cp in cps:
     A, B = load(cp, "poc"), load(cp, "impl")
-    if A is None or B is None: continue
-    rows, n_ok = [], 0
+    if A is None or B is None:
+        # 少一邊的量測檔＝整個 checkpoint 沒比到，不能從分母消失
+        lost = "poc" if A is None else "impl"
+        unresolved.append(f"{cp} · （缺 {cp}-{lost}.json，整個 checkpoint 沒量到）"); skipped_cps.append(cp); totals["bad"] += 1
+        items.append({"cp": cp, "key": "（整個 checkpoint）", "prop": "未解析", "poc": "有" if A else "—", "impl": "有" if B else "—", "status": "❌"})
+        continue
+    rows, n_ok, n_unresolved = [], 0, 0
     for k in A:
-        pre = k.split(".")[0]; present.add(aliases.get(pre, pre))
         ma, mb = A.get(k), B.get(k)
-        if ma is None and mb is None: continue
+        # 兩邊都量不到＝選擇器沒對到元素，不是「一致」；這個 probe 不能替它的類別算涵蓋
+        if ma is None and mb is None:
+            rows.append((k, "未解析（選擇器沒對到）", "—", "—", "❌")); unresolved.append(f"{cp} · {k}"); n_unresolved += 1
+            items.append({"cp": cp, "key": k, "prop": "未解析", "poc": "—", "impl": "—", "status": "❌"})
+            totals["unresolved"] += 1; totals["bad"] += 1
+            continue
+        pre = k.split(".")[0]; present.add(aliases.get(pre, pre))
         totals["probes"] += 1
         if ma is None or mb is None:
-            rows.append((k, "存在", "—" if ma is None else "有", "有" if ma is None else "—", "⚠️")); totals["missing"] += 1
-            items.append({"cp": cp, "key": k, "prop": "存在", "poc": "—" if ma is None else "有", "impl": "有" if ma is None else "—", "status": "⚠️"})
+            # POC 有、實作沒有＝缺元件（❌）；只有實作有的多餘元素維持 ⚠️ 交人判斷
+            st = "❌" if mb is None else "⚠️"
+            rows.append((k, "存在", "—" if ma is None else "有", "有" if ma is None else "—", st)); totals["missing"] += 1
+            items.append({"cp": cp, "key": k, "prop": "存在", "poc": "—" if ma is None else "有", "impl": "有" if ma is None else "—", "status": st})
+            totals["bad" if st == "❌" else "warn"] += 1
             continue
         diffs = []
         is_full = bool(FULLWIDTH.search(k)); buttonish = bool(BUTTONISH.search(k))
@@ -152,7 +167,7 @@ for cp in cps:
             for p, label, x, y, st in diffs:
                 rows.append((k, label, x, y, st)); items.append({"cp": cp, "key": k, "prop": label, "poc": x, "impl": y, "status": st})
                 totals["bad" if st == "❌" else "warn"] += 1
-    lines = [f"### {cp}", "", f"probe {len([k for k in A if A[k] or B.get(k)])} 個，完全一致 {n_ok} 個。", "", "| 項目 | POC | 實作 | 狀態 |", "|---|---|---|---|"]
+    lines = [f"### {cp}", "", f"probe 解析 {len(A) - n_unresolved}/{len(A)} 個" + (f"（未解析 {n_unresolved} 個）" if n_unresolved else "") + f"，完全一致 {n_ok} 個。", "", "| 項目 | POC | 實作 | 狀態 |", "|---|---|---|---|"]
     ok_keys = [k for k in A if A.get(k) and B.get(k) and not any(r[0] == k for r in rows)]
     if ok_keys: lines.append(f"| ✅ 一致：{'、'.join('`'+k+'`' for k in ok_keys)} | — | — | ✅ |")
     lines += [f"| `{k}` {label} | {x} | {y} | {st} |" for k, label, x, y, st in rows]
@@ -161,7 +176,7 @@ for cp in cps:
 def score(i):
     p, a, b = i["prop"], i["poc"], i["impl"]
     d = abs((px(a) or 0) - (px(b) or 0))
-    if p in ("存在", "grid 欄", "內捲"): return 3
+    if p in ("存在", "未解析", "grid 欄", "內捲"): return 3
     if p == "寬度": return 3 if d > 8 else 1
     if p in ("字色", "底色", "字重", "邊框", "透明度"): return 2
     if p == "字級": return 2 if d >= 2 else 1
@@ -174,7 +189,7 @@ os.makedirs(OUT, exist_ok=True)
 open(os.path.join(OUT, "report-tables.md"), "w").write("\n\n".join(tables) + "\n")
 json.dump({"totals": totals, "items": items}, open(os.path.join(OUT, "diff-items.json"), "w"), ensure_ascii=False, indent=1)
 missing = [c for c in required if c not in present and c not in na]
-coverage = {"required": required, "present": sorted(present), "na": na, "missing": missing, "checkpoints": cps}
+coverage = {"required": required, "present": sorted(present), "na": na, "missing": missing, "unresolved": unresolved, "checkpoints": cps, "skipped_checkpoints": skipped_cps}
 json.dump(coverage, open(os.path.join(OUT, "coverage.json"), "w"), ensure_ascii=False, indent=1)
 
 # --- 並排合成圖：同寬縮放、頂端對齊、上方標題列 ---------------------------------------------------------
@@ -195,6 +210,8 @@ if not args.no_composite:
     except ImportError:
         print("（沒有 Pillow，略過合成圖：pip3 install pillow）", file=sys.stderr)
 
+print(f"checkpoint 量到 {len(cps) - len(skipped_cps)}/{len(cps)} 個，probe 解析 {totals['probes']}/{totals['probes'] + totals['unresolved']}"
+      + (f"，未解析：{'、'.join(unresolved)}" if unresolved else ""))
 print(json.dumps(totals, ensure_ascii=False))
 print("coverage:", "OK" if not missing else f"缺 {missing}", "| na:", na or "-")
 bad = [i for i in items if i["status"] == "❌"]

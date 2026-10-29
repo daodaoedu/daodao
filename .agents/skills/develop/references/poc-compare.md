@@ -59,7 +59,7 @@ cd "$TASK/daodao-f2e/apps/product" && CONFIG="$TASK/notes/poc-compare/config.mjs
 python3 plugin/skills/develop/references/poc-compare/poc-report.py --task "$TASK"
 ```
 
-- probe key 第一段是類別（`shell.` `card.` `button.` `input.` `dialog.` `table.` `badge.` `filter.` `empty.`），`coverage.json` 缺任何 required 類別，`pre-pr-gate.sh` 會擋；任務真的沒有的類別在 config `categories.na` 寫理由
+- probe key 第一段是類別（`shell.` `card.` `button.` `input.` `dialog.` `table.` `badge.` `filter.` `empty.`），`coverage.json` 缺任何 required 類別，`pre-pr-gate.sh` 會擋；任務真的沒有的類別在 config `categories.na` 寫理由。兩邊都量不到的 probe 會列進 `unresolved` 並標 ❌（選擇器沒對到元素，不算涵蓋），`pre-pr-gate.sh` 同樣會擋：修選擇器，不要刪 probe。POC 有、實作沒有的元素標 ❌（缺元件）
 - `dialog.body` 這類 probe 會量到 `scrollable`：原型不內捲而實作內捲會直接標 ❌
 - 並排合成圖已同寬、頂端對齊，Google 文件直接嵌 `compare-*.png`，不要各放一張
 
@@ -85,7 +85,7 @@ JSON.stringify({
 
 兩邊數字不一致的項目記入 task.md 的「驗證」區塊，標 ❌ 並附上 POC 值 vs. 實作值。
 
-**判定規則**：❌ 只有兩種出路——修掉，或列進「### POC 差異決策」交給使用者（AskUserQuestion，附並排截圖）。不可以自行標成「設計系統」「刻意」就放過；FRD 明文寫的降級（例如成員新增 coming soon）才算已知刻意。使用者確認後在 task.md「驗證」區塊寫一行 `POC 差異決策已確認`，`pre-pr-gate.sh` 才會放行 UI repo 的 PR。
+**判定規則**：❌ 只有兩種出路——修掉，或列進「### POC 差異決策」交給使用者（AskUserQuestion，附並排截圖）。不可以自行標成「設計系統」「刻意」就放過；FRD 明文寫的降級（例如成員新增 coming soon）才算已知刻意。使用者確認後在 task.md「驗證」區塊寫一行 `POC 差異決策已確認`，`pre-pr-gate.sh` 才會放行 UI repo 的 PR。重跑 `poc-report.py` 後出現先前沒有的 ❌（例如升級後新增的「未解析」「存在」列），要重新交使用者做差異決策並更新這一行，不能沿用舊的確認。
 
 ### 3.5 肉眼核對（必做）
 
