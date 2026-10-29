@@ -562,4 +562,41 @@ t=$(make_task daodao-server "$(task_md verified "$FENCED_NA" '- none')")
 printf '%s\n' "$READ_BODY" > "$t/notes/body.md"
 code=$(run_hook "$t/daodao-server" "$(pr_cmd "$t/daodao-server" "$t/notes/body.md")")
 expect_block "task fenced核心NA不得放過失敗讀取journey" "$code" "⬜／❌"
+# ---------------------------------------------------------------- 預演（pre-pr-gate-preview.sh）
+PREVIEW="$SCRIPT_DIR/../../plugin/hooks/pre-pr-gate-preview.sh"
+run_preview() {  # $1=任務資料夾 $2=repo $3=body 檔 → exit code；stderr 存 $ERR_FILE
+  local code=0
+  bash "$PREVIEW" "$1" "$2" "$3" >"$OUT_FILE" 2>"$ERR_FILE" || code=$?
+  echo "$code"
+}
+ledger="$HOME/.cache/daodao-harness/gate-ledger.jsonl"
+touch "$ledger"
+
+# 兩道閘門同時不過：預演要一次都列出來（真的發 PR 時只會看到第一道），而且不寫 ledger
+before=$(wc -l < "$ledger")
+t=$(make_task daodao-f2e "$(task_md implementing "$GOOD_MATRIX" '- none')")
+printf '## Summary\nx\n' > "$t/notes/body.md"
+code=$(run_preview "$t" daodao-f2e "$t/notes/body.md")
+expect_block "預演列出 Status 未完成" "$code" "verify 階段沒跑完"
+[[ "$(last_err)" == *"驗證證據"* ]] || fail "預演應同時列出缺「## 驗證證據」，實際：$(last_err)"
+printf '✅ %s\n' "預演一次列出多道閘門"
+[ "$(wc -l < "$ledger")" = "$before" ] || fail "預演不應寫進 gate ledger"
+printf '✅ %s\n' "預演不寫 gate ledger"
+
+# 都準備好了：預演通過
+t=$(make_task daodao-f2e "$(task_md verified "$GOOD_MATRIX" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+code=$(run_preview "$t" daodao-f2e "$t/notes/body.md")
+expect_pass "預演全部通過" "$code"
+[[ "$(last_err)" == *"閘門 1–8 都會通過"* ]] || fail "預演通過時應說明通過範圍，實際：$(last_err)"
+
+# 預演不影響真的發 PR：沒設 PRE_PR_GATE_PREVIEW 時照舊第一道就擋、寫 ledger
+t=$(make_task daodao-f2e "$(task_md implementing "$GOOD_MATRIX" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$t/notes/body.md"
+before=$(wc -l < "$ledger")
+code=$(run_hook "$t/daodao-f2e" "$(pr_cmd "$t/daodao-f2e" "$t/notes/body.md")")
+expect_block "非預演照舊擋下" "$code" "verify 階段沒跑完"
+[ "$(wc -l < "$ledger")" -gt "$before" ] || fail "非預演擋下時應寫 gate ledger"
+printf '✅ %s\n' "非預演照舊寫 gate ledger"
+
 echo "✅ pre-pr-gate regression tests passed"

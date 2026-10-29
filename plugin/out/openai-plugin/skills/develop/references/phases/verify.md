@@ -23,9 +23,16 @@
 6. **失敗處理** — 修復後重驗該項（同一項失敗 2 次，先照 [dev.md](dev.md)「連續執行原則」寫出共同假設並驗證，停止重複相同嘗試；整理已查核原因、證據與阻塞，能繼續查明的技術問題由 AI 調查，不要交人猜根因或無限重試）
 7. **產出 Google 文件驗證報告**（必做）— 把「驗證」區塊 + 核心旅程矩陣 + evidence/ 截圖整理成一份 Google 文件（截圖嵌圖，不是留在本機資料夾），連結記進 task.md「驗證」區塊第一行；操作細節與一次性 rclone 設定見 [verify-report.md](../verify-report.md)
 8. 全部通過 → task.md Status → `verified`，進入 finish。「全部」包含：「## 驗證」沒有任何 `- [ ]` 未勾項目、沒有「需要手動驗證」清單、「### 版面探針」全 ✅
+9. **發 PR 前先預演閘門**：照 [finish.md](finish.md) 第 8 步的範本先寫好 `$TASK/notes/pr-body-<repo>.md`，再跑
+
+   ```bash
+   bash "$ROOT/plugin/hooks/pre-pr-gate-preview.sh" "$TASK" <repo>
+   ```
+
+   它一次列出開 PR 時 pre-pr-gate 閘門 1–8 會擋下的所有缺漏（真的發 PR 時只看得到第一個），不寫 gate ledger。exit 2 就照訊息補完再跑，直到 ✅ 才進 finish。gate ledger 裡 133 次擋下（缺驗證證據 64、缺核心旅程矩陣 41、Status 沒到 verified 28）都是開 PR 當下才發現；多個 repo 的任務每個 repo 各跑一次
 
 ---
 
-**完成條件**：上面第 8 步的「全部通過」成立，`task.md` Status 已改成 `verified`。
+**完成條件**：上面第 8 步的「全部通過」成立，`task.md` Status 已改成 `verified`，第 9 步的閘門預演 ✅。
 
 達成後才讀 [finish.md](finish.md) 發 PR。
