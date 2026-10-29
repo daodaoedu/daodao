@@ -99,6 +99,20 @@ server 起不來、openapi 檔冒出大量 diff、連不到 `*.orb.local` 等環
 
 在 task.md 記錄來源版本／快照與查核的 repo、ref、HEAD、base／merge-base、dirty 狀態，這些由 AI 取得。參考 POC／分支與目標實作基準分開；mock 或靜態畫面不能當作正式功能證據。來源更新時保留原驗收基準，列出變更與影響，經必要產品決策確認後才更新契約。新需求統一 PRD，不另強制產出 FRD。
 
+### 1.5a 資料形狀與設計理由（動到契約或狀態時才寫）
+
+任務會新增或修改 API request／response、Zod validator、Prisma／storage schema、跨 repo 契約，或新增有狀態的流程（status、phase、多個 boolean）時，在 task.md「## 設計草圖」依序寫下，總長不超過一頁：
+
+1. 呼叫端用法：f2e 怎麼呼叫（含 request／response 範例），或元件的 props 範例。先寫這段，型別從它推出來
+2. 型別草圖：schema 或 model 的欄位、狀態 union、錯誤情況
+3. 邊界：在哪一層 parse，哪裡以內信任型別
+4. 一個被否決的形狀，附一行理由；沒有其他可行做法就寫「只有這個形狀可行，因為…」
+5. 待人決定的開放問題
+
+從 `Need Fix` 接手，或在既有功能上追加需求時，多回答一題：「如果這個需求一開始就存在，資料形狀會不會不同？」答案是會，就列出應該改的型別或 schema，以及這次做到哪裡；不要只加一個 if 分支或第二個 boolean。
+
+草圖要對得到驗收契約的 ID，不需要人工簽核；裡面若出現新的產品行為，照 1.5 列為待確認。純樣式、純文案、單檔修正寫一行「設計草圖不適用：<原因>」。
+
 ### 1.6 寫 task.md
 
 用 [task-template.md](../task-template.md) 模板寫 `$TASK/task.md`，把 issue、PRD／既有 FRD、POC／分支連結、repos、phases、**驗收契約**全部記進去。**之後任何 session 接手都從這個檔開始。**
@@ -107,6 +121,6 @@ start 完成後回報任務資料夾路徑與 task.md 摘要，然後**預設直
 
 ---
 
-**完成條件**：每個涉及的 repo 都有 worktree 且依賴已裝好（`ls node_modules/.bin` 有東西）；`task.md` 已寫入，含已確認的驗收契約。
+**完成條件**：每個涉及的 repo 都有 worktree 且依賴已裝好（`ls node_modules/.bin` 有東西）；`task.md` 已寫入，含已確認的驗收契約；有觸發 1.5a 時含設計草圖。
 
 達成後讀 [dev.md](dev.md) 接著實作。

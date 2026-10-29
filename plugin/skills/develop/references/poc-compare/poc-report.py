@@ -11,7 +11,7 @@
                      兩邊都量不到的 probe（選擇器沒對到）列進 unresolved，不算涵蓋
   evidence/compare-<checkpoint>.png  左 POC / 右實作 的同寬、頂端對齊合成圖（給 Google 文件與肉眼核對）
 """
-import argparse, glob, json, os, re, sys
+import argparse, glob, hashlib, json, os, re, sys
 from collections import defaultdict
 
 ap = argparse.ArgumentParser()
@@ -189,7 +189,10 @@ os.makedirs(OUT, exist_ok=True)
 open(os.path.join(OUT, "report-tables.md"), "w").write("\n\n".join(tables) + "\n")
 json.dump({"totals": totals, "items": items}, open(os.path.join(OUT, "diff-items.json"), "w"), ensure_ascii=False, indent=1)
 missing = [c for c in required if c not in present and c not in na]
-coverage = {"required": required, "present": sorted(present), "na": na, "missing": missing, "unresolved": unresolved, "checkpoints": cps, "skipped_checkpoints": skipped_cps}
+coverage = {"required": required, "present": sorted(present), "na": na, "missing": missing, "unresolved": unresolved, "checkpoints": cps, "skipped_checkpoints": skipped_cps,
+            # 比對設定跑過一次就凍結；記下雜湊，事後改了 probe 或選擇器看得出來
+            "config_path": os.path.abspath(cfg_path) if os.path.exists(cfg_path) else None,
+            "config_sha256": hashlib.sha256(open(cfg_path, "rb").read()).hexdigest() if os.path.exists(cfg_path) else None}
 json.dump(coverage, open(os.path.join(OUT, "coverage.json"), "w"), ensure_ascii=False, indent=1)
 
 # --- 並排合成圖：同寬縮放、頂端對齊、上方標題列 ---------------------------------------------------------

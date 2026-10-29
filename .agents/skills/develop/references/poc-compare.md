@@ -87,6 +87,8 @@ JSON.stringify({
 
 **判定規則**：❌ 只有兩種出路——修掉，或列進「### POC 差異決策」交給使用者（AskUserQuestion，附並排截圖）。不可以自行標成「設計系統」「刻意」就放過；FRD 明文寫的降級（例如成員新增 coming soon）才算已知刻意。使用者確認後在 task.md「驗證」區塊寫一行 `POC 差異決策已確認`，`pre-pr-gate.sh` 才會放行 UI repo 的 PR。重跑 `poc-report.py` 後出現先前沒有的 ❌（例如升級後新增的「未解析」「存在」列），要重新交使用者做差異決策並更新這一行，不能沿用舊的確認。
 
+**比對設定跑過一次就凍結**：第一次產出差異表後，`config.mjs` 的 probe 與選擇器、`categories.na`、`$TASK/poc/` 副本都視為凍結。`coverage.json` 會記下 `config_sha256`。不能為了讓 ❌ 消失而刪 probe、換較寬鬆的選擇器、補 na 或改 POC 副本；真的要改（例如選擇器打錯），在差異表下方寫「改了什麼、為什麼、改前後的 config_sha256」。覺得 POC 本身錯了就停下來問使用者，不要自己修。hover、focus、disabled、error 這類狀態用 config 的 `flow` 各開一個 checkpoint 量，不只靠肉眼。
+
 ### 3.5 肉眼核對（必做）
 
 probe 只量你想到的屬性。量完把每組並排截圖用 Read 打開看一遍，列出肉眼可見但表裡沒有的差異（遮罩深淺、按鈕實心／外框／ghost、modal 有沒有內捲、元件有無），補進差異表。probe 表最低涵蓋範圍見 [poc-probe-checklist.md](poc-probe-checklist.md)。
