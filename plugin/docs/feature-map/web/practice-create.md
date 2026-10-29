@@ -74,3 +74,8 @@
 - 精靈標題在「預覽」步驟變成「預覽」（apps/product/src/components/practice/create/wizard/wizard-page.tsx:289），且預覽步驟不顯示步驟計數。
 - 模板頁 templateId 不存在時顯示「載入模板時發生錯誤」（apps/product/src/app/[locale]/practices/create/template/[templateId]/page.tsx:53；packages/i18n/src/locales/zh-TW/practice.json:118）。
 - locale：zh-TW 無前綴，英文為 `/en/practices/create`（packages/i18n/src/routing.ts）。
+- 自動化瀏覽器預設英文，會被導到 `/en/...`；先設 cookie `NEXT_LOCALE=zh-TW`（2026-10-29 #141 草稿實跑）。
+- 「安裝島島阿學」橫幅：第一次進精靈時出現在畫面底部，**桌機 1280 寬也會出現**，蓋住「上一步／下一步」（Playwright 會一直等 click 逾時）。關掉後同一個瀏覽器不再出現。橫幅的關閉鈕可存取名稱是「關閉」，跟精靈右上角的關閉鈕同名，要限定在橫幅內點，不要直接 `getByRole('button', { name: '關閉' })`（2026-10-29 #141 草稿實跑）。
+- 輪播按鈕裡有共用元件的 sr-only 文字「Previous slide／Next slide」（packages/ui/src/components/carousel.tsx:201），抓頁面文字時會看到英文，但可存取名稱是 aria-label 的「上一個／下一個」，選擇器照上表即可。
+- 模板模式只有直接開 `/practices/create/manual?mode=template` 才進得去（標題「建立實踐模版」、節奏步驟沒有開始日期）。`/practices/create?mode=template` 不讀 `mode`，「我想自己建立」固定導到 `/practices/create/manual`；產品內也找不到連到模板模式的入口（2026-10-29 實測，#141）。
+- 驗完留下的實踐會持續寄提醒信到測試帳號；請驗收留言沒寫清理方式時，在報告列出建立的實踐 ID，由工程決定是否刪除。

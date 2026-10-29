@@ -37,6 +37,8 @@ PM 專用的測試帳號（不是個人帳號），一個角色一個，不互�
 
 只用一般的登入流程。需要密碼、驗證碼或 Google 再次驗證時暫停該角色的步驟，請使用者自己完成；不在對話裡要密碼，不繞過登入。
 
+**例外：agent 跑草稿模式**（例如在 Claude Code 代跑，瀏覽器登入的不是 PM 測試帳號）時，經使用者同意，可以用工程的 dev-login（`mode=user`，做法見 develop 的 `references/browser-verify.md` §3a）登入**同一個**測試帳號，把 token 設成 `.daodao.so` 網域的 `auth_token` cookie。報告的「測試環境／帳號角色」要寫明「以 dev-login 登入，PM 正式驗收時用 Google 登入」。發布模式一律由 PM 用 Google 登入，不用 dev-login。token 不寫進報告、截圖或 log，用完刪掉。
+
 ## 瀏覽器
 
 每個瀏覽器的登入狀態各自獨立，切換瀏覽器或帳號後都要重新確認登入的是誰（畫面右上角的使用者名稱或設定頁的信箱）。
@@ -50,6 +52,8 @@ PM 專用的測試帳號（不是個人帳號），一個角色一個，不互�
 同時要用兩個角色時（例如 admin 設定、使用者查看），一個瀏覽器登一個角色。驗完產品 Web 再開後台時，留意兩邊的登入 cookie 會互相影響，切換前先確認身分。
 
 被瀏覽器擋（`ERR_BLOCKED_BY_CLIENT`）→ 先換另一個可用的瀏覽器再試一次；仍被擋就 BLOCKED。
+
+自動化瀏覽器（playwright、headless）預設語系是英文，產品 Web 會導到 `/en/...`。開始前先設 cookie `NEXT_LOCALE=zh-TW`（網域 `app-dev.daodao.so`），或在 context 設 `locale: 'zh-TW'`，再照留言的網址打開；確認網址沒有 `/en/` 前綴、畫面是中文。
 
 ## 截圖與上傳
 

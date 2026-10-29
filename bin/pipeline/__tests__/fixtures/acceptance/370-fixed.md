@@ -18,6 +18,7 @@
   - 工程驗收項（畫面看不出，不列入上面步驟）：AC-5
 - AI 驗證報告：[2026-10-22 dev 冒煙 #369／#297／#370](https://docs.google.com/document/d/1O0cn1UsQcudIed_JKIVQCtO6mUEVIc25_T-BdCC2aTE/edit?usp=drivesdk)
 - 已知限制：App 端編輯頁是另一張卡，不在這次範圍
+- 驗完收尾：none（只編輯既有實踐，不建立資料）
 
 ✅ 通過 → 直接關掉這張 issue，卡片會自動移到 Done
 ❌ 有問題 → 留言寫「哪一條 AC 沒過、看到什麼」，再把卡片移到 Need Fix
