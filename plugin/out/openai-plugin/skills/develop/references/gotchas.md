@@ -52,3 +52,8 @@ POC 比對的陷阱在 [poc-compare.md](poc-compare.md)「`.dc.html` POC 的已�
   issue comment 同樣走 `gh api …/issues/<n>/comments -X POST -F body=@<file>`。（#218）
 - **刪測試需要的 `.test-integrity-review.json` 回條**：回條綁定那一次的測試 diff，留在 main 會擋下之後每個 PR 的 `test-integrity` required check。改了任何測試檔就重算 digest，PR 一 merge 就刪。完整流程見 root 的 `scripts/check-test-integrity.md`。
 - **worktree 共用 metadata（任務資料夾是複製別的任務建的）**：兩個 checkout 的 `.git` 指向同一份 metadata 時，HEAD／index 會互相覆蓋，而 `git worktree remove` 會刪掉那份 metadata，連帶弄壞另一個（2026-10-10 移除 240、290 弄壞 233、214）。開新任務時用 `git worktree add`，不要複製舊任務資料夾。移除前跑 `pnpm -s tsx bin/pipeline/worktree-audit.ts`，回報 `shared`／`copied` 就停。已壞掉的修法：重建 metadata 目錄（`commondir` 寫 `../..`、`gitdir` 寫該 checkout 的 `.git` 絕對路徑、`HEAD` 寫對應 PR head sha，必要時 `git fetch origin pull/<n>/head` 補物件），再 `git reset -q` 只重建 index、不動工作檔案，最後比對 PR head 確認沒有遺失修改。
+- **origin/dev 的測試本來就有紅的**：開工時先在 `origin/dev` 跑一次會受影響的測試，結果存成 `$TASK/evidence/baseline-test.txt`；之後只看這次新增的失敗。會時好時壞的測試跑兩次再判斷。不先存基準，就分不出紅燈是自己弄的還是原本就有。（task 189、154、281）
+- **Prisma 報「Must call super constructor in derived class」**：先懷疑 `select` 了不存在的欄位，不是 class 繼承出錯。例如 `users` 表沒有 `name`，只有 `nickname`（`daodao-server` `prisma/schema.prisma` 的 `model users`）。（task 189、140）
+- **讀 API 錯誤訊息**：server 回的錯誤長這樣：`{ success: false, error: { message } }`。前端用 `packages/api/src/errors.ts` 的 `apiErrorFromBody` 解析，不要直接讀 `response.error.message`。表單送出失敗時保留使用者輸入，不要清空。（task 154、353、188、377、383）
+- **權限查詢失敗不等於沒權限**：燈塔權限 API 失敗時 middleware 會導到 `/lighthouse/access-required?reason=unavailable`。這時要顯示「暫時無法確認」的錯誤文案和重試，不能顯示「沒開通」。其他需要權限判斷的頁面也一樣，要把「查詢失敗」和「沒權限」分成兩種狀態。（#384、#354）
+- **後台建立共同挑戰回「此組織目前已停權」**：共用的測試組織被停權了，不是功能壞掉。建立前先在後台確認組織狀態；停權時改用「lighthouse test」組織，或請 admin 恢復。（#179、#180、#295）
