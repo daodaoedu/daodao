@@ -33,6 +33,13 @@ export const PM_STEP_FORBIDDEN: ReadonlyArray<{ label: string; re: RegExp }> = [
   { label: "JSON 欄位", re: /"[A-Za-z_]+"\s*:/ },
 ];
 
+/**
+ * A bare URL running into full-width punctuation: GitHub's autolink swallows the 「，」「。」 into the
+ * link, so the PM gets a 404 (memory feedback_github_links_cjk_punct). Markdown links and <url> are fine:
+ * the URL stops at the closing `)` or `>` before any punctuation.
+ */
+const BARE_URL_CJK = /https?:\/\/[^\s<>()\[\]]*?[（）、，。：；！？「」]/;
+
 /** Technical URLs the PM should never be sent to (anywhere outside the engineering block). */
 const TECH_URL = /https?:\/\/(?:server-dev\.|server\.|[^\s)]*\/api\/)[^\s)]*/i;
 
@@ -194,6 +201,18 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
       }
     }
   }
+
+  lines.forEach((text, i) => {
+    // `code` spans are not autolinked, so a URL inside backticks is safe
+    const m = text.replace(/`[^`]*`/g, "").match(BARE_URL_CJK);
+    if (m) {
+      findings.push({
+        line: at(i),
+        rule: "bare-url-cjk-punct",
+        message: `裸網址後面直接接全形標點（${m[0].slice(-1)}）：GitHub 會把標點吃進連結，PM 點了是 404。改成 [說明文字](網址)`,
+      });
+    }
+  });
 
   const engSet = new Set(eng ? [eng.headerIdx, ...eng.idx] : []);
   lines.forEach((text, i) => {
