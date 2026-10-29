@@ -92,6 +92,8 @@ manifest 的 trace.ref／sha256 引用產生的 trace.json。嚴格 pilot 額外
 
 ## pstack 原始碼對照（2026-10-10）
 
+> 全部 pstack 項目的採用狀況（2026-10-29 盤點）見 [pstack-coverage.md](pstack-coverage.md)。
+
 原始參考：[/correct](https://github.com/cursor/plugins/blob/main/pstack/skills/correct/SKILL.md)、[create-verification-skill](https://github.com/cursor/plugins/blob/main/pstack/skills/create-verification-skill/SKILL.md)、[verify-and-ship](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/06-verify-and-ship.md)、[make-it-yours](https://github.com/cursor/plugins/blob/main/pstack/docs/guide/09-make-it-yours.md)。此前實作只有導讀文章依據，未直接比較原始 skill。
 
 採用的做法：先讀 repo 而非要求人填技術欄位；規則由架構／型別／lint／CI／test 到 docs 逐層選擇；驗證工具提供 launch、ready／doctor、drive、evidence、cleanup，先實跑再交付；skill 變更隔離試驗，不即時污染其他任務。這幾份 pstack 文件重點是實際產品行為，沒有把完整寫入操作 trace 當所有 PR 的通用前置条件。寫入 trace 是我們另加的輔助證據，不能取代 API／UI／服務驗收，collector 不適用時不得阻擋原本合法的驗收流程。

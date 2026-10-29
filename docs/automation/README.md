@@ -23,7 +23,8 @@
 | [evals.md](evals.md) | Weekly 評估指標（歷史快照；`review-evals` 週報已停） |
 | [../archive/automation/](../archive/automation/README.md) | 已退役：Routine A／B 運維手冊與 prompt、manual-issue-to-routine、spec-drafter spike、move-board-card agentic flows／templates |
 | [review-false-positive-research.md](review-false-positive-research.md) | AI code review 誤判：知識庫解不了的三個問題的文獻對照與落地順序（#168／#169） |
-| [../../.github/review-knowledge/README.md](../../.github/review-knowledge/README.md) | 誤判知識庫：樣態 A–G、記錄方式、本機 skill 與 CI 共用機制 |
+| [../../.github/review-knowledge/README.md](../../.github/review-knowledge/README.md) | 誤判知識庫：樣態 A–G、既有紀錄轉成的回歸測試（2026-10-29 起不再收集）、本機 skill 與 CI 共用機制 |
+| [pstack-coverage.md](pstack-coverage.md) | pstack 92 項 skill／playbook／原則對照 daodao 的採用狀況與建議下一步（採用新項目時更新狀態欄） |
 | [architecture.md](architecture.md) | ⚠️ 舊版 Notion pipeline 架構（僅供考古） |
 
 ## High-Level 介紹
