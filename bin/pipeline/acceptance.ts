@@ -54,6 +54,20 @@ const ENGINEERING_HEADER =/^(?:\s*[-*]\s*|#{1,6}\s+)\**工程證據/;
 const STEPS_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗收步驟/;
 /** #141's hand-off had no cleanup line, so the PM could not tell whether to delete the practices it created. */
 const CLEANUP_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**驗完收尾/;
+const ACCOUNT_HEADER = /^(?:\s*[-*]\s*|#{1,6}\s+)\**測試帳號/;
+
+/**
+ * Accounts the PM cannot sign in with: the PM only has Google login, while fixture accounts
+ * (#323, ids 900001–900003, display names 「驗收・組織管理員」 etc.) and QA plus-addresses only work
+ * through the engineers' dev-login. 16 BLOCKED reports came from hand-offs naming them (#277, #279).
+ * 「島島驗收組織」 alone is fine: the PM's own account can be added to the fixture org.
+ */
+const PM_UNUSABLE_ACCOUNT: ReadonlyArray<{ label: string; re: RegExp }> = [
+  { label: "fixture 帳號", re: /fixture|驗收・(?:組織管理員|教練|學員)/i },
+  { label: "QA plus 別名信箱", re: /\+(?:qa|fixture)[\w-]*@|[\w.]+\+[\w-]+@/i },
+  { label: "dev-login", re: /dev-?login/i },
+  { label: "fixture 帳號 ID", re: /\b9000\d\d\b/ },
+];
 
 /** Numbered step: `1. x`, `1.x`, `1、x`, `1) x`. */
 const STEP_LINE = /^\s*\d+[.)、．]\s*\S/;
@@ -163,6 +177,22 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
       rule: "cleanup-missing",
       message: "缺「驗完收尾」：寫出驗收建立的資料要刪除、封存或保留，不會建立資料就寫 none（#141 PM 不知道要不要刪測試實踐）",
     });
+  }
+
+  const account = sectionLines(lines, ACCOUNT_HEADER);
+  if (account) {
+    for (const i of [account.headerIdx, ...account.idx]) {
+      for (const { label, re } of PM_UNUSABLE_ACCOUNT) {
+        const m = lines[i].match(re);
+        if (m) {
+          findings.push({
+            line: at(i),
+            rule: "pm-account-unusable",
+            message: `測試帳號出現「${m[0]}」（${label}）：PM 只能 Google 登入，用不了 fixture 帳號與 dev-login。改寫成 PM 的 admin／一般使用者測試帳號；需要團主、團友身分就先把 PM 帳號加進組織或場次，並寫明加在哪裡（#277、#279）`,
+          });
+        }
+      }
+    }
   }
 
   const engSet = new Set(eng ? [eng.headerIdx, ...eng.idx] : []);

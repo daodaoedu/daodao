@@ -15,6 +15,8 @@
 # 教訓：#189（POC 比對漏做）、#171→#188（畫面驗過了、使用者建不了場次；deferred 項目只留在 comment）、
 #       #166→#233（「需登入才能驗」的頁面沒驗就 merge，evidence 截圖是登入牆；settings 橫向溢出 132px 六個月沒人量到）。
 # 逃生口：DEV_TASK_SKIP_GATE="<原因>"（全部閘門）或 DEV_TASK_SKIP_POC_GATE="<原因>"（相容舊名），都寫進 gate ledger 留痕。
+# 預演：PRE_PR_GATE_PREVIEW=1 時一次列出閘門 1–8 的所有缺漏、不寫 gate ledger，有缺漏 exit 2。
+#       develop verify 結束時用 pre-pr-gate-preview.sh 跑（gate ledger 裡 133 次擋下都是開 PR 當下才發現缺證據）。
 set -euo pipefail
 
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -74,10 +76,19 @@ is_ui_repo=0
 case "$repo_dir" in daodao-f2e|daodao-admin-ui) is_ui_repo=1 ;; esac
 
 skip_reason="${DEV_TASK_SKIP_GATE:-${DEV_TASK_SKIP_POC_GATE:-}}"
+preview="${PRE_PR_GATE_PREVIEW:-0}"
+preview_failed=0
+# 預演不是真的發 PR，寫進 ledger 會讓「被擋幾次」的統計失真
+[ "$preview" = 1 ] && LEDGER_FILE=/dev/null
 
-# 統一的擋／略過處理：有 skip_reason 就留痕放行，否則印訊息並 exit 2
+# 統一的擋／略過處理：有 skip_reason 就留痕放行；預演只記下、繼續檢查下一道；否則印訊息並 exit 2
 gate_fail() {
   local rule="$1" target="$2" message="$3"
+  if [ "$preview" = 1 ]; then
+    printf '%s\n\n' "$message" >&2
+    preview_failed=1
+    return 0
+  fi
   if [ -n "$skip_reason" ]; then
     log_gate_event "$rule" "$target" "skip:$skip_reason" "develop"
     return 0
@@ -382,6 +393,15 @@ EOF
 )"
     fi
   fi
+fi
+
+if [ "$preview" = 1 ]; then
+  if [ "$preview_failed" = 1 ]; then
+    echo "↑ 預演：以上是現在發 PR 會被擋的項目，補完再進 finish" >&2
+    exit 2
+  fi
+  echo "✅ 預演：閘門 1–8 都會通過（閘門 9 交付契約不在預演範圍）" >&2
+  exit 0
 fi
 
 # --- 閘門 9：試行交付契約。未完成真實 client pilot 前預設 off ---
