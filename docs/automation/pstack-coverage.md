@@ -8,8 +8,8 @@
 
 | 狀態 | 項目數 |
 |---|---|
-| 已採用 | 34 |
-| 部分採用 | 32 |
+| 已採用 | 35 |
+| 部分採用 | 31 |
 | 未採用 | 24 |
 | 不適用 | 2 |
 | 合計 | 92 |
@@ -46,7 +46,7 @@
 | autopilot-full／autopilot-stack | 每支 PR 一個 owner 從建置做到 merge；由沒寫過那段程式的 swarm 驗證後才 merge | 未採用 | 2026-09-20 起 Routine A／B／C 刻意退役，所有變更都走人審 PR（`docs/workflow.md` 第 894 行） | — |
 | orchestrate playbook | 一個協調者管理多日、多 PR、大量 subagent 的長期專案 | 未採用 | `plugin/skills/develop/references/parallel-dev.md` 只寫 2–3 個並行任務的約定，沒有協調者角色 | — |
 | hillclimb playbook | 針對單一指標持續迭代改善 | 未採用 | 沒找到；`docs/automation/review-false-positive-research.md` 有 precision／recall 目標，但沒有迭代流程 | — |
-| worktree-cleanup playbook | 先快照與稽核磁碟用量，用 `worktree-audit.sh` 判斷可清的 worktree 再清理 | 部分採用 | `plugin/skills/develop/references/phases/cleanup.md` 處理單一任務的 worktree 移除。缺：跨任務稽核腳本（共用 gitdir 的坑目前只記在個人 memory） | — |
+| worktree-cleanup playbook | 先快照與稽核磁碟用量，用 `worktree-audit.sh` 判斷可清的 worktree 再清理 | 已採用 | `bin/pipeline/worktree-audit.ts`（唯讀稽核共用／複製／損壞的 checkout 與孤兒 metadata，列出沒有 checkout 的任務資料夾）；`cleanup.md` 第 2 步移除前先跑。磁碟用量快照未做 | #426 |
 | authoring-a-skill playbook | 修改 skill 都走驗證：frontmatter、引用檔案存在、跨 skill 連結可解析 | 已採用 | `plugin/scripts/build.ts`（`pnpm plugin:build`／`plugin:check`，含產物死連結檢查）；正本與產物分離規則寫在 `AGENTS.md` | #418 |
 | arena | 平行產生 N 個候選，挑一個當基底，再把其他候選的優點移植進來 | 未採用 | 沒找到 | — |
 | prototype playbook | 拋棄式原型用來做設計決策 | 未採用 | POC 由設計端提供，`poc-compare.md` 只做比對；沒有工程端的拋棄式原型流程 | — |
@@ -147,7 +147,7 @@
 
 ## 3. 建議下一步
 
-「部分採用」32 項與「未採用」24 項、「不適用」2 項，依跟這個 repo 的關係分成四類。分類是依 repo 現況與過去事故做的判斷，不是 pstack 本身的分級；看法不同可以改列。
+分類當時（2026-10-29）的「部分採用」32 項與「未採用」24 項、「不適用」2 項，依跟這個 repo 的關係分成四類；之後做完的項目在表中加刪除線並標 PR，摘要與對照表的狀態同步更新。分類是依 repo 現況與過去事故做的判斷，不是 pstack 本身的分級；看法不同可以改列。
 
 ### 3.1 值得做（10 項）
 
@@ -160,7 +160,7 @@
 | 3 | ketchup：「等你決定」彙整（未採用） | 人類 reviewer 同時面對多張卡、多支 PR 與 PM 驗收；`board.ts audit` 只看狀態，沒有列出卡在誰、要決定什麼、決定所需資訊。加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結 | S |
 | 4 | type-system-discipline、typescript-best-practices（部分採用） | #418 留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。補窮舉檢查（`satisfies never`）、ID 類 branded type、zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件先拿過去事故證明 lint 會失敗 | M |
 | 5 | correct 的定期掃描（correct 已採用，這是延伸） | 防線機制已有，但候選來源只有「人發現第二次」。`analyze-ledger.sh` 已累積閘門紀錄，`verify-deploy` §3.5 也有閘門候選。每兩週彙整一次，找出反覆出現的類別，依 `agent-learning-loop.md` 提出候選規則，人核准後才實作。排程前先手動跑一次 | M |
-| 6 | worktree-cleanup：跨任務稽核（部分採用） | 2026-10-10 批次移除 worktree 時，因任務資料夾共用 git metadata 弄壞 #233、#214；`cleanup.md` 只處理單一任務。加一支唯讀稽核腳本，移除前列出重複的 gitdir 與孤兒 worktree | S |
+| 6 | ~~worktree-cleanup：跨任務稽核~~（#426 已做） | 2026-10-10 批次移除 worktree 時，因任務資料夾共用 git metadata 弄壞 #233、#214；`cleanup.md` 只處理單一任務。加一支唯讀稽核腳本，移除前列出重複的 gitdir 與孤兒 worktree | S |
 | 7 | migrate-callers-then-delete-legacy-apis（部分採用） | #411 改名時已這樣做（不留轉介 skill），但沒寫成規則；寫進 develop `refactor` 分支，避免之後留下轉介或舊 API | S |
 | 8 | in-your-own-words：動工前重述目標（未採用） | 開發前先用一句話確認對象、環境與交付形式，目前沒寫進 develop 流程；寫進 `start.md`，重述與 issue 不一致時先問 | S |
 | 9 | comment-sicko、no-comments：註解審查（未採用） | review-change 四引擎的焦點都不看註解品質（敘述式註解、註解掉的程式、workaround 說明）；在 review 焦點或 check-commit 加一條 | S |
