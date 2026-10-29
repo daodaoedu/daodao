@@ -51,7 +51,7 @@ const PATTERNS = {
 };
 
 // ---- 規則（確定性；每條規則都對應知識庫裡的樣態，改規則要同時加 fixture）----
-const UNVERIFIABLE_RE = /無法確認|无法确认|未能確認|無法判斷|无法判断|被截斷|被截断|不確定是否|不确定是否|無法得知|cannot (?:be )?(?:verif|confirm)|unable to (?:verify|confirm)|truncated in the diff|not visible in the diff|not shown in (?:the )?diff|diff (?:doesn'?t|does not) show|已顯示的(?:程式碼)?(?:段落|片段)|已显示的(?:代码)?(?:段落|片段)|在顯示的(?:段落|片段)|(?:visible|shown|displayed) (?:portion|snippet|section|segment)/i;
+const UNVERIFIABLE_RE = /無法確認|无法确认|未能確認|未被證明|未经证明|未經證實|未经证实|無法判斷|无法判断|被截斷|被截断|不確定是否|不确定是否|無法得知|cannot (?:be )?(?:verif|confirm)|unable to (?:verify|confirm)|truncated in the diff|not visible in the diff|not shown in (?:the )?diff|diff (?:doesn'?t|does not) show|已顯示的(?:程式碼)?(?:段落|片段)|已显示的(?:代码)?(?:段落|片段)|在顯示的(?:段落|片段)|(?:visible|shown|displayed) (?:portion|snippet|section|segment)/i;
 const HYPOTHETICAL_RE = /若未來|如果未來|若將來|萬一|万一|未來若|未来若|假設|hypothetical|in the future|if a future|should a future|potential(?:ly)? (?:risk|issue|problem)/i;
 
 const REMINDER_RE = /請確認|請確保|請檢查.{0,24}是否|需確認|需確保|需要確認|需要確保|需同步|確認.{0,24}(?:同步|一致|更新)|是否.{0,24}一併|記得(?:更新|同步)|建議檢查.{0,24}是否|ensure .{0,40}(?:updated|in sync|consistent)|make sure|double[- ]check|please (?:check|verify|confirm)|verify that all/i;
@@ -451,12 +451,32 @@ function duplicateIds(db) {
 }
 
 // ---- record ----
+// 回傳 record 參數的錯誤清單（空陣列 = 可寫入）。
+// 文字欄位必須是非空字串：parseArgs 遇到 `--finding` 後面沒值時給 true，曾寫出 finding:true 的紀錄。
+// 新紀錄必須帶 sample + expected：沒有 sample 的紀錄不進 test、也不影響 filter，留著只是歷史。
+function recordErrors(opt) {
+  const errors = [];
+  const text = (k) => typeof opt[k] === "string" && opt[k].trim() !== "";
+  for (const k of ["pattern", "source", "engine", "repo", "finding", "why"]) {
+    if (!text(k)) errors.push(`--${k} 必須是非空文字`);
+  }
+  if (!/^\d+$/.test(String(opt.pr))) errors.push("--pr 必須是數字（人工造的 fixture 用 0）");
+  if (text("pattern") && !PATTERNS[opt.pattern]) errors.push(`--pattern 必須是 ${Object.keys(PATTERNS).join("/")}`);
+  if (text("source") && !["ci", "local"].includes(opt.source)) errors.push("--source 必須是 ci 或 local");
+  if (opt.expected !== undefined && !["keep", "drop", "downgrade"].includes(opt.expected)) errors.push("--expected 必須是 keep/drop/downgrade");
+  if (opt["no-sample"] !== undefined) {
+    if (!text("no-sample")) errors.push("--no-sample 要寫原因，例如 --no-sample \"CI structured finding，沒有表格列\"");
+    if (opt.sample !== undefined || opt.expected !== undefined) errors.push("--no-sample 不能和 --sample／--expected 一起用");
+  } else {
+    if (!text("sample")) errors.push("缺 --sample（那一列表格原文）；真的沒有就用 --no-sample \"<原因>\"");
+    if (opt.expected === undefined) errors.push("缺 --expected（keep/drop/downgrade）：沒有 expected 的 sample 不會被 test 跑到");
+  }
+  return errors;
+}
+
 function record(opt) {
-  const required = ["pattern", "source", "engine", "repo", "pr", "finding", "why"];
-  for (const k of required) if (!opt[k]) throw new Error(`record 缺少 --${k}`);
-  if (!PATTERNS[opt.pattern]) throw new Error(`--pattern 必須是 ${Object.keys(PATTERNS).join("/")}`);
-  if (!["ci", "local"].includes(opt.source)) throw new Error("--source 必須是 ci 或 local");
-  if (opt.expected && !["keep", "drop", "downgrade"].includes(opt.expected)) throw new Error("--expected 必須是 keep/drop/downgrade");
+  const errors = recordErrors(opt);
+  if (errors.length) throw new Error(`record 參數有誤：\n- ${errors.join("\n- ")}`);
   const file = resolveDb(opt.db, { forWrite: true });
   const db = loadDb(file);
   const id = nextId(db);
@@ -469,6 +489,7 @@ function record(opt) {
   };
   if (opt.sample) entry.sample = opt.sample;
   if (opt.expected) entry.expected = opt.expected;
+  if (opt["no-sample"]) entry.no_sample_reason = opt["no-sample"];
   fs.appendFileSync(file, JSON.stringify(entry) + "\n");
   process.stdout.write(`${id} → ${file}\n`);
 }
@@ -606,4 +627,4 @@ function main() {
 if (require.main === module) {
   try { main(); } catch (e) { console.error(`review-knowledge: ${e.message}`); process.exit(1); }
 }
-module.exports = { filterBody, promptBlock, nextId, duplicateIds, PATTERNS, verifyBody, verifyFindings, verifyNote, extractIdentifiers, absentClaimKind, makeGrep, runVerifyFixture };
+module.exports = { filterBody, promptBlock, nextId, duplicateIds, recordErrors, PATTERNS, verifyBody, verifyFindings, verifyNote, extractIdentifiers, absentClaimKind, makeGrep, runVerifyFixture };
