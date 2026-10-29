@@ -8,9 +8,9 @@
 
 | 狀態 | 項目數 |
 |---|---|
-| 已採用 | 36 |
-| 部分採用 | 31 |
-| 未採用 | 23 |
+| 已採用 | 39 |
+| 部分採用 | 30 |
+| 未採用 | 21 |
 | 不適用 | 2 |
 | 合計 | 92 |
 
@@ -52,7 +52,7 @@
 | prototype playbook | 拋棄式原型用來做設計決策 | 未採用 | POC 由設計端提供，`poc-compare.md` 只做比對；沒有工程端的拋棄式原型流程 | — |
 | swarm | 平行派出 N 個 worker，收齊後彙整成一份報告 | 部分採用 | `parallel-dev.md` 允許對機械子步驟 fan out subagent；review-change 四引擎平行執行並產出覆蓋表。缺：通用的分片、彙整與報告格式 | #415 |
 | tdd | 先寫會失敗的測試再修 | 已採用 | `dev.md` 第 3 步 `fix`（失敗測試單獨 commit 在修正之前）；`AGENTS.md` 規定修 bug 必須附 regression test | #411 |
-| no-comments | 派 Comment Sicko 找出多餘註解並刪掉 | 未採用 | 沒找到註解審查規則 | — |
+| no-comments | 派 Comment Sicko 找出多餘註解並刪掉 | 部分採用 | `plugin/skills/check-commit/SKILL.md` 步驟 2.5：commit 前檢查新增的註解（註解掉的程式、複述程式、workaround 沒原因、TODO 沒卡、密度跟周圍不一致）。缺：獨立 reviewer agent | 本 PR |
 | typescript-best-practices | 編輯 .ts／.tsx 時套用 TS 規範 | 部分採用 | `plugin/hooks/ADR-0001-gates-over-guidelines.md`：`no-any`、裸 `@ts-ignore` 直接阻擋，`as any` 只警告。#418 寫明子 repo 的 TS 規範尚未開 PR | #418 |
 
 ### 驗證與證據
@@ -63,7 +63,7 @@
 | maintain-verification-skill | 定期稽核：每個功能派人讀原始碼，再用一個 live session 實際操作，最多開一支修正 PR | 部分採用 | `plugin/docs/feature-map/` 每份檔案標註依據的 dev 版本；規則是改到 UI 時順手更新；test-acceptance 會在報告記下與 feature map 不一致之處。缺：定期稽核 | #419、#420 |
 | visual-parity playbook | 基準就是規格、不能動；用量測判斷是否等價，不靠肉眼 | 已採用 | `plugin/skills/develop/references/poc-compare.md`、`poc-report.py`（`config_sha256` 凍結設定）、`poc-probe-checklist.md`、`layout-probe.mjs`；`pre-pr-gate.sh` 的 `pr-poc-compare-missing` 與 `pr-layout-probe-missing` | #418 |
 | benchmark-checklist | 報數字前先檢查限制因素、重複性，以及工作是否真的有跑 | 已採用 | `dev.md` 第 3 步 `perf`（冷／熱快取、request 是否真的送到 server、差距小於每次之間的變動就算沒有差異） | — |
-| blast-radius | 找出 diff 以外會壞的地方，並用實跑證明安全所依賴的那一個前提 | 部分採用 | `dev.md` `fix`「修完搜一次同樣寫法」；`review-change/references/engines.md` 讓 Codex 負責跨檔契約；`retrieve-context.sh` 的 Context Pack 補 middleware、schema 與刪檔的替代者。缺：pstack 那套「把前提推到實跑等級，並說明停在哪一級」的確定度梯度 | #415 |
+| blast-radius | 找出變更會弄壞的地方，把讓它安全的 1～2 件事用真程式證明 | 已採用 | develop `finish.md` 第 8 步：PR 本文寫「## 安全前提」並標 1～5 級證據，高風險類別至少第 4 級；review-change `findings.md` 步驟 8 核對等級是否相符。缺：大型變更用 arena 多模型交叉 | #430 |
 | interrogate | 讓對手試著打破變更，只保留重跑過能證明的 finding，並列出丟棄清單 | 已採用 | `plugin/skills/review-change/references/findings.md` 步驟 8：P0／P1 要在 review snapshot 重跑重現，交人時附各引擎的丟棄清單。刻意偏離：高風險類別即使無法重現仍阻擋 | #415、#422 |
 | create-formal-verification-skill | 對 bug 代價最高、測試又碰不到的地方產生形式驗證 skill | 未採用 | 沒找到 TLA+／model checking | — |
 | maintain-formal-verification-skill | 程式改了之後同步更新形式模型 | 未採用 | 前一項沒有，這項也就沒有 | — |
@@ -84,7 +84,7 @@
 | why | 跨各種證據來源（版控、issue、文件、聊天）查設計理由與 regression | 部分採用 | `plugin/skills/report-bug/SKILL.md` 第 29 行（`git log`／`git blame`／`gh pr view`）；1.5a 記設計理由；PRD 模板 §5「不採用的方案」。缺：查聊天、文件等其他證據類別 | #417、#418 |
 | teach | 結合 how 和 why，讓人真正理解 | 未採用 | 沒找到 | — |
 | sharpen | 把任務改得更深而不是更大，再重寫 prompt | 未採用 | 沒找到 | — |
-| in-your-own-words | 先重述使用者的目標與問題 | 未採用 | 沒找到明確的重述步驟（report-bug 會改寫成草稿，但用途是整理通報，不是確認目標） | — |
+| in-your-own-words | 先重述使用者的目標與問題 | 已採用 | `plugin/skills/develop/references/phases/start.md` 1.1 第 0 步：用一句話重述對象、環境、交付物與完成條件，寫進 task.md，對不上先問 | 本 PR |
 | 指南：共用程式先寫 README | 共用程式先寫 README 再實作 | 未採用 | 沒找到 | — |
 
 ### 學習與回顧
@@ -119,7 +119,7 @@
 | guard-the-context-window | 大量輸出交給 subagent，主線只留摘要 | 已採用 | `docs/automation/agent-budget-policy.md` §4；`parallel-dev.md`（唯讀調查用 Explore） | — |
 | laziness-protocol | 偏向刪除，做最小的改動 | 部分採用 | 只在 `dev.md` `refactor` 寫「先刪死碼」；沒有通用的 diff 大小原則 | #411 |
 | make-operations-idempotent | 重跑會收斂到相同的最終狀態 | 已採用 | `finish.md` 第 10 步（marker：先找再 PATCH）；`check-commit` 規定 migration 冪等重跑；`test-acceptance` 報告用 marker 防止重複發布 | #417、#419 |
-| migrate-callers-then-delete-legacy-apis | 同一波遷移完呼叫端並刪掉舊 API，不留相容層 | 部分採用 | #411 實際這樣做（dev-task 改名、不留轉介 skill），但沒寫成規則 | #411 |
+| migrate-callers-then-delete-legacy-apis | 同一波遷移完呼叫端並刪掉舊 API，不留相容層 | 已採用 | `plugin/skills/develop/references/phases/dev.md` refactor：改名或換 API 時同一 PR 遷移所有呼叫端（含文件、skill、設定字串），`git grep` 舊名零命中才刪，不留轉介 | #411、本 PR |
 | minimize-reader-load | 減少讀者要追的層數，收掉只有一個呼叫者的 wrapper | 部分採用 | 只在 `dev.md` `refactor` 提到單一呼叫者的 wrapper | #411 |
 | model-the-domain | 有狀態的邏輯要建模，不散成分支 | 部分採用 | 1.5a 要求狀態 union，追加需求時不再加第二個 boolean。缺：獨立的審查準則 | #418 |
 | never-block-on-the-human | 可回復的工作不問就做 | 已採用 | `dev.md` 第 5–6 步（禁止在 phase 結尾問「要繼續嗎」）；`format-commit` 第 122 行 | — |
@@ -155,15 +155,15 @@
 
 | # | 項目 | 為什麼 | 工作量 |
 |---|---|---|---|
-| 1 | blast-radius（部分採用） | daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。改 `findings.md`／`finish.md` 各一段，PR 模板加一欄 | S |
+| 1 | ~~blast-radius~~（#430 已做） | daodao 已有「搜同樣寫法」和 Codex 跨檔焦點，但小 diff 的安全前提多半停在「我說的」或「指到某一行」。#422 已要求 P0／P1 重跑重現，可以延伸到「為什麼這個改動安全」：每個變更寫出 1–2 個安全前提，標明證據停在梯度哪一級，高風險類別要求到「實跑」。改 `findings.md`／`finish.md` 各一段，PR 模板加一欄 | S |
 | 2 | maintain-verification-skill：feature map 定期稽核（部分採用） | PM 驗收與 develop verify 都依賴 feature map，而它只靠「改 UI 時順手更新」。#419 已有一次性的 `path:line` 比對腳本，可以做成像 `board-audit.yml` 的排程：比對 `path:line` 與 `data-testid` 是否仍存在，加一輪 live 抽測，最多開一支修正 PR，減少 #277／#282 這類 BLOCKED。排程前先手動跑一次 | M |
 | 3 | ~~ketchup：「等你決定」彙整~~（#428 已做） | 人類 reviewer 同時面對多張卡、多支 PR 與 PM 驗收；`board.ts audit` 只看狀態，沒有列出卡在誰、要決定什麼、決定所需資訊。加一個唯讀指令或 skill，彙整 Review／Acceptance／Need Fix 卡上待人決定的事項與最新證據連結 | S |
 | 4 | type-system-discipline、typescript-best-practices（部分採用） | #418 留下「TypeScript 規範需在 daodao-server、daodao-f2e 各自開 PR」；`ADR-0001` 只擋 `any`。補窮舉檢查（`satisfies never`）、ID 類 branded type、zod 邊界 parse 後不再斷言，並依 `ADR-0001` 的進場條件先拿過去事故證明 lint 會失敗 | M |
 | 5 | correct 的定期掃描（correct 已採用，這是延伸） | 防線機制已有，但候選來源只有「人發現第二次」。`analyze-ledger.sh` 已累積閘門紀錄，`verify-deploy` §3.5 也有閘門候選。每兩週彙整一次，找出反覆出現的類別，依 `agent-learning-loop.md` 提出候選規則，人核准後才實作。排程前先手動跑一次 | M |
 | 6 | ~~worktree-cleanup：跨任務稽核~~（#426 已做） | 2026-10-10 批次移除 worktree 時，因任務資料夾共用 git metadata 弄壞 #233、#214；`cleanup.md` 只處理單一任務。加一支唯讀稽核腳本，移除前列出重複的 gitdir 與孤兒 worktree | S |
-| 7 | migrate-callers-then-delete-legacy-apis（部分採用） | #411 改名時已這樣做（不留轉介 skill），但沒寫成規則；寫進 develop `refactor` 分支，避免之後留下轉介或舊 API | S |
-| 8 | in-your-own-words：動工前重述目標（未採用） | 開發前先用一句話確認對象、環境與交付形式，目前沒寫進 develop 流程；寫進 `start.md`，重述與 issue 不一致時先問 | S |
-| 9 | comment-sicko、no-comments：註解審查（未採用） | review-change 四引擎的焦點都不看註解品質（敘述式註解、註解掉的程式、workaround 說明）；在 review 焦點或 check-commit 加一條 | S |
+| 7 | ~~migrate-callers-then-delete-legacy-apis~~（已做） | #411 改名時已這樣做（不留轉介 skill），但沒寫成規則；寫進 develop `refactor` 分支，避免之後留下轉介或舊 API | S |
+| 8 | ~~in-your-own-words：動工前重述目標~~（已做） | 開發前先用一句話確認對象、環境與交付形式，目前沒寫進 develop 流程；寫進 `start.md`，重述與 issue 不一致時先問 | S |
+| 9 | ~~comment-sicko、no-comments：註解審查~~（no-comments 已做在 check-commit；獨立 agent 未做） | review-change 四引擎的焦點都不看註解品質（敘述式註解、註解掉的程式、workaround 說明）；在 review 焦點或 check-commit 加一條 | S |
 | 10 | runtime-forensics、trace-forensics：線上問題追查（未採用） | report-bug 會查 `git log`／`git blame`，但沒有看 log 與執行紀錄的固定方法；依 dev／prod 問題的頻率決定要不要做 | M |
 
 ### 3.2 部分採用、現況夠用（26 項）
