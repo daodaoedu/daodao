@@ -16,7 +16,7 @@ Block（exit 2，拒絕編輯）只用於**高信心、低誤報**的規則：
 - `existing-migration`：修改已存在的 migration SQL — 零例外
 - `credential-leak`：AWS key / GitHub PAT / Slack token — 零例外
 - `pr-status-not-verified`（`pre-pr-gate.sh`，Bash `gh pr create`）：develop 任務 task.md Status 仍是 implementing 就發 PR — verify 沒跑完
-- `pr-poc-compare-missing`（同上）：任務有可互動 HTML 原型（`poc/*.dc.html` 或 `index.html + support.js`）卻缺任一項就擋：`notes/poc-compare/report.md`、task.md「### POC 比對」、使用者確認行「POC 差異決策已確認」、`coverage.json` 的 required 類別缺漏（擋「做了但做得淺」）— 2026-09-12 #189 漏做 POC 量測比對、又把可見差異自行放過的教訓；逃生口 `DEV_TASK_SKIP_POC_GATE="<原因>"` 留痕
+- `pr-poc-compare-missing`（同上）：任務有可互動 HTML 原型（`poc/*.dc.html` 或 `index.html + support.js`）卻缺任一項就擋：`notes/poc-compare/report.md`、task.md「### POC 比對」、使用者確認行「POC 差異決策已確認」、`coverage.json` 的 required 類別缺漏（擋「做了但做得淺」）、`coverage.json` 有未解析的 probe 或缺 `unresolved` 欄位（擋「選擇器沒對到卻算通過」）— 2026-09-12 #189 漏做 POC 量測比對、又把可見差異自行放過的教訓；逃生口 `DEV_TASK_SKIP_POC_GATE="<原因>"` 留痕
 - `pr-journey-matrix-missing`（同上）：task.md「### 核心旅程矩陣」缺、沒有「正常」+「錯誤路徑」列、或有 ⬜／❌ 就擋；「核心旅程不適用：<具體原因>」放行並記 `pr-journey-matrix-na` — 2026-09-19 #171 Phase A 驗證全是畫面、四天後 #188「無法建立場次」的教訓：畫面像 POC ≠ 使用者能完成任務
 - `pr-deferred-unlinked`（同上）：task.md「## Deferred items」有項目沒有子 issue `#n` 也沒寫「待開卡：<原因>」就擋 — #171 的「驗證紅框取代 toast」只留在 comment，變成 #188 的第二個根因
 - `pr-body-evidence-missing`（同上）：PR body 缺「## 驗證證據」或裡面沒有報告連結／不適用聲明就擋；CI 版 `pr-evidence-gate.yml` 讀同一段，涵蓋 Codex／手動 gh／pipeline runner
