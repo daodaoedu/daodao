@@ -36,6 +36,8 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
    - **2026-10-29 起 App 暫不由 PM 驗收**（沒有可安裝測試版，避免卡片一直卡在 Acceptance）：只改 App 的卡改走工程驗收——補掛 `acceptance:engineering`，冒煙（Expo web 或模擬器）全部 ✅ 就依第 5 步留「工程驗收通過」留言並關 issue，不進 Acceptance。網頁＋App 混合的卡照常交 PM，但交接留言的 PM 步驟只寫網頁，App 步驟放「已知限制／這次沒做的」並註明「App 暫不驗收」。規則見 move-board-card「誰驗收」。
    - **測試帳號 email 只能用使用者指定的 QA 信箱**（`~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt`，plus 別名 `<base>+qa<issue#>@<domain>`）。dev 走真 SMTP，自己編的地址會把退信灌進維運信箱（#218 實例見 browser-verify.md §3a）。能用 `dev-login mode=user` 登既有帳號就別建新帳號。
    - **冒煙完清理測試資料**：本次新建的 QA 帳號先退訂 `PUT /users/me isSubscribeEmail=false`，再停用 `PUT /admin/users/<external_id>/status {"isActive":false}`；沿用共用 fixture／既有帳號時不停用或重設他人資料。刪掉本次建立的實踐等排程來源並回讀；清不掉的用明顯測試命名並在 comment 標明。
+   - **改到共用資料要還原**：冒煙時改了共用的場次、模板、組織或 fixture（改名稱、加項目、改設定），先記下原值，測完改回並回讀；改不回去就在 comment 寫明改了什麼、原值是什麼。共用 dev 資料被改名或多出東西，是 PM 驗收受阻的第二大原因（#344 場次被改名、#216 多出模板、#332 fixture 少了第 5 天的資源）。
+   - **每一筆都記進冒煙留言的「測試資料」表**（第 4 步）：建立了什麼、改了什麼、怎麼處理、回讀結果。沒建立也沒改就寫一行「未建立或改動資料」，不能空著。
 4. **回寫**：在對應 issue comment 追加「dev 冒煙」表：
 
 ```markdown
@@ -44,6 +46,12 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 |---|---|---|---|---|
 | J-01 | 建立場次 | 正常 | ✅ 201 | <截圖／curl 輸出連結> |
 | J-03 | 建立場次 | 錯誤路徑 | ✅ 409 訊息可見 | ... |
+
+### 測試資料
+| 資料 | ID／網址 | 建立或改動 | 處理 | 回讀 |
+|---|---|---|---|---|
+| 實踐 | <id> | 建立 | 刪除 | ✅ 404 |
+| 場次 900001 名稱 | <網址> | 改動（原值「驗收共同挑戰」） | 改回原值 | ✅ 名稱已還原 |
 ```
 
    全部 ✅ 只代表 AI 冒煙通過，docs/product 標「dev 冒煙通過，待 PM 驗收」；PM 驗收通過後才標「已驗收」（見 §2.6）。任一 ❌ → 走 `report-bug` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。僅工具、登入、環境或 installer 前提不足時記「未冒煙／受阻：<原因>」，不算行為 FAIL 或可用：初次交驗前留 Review 並列出待排除前提；已在 Acceptance 則依 §2.6 留 Acceptance、掛 `acceptance:blocked`。
