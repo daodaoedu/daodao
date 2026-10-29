@@ -6,6 +6,7 @@
  *   pnpm tsx bin/pipeline/board.ts set <issue#> <status> [--add-label x]... [--remove-label y]... [--dry-run]
  *   pnpm tsx bin/pipeline/board.ts remove <issue#> [--dry-run]
  *   pnpm tsx bin/pipeline/board.ts audit [--json] [--stale-days <n>]
+ *   pnpm tsx bin/pipeline/board.ts pending [--json]   # 唯讀：Review／Acceptance／Need Fix 各卡在等誰決定什麼，附最新證據連結
  *
  * Status accepts aliases: todo | ready | wip / "in progress" | review | accept / acceptance |
  * needfix / "need fix" | done.
@@ -15,7 +16,7 @@
  * (dev smoke passed → Acceptance, failed → Need Fix), collect-pr-feedback (→ Need Fix)
  * and request-feature (→ Todo). Done comes from the PM closing the issue (built-in workflow).
  */
-import { auditCards, resolveStatus, type AuditCard } from "./lib.js";
+import { auditCards, pendingDecisions, resolveStatus, type AuditCard, type PendingCard } from "./lib.js";
 import {
   addBoardItem,
   addIssueAssignees,
@@ -160,6 +161,48 @@ function cmdAudit(): void {
   }
 }
 
+const WAITS_ON_LABEL = { reviewer: "等 reviewer", engineer: "等工程", pm: "等 PM" } as const;
+
+function cmdPending(): void {
+  const columns = ["Review", "Acceptance", "Need Fix"];
+  const items = listBoardItemsLite().filter(
+    (it) => it.issueNumber !== null && (it.repository ?? "").endsWith(`/${CENTRAL_REPO}`) && columns.includes(it.status ?? "")
+  );
+  const nums = items.map((it) => it.issueNumber!);
+  const links = getCentralIssueLinks(nums);
+  const comments = getIssueComments(nums, 30);
+  const cards: PendingCard[] = items.map((it) => {
+    const l = links.get(it.issueNumber!);
+    return {
+      number: it.issueNumber!,
+      title: it.title,
+      status: it.status,
+      labels: l?.labels ?? [],
+      statusUpdatedAt: it.statusUpdatedAt,
+      prs: l?.prs ?? [],
+      subIssues: l?.subIssues ?? { total: 0, completed: 0 },
+      comments: comments.get(it.issueNumber!) ?? [],
+    };
+  });
+  const decisions = pendingDecisions(cards, new Date());
+  if (argv.includes("--json")) {
+    console.log(JSON.stringify({ total: cards.length, decisions }, null, 2));
+    return;
+  }
+  console.log(`Review／Acceptance／Need Fix 共 ${cards.length} 張，${decisions.length} 張在等人決定`);
+  for (const who of ["reviewer", "engineer", "pm"] as const) {
+    const rows = decisions.filter((d) => d.waitsOn === who);
+    if (!rows.length) continue;
+    console.log(`\n### ${WAITS_ON_LABEL[who]}（${rows.length}）\n`);
+    console.log("| # | 欄位 | 等了幾個工作天 | 要決定什麼 | 證據 |");
+    console.log("|---|---|---|---|---|");
+    for (const d of rows) {
+      const ev = d.evidence ? `[${d.evidence.label}](${d.evidence.url})` : "—";
+      console.log(`| #${d.number} ${d.title.slice(0, 24)} | ${d.status} | ${d.waitingDays ?? "?"} | ${d.decision} | ${ev} |`);
+    }
+  }
+}
+
 switch (cmd) {
   case "set":
     cmdSet();
@@ -170,6 +213,9 @@ switch (cmd) {
   case "audit":
     cmdAudit();
     break;
+  case "pending":
+    cmdPending();
+    break;
   default:
-    die("usage: board.ts <set|remove|audit> ...");
+    die("usage: board.ts <set|remove|audit|pending> ...");
 }
