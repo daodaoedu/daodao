@@ -16,6 +16,7 @@ jobs:
   regression:
     name: Branch guard regression (untrusted PR)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions: {}
 
     steps:

@@ -12,6 +12,7 @@ permissions:
 jobs:
   regression:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,6 +66,7 @@ jobs:
         # macOS runner 計費約 Linux 的 10 倍：PR 只跑 ubuntu，macOS 留給 main push 與手動觸發
         os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","macos-latest"]') }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

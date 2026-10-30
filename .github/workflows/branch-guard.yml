@@ -12,6 +12,7 @@ jobs:
   guard:
     name: Branch flow rules
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       # Required only while actions/checkout reads the trusted default branch.
       contents: read
