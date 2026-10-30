@@ -640,7 +640,7 @@ Check           `AI review coverage`：complete → success、partial → neutra
 Post            同 head PATCH、新 head POST；超長報告只縮公開留言，完整報告留 artifact
 ```
 
-首次導入時若可信 base 尚無 runtime，必明列 `trusted_runtime_missing`，由本機／人工審核承接；正常合併後後續 PR 才採用。Job 綠燈是流程執行成功且至少審到部分檔案，審查是否完整看 `AI review coverage` check 或 `status.json.complete`；`AI Code Review` 不是 required check，不擋 merge。Workers AI 免費額度每日 10k neurons，用完會整批 429，只能等 00:00 UTC 重置後 re-run。完整設計、primary sources 與限制見 [complete-ci-review.md](automation/complete-ci-review.md)。
+首次導入時若可信 base 尚無 runtime，必明列 `trusted_runtime_missing`，由本機／人工審核承接；正常合併後後續 PR 才採用。Job 綠燈是流程執行成功且至少審到部分檔案，審查是否完整看 `AI review coverage` check 或 `status.json.complete`；`AI Code Review` 不是 required check，不擋 merge；改為手動觸發，PR 貼 `ai-review` label 才跑（跑完自動移除，要再審就再貼一次），貼 `ai-review:full` 強制全檔重審。兩個 label 由 `sync-claude-config` 自動在各 repo 建立（只建缺少的）。Workers AI 免費額度每日 10k neurons，用完會整批 429，只能等 00:00 UTC 重置後 re-run。完整設計、primary sources 與限制見 [complete-ci-review.md](automation/complete-ci-review.md)。
 
 嚴重度依 base 的 `REVIEW.md`（CI 把它當 policy 傳給模型）：
 

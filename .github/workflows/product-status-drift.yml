@@ -20,6 +20,7 @@ jobs:
   check:
     name: Check Product Status Drift
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout daodao (docs + manifest + script)
         uses: actions/checkout@v4
@@ -85,6 +86,7 @@ jobs:
   notify:
     needs: [check]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: failure() && github.event_name == 'schedule'
     steps:
       - name: Notify Discord

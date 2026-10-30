@@ -18,6 +18,7 @@ on:
       - '.github/scripts/test-retrieve-context.sh'
       - '.github/scripts/test-code-review-contract.sh'
       - '.github/scripts/check-pr-evidence.sh'
+      - '.github/scripts/ensure-labels.sh'
       - '.github/scripts/test-pr-evidence.sh'
       - '.github/scripts/review-knowledge.cjs'
       - '.github/scripts/build-review-batches.py'
@@ -39,6 +40,7 @@ concurrency:
 jobs:
   regression:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,12 +53,29 @@ jobs:
         run: |
           node --test .github/scripts/__tests__/*.test.cjs
           bash .github/scripts/test-sync-claude-config-contract.sh
+          bash .github/scripts/test-ensure-labels.sh
           python3 -m unittest discover -s .github/scripts/__tests__ -p 'test_review_*.py' -v
           python3 -m unittest discover -s plugin/hooks/__tests__ -p 'test_read_access_evidence.py' -v
+
+  # sync 的 matrix 不含 daodao 本身，這裡用本 repo 的 token 確保 label 存在
+  labels:
+    needs: regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure shared labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/ensure-labels.sh "${{ github.repository }}"
 
   sync:
     needs: regression
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         repo:
@@ -78,6 +97,14 @@ jobs:
           repository: ${{ github.repository_owner }}/${{ matrix.repo }}
           token: ${{ secrets.REPO_SYNC_TOKEN }}
           path: target
+
+      # code-review.yml 靠貼 `ai-review` label 觸發，label 不存在就無法貼；只建缺少的，不改既有的。
+      # 失敗不擋同步（權限不足時由人工建立）
+      - name: Ensure shared labels
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.REPO_SYNC_TOKEN }}
+        run: bash .github/scripts/ensure-labels.sh "${{ github.repository_owner }}/${{ matrix.repo }}"
 
       - name: Sync settings, workflows, and review scripts
         run: |
