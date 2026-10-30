@@ -52,5 +52,5 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 - 更新人已裁定的問題與草稿，沿用既有授權，不固定再問一次「要修哪些」。缺少產品決策才集中提出關鍵問題。
 - Commit 遵守目標 repo 的 [check-commit](../check-commit/SKILL.md)、[format-commit](../format-commit/SKILL.md) 與確認規則。Commit 授權不等於 push、merge 或回覆 reviewer 的授權。
 - 只有已授權時才 push／回覆／resolve thread；發布前準備具體內容。文字以結構化工具或 body-file 傳送，避免把外部留言插入 shell。
-- **修正併成一次 push**：所有已確認的修正都在本機 commit、跑完受影響的檢查後，才一次 push。處理順序是衝突 → review → CI；碰到 rebase 衝突就回報需要 rebase 的 repo 並停下，不往下處理 CI。每次 push 都會重跑 CI 與 AI Code Review（消耗 Workers AI 額度），也會讓 PR body 的驗證證據對到舊 head。
+- **修正併成一次 push**：所有已確認的修正都在本機 commit、跑完受影響的檢查後，才一次 push。處理順序是衝突 → review → CI；碰到 rebase 衝突就回報需要 rebase 的 repo 並停下，不往下處理 CI。每次 push 都會重跑 CI（AI Code Review 改為貼 `ai-review` label 才跑，需要再審時再貼），也會讓 PR body 的驗證證據對到舊 head。
 - 遠端寫入後讀回確認；逾時先查是否成功，不盲目重送。Push 後使用新 head 查 CI，不沿用舊 head 的通過結果。修正或 rebase 後的驗證證據是否還有效，依 develop finish 步驟 2 的 patch-id 判斷。
