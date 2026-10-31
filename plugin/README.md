@@ -100,11 +100,11 @@ hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同�
 
 ```bash
 codex plugin marketplace add daodaoedu/daodao --sparse .agents/plugins --sparse plugin/out/openai-plugin
-codex plugin add daodao@daodao-local
+codex plugin add daodao@daodao
 ```
 
 - Codex 的 marketplace 只接受本機路徑或 git，不吃 `marketplace.json` 網址，所以不能用 Claude Code 那個 Pages 網址
-- marketplace 名稱叫 `daodao-local`（取自 `.agents/plugins/marketplace.json`），雖然名字有 local，這就是給大家裝的那份
+- marketplace 名稱跟 Claude Code 一致叫 `daodao`（取自 `.agents/plugins/marketplace.json`）。2026-10-31 前裝過舊名 `daodao-local` 的人，先 `codex plugin marketplace remove daodao-local` 再重加
 - 這樣裝的只有 14 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
 
 ### ChatGPT

@@ -125,6 +125,14 @@ describe('settings 指向不需要 clone 的來源', () => {
     expect(Object.keys(settings.extraKnownMarketplaces)).toContain('daodao')
   })
 
+  // Codex 安裝指令是 `codex plugin add daodao@<marketplace 名>`，跟 Claude Code 同名
+  // 才不會出現兩套名字（舊名 daodao-local 讓人以為是本機限定）。
+  it('Codex marketplace 與 Claude Code marketplace 同名', () => {
+    const claude = JSON.parse(readFileSync(join(REPO_ROOT, '.claude-plugin', 'marketplace.json'), 'utf8'))
+    const codex = JSON.parse(readFileSync(join(REPO_ROOT, '.agents', 'plugins', 'marketplace.json'), 'utf8'))
+    expect(codex.name).toBe(claude.name)
+  })
+
   it('repo marketplace 同時列出完整版與網頁版', () => {
     const repo = JSON.parse(readFileSync(join(REPO_ROOT, '.claude-plugin', 'marketplace.json'), 'utf8'))
     const byName = Object.fromEntries(repo.plugins.map((p: { name: string }) => [p.name, p]))

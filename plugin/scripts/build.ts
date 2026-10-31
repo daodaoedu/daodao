@@ -475,7 +475,7 @@ function buildRepoMarketplace(): OutFile[] {
       path: '.agents/plugins/marketplace.json',
       content: `${JSON.stringify(
         {
-          name: 'daodao-local',
+          name: 'daodao',
           plugins: [
             {
               name: pluginMeta.name,
