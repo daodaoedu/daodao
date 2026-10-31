@@ -23,6 +23,7 @@ plugin/
 | `plugin/`（就地） | Claude Code |
 | `.agents/skills/` | Codex CLI／IDE、ChatGPT 桌面版 |
 | `.codex/hooks.json` | Codex 閘門 |
+| `.codex/config.toml` | Codex 的 Playwright MCP（畫面驗證） |
 | `.agents/plugins/marketplace.json` | 本機安裝用的 repo marketplace |
 | `plugin/out/openai-plugin/` | ChatGPT 網頁／行動版（Agent Plugins 格式） |
 | `plugin/out/claude-ai/` + `plugin:zip` | Claude.ai 手動上傳 |
@@ -94,7 +95,9 @@ zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version 
 
 **有本 repo**：不用裝。`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、
 `$REPO_ROOT` 三層）。**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前
-hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。
+hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。專案信任後，Codex 也會載入
+`.codex/config.toml` 的 Playwright MCP，畫面驗證與截圖就能做；Drive 報告另需一次性的 rclone 設定
+（見 [verify-report.md](skills/develop/references/verify-report.md)）。
 
 **沒有 repo**：加 marketplace 再裝，用 `--sparse` 只抓需要的目錄（約 400KB，不 clone 整個 monorepo）：
 
@@ -200,8 +203,8 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | skill 數 | 14 | 14 | 7 | 7 |
 | 本機 repo／shell | ✅ | ✅ | ❌ | ❌ |
 | 自動閘門 | ✅ hooks | ✅ 需 `/hooks` 信任 | ❌ | ❌（hooks 只在 Cowork 跑）|
-| 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
-| Drive 報告 | ✅ | ❌ | ❌ | ❌ |
+| 瀏覽器驗證 | ✅ | ✅ 需信任專案 | ❌ | ❌ |
+| Drive 報告 | ✅ 需 rclone | ✅ 需 rclone | ❌ | ❌ |
 
 Claude.ai 少掉的 7 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
 `move-board-card`、`format-commit`——全都需要使用者的 checkout；以及 `test-acceptance`，要在本機存截圖再上傳。Claude.ai 的 sandbox 有檔案系統也能跑
@@ -214,15 +217,15 @@ Claude.ai 少掉的 7 個是 `develop`、`review-change`、`check-commit`、`ver
 
 | 缺口 | 平台 | 補得起來嗎 | 做法 |
 |---|---|---|---|
-| 瀏覽器驗證 | Codex／ChatGPT 桌面 | 可以（尚未做） | Codex 支援 MCP，把 Playwright MCP 寫進 repo 的 `.codex/config.toml` |
-| Drive 報告 | Codex／ChatGPT 桌面 | 可以（尚未做） | 上傳改成 bash 腳本（rclone），能跑 shell 的平台都能用 |
+| 瀏覽器驗證 | Codex／ChatGPT 桌面 | 已補 | build 產生 `.codex/config.toml`，設定 Playwright MCP（版本釘在 `build.ts` 的 `PLAYWRIGHT_MCP_VERSION`）；專案信任後載入 |
+| Drive 報告 | 所有能跑 shell 的平台 | 已補 | `develop/references/verify-report/upload-report.py`，只需要 python3 與 rclone，不靠 Drive connector |
 | 自動閘門 | Codex／ChatGPT 桌面 | 已有 | 在 repo 裡開，跑 `/hooks` 信任 `.codex/hooks.json` |
 | 自動閘門 | repo 外裝的 Codex plugin | 不行 | plugin 不能附 hooks；在 repo 裡開 Codex 就有 |
 | repo／shell／git／測試 | ChatGPT 網頁／行動、Claude.ai 網頁 | 不行 | 雲端 sandbox 碰不到使用者的 checkout |
 
 分工原則：**開發、驗收、commit 一律在 repo 裡用 Claude Code 或 Codex**；網頁版只當需求入口
-（寫 PRD、開卡、回報 bug、看 PR）。Codex 補上瀏覽器與 Drive 後，兩個本機平台的 14 個 skill
-就沒有能力落差。
+（寫 PRD、開卡、回報 bug、看 PR）。在 repo 裡開的 Codex 補上瀏覽器與 Drive 後，跟 Claude Code
+的 14 個 skill 已經沒有能力落差。
 
 ## 平台事實（2026-09-21 查證）
 
