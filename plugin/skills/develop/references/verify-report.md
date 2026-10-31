@@ -27,6 +27,7 @@ rclone config create gdrive drive scope=drive.file token='<上一步印出的 to
      --slug <task-slug> --evidence "$TASK/evidence" \
      --html "$TASK/notes/report.html" --title "Task <n> 驗證報告"
    ```
+   在 Codex 裡執行時，這個指令要連 Google API，sandbox 會擋網路：一開始就請求在 sandbox 外執行，不要先在 sandbox 內試。repo 的 `.codex/rules/daodao.rules` 已放行這個指令，信任專案後不會再跳核准。
    腳本會把截圖傳到 `gdrive:dev-task-verify-reports/<task-slug>/evidence/`、替換 HTML 裡的截圖網址、建立 Google 文件，最後印出 `{"docUrl": ...}`。HTML 引用了 evidence/ 裡沒有的檔案會直接失敗並列出檔名，不會產出缺圖的報告。
 3. **權限**：腳本預設把 task 資料夾與文件設成「知道連結的人都能看」（不會被搜尋索引，但連結外流就能被任何人開）——Google 文件轉檔伺服器要嵌入圖片必須能公開抓取到，沒有更窄的做法。**內容若明顯敏感（正式環境真實個資、機密商業資料）先跟使用者確認**；不公開就加 `--no-public`，代價是圖片嵌不進去。一般 dev 環境截圖預設可以直接做。
 4. 把 `docUrl` 記進 task.md「驗證」區塊最上方，並帶進 finish 階段 issue comment。

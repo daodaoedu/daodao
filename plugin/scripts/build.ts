@@ -460,6 +460,23 @@ function buildCodexHooks(): OutFile[] {
         '[mcp_servers.playwright]',
         'command = "npx"',
         `args = ["-y", "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}"]`,
+        '# 不設的話每個瀏覽器動作（含開網址）都要人按核准，畫面驗證跑不完',
+        'default_tools_approval_mode = "approve"',
+        '',
+      ].join('\n'),
+    },
+    {
+      // 驗證報告上傳要連 googleapis，Codex sandbox 的網路預設擋掉；只放行這一支腳本，不開整個網路。
+      // 只在信任的專案載入，跟 config.toml 一樣。
+      path: '.codex/rules/daodao.rules',
+      content: [
+        `# ${BANNER.replace(/<!--|-->/g, '').trim()}`,
+        '',
+        'prefix_rule(',
+        '    pattern = ["python3", "plugin/skills/develop/references/verify-report/upload-report.py"],',
+        '    decision = "allow",',
+        '    justification = "develop 驗證報告上傳到 Google 文件，需要連 googleapis",',
+        ')',
         '',
       ].join('\n'),
     },
@@ -478,6 +495,7 @@ function buildCodexHooks(): OutFile[] {
         '',
         '`config.toml` 設定 Playwright MCP，讓 develop 的畫面驗證與截圖在 Codex 也做得到。',
         'Codex 只在專案被信任時載入這份設定；沒信任就沒有瀏覽器，畫面驗證要標「未完成」。',
+        '`rules/daodao.rules` 只放行驗證報告上傳腳本跑在 sandbox 外（要連 googleapis），同樣只在信任後生效。',
         '',
         'skills 不在這裡：Codex 掃的是 `.agents/skills/`（見該目錄 README）。',
         '舊版 `.codex/skills/` 不是 Codex 的實際載入路徑，已於 2026-09-21 移除。',

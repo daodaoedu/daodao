@@ -10,6 +10,7 @@
 
 `config.toml` 設定 Playwright MCP，讓 develop 的畫面驗證與截圖在 Codex 也做得到。
 Codex 只在專案被信任時載入這份設定；沒信任就沒有瀏覽器，畫面驗證要標「未完成」。
+`rules/daodao.rules` 只放行驗證報告上傳腳本跑在 sandbox 外（要連 googleapis），同樣只在信任後生效。
 
 skills 不在這裡：Codex 掃的是 `.agents/skills/`（見該目錄 README）。
 舊版 `.codex/skills/` 不是 Codex 的實際載入路徑，已於 2026-09-21 移除。
