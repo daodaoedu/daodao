@@ -45,14 +45,12 @@
         "worktree",
         "gh",
         "runtests",
+        "browser",
         "db",
+        "drive",
         "subagent",
         "hooks"
       ],
-      "missing_note": {
-        "browser": "這裡預設沒有瀏覽器工具。需要畫面驗證時標記為未完成，或請人工執行後貼回證據；不得只因程式碼看起來對就打勾。",
-        "drive": "沒有 Drive connector。驗證報告先存成本機 Markdown，上傳由人工或 Claude Code 完成。"
-      },
       "hooks_note": "Codex 有自己的 hooks（事件名與 Claude Code 相同）。本 repo 的 .codex/hooks.json 已指向同一批腳本，所以 pre-pr-gate 等閘門在 Codex 也會實際觸發。仍要確認 /hooks 已信任該設定，未信任時視同沒有閘門。"
     },
     "openai-plugin": {
@@ -68,12 +66,12 @@
         "gh",
         "runtests",
         "db",
-        "subagent"
+        "subagent",
+        "drive"
       ],
       "conditional_note": "同一個 plugin 會同時被有 repo 的 Codex 與沒有 repo 的 ChatGPT 網頁／行動版載入，所以能力落差寫成條件式，由 agent 在執行時自己判斷。",
       "missing_note": {
         "browser": "沒有瀏覽器工具時，畫面驗證標記為未完成，不得用讀程式碼代替。",
-        "drive": "沒有 Drive connector 時，報告留在本機或直接貼進對話。",
         "hooks": "plugin 內沒有附 hooks。發 PR 前的閘門必須由 agent 主動逐項執行並貼出輸出，不得宣稱機器已攔截。"
       },
       "linkMode": "standalone"

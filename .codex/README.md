@@ -8,5 +8,8 @@
 **第一次使用要先信任**：在 Codex 跑 `/hooks` 檢視並信任這份設定（會對內容做 hash pinning）。
 沒信任之前 hooks 不會執行——那就等同沒有閘門，此時 agent 必須自己逐項跑同一批腳本並貼出輸出。
 
+`config.toml` 設定 Playwright MCP，讓 develop 的畫面驗證與截圖在 Codex 也做得到。
+Codex 只在專案被信任時載入這份設定；沒信任就沒有瀏覽器，畫面驗證要標「未完成」。
+
 skills 不在這裡：Codex 掃的是 `.agents/skills/`（見該目錄 README）。
 舊版 `.codex/skills/` 不是 Codex 的實際載入路徑，已於 2026-09-21 移除。

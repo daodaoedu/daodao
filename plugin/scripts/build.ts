@@ -426,6 +426,8 @@ function buildClaudeAi(platform: Platform): OutFile[] {
   return resolveBundleLinks(files, platform.target)
 }
 
+const PLAYWRIGHT_MCP_VERSION = '0.0.83'
+
 function buildCodexHooks(): OutFile[] {
   const claudeHooks = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'hooks', 'hooks.json'), 'utf8')).hooks
   // Codex 的 hook command 以 session cwd 執行，且文件明講不要用相對路徑（Codex 可能從別的目錄啟動）。
@@ -449,6 +451,19 @@ function buildCodexHooks(): OutFile[] {
       content: `${JSON.stringify({ $comment: BANNER.replace(/<!--|-->/g, '').trim(), hooks: out }, null, 2)}\n`,
     },
     {
+      // Codex 只在信任的專案載入 repo 的 .codex/config.toml；有了它，develop 的畫面驗證在 Codex 也做得到。
+      // 版本釘死，跟 hooks 一樣要能重現；升級時改這裡再重跑 build。
+      path: '.codex/config.toml',
+      content: [
+        `# ${BANNER.replace(/<!--|-->/g, '').trim()}`,
+        '',
+        '[mcp_servers.playwright]',
+        'command = "npx"',
+        `args = ["-y", "@playwright/mcp@${PLAYWRIGHT_MCP_VERSION}"]`,
+        '',
+      ].join('\n'),
+    },
+    {
       path: '.codex/README.md',
       content: [
         '# Codex 設定',
@@ -460,6 +475,9 @@ function buildCodexHooks(): OutFile[] {
         '',
         '**第一次使用要先信任**：在 Codex 跑 `/hooks` 檢視並信任這份設定（會對內容做 hash pinning）。',
         '沒信任之前 hooks 不會執行——那就等同沒有閘門，此時 agent 必須自己逐項跑同一批腳本並貼出輸出。',
+        '',
+        '`config.toml` 設定 Playwright MCP，讓 develop 的畫面驗證與截圖在 Codex 也做得到。',
+        'Codex 只在專案被信任時載入這份設定；沒信任就沒有瀏覽器，畫面驗證要標「未完成」。',
         '',
         'skills 不在這裡：Codex 掃的是 `.agents/skills/`（見該目錄 README）。',
         '舊版 `.codex/skills/` 不是 Codex 的實際載入路徑，已於 2026-09-21 移除。',
@@ -518,7 +536,7 @@ for (const [id, platform] of Object.entries(manifest.platforms)) {
   jobs.push({ id, label: platform.label, target: platform.target, files })
 }
 
-if (!only || only === 'codex-hooks') jobs.push({ id: 'codex-hooks', label: 'Codex hooks', target: '.codex/', files: buildCodexHooks() })
+if (!only || only === 'codex-hooks') jobs.push({ id: 'codex-hooks', label: 'Codex 設定', target: '.codex/', files: buildCodexHooks() })
 if (!only || only === 'openai-plugin') jobs.push({ id: 'repo-marketplace', label: 'Repo marketplace', target: '.agents/plugins/', files: buildRepoMarketplace() })
 
 if (errors.length) {
