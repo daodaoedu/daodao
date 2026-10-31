@@ -197,7 +197,7 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | | Claude Code | Codex／ChatGPT 桌面 | ChatGPT 網頁／行動 | Claude.ai 網頁 |
 |---|---|---|---|---|
 | 安裝的東西 | `daodao` | `.agents/skills/`（免裝） | `daodao-web` | `daodao-web` |
-| skill 數 | 14 | 14 | 8 | 7 |
+| skill 數 | 14 | 14 | 7 | 7 |
 | 本機 repo／shell | ✅ | ✅ | ❌ | ❌ |
 | 自動閘門 | ✅ hooks | ✅ 需 `/hooks` 信任 | ❌ | ❌（hooks 只在 Cowork 跑）|
 | 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
@@ -206,6 +206,23 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 Claude.ai 少掉的 7 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
 `move-board-card`、`format-commit`——全都需要使用者的 checkout；以及 `test-acceptance`，要在本機存截圖再上傳。Claude.ai 的 sandbox 有檔案系統也能跑
 指令，但那是一個空的暫時環境，不是專案。
+
+### 怎麼讓大家能力一致
+
+要補的是平台的能力，不是把 skill 複製過去。能力補上後，在 `platforms.json` 對應平台的 `has`
+加上那一項並重跑 build，skill 與警語就會跟著變。
+
+| 缺口 | 平台 | 補得起來嗎 | 做法 |
+|---|---|---|---|
+| 瀏覽器驗證 | Codex／ChatGPT 桌面 | 可以（尚未做） | Codex 支援 MCP，把 Playwright MCP 寫進 repo 的 `.codex/config.toml` |
+| Drive 報告 | Codex／ChatGPT 桌面 | 可以（尚未做） | 上傳改成 bash 腳本（rclone），能跑 shell 的平台都能用 |
+| 自動閘門 | Codex／ChatGPT 桌面 | 已有 | 在 repo 裡開，跑 `/hooks` 信任 `.codex/hooks.json` |
+| 自動閘門 | repo 外裝的 Codex plugin | 不行 | plugin 不能附 hooks；在 repo 裡開 Codex 就有 |
+| repo／shell／git／測試 | ChatGPT 網頁／行動、Claude.ai 網頁 | 不行 | 雲端 sandbox 碰不到使用者的 checkout |
+
+分工原則：**開發、驗收、commit 一律在 repo 裡用 Claude Code 或 Codex**；網頁版只當需求入口
+（寫 PRD、開卡、回報 bug、看 PR）。Codex 補上瀏覽器與 Drive 後，兩個本機平台的 14 個 skill
+就沒有能力落差。
 
 ## 平台事實（2026-09-21 查證）
 
