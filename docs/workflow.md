@@ -2,7 +2,7 @@
 
 > 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日退役自動派工 Routine A／B（#241）與 merge 回寫 Routine C；board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回，所有開發走人工 `/develop`。
 >
-> 最後全面校正：2026-10-28。逐段對照 `plugin/skills/` 正本、`plugin/hooks/`、monorepo 與各 sub-repo 的 workflow、ruleset 與 package.json；涵蓋到 2026-10-23 merge 的變更（PR #309 develop 拆階段、#315 工程驗收、#387 Need Fix 分流與每日 board audit〔issue #338〕、#365 closing keyword 攔截〔issue #364〕、#351／#363／#371／#388／#391 CI review 改版）。各步驟細節以 `plugin/skills/` 正本為準，本文只寫全貌；本文的 `/x` 都是指 `/daodao:x`。
+> 最後全面校正：2026-10-28。逐段對照 `plugin/skills/` 正本、`plugin/hooks/`、monorepo 與各 sub-repo 的 workflow、ruleset 與 package.json；涵蓋到 2026-10-23 merge 的變更（PR #309 develop 拆階段、#315 工程驗收、#387 Need Fix 分流與每日 board audit〔issue #338〕、#365 closing keyword 攔截〔issue #364〕、#351／#363／#371／#388／#391 CI review 改版）。2026-11-01 局部更新：Codex 補上瀏覽器與 Drive 報告（#444）、開卡定位 repo 要附程式碼依據（#446）。各步驟細節以 `plugin/skills/` 正本為準，本文只寫全貌；本文的 `/x` 都是指 `/daodao:x`。
 
 ## 簡介
 
@@ -78,13 +78,13 @@ flowchart TD
 | 工具 | 用途 | 安裝方式 |
 |------|------|---------|
 | **Claude Code** | 主力 AI 開發工具，執行 daodao plugin 的 skills 與 hooks | `curl -fsSL https://claude.ai/install.sh \| bash`（原生安裝器） |
-| **Codex CLI** | `/daodao:review-change` 四引擎之一；也可當替代客戶端（讀 `.agents/skills/`，hooks 需先 `/hooks` 信任） | `npm install -g @openai/codex` |
+| **Codex CLI** | `/daodao:review-change` 四引擎之一；也可當替代客戶端（讀 `.agents/skills/`）；在 repo 裡信任專案後一併載入 hooks、Playwright MCP 與報告上傳放行（`.codex/`），能力與 Claude Code 一致，hooks 另需 `/hooks` 信任 | `npm install -g @openai/codex` |
 | **OMP** | `/daodao:review-change` 四引擎之一（OpenRouter 免費模型） | `bun add -g @oh-my-pi/pi-coding-agent` |
 | **OpenCode** | `/daodao:review-change` 四引擎之一（OpenCode Zen 免費模型） | `npm install -g opencode-ai` |
 
 review-change 的引擎缺哪一個就記「未執行」，不會整個失敗；四個都裝 review 覆蓋率最高。
 
-同一套 14 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版只收其中 8 個、Claude.ai 只收 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程，ChatGPT 網頁版另含 PM 驗收；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
+同一套 14 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 裝 `daodao-web`，只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card`、`test-acceptance` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
 
 ### 0.2 GitHub CLI（gh）
 
@@ -115,7 +115,7 @@ gh repo list daodaoedu --limit 5
 | **Docker** | latest | 本地 DB 與部分子專案開發需要 |
 | **Git** | 支援 `git worktree` | `/daodao:develop` 以 worktree 隔離每個 issue |
 | **jq** | latest | `pre-pr-gate` hook 必需，缺了會直接擋下 `gh pr create` |
-| **rclone** | latest | develop verify 上傳驗證報告截圖到 Google Drive（一次性設定見 `plugin/skills/develop/references/verify-report.md`） |
+| **rclone** | latest | develop verify 用 `upload-report.py` 上傳驗證報告到 Google 文件，Claude Code 與 Codex 共用（一次性設定見 `plugin/skills/develop/references/verify-report.md`） |
 
 ```bash
 # 確認版本
@@ -151,8 +151,8 @@ claude plugin details daodao@daodao   # 應列出 13 skills 與 hooks
 |------------|------|---------|
 | **daodao-pg-dev／daodao-pg-prod** | 唯讀查詢 dev／prod DB（經 SSH tunnel） | 專案 `.mcp.json`（已宣告）；需在 shell 設 `DAODAO_MCP_DIR`（daodao-mcp clone 的位置）、`DAODAO_PG_DEV_URL`、`DAODAO_PG_PROD_URL`，連線字串向管理者索取，不寫進 repo |
 | **notion** | 讀 Notion 舊文件 | 專案 `.mcp.json`（已宣告）；需設 `NOTION_TOKEN` |
-| **playwright** | develop verify 的瀏覽器驗收（`browser-verify.md` 指定） | 個人自行安裝 |
-| **Google Drive** | 下載 POC、建立驗證報告文件 | 個人自行安裝 |
+| **playwright** | develop verify 的瀏覽器驗收（`browser-verify.md` 指定） | Claude Code 個人自行安裝；Codex 由 repo 的 `.codex/config.toml` 提供，信任專案後載入 |
+| **Google Drive** | 下載 POC（驗證報告改用 rclone 腳本上傳，不需要這個 MCP） | 個人自行安裝 |
 | **Figma** | 有 Figma 連結時用 `get_screenshot` 取設計稿 | 個人自行安裝 |
 
 ### 0.6 快速確認清單
@@ -321,6 +321,8 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
   Status   Todo（預設）：發布後 `pnpm -s tsx bin/pipeline/board.ts set <n> todo` 掛板並回讀
 ```
 
+**涉及 repo 要有依據**（#446）：先查 [feature map](../plugin/docs/feature-map/README.md) 的「主要程式位置」，再到程式碼確認檔案存在，路徑寫進「涉及 repo」的「依據：」；只比對名稱不算（#445 把燈塔的「管理端」對到 `daodao-admin-ui`，實際在 `daodao-f2e`）。讀不到程式碼（例如網頁版）就寫「待確認」，不猜。`check-issue-draft.py` 會擋下沒有依據也沒寫待確認的草稿。開卡者只有 Read 權限時 GitHub 不讓他設 label，skill 照樣開卡並留言請維護者補，不一直要求本人改。
+
 草稿先存本機（任務目錄的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`），預覽後發布；對話中已明確授權建立的，不再重複詢問。開卡前先查既有相關卡，避免重複。
 
 **母卡與子卡**（[GitHub Issue 管理規範 §4](automation/github-issue-management.md#4-母卡子卡pr-與相依關係)）：開新功能（一份 PRD）時，母卡只放目標、AC 總表與子卡清單，並依 AC 一次拆好子卡——子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張對應母卡的部分 AC、約一週內做完，body 保留 `Parent: daodaoedu/daodao#N` 行。只有兩層；技術債、後續改進開獨立卡寫「相關：#n」，不掛子卡。`/develop` 只在子卡或獨立卡開工，不在母卡上開工。單一 repo 的工程交接可用 `subtask-issue.md` 開在 sub-repo，只當交接筆記，不掛 sub-issue、不上 board。
@@ -395,7 +397,7 @@ daodao/
 - **讀取權限驗證**（改到 ACL、隱私、資料範圍篩選，或因此造成列表／詳情不一致時必做，#400）：從使用者入口追到下游各服務的 ACL／查詢／cache（列表、搜尋、詳情未必共用後端），用同一組固定資料驗資料擁有者、同範圍成員、範圍外使用者、被移除者的可見性；改查詢或 DB ACL 要在真實資料庫上證明舊版失敗、新版通過，mock 不算。規則見 `references/read-access-verification.md`；不適用要寫具體理由
 - **核心旅程矩陣**（寫入，或涉及權限／隱私／資料範圍的讀取都必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗（讀取旅程的錯誤路徑是「拒絕存取且回應不含私人資料」），「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `references/journey-matrix.md`
 - **留證據**：截圖存 `evidence/`，命名 `<phase>-<checkpoint>.png`、旅程列 `verify-jNN.png`；task.md 新增「驗證」區塊記通過／失敗／未做 + 矩陣
-- **Google 文件驗證報告**（必做）：依 `references/verify-report.md`，rclone 上傳截圖 → 產生 HTML（核心旅程矩陣放最前）→ 建 Google 文件、設知道連結者可看，連結記進 task.md「驗證」區塊第一行。截圖只留在本機或對話裡等於沒發
+- **Google 文件驗證報告**（必做）：依 `references/verify-report.md`，寫報告 HTML（核心旅程矩陣放最前，截圖寫成 `evidence/<檔名>`）→ 跑 `upload-report.py` 上傳截圖、建 Google 文件並設知道連結者可看，連結記進 task.md「驗證」區塊第一行。截圖只留在本機或對話裡等於沒發
 - 同一項失敗 2 次 → 停止重複嘗試，整理已查核的原因與證據
 - 全部通過（沒有 `- [ ]` 未勾項、沒有「需要手動驗證」清單、版面探針全 ✅）→ Status `verified`
 
@@ -813,7 +815,7 @@ Todo → In Progress → Review → Acceptance → Done
 遇到操作異常、截圖、對話或 CI 錯誤
   → /report-bug
     1. 先從已有資訊整理草稿：現象、重現步驟、預期與實際、截圖／log；最多問 1–2 個關鍵問題
-    2. skill 自行查核現況與重複卡、判定 repo 與可能根因——不問通報者 repo、SHA、負責人、根因
+    2. skill 自行查核現況與重複卡、判定 repo（從 feature map 的主要程式位置開始、到程式碼確認，不看名字猜）與可能根因——不問通報者 repo、SHA、負責人、根因
     3. AI 自審修訂 → 人審核草稿
     4. 展示標題、內容、目標 repo 與 labels，依授權用 gh issue create 發布（預設 daodaoedu/daodao）
 ```
@@ -854,9 +856,10 @@ Todo → In Progress → Review → Acceptance → Done
 | 階段 | 工具 | 用途 |
 |------|------|------|
 | **前置** | Claude Code + daodao plugin | 主力 AI 開發工具；plugin 提供 14 個 skills 與 6 支 hooks（`/daodao:<skill>`） |
-| **前置** | Codex CLI／OMP／OpenCode | review-change 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`） |
+| **前置** | Codex CLI／OMP／OpenCode | review-change 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`，信任專案後有瀏覽器與報告上傳） |
 | **前置** | GitHub CLI（gh） | PR、issue、CI 狀態、Planning board 操作 |
-| **前置** | MCP：playwright、Google Drive、Figma、daodao-pg-dev／prod | 瀏覽器驗收、驗證報告、設計稿、唯讀查 DB |
+| **前置** | MCP：playwright、Google Drive、Figma、daodao-pg-dev／prod | 瀏覽器驗收、下載 POC、設計稿、唯讀查 DB |
+| **前置** | rclone | 驗證報告上傳到 Google 文件（`upload-report.py`） |
 | **需求** | PRD（既有 FRD 沿用） | 一份文件含功能行為與驗收（FR／TP） |
 | **需求** | Figma + Figma MCP | UI 設計稿與 `get_screenshot` 對照 |
 | **規格** | draft-prd + check-product-status skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 確認（L/M 必要；OpenSpec 已退役） |
