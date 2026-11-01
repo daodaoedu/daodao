@@ -47,6 +47,7 @@ templateVersion: 1
 - AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。
 - issue 內文驗收契約的「必須證據」欄若寫了 API 回讀或測試，PM 會照著要；所以「對照的 AC」要寫明那些由工程提供、PM 依畫面判定。
 - 第一行的隱藏標記 `<!-- daodao:acceptance-request -->`、標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具（**test-acceptance**（`skills/test-acceptance/SKILL.md`，未隨本包出貨））靠標記找出這則留言，缺任一個就判 BLOCKED（#245、#346）。標記在 GitHub 上看不到，不影響 PM 閱讀。
+- 交驗前先用指定 PM 帳號，從本留言連結照全部步驟實跑；資料前提逐項查核，測完還原並保留給 PM。格式 lint 不證明前提成立。實踐資源可用 **唯讀前置檢查**（`skills/verify-deploy/references/acceptance-preflight.md`，未隨本包出貨），報告放工程證據，不要求 PM 自己跑。
 - 發出前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 不發。`warn [quoted-copy-not-in-locale]` 代表步驟用「」引用的文字在 f2e 的 zh-TW locale 找不到：是畫面文案就對照畫面改正（#346 全形「！」對半形「!」、#333 舊文案「帶領人」已改「教練」）；是使用者輸入的內容或步驟描述就忽略。
 
 ```markdown
@@ -65,6 +66,9 @@ templateVersion: 1
   - <AC-0x 的 API 送出內容／回讀>：[dev 冒煙留言](<留言連結>)
   - <AC-0x regression test>：[<repo>#<PR>](<PR 連結>) 的 CI test job
   - 工程驗收項（畫面看不出，不列入上面步驟）：<AC ID 與一句理由；沒有就寫 none>
+  - 驗收前置檢查：<時間；指定 PM 帳號／角色；資料直接連結、擁有者、必要欄位／數量與鎖定狀態；唯讀檢查報告與逐項結果>
+  - 同帳號步驟實跑：<登入方式、逐步實際結果及截圖／報告連結；不能用其他帳號或 API 成功代替>
+  - 資料保留：<實跑後還原與再次檢查結果；保留至驗收完成，或到期時間與可執行重設方式；無預建資料則寫 PM 從指定入口如何建立，且該流程已實跑>
 - AI 驗證報告：[Task <n> 驗證報告](<Google 文件連結>)
 - 已知限制／這次沒做的：<none 或清單，附子 issue 連結>
 - 驗完收尾：<驗收會建立的資料（實踐、場次、邀請…）要怎麼處理：刪除或封存的畫面步驟，或「保留，工程會清」；不會建立資料就寫 none>
