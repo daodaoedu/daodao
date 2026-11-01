@@ -29,6 +29,8 @@ export interface AuditCard {
   updatedAt: string; // ISO
   /** When the Status field was last set, i.e. when the card entered its column (ISO). */
   statusUpdatedAt: string | null;
+  /** 類別 field value; null = empty on the board, undefined = not fetched. */
+  category?: string | null;
   assignees: string[];
   /**
    * PRs referencing the card. `linked` marks a real GitHub link (ConnectedEvent:
@@ -114,6 +116,15 @@ export function resolveStatus(
   return aliases[key] ?? null;
 }
 
+/** 類別 alias → canonical name; ignores case, spaces, `-`/`_`, and half- vs full-width slash. */
+export function resolveCategory(
+  input: string,
+  aliases: Record<string, string>
+): string | null {
+  const key = input.trim().toLowerCase().replace(/[\s_-]+/g, "").replace(/\//g, "／");
+  return aliases[key] ?? null;
+}
+
 /**
  * Flag cards whose board Status disagrees with issue state / linked PRs / labels.
  * `now` is injectable for tests; `staleDays` = how long a merged-but-unmoved card
@@ -176,6 +187,11 @@ export function auditCards(
 
     if (c.status === null) {
       push(c, "卡片沒有 Status", "設 Todo，或從 board 移除");
+    }
+    // The 產品／工程 views filter on 類別: an open card without one drops off both (#453)
+    if (c.category === null && c.issueState === "OPEN" && !["Done", "Not Considered"].includes(status)) {
+      // No `|` in the text: audit output is a Markdown table
+      push(c, "沒有類別", `board.ts category ${c.number} <類別>（產品功能、bug、工程、技術債、清單）`);
     }
     if (status === "Done" && c.issueState === "OPEN") {
       push(c, "Done 但 issue 仍 open", "驗收後 close issue，或移回 Review");

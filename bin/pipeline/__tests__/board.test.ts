@@ -4,11 +4,14 @@ import {
   prTargets,
   businessDaysSince,
   classifyReturnComment,
+  resolveCategory,
   resolveStatus,
   type AuditCard,
 } from "../lib.js";
 import {
   BLOCKED_ACCEPTANCE_LABEL,
+  BOARD,
+  CATEGORY_ALIASES,
   BOARD_AUDIT_LABEL,
   DEAD_LABELS,
   ENGINEERING_ACCEPTANCE_LABEL,
@@ -45,10 +48,52 @@ describe("resolveStatus", () => {
 
 const pr = (ref: string, state: "open" | "merged" | "closed", linked = false) => ({ ref, state, linked });
 
+describe("resolveCategory", () => {
+  it("accepts the full names however the space and slash are typed", () => {
+    expect(resolveCategory("產品 Bug", CATEGORY_ALIASES)).toBe("產品 Bug");
+    expect(resolveCategory("產品bug", CATEGORY_ALIASES)).toBe("產品 Bug");
+    expect(resolveCategory("技術債/維運", CATEGORY_ALIASES)).toBe("技術債／維運");
+    expect(resolveCategory("清單／報告", CATEGORY_ALIASES)).toBe("清單／報告");
+  });
+
+  it("accepts short aliases used by the card-creating skills", () => {
+    expect(resolveCategory("bug", CATEGORY_ALIASES)).toBe("產品 Bug");
+    expect(resolveCategory("Feature", CATEGORY_ALIASES)).toBe("產品功能");
+    expect(resolveCategory("工程", CATEGORY_ALIASES)).toBe("工程流程");
+    expect(resolveCategory("技術債", CATEGORY_ALIASES)).toBe("技術債／維運");
+    expect(resolveCategory("清單", CATEGORY_ALIASES)).toBe("清單／報告");
+  });
+
+  it("rejects unknown names instead of guessing", () => {
+    expect(resolveCategory("產品", CATEGORY_ALIASES)).toBeNull();
+    expect(resolveCategory("", CATEGORY_ALIASES)).toBeNull();
+  });
+
+  it("only resolves to options that exist on the board", () => {
+    const options = Object.keys(BOARD.categoryOptions);
+    for (const target of Object.values(CATEGORY_ALIASES)) expect(options).toContain(target);
+    for (const name of options) expect(resolveCategory(name, CATEGORY_ALIASES)).toBe(name);
+  });
+});
+
 describe("auditCards", () => {
   it("is quiet for a consistent card", () => {
     expect(problems(card({ status: "Review", prs: [pr("daodao-f2e#1", "open")] }))).toEqual([]);
     expect(problems(card({ status: "Done", issueState: "CLOSED" }))).toEqual([]);
+  });
+
+  it("#453: flags an open card with no 類別, which drops off the 產品／工程 views", () => {
+    const found = auditCards([card({ number: 7, category: null })], DEAD_LABELS, NOW);
+    expect(found.map((f) => f.problem)).toEqual(["沒有類別"]);
+    expect(found[0]!.suggest).toContain("board.ts category 7");
+    // audit prints a Markdown table: a `|` in the cell would split the row
+    expect(found[0]!.suggest).not.toContain("|");
+  });
+
+  it("does not ask for a 類別 on categorized, finished, or closed cards", () => {
+    expect(problems(card({ category: "工程流程" }))).toEqual([]);
+    expect(problems(card({ status: "Not Considered", category: null }))).toEqual([]);
+    expect(problems(card({ status: "Done", issueState: "CLOSED", category: null }))).toEqual([]);
   });
 
   it("flags a card with no Status at all", () => {
