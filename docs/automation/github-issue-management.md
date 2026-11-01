@@ -47,7 +47,19 @@ Ready 前凍結適用規格／AC 與 POC 基準，確認驗收者及執行授權
 
 沒有自動派工後，未準備好的卡保持 Todo 即可；人工任務加 `human-driving` 以便在 board 上辨識。
 
-Priority 是 Board 欄位，與 scope 分開。查詢確認欄位存在，但未列出選項；填寫前查實際可選值。尚無適合選項時先在 body 記錄影響程度、處理順序與理由，不宣稱已有 P0–P3，也不自動新增 priority labels。
+Board 另有「類別」欄位（2026-11-01，#453），每張卡選一個，「產品」「工程」看板依它篩選：
+
+| 類別 | 放什麼 | `board.ts` 別名 |
+|---|---|---|
+| 產品功能 | 使用者看得到的新功能或改版 | `功能`、`feature` |
+| 產品 Bug | 使用者看得到的錯誤 | `bug` |
+| 工程流程 | CI、驗收流程、開發工具 | `工程`、`eng` |
+| 技術債／維運 | 重構、清理、基礎建設、資料維護 | `技術債`、`維運`、`debt` |
+| 清單／報告 | 彙整清單、待決問題，不是可交付任務 | `清單`、`報告`、`list` |
+
+開卡時用 `board.ts set <n> todo --category <類別>` 一起設；事後補或改用 `board.ts category <n> <類別>`。`bug`／`enhancement` label 記工作類型，類別記這張卡給誰看，兩者不互相推導（例如 CI 壞掉是 `bug` label＋工程流程）。
+
+Priority 是組織層級的 issue 欄位（不是 Board 自訂欄位），選項為 Urgent／High／Medium／Low，與 scope 分開；不新增 priority labels，也不在標題寫 [P1]。
 
 ## 3. Issue state 與 Board Status
 
@@ -144,6 +156,7 @@ GitHub 內建 board workflow 只認同 repo closing keyword；跨 repo `Refs` �
 | Repo | `daodaoedu/daodao-f2e` | `daodaoedu/daodao` |
 | Labels | `bug`、`scope:S`、`human-driving`（先確認子 repo 存在） | `enhancement`、`scope:M`、`repo:daodao-f2e`、`repo:daodao-server` |
 | Status | 納入 Planning 時先 Todo，開始修復後 In Progress | Todo |
+| 類別 | 產品 Bug | 產品功能 |
 | 責任 | 指定修復者與驗收者 | 指定目標負責人與各 repo 責任人 |
 | 關聯 | Body 引用原功能；屬於某功能驗收範圍才掛該母卡（§4.2），否則寫「相關：#n」 | 依 AC 在中央 repo 拆子卡並設定原生父子關係（§4.3） |
 | 完成 | 回歸驗證、review、適用部署確認後 close | 所有必要子交付符合中央 AC 才 Done／close |

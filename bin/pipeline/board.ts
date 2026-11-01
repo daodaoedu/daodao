@@ -3,20 +3,23 @@
  * Planning board (org project 10) status CLI — the manual counterpart of Routine C.
  *
  * Usage:
- *   pnpm tsx bin/pipeline/board.ts set <issue#> <status> [--add-label x]... [--remove-label y]... [--dry-run]
+ *   pnpm tsx bin/pipeline/board.ts set <issue#> <status> [--category <類別>] [--add-label x]... [--remove-label y]... [--dry-run]
+ *   pnpm tsx bin/pipeline/board.ts category <issue#> <類別> [--dry-run]
  *   pnpm tsx bin/pipeline/board.ts remove <issue#> [--dry-run]
  *   pnpm tsx bin/pipeline/board.ts audit [--json] [--stale-days <n>]
  *   pnpm tsx bin/pipeline/board.ts pending [--json]   # 唯讀：Review／Acceptance／Need Fix 各卡在等誰決定什麼，附最新證據連結
  *
  * Status accepts aliases: todo | ready | wip / "in progress" | review | accept / acceptance |
  * needfix / "need fix" | done.
+ * 類別 accepts 產品功能 | 產品 Bug | 工程流程 | 技術債／維運 | 清單／報告 and short aliases
+ * (功能/feature, bug, 工程/eng, 技術債/維運/debt, 清單/報告/list); see CATEGORY_ALIASES.
  * `set` adds the issue to the board first if it is not there yet; `set <n> accept` also
  * assigns the PM (PM_LOGIN) so the card shows up in their queue.
  * Called by develop (start → In Progress, finish → Review), verify-deploy
  * (dev smoke passed → Acceptance, failed → Need Fix), collect-pr-feedback (→ Need Fix)
  * and request-feature (→ Todo). Done comes from the PM closing the issue (built-in workflow).
  */
-import { auditCards, pendingDecisions, resolveStatus, type AuditCard, type PendingCard } from "./lib.js";
+import { auditCards, pendingDecisions, resolveCategory, resolveStatus, type AuditCard, type PendingCard } from "./lib.js";
 import {
   addBoardItem,
   addIssueAssignees,
@@ -27,15 +30,18 @@ import {
   getIssueComments,
   listBoardItemsLite,
   removeBoardItem,
+  setBoardCategory,
   setBoardStatus,
 } from "./gh.js";
 import {
   BOARD,
+  CATEGORY_ALIASES,
   CENTRAL_REPO,
   DEAD_LABELS,
   OWNER,
   PM_LOGIN,
   STATUS_ALIASES,
+  type BoardCategory,
   type BoardStatus,
 } from "./types.js";
 
@@ -58,6 +64,13 @@ function die(msg: string): never {
 
 const findItem = findBoardItemForIssue;
 
+/** Resolve a 類別 argument or exit before anything is written. */
+function categoryArg(input: string): BoardCategory {
+  const category = resolveCategory(input, CATEGORY_ALIASES) as BoardCategory | null;
+  if (!category) die(`類別「${input}」不存在，可用：${Object.keys(BOARD.categoryOptions).join(" | ")}`);
+  return category;
+}
+
 function cmdSet(): void {
   const num = parseInt(argv[1] ?? "", 10);
   const statusName = resolveStatus(argv[2] ?? "", STATUS_ALIASES) as BoardStatus | null;
@@ -67,6 +80,8 @@ function cmdSet(): void {
   if (!BOARD.statusOptions[statusName]) {
     die(`Status「${statusName}」還沒有 option id：先到 board 設定頁新增選項，再填進 bin/pipeline/types.ts`);
   }
+  const categoryInput = optValues("--category")[0];
+  const category = categoryInput === undefined ? null : categoryArg(categoryInput);
   const add = optValues("--add-label");
   const remove = optValues("--remove-label");
   const assign = statusName === "Acceptance" ? [PM_LOGIN] : [];
@@ -77,7 +92,7 @@ function cmdSet(): void {
     console.log(`${tag}#${num} 不在 board，先加入`);
     if (!DRY_RUN) {
       const url = `https://github.com/${OWNER}/${CENTRAL_REPO}/issues/${num}`;
-      item = { itemId: addBoardItem(url), status: null, url };
+      item = { itemId: addBoardItem(url), status: null, category: null, url };
     }
   }
   // Assign first: if it fails the card has not moved, so Acceptance never sits without its PM
@@ -87,6 +102,10 @@ function cmdSet(): void {
   }
   console.log(`${tag}#${num} ${item?.status ?? "(none)"} → ${statusName}`);
   if (!DRY_RUN && item) setBoardStatus(item.itemId, statusName);
+  if (category) {
+    console.log(`${tag}#${num} 類別 ${item?.category ?? "(none)"} → ${category}`);
+    if (!DRY_RUN && item) setBoardCategory(item.itemId, category);
+  }
 
   if (add.length || remove.length) {
     console.log(`${tag}#${num} labels +[${add.join(",")}] -[${remove.join(",")}]`);
@@ -95,11 +114,28 @@ function cmdSet(): void {
   if (!DRY_RUN) {
     const after = findItem(num);
     if (after?.status !== statusName) die(`回讀失敗：#${num} 目前 status=${after?.status}`);
+    if (category && after.category !== category) die(`回讀失敗：#${num} 目前類別=${after.category}`);
     const assignees = assign.length ? getIssueAssignees(CENTRAL_REPO, num) : [];
     const missing = assign.filter((a) => !assignees.includes(a));
     if (missing.length) die(`回讀失敗：#${num} 未指派 ${missing.join(",")}`);
-    console.log(`#${num} 回讀 OK：${after.status}${assign.length ? `，assignee 含 ${assign.join(",")}` : ""}`);
+    console.log(
+      `#${num} 回讀 OK：${after.status}${category ? `，類別 ${category}` : ""}${assign.length ? `，assignee 含 ${assign.join(",")}` : ""}`
+    );
   }
+}
+
+function cmdCategory(): void {
+  const num = parseInt(argv[1] ?? "", 10);
+  if (!num || !argv[2]) die(`usage: board.ts category <issue#> <類別>  (類別 ∈ ${Object.keys(BOARD.categoryOptions).join(" | ")})`);
+  const category = categoryArg(argv[2]);
+  const item = findItem(num);
+  if (!item) die(`#${num} 不在 board：用 board.ts set ${num} todo --category ${category} 加入`);
+  console.log(`${DRY_RUN ? "[dry-run] " : ""}#${num} 類別 ${item.category ?? "(none)"} → ${category}`);
+  if (DRY_RUN) return;
+  setBoardCategory(item.itemId, category);
+  const after = findItem(num);
+  if (after?.category !== category) die(`回讀失敗：#${num} 目前類別=${after?.category}`);
+  console.log(`#${num} 回讀 OK：類別 ${category}`);
 }
 
 function cmdRemove(): void {
@@ -135,6 +171,7 @@ function cmdAudit(): void {
       foreignSubIssues: l?.foreignSubIssues,
       updatedAt: l?.updatedAt ?? new Date(0).toISOString(),
       statusUpdatedAt: it.statusUpdatedAt,
+      category: it.category,
       prs: l?.prs ?? [],
       comments: comments.get(it.issueNumber!),
       labelAddedAt: l?.labelAddedAt,
@@ -207,6 +244,9 @@ switch (cmd) {
   case "set":
     cmdSet();
     break;
+  case "category":
+    cmdCategory();
+    break;
   case "remove":
     cmdRemove();
     break;
@@ -217,5 +257,5 @@ switch (cmd) {
     cmdPending();
     break;
   default:
-    die("usage: board.ts <set|remove|audit|pending> ...");
+    die("usage: board.ts <set|category|remove|audit|pending> ...");
 }

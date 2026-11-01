@@ -52,7 +52,7 @@ description: 把想法、PRD、FRD 或 POC 整理成島島阿學的需求 Issue�
 
 **新功能拆子卡**：母卡只放目標、AC 總表、子卡清單。依 AC 一次拆好子卡，子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張約一週可完成、對應母卡 AC，body 保留獨立一行 `Parent: daodaoedu/daodao#N`。子卡標題用動詞開頭寫要做的事；「做完會看到」寫 PM 在 dev 照著做就能驗收的步驟。只有兩層；技術債、後續改進、其他功能的 bug 開獨立卡並寫「相關：#n」。母卡號碼還沒有時先存子卡草稿。
 
-草稿存在任務的 `notes/issue-drafts/`，沒有任務目錄時存 root `docs/plans/issue-drafts/`，不覆蓋既有檔名。記下 title、repo、labels、預定 status 與 body。
+草稿存在任務的 `notes/issue-drafts/`，沒有任務目錄時存 root `docs/plans/issue-drafts/`，不覆蓋既有檔名。記下 title、repo、labels、類別、預定 status 與 body。類別依 [GitHub Issue 管理規範 §2](../../../docs/automation/github-issue-management.md#2-labels分類範圍與執行控制)選一個：使用者看得到的新功能或改版是「產品功能」，CI／驗收流程／開發工具是「工程流程」，重構、清理、資料維護、基礎建設是「技術債／維運」。
 
 ## 3. 查重
 
@@ -75,7 +75,7 @@ description: 把想法、PRD、FRD 或 POC 整理成島島阿學的需求 Issue�
 2. 查重結果是「沒找到」或「只是表面相似」。
 3. 目標 repo、labels、Board 欄位已用 live 查詢確認。
 4. 有 shell 且腳本存在時，`python3 <plugin root>/templates/check-issue-draft.py --template <central|child> <草稿>` 沒有輸出；印出的每一行都要修掉。沒有 shell 或找不到腳本，就自己對照模板逐段檢查，並在回報寫「未跑格式檢查」。
-5. 已向使用者展示具體的 title、repo、labels、預定 status 與 body（或草稿連結）。
+5. 已向使用者展示具體的 title、repo、labels、類別、預定 status 與 body（或草稿連結）。
 6. 使用者已授權建立這個範圍；已明確授權就不再重問。只授權草擬或規劃時停在草稿；尚未授權就交草稿並詢問是否建立。
 
 缺需求細節不擋 Todo 卡。`Ready for Dev` 只在使用者要求、且規格與 AC 齊備時才設。
@@ -84,7 +84,7 @@ description: 把想法、PRD、FRD 或 POC 整理成島島阿學的需求 Issue�
 
 ```text
 gh issue create --repo <已驗證 repo> --title <title> --body-file <body.md> --label <既有 label>
-pnpm -s tsx bin/pipeline/board.ts set <issue#> todo
+pnpm -s tsx bin/pipeline/board.ts set <issue#> todo --category <類別>
 gh issue view <issue-url> --json number,url,title,body,labels,state
 ```
 
@@ -94,7 +94,8 @@ gh issue view <issue-url> --json number,url,title,body,labels,state
 - 建立請求 timeout 時先查是否已建立，再決定重送。
 - Issue 已建立但 Board 失敗時，只重試沒完成的步驟。
 - 取得號碼後回填自身 ref 與 `Parent:`，有授權時一併更新母卡的子卡清單。
-- 回讀 body、labels、Board status，不能只看 exit code。
+- 沒帶 `--category` 的卡不會出現在「產品」「工程」看板，每日 `audit` 會列成「沒有類別」；事後補用 `board.ts category <n> <類別>`。
+- 回讀 body、labels、Board status 與類別，不能只看 exit code。
 
 ## 6. 回報
 

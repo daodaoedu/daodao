@@ -16,9 +16,39 @@ export const BOARD = {
     "Need Fix": "bb831d2b",
     Done: "98236657",
   },
+  // 「類別」 field, added 2026-11-01 (#453): the 產品／工程 views filter on it
+  categoryFieldId: "PVTSSF_lADOBTLl0c4BgxefzhoFPLg",
+  categoryOptions: {
+    產品功能: "b1377de1",
+    "產品 Bug": "aa12666f",
+    工程流程: "3397b424",
+    "技術債／維運": "7a04bdc0",
+    "清單／報告": "b384753a",
+  },
 } as const;
 
 export type BoardStatus = keyof typeof BOARD.statusOptions;
+export type BoardCategory = keyof typeof BOARD.categoryOptions;
+
+/** CLI aliases → canonical 類別 (keys normalized by resolveCategory: lowercase, no spaces/-/_, `/` → `／`). */
+export const CATEGORY_ALIASES: Record<string, BoardCategory> = {
+  產品功能: "產品功能",
+  功能: "產品功能",
+  feature: "產品功能",
+  產品bug: "產品 Bug",
+  bug: "產品 Bug",
+  工程流程: "工程流程",
+  工程: "工程流程",
+  eng: "工程流程",
+  "技術債／維運": "技術債／維運",
+  技術債: "技術債／維運",
+  維運: "技術債／維運",
+  debt: "技術債／維運",
+  "清單／報告": "清單／報告",
+  清單: "清單／報告",
+  報告: "清單／報告",
+  list: "清單／報告",
+};
 
 /** CLI aliases → canonical Status name (case-insensitive, `-`/`_`/space interchangeable). */
 export const STATUS_ALIASES: Record<string, BoardStatus> = {

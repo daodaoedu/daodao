@@ -87,7 +87,7 @@ bug 與新需求分不清時，先不開卡：草稿照樣寫完並標「待釐�
 4. 查重結果是「沒找到」或「表面相似」。
 5. 目標 repo 與 labels 已用 live 查詢確認。一般通報預設開在 `daodaoedu/daodao`，受影響子專案寫在技術查核段。
 6. 有 shell 且腳本存在時，`python3 <plugin root>/templates/check-issue-draft.py --template bug <草稿>` 沒有輸出；不適用的段落刪掉而不是留佔位符。沒有 shell 或找不到腳本，就自己對照模板檢查，並在回報寫「未跑格式檢查」。
-7. 已向使用者展示具體的標題、內容、目的 repo 與預定 labels／狀態。
+7. 已向使用者展示具體的標題、內容、目的 repo 與預定 labels／類別／狀態。
 8. 使用者已授權建立；已明確授權就不再重問。只要求草稿、模板或改 skill 時停在草稿；尚未授權就交草稿並詢問是否建立。
 
 缺根因、SHA 或重現紀錄不擋開卡。
@@ -97,7 +97,7 @@ bug 與新需求分不清時，先不開卡：草稿照樣寫完並標「待釐�
 1. 發布前再查一次重複卡；已存在就回報連結。
 2. 已確認的 bug 掛 `bug`；預期行為未定時在內容標「待釐清」。缺 label 不忽略錯誤；開卡者只有 Read 權限設不了 label 時，照 [request-feature](../request-feature/SKILL.md)「發布與回讀」留言請維護者補。
 3. `gh issue create --repo <repo> --title <title> --body-file <body.md> --label <label>`，不把錯誤文字拼進 shell。
-4. 只有要求掛 Board 才掛，預設 Todo；指令見 [request-feature](../request-feature/SKILL.md)「發布與回讀」。不設 Ready、不建修復子卡。
-5. 回讀 title、body、labels（與 Board status）。timeout 時先搜尋是否已建立，再決定重送；Issue 已建立但 Board 失敗時只補未完成的步驟。
+4. 只有要求掛 Board 才掛，預設 Todo，並帶類別：使用者看得到的錯誤用 `--category bug`（產品 Bug），CI、開發或驗收流程的錯誤用 `--category 工程`；指令見 [request-feature](../request-feature/SKILL.md)「發布與回讀」。不設 Ready、不建修復子卡。
+5. 回讀 title、body、labels（與 Board status、類別）。timeout 時先搜尋是否已建立，再決定重送；Issue 已建立但 Board 失敗時只補未完成的步驟。
 
 回報草稿位置或 Issue URL、分類、已知限制與待確認事項。通報不等於已重現、已修復或已驗收；修復時需附 regression test 與驗收證據。

@@ -18,7 +18,7 @@ description: 把已確認開發計畫裡未完成的任務拆成 GitHub 子 Issu
 4. 分清楚每項要開成哪種卡：
    - 本卡驗收範圍內的工作：開成子 issue，body 保留獨立一行 `Parent: daodaoedu/daodao#N`。
    - 範圍外的後續改進或技術債：開獨立 issue，寫「#n 的後續改進」，不掛子卡關係。
-5. 子 issue 用 [child-issue.md](../../../plugin/templates/child-issue.md)、獨立 issue 用 [central-issue.md](../../../plugin/templates/central-issue.md) 存本機草稿，不覆蓋既有檔名；標題用動詞開頭寫要做的事。附標題、repo、母卡、labels、status、原任務對照與檢核摘要。遠端 body 要自足，不能只引用本機檔案。
+5. 子 issue 用 [child-issue.md](../../../plugin/templates/child-issue.md)、獨立 issue 用 [central-issue.md](../../../plugin/templates/central-issue.md) 存本機草稿，不覆蓋既有檔名；標題用動詞開頭寫要做的事。附標題、repo、母卡、labels、類別、status、原任務對照與檢核摘要；類別每張各自判斷（子卡做的是 CI 或重構時不沿用母卡的「產品功能」）。遠端 body 要自足，不能只引用本機檔案。
 6. 依 [request-feature](../request-feature/SKILL.md) 的「建立條件」與「發布與回讀」執行，不重新分類。已授權就處理範圍內的任務；只授權規劃就交草稿。逐張記錄結果；timeout 先查重，部分成功只補未完成的操作。
 
 發布的子 issue 由人工 `/develop` 開工。回報每張的實際 URL／狀態、對應的來源任務、未完成的發布步驟與待決策事項；建卡不等於任務完成。
