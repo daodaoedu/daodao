@@ -1,9 +1,10 @@
 # daodao feature map
 
-給驗證與驗收用的共用對照表：每個使用者看得到的功能，**怎麼到這頁、用什麼穩定的選擇器操作、要用哪個角色的測試帳號、看到什麼才算成功**。參考 pstack 的 feature map 做法，站在使用者視角寫，程式內部細節到實測時再查，不凍結在這裡。
+給開卡、驗證與驗收用的共用對照表：每個使用者看得到的功能，**怎麼到這頁、用什麼穩定的選擇器操作、要用哪個角色的測試帳號、看到什麼才算成功**。參考 pstack 的 feature map 做法，站在使用者視角寫，程式內部細節到實測時再查，不凍結在這裡。
 
 誰會讀：
 
+- [request-feature](../../skills/request-feature/SKILL.md)、[report-bug](../../skills/report-bug/SKILL.md)：開卡定位 repo 時，從各功能的「主要程式位置」開始，再到程式碼確認，把路徑寫進「涉及 repo」的依據。只比對功能名稱不算依據（例：燈塔是講師的管理端，但在 `daodao-f2e`，不在 `daodao-admin-ui`）。
 - **develop**（`skills/develop/SKILL.md`，未隨本包出貨） verify 階段：決定瀏覽器驗證怎麼走、用哪些選擇器（**browser-verify.md**（`skills/develop/references/browser-verify.md`，未隨本包出貨））。
 - **test-acceptance**（`skills/test-acceptance/SKILL.md`，未隨本包出貨）：照請驗收留言實測時，補到達路徑、選擇器與前置條件。請驗收留言與這裡不一致時以留言為準，差異回報後再更新這裡。
 

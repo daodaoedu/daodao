@@ -24,7 +24,7 @@
 
 ## 四平台的 skill 來源
 
-上述 14 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版讀 `.agents/skills/`，ChatGPT 網頁／行動版讀 `plugin/out/openai-plugin/`，Claude.ai 上傳 `plugin/out/web-plugin/` 打包的 zip（只收 7 個不需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
+上述 14 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版在 repo 裡讀 `.agents/skills/`、在 repo 外裝 `plugin/out/openai-plugin/`，ChatGPT 網頁／行動版與 Claude.ai 用 `plugin/out/web-plugin/`（`daodao-web`，只收 7 個不需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
 
 Codex 有自己的 hooks（`.codex/hooks.json`，與 Claude Code 指向同一批腳本），但**首次使用要先 `/hooks` 信任**才會觸發；沒信任就等同沒有閘門，須主動執行相同檢查並保留輸出。ChatGPT 與 Claude.ai 沒有閘門機制，一律由 skill 內文逐項執行。工具不可用標限制；缺少獨立 agent 不把自審冒稱獨立 review。檔案存在不證明各客戶端端到端實測通過。
 
