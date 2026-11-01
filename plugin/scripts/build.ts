@@ -438,17 +438,23 @@ function buildCodexHooks(): OutFile[] {
     // Claude Code 直接執行腳本路徑；Codex 的示範一律帶 interpreter，這裡補上並加引號
     return /^\$\(git rev-parse[^"]*\.sh$/.test(expanded) ? `bash "${expanded}"` : expanded
   }
+  // Resolve the repo before launching its Windows interpreter adapter.
+  const windowsCommand = (s: string) => {
+    const file = s.match(/\/hooks\/([a-z-]+\.(?:sh|py))/)?.[1]
+    if (!file) throw new Error(`Unsupported Windows hook: ${s}`)
+    return `python -X utf8 -c "import runpy,subprocess; runpy.run_path(subprocess.check_output(['git','rev-parse','--show-toplevel'],encoding='utf-8').strip()+'/plugin/hooks/run-windows.py',run_name='__main__')" ${file}; exit $LASTEXITCODE`
+  }
   const out: Record<string, unknown> = {}
   for (const [event, groups] of Object.entries(claudeHooks as Record<string, any[]>)) {
     out[event] = groups.map((g) => ({
       ...(g.matcher ? { matcher: g.matcher } : {}),
-      hooks: g.hooks.map((h: any) => ({ ...h, command: rewrite(h.command) })),
+      hooks: g.hooks.map((h: any) => ({ ...h, command: rewrite(h.command), commandWindows: windowsCommand(h.command) })),
     }))
   }
   return [
     {
       path: '.codex/hooks.json',
-      content: `${JSON.stringify({ $comment: BANNER.replace(/<!--|-->/g, '').trim(), hooks: out }, null, 2)}\n`,
+      content: `${JSON.stringify({ description: BANNER.replace(/<!--|-->/g, '').trim(), hooks: out }, null, 2)}\n`,
     },
     {
       // Codex 只在信任的專案載入 repo 的 .codex/config.toml；有了它，develop 的畫面驗證在 Codex 也做得到。
