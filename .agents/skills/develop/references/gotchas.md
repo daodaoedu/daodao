@@ -50,6 +50,8 @@ POC 比對的陷阱在 [poc-compare.md](poc-compare.md)「`.dc.html` POC 的已�
   CLAUDE_WORKING_DIRECTORY="$(pwd)" bash <daodao root>/plugin/hooks/pre-pr-gate.sh
   ```
   issue comment 同樣走 `gh api …/issues/<n>/comments -X POST -F body=@<file>`。（#218）
+- **PR 開的時候閘門過了，之後 push 才被 CI `pr-evidence-gate` 擋**：CI 每次 push 都用 main 上最新的規則重讀 PR body。f2e#1126、server#588 在 PR #400 加入「讀取權限驗證：適用／不適用：<原因>」之前開，之後 push 就紅了。`pre-pr-gate.sh` 現在會在 `git push`、`gh pr ready` 前抓既有 PR 的 body 重跑閘門 5，`gh pr edit --body/--body-file` 則檢查新 body；被擋就用 `gh pr edit <n> --body-file <檔>` 補上宣告再 push。（#324）
+- **storage 加表或刪表後，server 每個 PR 的「Compare SQL ↔ Prisma schemas」都紅**：`src/scripts/check-schema-drift.ts` 讀 storage **dev** 的 schema 比對 Prisma，storage 先 merge、server 還沒有對應 model 就會整排紅（storage#297 加 `audit_logs`）。順序是先 merge server 的 PR（補 Prisma model，或在 `.schema-drift-ignore.json` 加一筆），再 merge storage。（#324）
 - **刪測試需要的 `.test-integrity-review.json` 回條**：回條綁定那一次的測試 diff，留在 main 會擋下之後每個 PR 的 `test-integrity` required check。改了任何測試檔就重算 digest，PR 一 merge 就刪。完整流程見 root 的 `scripts/check-test-integrity.md`。
 - **worktree 共用 metadata（任務資料夾是複製別的任務建的）**：兩個 checkout 的 `.git` 指向同一份 metadata 時，HEAD／index 會互相覆蓋，而 `git worktree remove` 會刪掉那份 metadata，連帶弄壞另一個（2026-10-10 移除 240、290 弄壞 233、214）。開新任務時用 `git worktree add`，不要複製舊任務資料夾。移除前跑 `pnpm -s tsx bin/pipeline/worktree-audit.ts`，回報 `shared`／`copied` 就停。已壞掉的修法：重建 metadata 目錄（`commondir` 寫 `../..`、`gitdir` 寫該 checkout 的 `.git` 絕對路徑、`HEAD` 寫對應 PR head sha，必要時 `git fetch origin pull/<n>/head` 補物件），再 `git reset -q` 只重建 index、不動工作檔案，最後比對 PR head 確認沒有遺失修改。
 - **origin/dev 的測試本來就有紅的**：開工時先在 `origin/dev` 跑一次會受影響的測試，結果存成 `$TASK/evidence/baseline-test.txt`；之後只看這次新增的失敗。會時好時壞的測試跑兩次再判斷。不先存基準，就分不出紅燈是自己弄的還是原本就有。（task 189、154、281）
