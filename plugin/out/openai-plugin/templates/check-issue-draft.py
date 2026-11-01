@@ -21,6 +21,8 @@ ANGLE = re.compile(r'<[^<>\n]+>')
 SQUARE = re.compile(r'\[[^\]\n]+\](?![(\[])')
 BOX = re.compile(r'^\s*[-*+] \[([ xX])\] (.*)$')
 PARENT = re.compile(r'^Parent: daodaoedu/daodao#\d+$')
+REPO_LINE = re.compile(r'^\s*[-*+] 涉及 repo')
+REPO_BASIS = re.compile(r'依據：[\s`（）()]*[^\s`（）()]')
 NOT_YET = ('尚未產生', '尚未開始')
 
 
@@ -73,6 +75,16 @@ def check(text, template):
 
     if not any(line.startswith('# ') for line in lines):
         fail(0, '缺少標題「# 」')
+
+    if template == 'central':
+        # 依據多半寫成 inline code 路徑，prose_lines 會把它清掉，所以看原文；行號兩邊一致
+        raw = text.splitlines()
+        repo_lines = [n for n, line in enumerate(lines, 1) if REPO_LINE.match(line)]
+        if not repo_lines:
+            fail(0, '缺少「- 涉及 repo」')
+        for n in repo_lines:
+            if '待確認' not in raw[n - 1] and not REPO_BASIS.search(raw[n - 1]):
+                fail(n, '「涉及 repo」要附「依據：<程式碼路徑或 feature map 檔案>」；查不到寫「待確認：原因」，不要看名字猜')
 
     if template == 'child':
         if not any(PARENT.match(line.strip()) for line in lines):

@@ -41,6 +41,7 @@ description: 把想法、PRD、FRD 或 POC 整理成島島阿學的需求 Issue�
 
 - 新產品需求先依 [draft-prd](../draft-prd/SKILL.md) 查核與起草；已確認的規格直接引用，不重做。
 - repo 與工程欄位由你查，不讓提出者填表；指派用 GitHub Assignees。
+- **定位 repo 要有依據**，小改動也一樣：先在 [feature map](../../../plugin/docs/feature-map/README.md) 找使用者說的頁面或功能，拿「主要程式位置」當起點，再到程式碼確認檔案存在（讀最新 dev：`git show origin/dev:<path>` 或搜尋 route／元件），把路徑寫在「涉及 repo」的「依據：」。只比對名稱不算依據，例如看到「管理端」就填 `daodao-admin-ui`（燈塔在 `daodao-f2e`）。讀不到程式碼時依據寫 feature map 檔案並註明「程式碼未查證」；feature map 也沒有就寫「待確認：原因」，不猜。
 - 沿用來源的 FR／TP／AC ID，不另編同義條件。
 - 標題寫功能與使用者可觀察的結果，不寫實作方式。
 - 先寫白話需求摘要，工程欄位放交接附錄。
@@ -89,7 +90,7 @@ gh issue view <issue-url> --json number,url,title,body,labels,state
 
 - 用 `--body-file`，不把需求文字拼進 shell。
 - 預設 Todo；使用者要求才 `set <n> ready`。
-- 缺 label 不忽略錯誤。
+- 缺 label 不忽略錯誤。但開卡者沒有 Triage 以上權限時（`gh api repos/<repo>/collaborators/<login>/permission -q .role_name` 是 `read`），GitHub 不讓他設 label：照樣開卡，不要一再要求本人補；在卡上留言列出該加的 labels 請有權限的人處理，回報時寫明「labels 待維護者補上」。
 - 建立請求 timeout 時先查是否已建立，再決定重送。
 - Issue 已建立但 Board 失敗時，只重試沒完成的步驟。
 - 取得號碼後回填自身 ref 與 `Parent:`，有授權時一併更新母卡的子卡清單。
