@@ -1,0 +1,193 @@
+# 核心旅程 E2E 的共用流程（#324）。放在公開的 daodao，是因為公開的 daodao-f2e 不能叫用私有程式庫的 reusable workflow；
+# 實際腳本仍在私有的 daodao-infra（scripts/journeys/），由下方以 infra_ref + CROSS_REPO_TOKEN 唯讀 checkout。
+# 呼叫端由 daodao-infra 的 scripts/journeys/install-callers.py 產生；本檔不在 sync-claude-config 的同步清單內。
+name: Core journeys
+on:
+  workflow_call:
+    inputs:
+      infra_ref:
+        type: string
+        required: true
+      caller_repository:
+        type: string
+        required: true
+      caller_sha:
+        type: string
+        required: true
+      base_sha:
+        type: string
+        default: ''
+      revisions:
+        type: string
+        default: '{}'
+      mode:
+        type: string
+        default: local
+      full:
+        type: boolean
+        default: false
+      product_url:
+        type: string
+        default: ''
+      admin_url:
+        type: string
+        default: ''
+      api_url:
+        type: string
+        default: ''
+      challenge_template_id:
+        type: string
+        default: ''
+      challenge_template_title:
+        type: string
+        default: ''
+    secrets:
+      CROSS_REPO_TOKEN:
+        required: true
+      DEV_LOGIN_SECRET:
+        required: false
+permissions:
+  contents: read
+jobs:
+  run:
+    name: Selected fullstack journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Validate caller trust and immutable inputs
+        env:
+          INFRA_REF: ${{ inputs.infra_ref }}
+          CALLER_SHA: ${{ inputs.caller_sha }}
+          BASE_SHA: ${{ inputs.base_sha }}
+          MODE: ${{ inputs.mode }}
+          EVENT: ${{ github.event_name }}
+          TRUSTED_REF: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          FORK: ${{ github.event.pull_request.head.repo.fork || false }}
+        run: |
+          [[ "$FORK" == false ]] || { echo 'Fork PRs require a trusted maintainer branch; private cross-repo secrets are unavailable.'; exit 1; }
+          [[ "$INFRA_REF" =~ ^[0-9a-f]{40}$ && "$CALLER_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MODE" == local || "$MODE" == dev ]]
+          [[ "$MODE" != dev || "$TRUSTED_REF" == true ]] || { echo "Dev journeys only run from the default branch"; exit 1; }
+          [[ "$MODE" != dev || "$EVENT" == schedule || "$EVENT" == workflow_dispatch ]] || { echo "Dev credentials require a trusted scheduled/manual run"; exit 1; }
+      - uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-infra
+          ref: ${{ inputs.infra_ref }}
+          path: stack/daodao-infra
+          fetch-depth: 0
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          persist-credentials: false
+      - name: Resolve immutable cross-repository revisions
+        id: refs
+        env:
+          GH_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+          REVISIONS: ${{ inputs.revisions }}
+          CALLER_REPOSITORY: ${{ inputs.caller_repository }}
+          CALLER_SHA: ${{ inputs.caller_sha }}
+          INFRA_REF: ${{ inputs.infra_ref }}
+        run: python3 stack/daodao-infra/scripts/journeys/resolve.py
+      - uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-f2e
+          ref: ${{ steps.refs.outputs.daodao-f2e }}
+          path: stack/daodao-f2e
+          fetch-depth: 0
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-admin-ui
+          ref: ${{ steps.refs.outputs.daodao-admin-ui }}
+          path: stack/daodao-admin-ui
+          fetch-depth: 0
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-server
+          ref: ${{ steps.refs.outputs.daodao-server }}
+          path: stack/daodao-server
+          fetch-depth: 0
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-storage
+          ref: ${{ steps.refs.outputs.daodao-storage }}
+          path: stack/daodao-storage
+          fetch-depth: 0
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: daodaoedu/daodao-ai-backend
+          ref: ${{ steps.refs.outputs.daodao-ai-backend }}
+          path: stack/daodao-ai-backend
+          fetch-depth: 0
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+          persist-credentials: false
+      - name: Select impacted journeys
+        id: selection
+        env:
+          CALLER_REPOSITORY: ${{ inputs.caller_repository }}
+          CALLER_SHA: ${{ inputs.caller_sha }}
+          BASE_SHA: ${{ inputs.base_sha }}
+          FULL: ${{ inputs.full }}
+        run: |
+          if [[ "$FULL" == true ]]; then
+            python3 stack/daodao-infra/scripts/journeys/select.py --repository "$CALLER_REPOSITORY" --full --output "$GITHUB_OUTPUT"
+          else
+            [[ -n "$BASE_SHA" ]] || { echo 'base_sha is required for diff selection'; exit 1; }
+            git -C "stack/$CALLER_REPOSITORY" diff --name-only --no-renames "$BASE_SHA" "$CALLER_SHA" > changed-paths.txt
+            python3 stack/daodao-infra/scripts/journeys/select.py --repository "$CALLER_REPOSITORY" --paths-file changed-paths.txt --output "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v4
+        if: steps.selection.outputs.count != '0'
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        if: steps.selection.outputs.count != '0'
+        with:
+          node-version: '22'
+      - name: Run isolated stack or dev journey suite
+        if: steps.selection.outputs.count != '0'
+        env:
+          JOURNEY_IDS: ${{ steps.selection.outputs.csv }}
+          JOURNEY_MODE: ${{ inputs.mode }}
+          JOURNEY_F2E_DIR: ${{ github.workspace }}/stack/daodao-f2e
+          JOURNEY_ADMIN_DIR: ${{ github.workspace }}/stack/daodao-admin-ui
+          JOURNEY_SERVER_DIR: ${{ github.workspace }}/stack/daodao-server
+          JOURNEY_STORAGE_DIR: ${{ github.workspace }}/stack/daodao-storage
+          JOURNEY_AI_DIR: ${{ github.workspace }}/stack/daodao-ai-backend
+          JOURNEY_ARTIFACT_DIR: ${{ github.workspace }}/journey-artifacts
+          JOURNEY_PRODUCT_URL: ${{ inputs.product_url }}
+          JOURNEY_ADMIN_URL: ${{ inputs.admin_url }}
+          JOURNEY_API_URL: ${{ inputs.api_url }}
+          JOURNEY_CHALLENGE_TEMPLATE_ID: ${{ inputs.challenge_template_id }}
+          JOURNEY_CHALLENGE_TEMPLATE_TITLE: ${{ inputs.challenge_template_title }}
+          DEV_LOGIN_SECRET: ${{ inputs.mode == 'dev' && secrets.DEV_LOGIN_SECRET || '' }}
+        run: bash stack/daodao-infra/scripts/journeys/run-stack.sh
+      - name: Summarize flaky and failed journeys
+        if: always() && steps.selection.outputs.count != '0'
+        run: python3 stack/daodao-infra/scripts/journeys/summarize_results.py --report stack/daodao-f2e/artifacts/journeys/results.json
+      - name: Upload revision evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journey-revisions
+          path: revisions.json
+          if-no-files-found: ignore
+          retention-days: 7
+      # Browser traces can contain auth and personal data; never upload them automatically.
+  required:
+    name: journey-required
+    if: always()
+    needs: run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Propagate actual suite result
+        env:
+          RESULT: ${{ needs.run.result }}
+        run: |
+          [[ "$RESULT" == success ]] || { echo "Journey job ended: $RESULT"; exit 1; }
