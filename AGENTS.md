@@ -6,15 +6,15 @@ daodao 是一個 monorepo，各子專案職責如下：
 
 | 子專案 | 職責 | 什麼時候去這裡 |
 |--------|------|----------------|
-| `daodao-f2e` | 前端與 App | 讀取/修改 UI、頁面、元件、前端邏輯 |
+| `daodao-f2e` | 使用者看得到的前端與 App（含燈塔講師／團主管理端） | 讀取/修改 UI、頁面、元件、前端邏輯 |
 | `daodao-server` | 後端 API | 讀取/修改 API、商業邏輯、後端服務 |
 | `daodao-ai-backend` | AI 相關服務 | 統計分析、推薦系統、AI 功能開發與 debug |
 | `daodao-storage` | DB 管理 | Schema 定義、migrations、資料庫結構變更（現有 schema 在 `schema/`，異動寫 migration 到 `migrate/sql/`） |
 | `daodao-infra` | 基礎建設 | 部署、CI/CD、雲端資源、環境設定 |
 | `daodao-worker` | Cloudflare Workers | AI 相關 worker 與其他免費服務（Cloudflare 平台） |
-| `daodao-admin-ui` | 管理後台 UI | 讀取/修改管理介面、後台頁面、admin 元件 |
+| `daodao-admin-ui` | 島島內部員工用的管理後台（admin-dev），不是燈塔 | 讀取/修改內部管理介面、後台頁面、admin 元件 |
 
-跨專案功能先確認涉及哪些子專案，再分別在對應專案內實作。
+跨專案功能先確認涉及哪些子專案，再分別在對應專案內實作。判斷功能在哪個子專案，查 [feature map](plugin/docs/feature-map/README.md) 的「主要程式位置」再到程式碼確認，不要看名字猜（「管理端」「後台」不等於 `daodao-admin-ui`）。
 
 ## 測試規範
 

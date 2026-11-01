@@ -22,7 +22,7 @@
 
 （依介面分組；每個功能一個檔案。各檔開頭的「依據版本」是撰寫時讀的程式版本，行號以那一版為準）
 
-### Web（apps/product，`https://app-dev.daodao.so`）
+### Web（daodao-f2e apps/product，`https://app-dev.daodao.so`）
 
 一般瀏覽器即可操作。
 
@@ -58,7 +58,7 @@
 | [問卷管理](admin/surveys.md) | 管理員建立與編輯問卷、變更狀態、預覽填寫頁、看回應與分析結果。 |
 | [用戶管理與用戶詳情](admin/user-management.md) | 管理員搜尋、篩選用戶，設定角色、上標籤、停用／啟用帳號，並點進單一用戶看活動、登入、實踐與人物誌。 |
 
-### App（apps/mobile）
+### App（daodao-f2e apps/mobile）
 
 **不能用瀏覽器操作**：沒有網頁版、Expo Go 打不開。要裝 dev build（EAS preview「Dao Dao (Dev)」或 iOS 模擬器），登入只有 Google／Apple。沒有 `testID`，靠 `accessibilityLabel`。沒有可安裝的測試版時，App 步驟一律受阻。
 
