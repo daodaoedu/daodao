@@ -385,7 +385,7 @@ function buildClaudeAi(platform: Platform): OutFile[] {
         name: `${pluginMeta.name}-web`,
         displayName: `${pluginMeta.displayName}（網頁版）`,
         version: pluginMeta.version,
-        description: `${pluginMeta.description.replace(/13 個 skill.*$/, '')}網頁版收錄不需要本機 checkout 的 ${included.length} 個流程。`,
+        description: `${pluginMeta.description.replace(/\d+ 個 skill.*$/, '')}網頁版收錄不需要本機 checkout 的 ${included.length} 個流程。`,
         author: pluginMeta.author,
         homepage: pluginMeta.homepage,
         repository: pluginMeta.repository,

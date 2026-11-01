@@ -23,10 +23,11 @@ plugin/
 | `plugin/`（就地） | Claude Code |
 | `.agents/skills/` | Codex CLI／IDE、ChatGPT 桌面版 |
 | `.codex/hooks.json` | Codex 閘門 |
-| `.codex/config.toml` | Codex 的 Playwright MCP（畫面驗證） |
-| `.agents/plugins/marketplace.json` | 本機安裝用的 repo marketplace |
-| `plugin/out/openai-plugin/` | ChatGPT 網頁／行動版（Agent Plugins 格式） |
-| `plugin/out/claude-ai/` + `plugin:zip` | Claude.ai 手動上傳 |
+| `.codex/config.toml` | Codex 的 Playwright MCP（畫面驗證，瀏覽器工具免逐次核准） |
+| `.codex/rules/daodao.rules` | Codex 只放行驗證報告上傳腳本在 sandbox 外執行（要連 googleapis） |
+| `.agents/plugins/marketplace.json` | Codex 在 repo 外安裝用的 marketplace（`daodao@daodao`） |
+| `plugin/out/openai-plugin/` | repo 外安裝的 Codex／ChatGPT 桌面版 plugin |
+| `plugin/out/web-plugin/` + `plugin:zip` | `daodao-web`：Claude.ai 與 ChatGPT 網頁／行動版（zip 在 `plugin/out/web-plugin-zip/`） |
 
 ```bash
 pnpm plugin:build    # 重新產生全部
@@ -60,7 +61,7 @@ claude plugin install daodao --marketplace https://daodaoedu.github.io/daodao/ma
 ```
 
 裝完**重開 session** 才載入；skill 會是 `/daodao:develop` 這種帶命名空間的形式。
-`claude plugin details daodao@daodao` 可確認 13 skills + 6 hooks 都在。
+`claude plugin details daodao@daodao` 可確認 14 skills + 6 hooks 都在。
 
 沒辦法讓別人「自動」裝好——官方明講 repo 設定啟用外部來源 plugin 不會幫別人安裝，
 自動的只有 marketplace 註冊，`install` 每人跑一次。
@@ -96,8 +97,10 @@ zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version 
 **有本 repo**：不用裝。`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、
 `$REPO_ROOT` 三層）。**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前
 hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。專案信任後，Codex 也會載入
-`.codex/config.toml` 的 Playwright MCP，畫面驗證與截圖就能做；Drive 報告另需一次性的 rclone 設定
-（見 [verify-report.md](skills/develop/references/verify-report.md)）。
+`.codex/config.toml` 的 Playwright MCP（瀏覽器工具免逐次核准），畫面驗證與截圖就能做；以及
+`.codex/rules/daodao.rules`，讓驗證報告上傳腳本直接在 sandbox 外執行、不跳核准。Drive 報告另需一次性的
+rclone 設定（見 [verify-report.md](skills/develop/references/verify-report.md)）。以上 2026-10-31 在互動式
+Codex 實測通過；`codex exec`（非互動）一律禁止離開 sandbox，上傳在那裡會被擋。
 
 **沒有 repo**：加 marketplace 再裝，用 `--sparse` 只抓需要的目錄（約 400KB，不 clone 整個 monorepo）：
 
@@ -217,8 +220,8 @@ Claude.ai 少掉的 7 個是 `develop`、`review-change`、`check-commit`、`ver
 
 | 缺口 | 平台 | 補得起來嗎 | 做法 |
 |---|---|---|---|
-| 瀏覽器驗證 | Codex／ChatGPT 桌面 | 已補 | build 產生 `.codex/config.toml`，設定 Playwright MCP（版本釘在 `build.ts` 的 `PLAYWRIGHT_MCP_VERSION`）；專案信任後載入 |
-| Drive 報告 | 所有能跑 shell 的平台 | 已補 | `develop/references/verify-report/upload-report.py`，只需要 python3 與 rclone，不靠 Drive connector |
+| 瀏覽器驗證 | Codex／ChatGPT 桌面 | 已補 | build 產生 `.codex/config.toml`，設定 Playwright MCP（版本釘在 `build.ts` 的 `PLAYWRIGHT_MCP_VERSION`）並免逐次核准；專案信任後載入 |
+| Drive 報告 | 所有能跑 shell 的平台 | 已補 | `develop/references/verify-report/upload-report.py`，只需要 python3 與 rclone，不靠 Drive connector；Codex 由 `.codex/rules/daodao.rules` 放行到 sandbox 外 |
 | 自動閘門 | Codex／ChatGPT 桌面 | 已有 | 在 repo 裡開，跑 `/hooks` 信任 `.codex/hooks.json` |
 | 自動閘門 | repo 外裝的 Codex plugin | 不行 | plugin 不能附 hooks；在 repo 裡開 Codex 就有 |
 | repo／shell／git／測試 | ChatGPT 網頁／行動、Claude.ai 網頁 | 不行 | 雲端 sandbox 碰不到使用者的 checkout |

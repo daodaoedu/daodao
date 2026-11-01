@@ -9,7 +9,7 @@
 可用 [request-feature](../skills/request-feature/SKILL.md) 開卡（Claude Code `/daodao:request-feature`；Codex 讀 `.agents/skills/request-feature/`）。例如：「用 request-feature 根據這份需求開 Issue，先放 Todo」。skill 會讀本目錄模板、查重、發布與回讀；本目錄本身不執行自動化。
 
 1. 描述想法、操作問題，或提供 Issue／PRD／FRD／POC／分支。使用 [draft-prd](../skills/draft-prd/SKILL.md) 查核現況並以 [requirements-doc.md](requirements-doc.md) 起草一份 PRD；不要求提出者逐格填寫。既有 FRD 沿用原內容與 ID。
-2. AI 先完成適用檢核、自審並修訂，交付草稿、檢核摘要、限制與待決策事項；人負責審核原意與產品取捨，不按角色分配檢查工作。AI 依審核意見修訂並重查受影響內容，每輪只補問一兩個關鍵決策。repo、技術版本與交接資訊由工具或開發補充，任務指派用 GitHub Assignees，不另填負責人表。
+2. AI 先完成適用檢核、自審並修訂，交付草稿、檢核摘要、限制與待決策事項；人負責審核原意與產品取捨，不按角色分配檢查工作。AI 依審核意見修訂並重查受影響內容，每輪只補問一兩個關鍵決策。repo、技術版本與交接資訊由工具或開發補充（repo 先查 [feature map](../docs/feature-map/README.md) 的「主要程式位置」再到程式碼確認，不看名字猜），任務指派用 GitHub Assignees，不另填負責人表。
 3. 已要求開卡時，由 request-feature 將同份需求摘要放入 [central-issue.md](central-issue.md)；母卡底下的子卡用 [child-issue.md](child-issue.md)；[subtask-issue.md](subtask-issue.md) 只當單一 sub-repo 的工程交接筆記。Todo 可保留缺項，需求確認不等於啟動開發。
 4. 開發另補技術設計與任務；驗證結果使用 [acceptance-report.md](acceptance-report.md)，交付用 [pull-request.md](pull-request.md) 與 [issue-status-comment.md](issue-status-comment.md)。
 
@@ -25,7 +25,7 @@ PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 sna
 
 ## 工程模板填寫規則（由 skill／開發補充）
 
-發布前跑 `python3 plugin/templates/check-issue-draft.py --template <bug|central|child> <草稿>`，檢查未替換的佔位符、段落與順序、子卡的 `Parent:` 行與驗證證據；印出的每一行都要修掉。
+發布前跑 `python3 plugin/templates/check-issue-draft.py --template <bug|central|child> <草稿>`，檢查未替換的佔位符、段落與順序、中央卡「涉及 repo」有沒有附「依據：<程式碼路徑或 feature map 檔案>」或寫「待確認」、子卡的 `Parent:` 行與驗證證據；印出的每一行都要修掉。
 
 - 所有 `<...>` 必須替換；Todo 需求缺項填「待確認：原因／下一步」，執行階段受阻才填 `blocked`。Run、SHA、報告等開發後欄位在開卡時填「尚未開始／尚未產生」，不可留假值或要求開卡前先完成開發。
 - 必填：中央 Issue ref、AC ID、契約版本／digest、執行與報告狀態（依階段補充）；開始執行後還需版本 SHA map 與證據索引。
