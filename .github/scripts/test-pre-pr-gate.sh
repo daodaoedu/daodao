@@ -599,4 +599,94 @@ expect_block "非預演照舊擋下" "$code" "verify 階段沒跑完"
 [ "$(wc -l < "$ledger")" -gt "$before" ] || fail "非預演擋下時應寫 gate ledger"
 printf '✅ %s\n' "非預演照舊寫 gate ledger"
 
+# ---------------------------------------------------------------- 指令的 cd 路徑優先於 session cwd
+# session 停在 A 任務（Status 未完成，會被擋），指令 cd 到 B 任務（全部齊備）發 PR：要查 B，不是 A
+a=$(make_task daodao-server "$(task_md implementing "$GOOD_MATRIX" '- none')")
+b=$(make_task daodao-server "$(task_md verified "$GOOD_MATRIX" '- none')")
+printf '%s\n' "$GOOD_BODY" > "$b/notes/body.md"
+code=$(run_hook "$a/daodao-server" "$(pr_cmd "$b/daodao-server" "$b/notes/body.md")")
+expect_pass "cd 到別的任務發 PR，查的是 cd 那個任務" "$code"
+code=$(run_hook "$b/daodao-server" "$(pr_cmd "$a/daodao-server" "$b/notes/body.md")")
+expect_block "session 在齊備任務、cd 到未完成任務照樣擋" "$code" "verify 階段沒跑完"
+
+# ---------------------------------------------------------------- 既有 PR 重檢（git push／gh pr ready／gh pr edit，#324）
+# 假 gh：GH_STUB_MODE=json 印 $GH_STUB_JSON；nopr 模擬 branch 沒有 PR；fail 模擬網路錯誤。每次呼叫記到 $GH_STUB_LOG
+STUB_BIN="$SANDBOX/stub-bin"
+mkdir -p "$STUB_BIN"
+cat > "$STUB_BIN/gh" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >> "$GH_STUB_LOG"
+case "$GH_STUB_MODE" in
+  json) cat "$GH_STUB_JSON" ;;
+  nopr) echo 'no pull requests found for branch "feat/x"' >&2; exit 1 ;;
+  *) echo 'error connecting to api.github.com' >&2; exit 1 ;;
+esac
+STUB
+chmod +x "$STUB_BIN/gh"
+export PATH="$STUB_BIN:$PATH" GH_STUB_LOG="$SANDBOX/gh.log" GH_STUB_JSON="$SANDBOX/pr.json" GH_STUB_MODE=json
+stub_pr() {  # $1=state $2=body
+  jq -n --arg s "$1" --arg b "$2" '{number: 7, state: $s, body: $b}' > "$GH_STUB_JSON"
+}
+NO_READ_BODY=$(printf '%s\n' "$GOOD_BODY" | grep -v '^讀取權限驗證')
+repo="$SANDBOX/plain/daodao-f2e"
+mkdir -p "$repo"
+git -C "$repo" init -q
+git -C "$repo" remote add origin https://github.com/daodaoedu/daodao-f2e.git
+
+stub_pr OPEN "$NO_READ_BODY"
+code=$(run_hook "$repo" "git push")
+expect_block "push：既有 PR body 缺讀取權限宣告要擋" "$code" "既有 PR #7 的 body"
+code=$(run_hook "$SANDBOX" "cd $repo && git push -u origin HEAD")
+expect_block "push：cd 進 repo 再 push 也要擋" "$code" "讀取權限"
+code=$(run_hook "$SANDBOX" "git -C $repo push")
+expect_block "push：git -C <repo> push 也要擋" "$code" "既有 PR #7"
+code=$(run_hook "$repo" "gh pr ready")
+expect_block "gh pr ready：既有 PR body 缺宣告要擋" "$code" "既有 PR #7"
+code=$(run_hook "$repo" "git push origin --delete feat/x")
+expect_pass "push --delete 不檢查" "$code"
+
+stub_pr OPEN "$GOOD_BODY"
+code=$(run_hook "$repo" "git push")
+expect_pass "push：既有 PR body 有宣告就放行" "$code"
+
+stub_pr MERGED "$NO_READ_BODY"
+code=$(run_hook "$repo" "git push")
+expect_pass "push：PR 已 merge 不檢查" "$code"
+
+GH_STUB_MODE=nopr
+code=$(run_hook "$repo" "git push")
+expect_pass "push：branch 沒有 PR 就放行" "$code"
+[ -z "$(last_err)" ] || fail "沒有 PR 時不該有訊息，實際：$(last_err)"
+printf '✅ %s\n' "沒有 PR 時靜默"
+
+GH_STUB_MODE=fail
+code=$(run_hook "$repo" "git push")
+expect_pass "push：gh 失敗不擋（fail open）" "$code"
+[[ "$(last_err)" == *"⚠️"* ]] || fail "gh 失敗時應印警告，實際：$(last_err)"
+printf '✅ %s\n' "gh 失敗時印警告"
+GH_STUB_MODE=json
+
+# gh pr edit 檢查的是新 body，不是舊的
+printf '%s\n' "$NO_READ_BODY" > "$SANDBOX/new-body.md"
+stub_pr OPEN "$GOOD_BODY"
+code=$(run_hook "$repo" "gh pr edit 7 --body-file $SANDBOX/new-body.md")
+expect_block "gh pr edit：新 body 缺宣告要擋（舊 body 齊備也一樣）" "$code" "新的 PR body"
+printf '%s\n' "$GOOD_BODY" > "$SANDBOX/new-body.md"
+stub_pr OPEN "$NO_READ_BODY"
+code=$(run_hook "$repo" "gh pr edit 7 --body-file $SANDBOX/new-body.md")
+expect_pass "gh pr edit：用齊備的新 body 補救舊 body 要放行" "$code"
+code=$(run_hook "$repo" "gh pr edit 7 --add-label bug")
+expect_pass "gh pr edit 沒改 body 不檢查" "$code"
+
+# 不是 daodaoedu 的 repo：完全不打 gh
+other="$SANDBOX/plain/other"
+mkdir -p "$other"
+git -C "$other" init -q
+git -C "$other" remote add origin https://github.com/someone/other.git
+: > "$GH_STUB_LOG"
+code=$(run_hook "$other" "git push")
+expect_pass "非 daodaoedu repo 的 push 不檢查" "$code"
+[ ! -s "$GH_STUB_LOG" ] || fail "非 daodaoedu repo 不該呼叫 gh，實際：$(cat "$GH_STUB_LOG")"
+printf '✅ %s\n' "非 daodaoedu repo 不呼叫 gh"
+
 echo "✅ pre-pr-gate regression tests passed"

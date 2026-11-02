@@ -3,7 +3,7 @@
  */
 import { execSync } from "child_process";
 import { prTargets } from "./lib.js";
-import { BOARD, CENTRAL_REPO, OWNER, type BoardStatus } from "./types.js";
+import { BOARD, CENTRAL_REPO, OWNER, type BoardCategory, type BoardStatus } from "./types.js";
 
 function sh(cmd: string): string {
   return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
@@ -16,9 +16,18 @@ export interface BoardItem {
   status: string | null;
   /** When the Status field was last set (ISO), null if never. */
   statusUpdatedAt: string | null;
+  /** 類別 field value, null when empty. */
+  category: string | null;
   issueNumber: number | null;
   repository: string | null;
   title: string;
+}
+
+export function setBoardCategory(itemId: string, category: BoardCategory): void {
+  sh(
+    `gh project item-edit --project-id ${BOARD.projectId} --id ${itemId} ` +
+      `--field-id ${BOARD.categoryFieldId} --single-select-option-id ${BOARD.categoryOptions[category]}`
+  );
 }
 
 export function setBoardStatus(itemId: string, statusName: BoardStatus): void {
@@ -47,6 +56,7 @@ export function listBoardItemsLite(): BoardItem[] {
         pageInfo { hasNextPage endCursor }
         nodes { id
           fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name updatedAt } }
+          category: fieldValueByName(name: "類別") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
           content { ... on Issue { number title repository { nameWithOwner } } } } } } } }`;
     const out = sh(`gh api graphql -f query='${query}'`);
     const page = (
@@ -54,6 +64,7 @@ export function listBoardItemsLite(): BoardItem[] {
         data: { organization: { projectV2: { items: {
           pageInfo: { hasNextPage: boolean; endCursor: string };
           nodes: Array<{ id: string; fieldValueByName: { name?: string; updatedAt?: string } | null;
+            category: { name?: string } | null;
             content: { number?: number; title?: string; repository?: { nameWithOwner: string } } | null }>;
         } } } };
       }
@@ -63,6 +74,7 @@ export function listBoardItemsLite(): BoardItem[] {
         itemId: n.id,
         status: n.fieldValueByName?.name ?? null,
         statusUpdatedAt: n.fieldValueByName?.updatedAt ?? null,
+        category: n.category?.name ?? null,
         issueNumber: n.content?.number ?? null,
         repository: n.content?.repository?.nameWithOwner ?? null,
         title: n.content?.title ?? "",
@@ -79,11 +91,12 @@ export function listBoardItemsLite(): BoardItem[] {
  */
 export function findBoardItemForIssue(
   issueNumber: number
-): { itemId: string; status: string | null; url: string } | null {
+): { itemId: string; status: string | null; category: string | null; url: string } | null {
   const query = `query { repository(owner: "${OWNER}", name: "${CENTRAL_REPO}") {
     issue(number: ${issueNumber}) { url projectItems(first: 20) { nodes {
       id project { number }
       fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+      category: fieldValueByName(name: "類別") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
     } } } } }`;
   const out = sh(`gh api graphql -f query='${query}'`);
   const issue = (
@@ -93,7 +106,12 @@ export function findBoardItemForIssue(
           issue: {
             url: string;
             projectItems: {
-              nodes: Array<{ id: string; project: { number: number }; fieldValueByName: { name?: string } | null }>;
+              nodes: Array<{
+                id: string;
+                project: { number: number };
+                fieldValueByName: { name?: string } | null;
+                category: { name?: string } | null;
+              }>;
             };
           } | null;
         };
@@ -102,7 +120,9 @@ export function findBoardItemForIssue(
   ).data.repository.issue;
   if (!issue) return null;
   const item = issue.projectItems.nodes.find((n) => n.project.number === BOARD.projectNumber);
-  return item ? { itemId: item.id, status: item.fieldValueByName?.name ?? null, url: issue.url } : null;
+  return item
+    ? { itemId: item.id, status: item.fieldValueByName?.name ?? null, category: item.category?.name ?? null, url: issue.url }
+    : null;
 }
 
 /** Add a central issue to the board; returns the new item id. */

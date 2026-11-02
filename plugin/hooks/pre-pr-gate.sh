@@ -17,6 +17,10 @@
 # 逃生口：DEV_TASK_SKIP_GATE="<原因>"（全部閘門）或 DEV_TASK_SKIP_POC_GATE="<原因>"（相容舊名），都寫進 gate ledger 留痕。
 # 預演：PRE_PR_GATE_PREVIEW=1 時一次列出閘門 1–8 的所有缺漏、不寫 gate ledger，有缺漏 exit 2。
 #       develop verify 結束時用 pre-pr-gate-preview.sh 跑（gate ledger 裡 133 次擋下都是開 PR 當下才發現缺證據）。
+# 既有 PR 重檢：`git push`、`gh pr ready` 前抓目前 branch 的 OPEN PR body（gh pr view），重跑閘門 5；
+#       `gh pr edit --body/--body-file` 檢查新 body。只管 origin 是 daodaoedu/* 的 repo；
+#       沒有 PR、gh 失敗或逾時就放行（gh 錯誤印 ⚠️），不因網路擋人。
+#       教訓：#324——f2e#1126、server#588 開 PR 時閘門過了，PR #400 加了讀取權限宣告後，之後的 push 讓 CI pr-evidence-gate 紅。
 set -euo pipefail
 
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -34,15 +38,26 @@ if ! jq --version >/dev/null 2>&1; then
 fi
 cmd=$(echo "$HOOK_TOOL_INPUT" | jq -r '.command // empty' 2>/dev/null || true)
 [ -z "$cmd" ] && exit 0
-echo "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+create([[:space:]]|$)' || exit 0
+gate_mode=""
+if echo "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+create([[:space:]]|$)'; then
+  gate_mode=create
+elif echo "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+edit([[:space:]]|$)'; then
+  gate_mode=edit
+elif echo "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+ready([[:space:]]|$)'; then
+  gate_mode=ready
+elif echo "$cmd" | grep -qE '(^|[;&|[:space:]])git([[:space:]]+-C[[:space:]]+[^[:space:];&|]+)?[[:space:]]+push([[:space:]]|$)'; then
+  gate_mode=push
+fi
+[ -n "$gate_mode" ] || exit 0
 
 cwd="$HOOK_CWD"
 # 從 cwd、指令裡的 cd 路徑、或指令中任何含 /worktrees/<n>-<slug> 的路徑找任務資料夾。
 # 引號要剝掉（cd "/a/worktrees/1-x/repo" 會連引號一起抓到，task.md 就找不到、整組閘門被繞過）。
+# 指令裡的 cd 路徑優先於 session cwd：從 A 任務的 session 執行 `cd <B 任務>/repo && gh pr create`，要查的是 B 的 task.md。
 task_dir=""
 cd_paths=$(echo "$cmd" | grep -oE 'cd[[:space:]]+[^[:space:];&|]+' | awk '{print $2}' | tr -d "\"'" || true)
 wt_paths=$(echo "$cmd" | tr "\"'" '  ' | grep -oE '[^[:space:];&|]*/worktrees/[^/[:space:];&|]+' || true)
-for candidate in "$cwd" $cd_paths $wt_paths; do
+for candidate in $cd_paths $wt_paths "$cwd"; do
   case "$candidate" in
     */worktrees/*)
       task_dir="${candidate%%/worktrees/*}/worktrees/$(echo "${candidate#*/worktrees/}" | cut -d/ -f1)"
@@ -50,30 +65,6 @@ for candidate in "$cwd" $cd_paths $wt_paths; do
       ;;
   esac
 done
-[ -z "$task_dir" ] && exit 0          # 不在 develop 任務內，不管
-task_md="$task_dir/task.md"
-if [ ! -f "$task_md" ]; then
-  if [ "${DEV_TASK_DELIVERY_GATE_MODE:-off}" = block ]; then
-    echo "❌ develop 目錄缺 task.md，無法核對交付契約" >&2
-    exit 2
-  fi
-  exit 0
-fi
-
-# 目標 repo：cd 路徑或 cwd 中 worktrees/<task>/<repo>
-repo_dir=""
-for candidate in "$cwd" $cd_paths $wt_paths; do
-  case "$candidate" in
-    "$task_dir"/*) repo_dir=$(basename "$(echo "${candidate#"$task_dir"/}" | cut -d/ -f1)"); break ;;
-  esac
-done
-# cd "$TASK/<repo>" 這種未展開的變數路徑抓不到 repo：退而從任務資料夾裡找唯一的 repo 目錄
-if [ -z "$repo_dir" ]; then
-  repo_candidates=$(find "$task_dir" -mindepth 1 -maxdepth 1 -type d -name 'daodao-*' 2>/dev/null | wc -l | tr -d ' ')
-  [ "$repo_candidates" = 1 ] && repo_dir=$(basename "$(find "$task_dir" -mindepth 1 -maxdepth 1 -type d -name 'daodao-*')")
-fi
-is_ui_repo=0
-case "$repo_dir" in daodao-f2e|daodao-admin-ui) is_ui_repo=1 ;; esac
 
 skip_reason="${DEV_TASK_SKIP_GATE:-${DEV_TASK_SKIP_POC_GATE:-}}"
 preview="${PRE_PR_GATE_PREVIEW:-0}"
@@ -107,6 +98,179 @@ section_body() {
     $0 ~ h { found = 1 }
   ' "$file"
 }
+
+# 從指令字串取 PR body（gh pr create／gh pr edit 共用）：$1=gh pr 子指令；設定 body_text、body_file_note
+extract_cmd_body() {
+  local sub="$1" body_file base candidate
+  body_text=""
+  body_file_note=""
+  # 先抓引號包住的路徑（可含空白），再抓裸路徑
+  body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)"[^"]+"' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)"//; s/"$//' || true)
+  [ -n "$body_file" ] || body_file=$(echo "$cmd" | grep -oE -- "(--body-file|-F)([[:space:]]+|=)'[^']+'" | head -1 | sed -E "s/^(--body-file|-F)([[:space:]]+|=)'//; s/'\$//" || true)
+  [ -n "$body_file" ] || body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)[^[:space:];&|]+' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)//' || true)
+  if [ -n "$body_file" ]; then
+    # 指令字串裡的 $TASK／${TASK}／$ROOT 不會被展開，hook 自己代入
+    body_file=$(printf '%s' "$body_file" | sed -e "s|\${TASK}|$task_dir|g" -e "s|\$TASK|$task_dir|g" -e "s|\${ROOT}|${task_dir%/worktrees/*}|g" -e "s|\$ROOT|${task_dir%/worktrees/*}|g" -e "s|^~|$HOME|")
+    for base in "" "$cwd/" "${task_dir:+$task_dir/}"; do
+      candidate="${base}${body_file}"
+      if [ -f "$candidate" ]; then body_text=$(cat "$candidate"); break; fi
+    done
+    if [ -z "$body_text" ]; then
+      body_text="$cmd"   # heredoc 寫檔在同一指令裡：內容還在 cmd 字串中
+      body_file_note="（--body-file 指向的檔案找不到：${body_file}；改讀指令字串）"
+    fi
+    return 0
+  fi
+  # Decode literal shell arguments without evaluating substitutions or commands.
+  # Reading the entire command leaks the closing quote into the final Markdown row.
+  body_text=$(python3 - "$cmd" "$sub" <<'PYBODY'
+import shlex, sys
+command, sub = sys.argv[1], sys.argv[2]
+try:
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=';&|\n')
+    lexer.whitespace = ' \t\r'
+    lexer.whitespace_split = True
+    lexer.commenters = ''
+    tokens = list(lexer)
+    start = next(i for i in range(len(tokens)-2) if tokens[i:i+3] == ['gh', 'pr', sub])
+    args = tokens[start+3:]
+    value_options = {'--title', '-t', '--base', '-B', '--head', '-H', '--repo', '-R',
+                     '--label', '-l', '--reviewer', '-r', '--assignee', '-a', '--project', '-p',
+                     '--milestone', '-m', '--template', '-T', '--recover',
+                     '--add-label', '--remove-label', '--add-reviewer', '--remove-reviewer',
+                     '--add-assignee', '--remove-assignee', '--add-project', '--remove-project'}
+    body = None
+    i = 0
+    while i < len(args):
+        token = args[i]
+        if token and all(char in ';&|\n' for char in token):
+            break
+        if token in ('--body', '-b'):
+            body = args[i+1]
+            break
+        if token.startswith('--body='):
+            body = token[len('--body='):]
+            break
+        if token.startswith('-b') and len(token) > 2:
+            body = token[2:]
+            break
+        i += 2 if token in value_options else 1
+    # Keep the existing inline-heredoc path; never evaluate its shell syntax.
+    print(command if body is not None and body.startswith('$(') else (body or ''))
+except (ValueError, StopIteration, IndexError):
+    print(command)
+PYBODY
+)
+}
+
+# 閘門 5 的檢查本體：$1=ledger target  $2=訊息裡的 body 名稱  $3=附加提示（可省略）；讀 body_text、body_file_note
+check_body_evidence() {
+  local target="$1" label="${2:-PR body}" hint="${3:-}" evidence_section read_access_problems
+  evidence_section=$(printf '%s\n' "$body_text" | awk '/^## 驗證證據/{f=1; next} f && /^## /{exit} f')
+  if ! printf '%s\n' "$body_text" | grep -q '^## 驗證證據'; then
+    gate_fail "pr-body-evidence-missing" "$target" "$(cat <<EOF
+❌ ${label} 缺「## 驗證證據」區塊${body_file_note}。需要：驗證報告連結 + 核心旅程矩陣摘要（或 task.md 那行「核心旅程不適用：<原因>」）。
+   用 --body-file <notes/pr-body-<repo>.md>，範本見 develop references/phases/finish.md 步驟 8「開 PR」。${hint:+
+$hint}
+EOF
+)"
+  elif ! printf '%s\n' "$evidence_section" | grep -qE 'https?://|核心旅程不適用[：:]'; then
+    gate_fail "pr-body-evidence-missing" "$target" \
+      "❌ ${label}「## 驗證證據」裡沒有驗證報告連結（https://…），也沒有「核心旅程不適用：<原因>」聲明。${hint:+
+$hint}"
+  fi
+
+  if read_access_problems=$(printf '%s\n' "$body_text" | python3 "$HOOKS_DIR/check-read-access-evidence.py" --scope pr 2>&1); then
+    :
+  else
+    gate_fail "pr-read-access-evidence-missing" "$target" "❌ ${label}：$read_access_problems${hint:+
+$hint}"
+  fi
+}
+
+# --- 既有 PR 重檢：git push／gh pr ready 讀 PR 目前的 body，gh pr edit 讀新 body（#324）---
+# CI pr-evidence-gate 每次 push 都用 main 上最新的規則重讀 body；開 PR 後規則變了，只在 gh pr create 檢查就會漏。
+# 只做閘門 5（task.md 類閘門在開 PR 時已檢查過）；查不到 PR 或 gh 失敗一律放行，不因網路擋人。
+if [ "$gate_mode" != create ]; then
+  # 要查的 repo：git -C <path>，否則指令裡最後一個 cd 路徑，否則 cwd
+  repo_path=$(echo "$cmd" | grep -oE 'git[[:space:]]+-C[[:space:]]+[^[:space:];&|]+' | head -1 | awk '{print $3}' | tr -d "\"'" || true)
+  [ -n "$repo_path" ] || repo_path=$(printf '%s\n' $cd_paths | tail -1)
+  [ -n "$repo_path" ] || repo_path="$cwd"
+  case "$repo_path" in
+    "~"*) repo_path="$HOME${repo_path#\~}" ;;
+    /*) ;;
+    *) repo_path="$cwd/$repo_path" ;;
+  esac
+  # CI pr-evidence-gate 只在 daodaoedu 的 repo 上跑；其他 repo 不必多打一次 gh
+  origin_url=$(git -C "$repo_path" remote get-url origin 2>/dev/null || true)
+  printf '%s' "$origin_url" | grep -qiE 'github\.com[:/]daodaoedu/' || exit 0
+  origin_repo=$(printf '%s' "$origin_url" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+  recheck_hint="   這個檢查和 CI pr-evidence-gate 同一套規則；真的不適用時：DEV_TASK_SKIP_GATE=\"<原因>\" 再跑一次（會留痕）"
+
+  if [ "$gate_mode" = edit ]; then
+    extract_cmd_body edit
+    [ -n "$body_text" ] || exit 0   # 沒改 body（改標題、加 label）就不管
+    check_body_evidence "$origin_repo:gh-pr-edit" "新的 PR body" "$recheck_hint"
+    exit 0
+  fi
+
+  # 刪 branch、推 tag、把 PR 轉回 draft 都不是要過 CI 的推送
+  if [ "$gate_mode" = push ] && echo "$cmd" | grep -qE '[[:space:]](--delete|-d|--tags)([[:space:]]|$)'; then exit 0; fi
+  if [ "$gate_mode" = ready ] && echo "$cmd" | grep -qE '[[:space:]]--undo([[:space:]]|$)'; then exit 0; fi
+  pr_view=(gh pr view)
+  if [ "$gate_mode" = ready ]; then
+    pr_arg=$(echo "$cmd" | grep -oE 'gh[[:space:]]+pr[[:space:]]+ready[[:space:]]+[^-[:space:];&|][^[:space:];&|]*' | head -1 | awk '{print $4}' | tr -d "\"'" || true)
+    [ -n "$pr_arg" ] && pr_view+=("$pr_arg")
+  fi
+  pr_view+=(--json "number,state,body")
+  if command -v timeout >/dev/null 2>&1; then pr_view=(timeout 10 "${pr_view[@]}")
+  elif command -v gtimeout >/dev/null 2>&1; then pr_view=(gtimeout 10 "${pr_view[@]}")
+  fi
+  gh_err=$(mktemp)
+  trap 'rm -f "$gh_err"' EXIT
+  if ! pr_json=$(cd "$repo_path" && GH_PROMPT_DISABLED=1 "${pr_view[@]}" 2>"$gh_err"); then
+    grep -qi 'no pull requests found' "$gh_err" && exit 0   # branch 還沒有 PR
+    echo "⚠️  pre-pr-gate：查不到 ${origin_repo} 既有 PR 的 body（gh 失敗或逾時），這次沒重檢「## 驗證證據」：$(head -c 200 "$gh_err" | tr '\n' ' ')" >&2
+    log_gate_event "pr-recheck-unavailable" "$origin_repo" "warn" "develop"
+    exit 0
+  fi
+  pr_state=$(printf '%s' "$pr_json" | jq -r '.state // empty' 2>/dev/null || true)
+  [ "$pr_state" = OPEN ] || exit 0   # 已 merge／關閉的 PR，CI 不會再跑
+  pr_number=$(printf '%s' "$pr_json" | jq -r '.number // empty' 2>/dev/null || true)
+  body_text=$(printf '%s' "$pr_json" | jq -r '.body // ""' 2>/dev/null || true)
+  body_file_note=""
+  check_body_evidence "$origin_repo#$pr_number" "既有 PR #$pr_number 的 body" "$(cat <<EOF
+   開 PR 之後規則變了也會被擋：push 前先補 body，gh pr edit $pr_number --body-file <檔>（新 body 一樣會先檢查）。
+$recheck_hint
+EOF
+)"
+  exit 0
+fi
+
+[ -z "$task_dir" ] && exit 0          # 不在 develop 任務內，不管
+task_md="$task_dir/task.md"
+if [ ! -f "$task_md" ]; then
+  if [ "${DEV_TASK_DELIVERY_GATE_MODE:-off}" = block ]; then
+    echo "❌ develop 目錄缺 task.md，無法核對交付契約" >&2
+    exit 2
+  fi
+  exit 0
+fi
+
+# 目標 repo：cd 路徑或 cwd 中 worktrees/<task>/<repo>
+repo_dir=""
+for candidate in $cd_paths $wt_paths "$cwd"; do
+  case "$candidate" in
+    "$task_dir"/*) repo_dir=$(basename "$(echo "${candidate#"$task_dir"/}" | cut -d/ -f1)"); break ;;
+  esac
+done
+# cd "$TASK/<repo>" 這種未展開的變數路徑抓不到 repo：退而從任務資料夾裡找唯一的 repo 目錄
+if [ -z "$repo_dir" ]; then
+  repo_candidates=$(find "$task_dir" -mindepth 1 -maxdepth 1 -type d -name 'daodao-*' 2>/dev/null | wc -l | tr -d ' ')
+  [ "$repo_candidates" = 1 ] && repo_dir=$(basename "$(find "$task_dir" -mindepth 1 -maxdepth 1 -type d -name 'daodao-*')")
+fi
+is_ui_repo=0
+case "$repo_dir" in daodao-f2e|daodao-admin-ui) is_ui_repo=1 ;; esac
 
 # --- 閘門 1：task.md Status 必須離開 implementing ---
 status_line=$(awk '/^## Status/{getline; print; exit}' "$task_md" | tr -d '[:space:]')
@@ -230,80 +394,8 @@ EOF
 fi
 
 # --- 閘門 5：PR body 要帶「## 驗證證據」（CI pr-evidence-gate 讀的就是這段）---
-body_text=""
-# 先抓引號包住的路徑（可含空白），再抓裸路徑
-body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)"[^"]+"' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)"//; s/"$//' || true)
-[ -n "$body_file" ] || body_file=$(echo "$cmd" | grep -oE -- "(--body-file|-F)([[:space:]]+|=)'[^']+'" | head -1 | sed -E "s/^(--body-file|-F)([[:space:]]+|=)'//; s/'\$//" || true)
-[ -n "$body_file" ] || body_file=$(echo "$cmd" | grep -oE -- '(--body-file|-F)([[:space:]]+|=)[^[:space:];&|]+' | head -1 | sed -E 's/^(--body-file|-F)([[:space:]]+|=)//' || true)
-body_file_note=""
-if [ -n "$body_file" ]; then
-  # 指令字串裡的 $TASK／${TASK}／$ROOT 不會被展開，hook 自己代入
-  body_file=$(printf '%s' "$body_file" | sed -e "s|\${TASK}|$task_dir|g" -e "s|\$TASK|$task_dir|g" -e "s|\${ROOT}|${task_dir%/worktrees/*}|g" -e "s|\$ROOT|${task_dir%/worktrees/*}|g" -e "s|^~|$HOME|")
-  for base in "" "$cwd/" "$task_dir/"; do
-    candidate="${base}${body_file}"
-    if [ -f "$candidate" ]; then body_text=$(cat "$candidate"); break; fi
-  done
-  if [ -z "$body_text" ]; then
-    body_text="$cmd"   # heredoc 寫檔在同一指令裡：內容還在 cmd 字串中
-    body_file_note="（--body-file 指向的檔案找不到：${body_file}；改讀指令字串）"
-  fi
-else
-  # Decode literal shell arguments without evaluating substitutions or commands.
-  # Reading the entire command leaks the closing quote into the final Markdown row.
-  body_text=$(python3 - "$cmd" <<'PYBODY'
-import shlex, sys
-command = sys.argv[1]
-try:
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=';&|\n')
-    lexer.whitespace = ' \t\r'
-    lexer.whitespace_split = True
-    lexer.commenters = ''
-    tokens = list(lexer)
-    start = next(i for i in range(len(tokens)-2) if tokens[i:i+3] == ['gh', 'pr', 'create'])
-    args = tokens[start+3:]
-    value_options = {'--title', '-t', '--base', '-B', '--head', '-H', '--repo', '-R',
-                     '--label', '-l', '--reviewer', '-r', '--assignee', '-a', '--project', '-p',
-                     '--milestone', '-m', '--template', '-T', '--recover'}
-    body = None
-    i = 0
-    while i < len(args):
-        token = args[i]
-        if token and all(char in ';&|\n' for char in token):
-            break
-        if token in ('--body', '-b'):
-            body = args[i+1]
-            break
-        if token.startswith('--body='):
-            body = token[len('--body='):]
-            break
-        if token.startswith('-b') and len(token) > 2:
-            body = token[2:]
-            break
-        i += 2 if token in value_options else 1
-    # Keep the existing inline-heredoc path; never evaluate its shell syntax.
-    print(command if body is not None and body.startswith('$(') else (body or ''))
-except (ValueError, StopIteration, IndexError):
-    print(command)
-PYBODY
-)
-fi
-evidence_section=$(printf '%s\n' "$body_text" | awk '/^## 驗證證據/{f=1; next} f && /^## /{exit} f')
-if ! printf '%s\n' "$body_text" | grep -q '^## 驗證證據'; then
-  gate_fail "pr-body-evidence-missing" "$task_md" "$(cat <<EOF
-❌ PR body 缺「## 驗證證據」區塊${body_file_note}。需要：驗證報告連結 + 核心旅程矩陣摘要（或 task.md 那行「核心旅程不適用：<原因>」）。
-   用 --body-file <notes/pr-body-<repo>.md>，範本見 develop references/phases/finish.md 步驟 8「開 PR」。
-EOF
-)"
-elif ! printf '%s\n' "$evidence_section" | grep -qE 'https?://|核心旅程不適用[：:]'; then
-  gate_fail "pr-body-evidence-missing" "$task_md" \
-    "❌ PR body「## 驗證證據」裡沒有驗證報告連結（https://…），也沒有「核心旅程不適用：<原因>」聲明。"
-fi
-
-if read_access_problems=$(printf '%s\n' "$body_text" | python3 "$HOOKS_DIR/check-read-access-evidence.py" --scope pr 2>&1); then
-  :
-else
-  gate_fail "pr-read-access-evidence-missing" "$task_md" "❌ PR body：$read_access_problems"
-fi
+extract_cmd_body create
+check_body_evidence "$task_md"
 
 # --- 閘門 6：前端手寫驗證規則要能編譯、要對得到 server 規則（#188 根因）---
 # 腳本住在 monorepo root；sub-repo 同步來的 hook 從任務資料夾往上找 root（<root>/worktrees/<task>），不依賴 HOOKS_DIR 位置

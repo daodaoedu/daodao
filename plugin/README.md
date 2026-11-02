@@ -23,9 +23,11 @@ plugin/
 | `plugin/`（就地） | Claude Code |
 | `.agents/skills/` | Codex CLI／IDE、ChatGPT 桌面版 |
 | `.codex/hooks.json` | Codex 閘門 |
-| `.agents/plugins/marketplace.json` | 本機安裝用的 repo marketplace |
-| `plugin/out/openai-plugin/` | ChatGPT 網頁／行動版（Agent Plugins 格式） |
-| `plugin/out/claude-ai/` + `plugin:zip` | Claude.ai 手動上傳 |
+| `.codex/config.toml` | Codex 的 Playwright MCP（畫面驗證，瀏覽器工具免逐次核准） |
+| `.codex/rules/daodao.rules` | Codex 只放行驗證報告上傳腳本在 sandbox 外執行（要連 googleapis） |
+| `.agents/plugins/marketplace.json` | Codex 在 repo 外安裝用的 marketplace（`daodao@daodao`） |
+| `plugin/out/openai-plugin/` | repo 外安裝的 Codex／ChatGPT 桌面版 plugin |
+| `plugin/out/web-plugin/` + `plugin:zip` | `daodao-web`：Claude.ai 與 ChatGPT 網頁／行動版（zip 在 `plugin/out/web-plugin-zip/`） |
 
 ```bash
 pnpm plugin:build    # 重新產生全部
@@ -59,7 +61,7 @@ claude plugin install daodao --marketplace https://daodaoedu.github.io/daodao/ma
 ```
 
 裝完**重開 session** 才載入；skill 會是 `/daodao:develop` 這種帶命名空間的形式。
-`claude plugin details daodao@daodao` 可確認 13 skills + 6 hooks 都在。
+`claude plugin details daodao@daodao` 可確認 14 skills + 6 hooks 都在。
 
 沒辦法讓別人「自動」裝好——官方明講 repo 設定啟用外部來源 plugin 不會幫別人安裝，
 自動的只有 marketplace 註冊，`install` 每人跑一次。
@@ -94,17 +96,21 @@ zip 是可重現的：同一份 commit 在本機 `pnpm plugin:package --version 
 
 **有本 repo**：不用裝。`.agents/skills/` 在 repo 裡，Codex 會自動掃（`$CWD`、`$CWD/..`、
 `$REPO_ROOT` 三層）。**閘門要先信任**：跑 `/hooks` 檢視並信任 `.codex/hooks.json`。沒信任之前
-hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。
+hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同一批腳本並貼出輸出。專案信任後，Codex 也會載入
+`.codex/config.toml` 的 Playwright MCP（瀏覽器工具免逐次核准），畫面驗證與截圖就能做；以及
+`.codex/rules/daodao.rules`，讓驗證報告上傳腳本直接在 sandbox 外執行、不跳核准。Drive 報告另需一次性的
+rclone 設定（見 [verify-report.md](skills/develop/references/verify-report.md)）。以上 2026-10-31 在互動式
+Codex 實測通過；`codex exec`（非互動）一律禁止離開 sandbox，上傳在那裡會被擋。
 
 **沒有 repo**：加 marketplace 再裝，用 `--sparse` 只抓需要的目錄（約 400KB，不 clone 整個 monorepo）：
 
 ```bash
 codex plugin marketplace add daodaoedu/daodao --sparse .agents/plugins --sparse plugin/out/openai-plugin
-codex plugin add daodao@daodao-local
+codex plugin add daodao@daodao
 ```
 
 - Codex 的 marketplace 只接受本機路徑或 git，不吃 `marketplace.json` 網址，所以不能用 Claude Code 那個 Pages 網址
-- marketplace 名稱叫 `daodao-local`（取自 `.agents/plugins/marketplace.json`），雖然名字有 local，這就是給大家裝的那份
+- marketplace 名稱跟 Claude Code 一致叫 `daodao`（取自 `.agents/plugins/marketplace.json`）。2026-10-31 前裝過舊名 `daodao-local` 的人，先 `codex plugin marketplace remove daodao-local` 再重加
 - 這樣裝的只有 14 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
 
 ### ChatGPT
@@ -197,15 +203,32 @@ sha256 被釘在 marketplace.json 裡，重發同版號會讓已安裝的人撞
 | | Claude Code | Codex／ChatGPT 桌面 | ChatGPT 網頁／行動 | Claude.ai 網頁 |
 |---|---|---|---|---|
 | 安裝的東西 | `daodao` | `.agents/skills/`（免裝） | `daodao-web` | `daodao-web` |
-| skill 數 | 14 | 14 | 8 | 7 |
+| skill 數 | 14 | 14 | 7 | 7 |
 | 本機 repo／shell | ✅ | ✅ | ❌ | ❌ |
 | 自動閘門 | ✅ hooks | ✅ 需 `/hooks` 信任 | ❌ | ❌（hooks 只在 Cowork 跑）|
-| 瀏覽器驗證 | ✅ | ❌ | ❌ | ❌ |
-| Drive 報告 | ✅ | ❌ | ❌ | ❌ |
+| 瀏覽器驗證 | ✅ | ✅ 需信任專案 | ❌ | ❌ |
+| Drive 報告 | ✅ 需 rclone | ✅ 需 rclone | ❌ | ❌ |
 
 Claude.ai 少掉的 7 個是 `develop`、`review-change`、`check-commit`、`verify-deploy`、
 `move-board-card`、`format-commit`——全都需要使用者的 checkout；以及 `test-acceptance`，要在本機存截圖再上傳。Claude.ai 的 sandbox 有檔案系統也能跑
 指令，但那是一個空的暫時環境，不是專案。
+
+### 怎麼讓大家能力一致
+
+要補的是平台的能力，不是把 skill 複製過去。能力補上後，在 `platforms.json` 對應平台的 `has`
+加上那一項並重跑 build，skill 與警語就會跟著變。
+
+| 缺口 | 平台 | 補得起來嗎 | 做法 |
+|---|---|---|---|
+| 瀏覽器驗證 | Codex／ChatGPT 桌面 | 已補 | build 產生 `.codex/config.toml`，設定 Playwright MCP（版本釘在 `build.ts` 的 `PLAYWRIGHT_MCP_VERSION`）並免逐次核准；專案信任後載入 |
+| Drive 報告 | 所有能跑 shell 的平台 | 已補 | `develop/references/verify-report/upload-report.py`，只需要 python3 與 rclone，不靠 Drive connector；Codex 由 `.codex/rules/daodao.rules` 放行到 sandbox 外 |
+| 自動閘門 | Codex／ChatGPT 桌面 | 已有 | 在 repo 裡開，跑 `/hooks` 信任 `.codex/hooks.json` |
+| 自動閘門 | repo 外裝的 Codex plugin | 不行 | plugin 不能附 hooks；在 repo 裡開 Codex 就有 |
+| repo／shell／git／測試 | ChatGPT 網頁／行動、Claude.ai 網頁 | 不行 | 雲端 sandbox 碰不到使用者的 checkout |
+
+分工原則：**開發、驗收、commit 一律在 repo 裡用 Claude Code 或 Codex**；網頁版只當需求入口
+（寫 PRD、開卡、回報 bug、看 PR）。在 repo 裡開的 Codex 補上瀏覽器與 Drive 後，跟 Claude Code
+的 14 個 skill 已經沒有能力落差。
 
 ## 平台事實（2026-09-21 查證）
 

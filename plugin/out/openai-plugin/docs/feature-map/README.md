@@ -1,9 +1,10 @@
 # daodao feature map
 
-給驗證與驗收用的共用對照表：每個使用者看得到的功能，**怎麼到這頁、用什麼穩定的選擇器操作、要用哪個角色的測試帳號、看到什麼才算成功**。參考 pstack 的 feature map 做法，站在使用者視角寫，程式內部細節到實測時再查，不凍結在這裡。
+給開卡、驗證與驗收用的共用對照表：每個使用者看得到的功能，**怎麼到這頁、用什麼穩定的選擇器操作、要用哪個角色的測試帳號、看到什麼才算成功**。參考 pstack 的 feature map 做法，站在使用者視角寫，程式內部細節到實測時再查，不凍結在這裡。
 
 誰會讀：
 
+- [request-feature](../../skills/request-feature/SKILL.md)、[report-bug](../../skills/report-bug/SKILL.md)：開卡定位 repo 時，從各功能的「主要程式位置」開始，再到程式碼確認，把路徑寫進「涉及 repo」的依據。只比對功能名稱不算依據（例：燈塔是講師的管理端，但在 `daodao-f2e`，不在 `daodao-admin-ui`）。
 - [develop](../../skills/develop/SKILL.md) verify 階段：決定瀏覽器驗證怎麼走、用哪些選擇器（[browser-verify.md](../../skills/develop/references/browser-verify.md)）。
 - [test-acceptance](../../skills/test-acceptance/SKILL.md)：照請驗收留言實測時，補到達路徑、選擇器與前置條件。請驗收留言與這裡不一致時以留言為準，差異回報後再更新這裡。
 
@@ -22,7 +23,7 @@
 
 （依介面分組；每個功能一個檔案。各檔開頭的「依據版本」是撰寫時讀的程式版本，行號以那一版為準）
 
-### Web（apps/product，`https://app-dev.daodao.so`）
+### Web（daodao-f2e apps/product，`https://app-dev.daodao.so`）
 
 一般瀏覽器即可操作。
 
@@ -58,7 +59,7 @@
 | [問卷管理](admin/surveys.md) | 管理員建立與編輯問卷、變更狀態、預覽填寫頁、看回應與分析結果。 |
 | [用戶管理與用戶詳情](admin/user-management.md) | 管理員搜尋、篩選用戶，設定角色、上標籤、停用／啟用帳號，並點進單一用戶看活動、登入、實踐與人物誌。 |
 
-### App（apps/mobile）
+### App（daodao-f2e apps/mobile）
 
 **不能用瀏覽器操作**：沒有網頁版、Expo Go 打不開。要裝 dev build（EAS preview「Dao Dao (Dev)」或 iOS 模擬器），登入只有 Google／Apple。沒有 `testID`，靠 `accessibilityLabel`。沒有可安裝的測試版時，App 步驟一律受阻。
 

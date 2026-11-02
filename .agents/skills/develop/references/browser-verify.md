@@ -32,6 +32,16 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 
 出錯時對照 [gotchas.md](gotchas.md)「開發與瀏覽器驗證」。這份清單目前是手動逐項確認；同一項第二次出問題時，依 `plugin/hooks/ADR-0001-gates-over-guidelines.md`「新常駐檢查的進場條件」寫成腳本。
 
+### 1b. 判定環境受阻前
+
+單一帳號登入失敗、組織停權、403 或空清單，只能證明該帳號／資料情境的結果。先完成以下查核，再判定必要驗證是否受阻：
+
+1. 查任務紀錄、feature map 與 repo 既有驗收資料，找已授權的測試帳號、fixture 角色及可用資料；確認帳號有目標範圍權限、組織與資料狀態符合這條驗收情境。不驗註冊時優先登入既有驗收帳號。
+2. 查本機 API／DB／代理與任務 worktree 的實際服務，核對 §1a 的來源、API URL 及登入狀態。可用替代環境仍須能驗證相同契約；mock 或空資料不能代替需要真實資料的檢查。
+3. 在 task.md「### 環境受阻查核」記錄各路徑的角色／fixture 識別、環境、實際操作、回應與證據，或查證後不適用的原因；不保存密碼、token 或 secret。
+
+已有可用路徑就繼續補驗，不先請人豁免。已查明可用且獲授權的路徑都失敗，或下一步需要缺失的帳號／權限、未授權的資料異動、不可用服務或工具時，才記錄明確 blocker、受影響檢查與下一步，保留未完成狀態。不得為排除 blocker 擅自建立帳號、恢復停權組織、修改共享 fixture，或啟停其他任務服務。真正受阻也不自動成為豁免或改開 Draft PR 的理由。
+
 ## 2. 展開檢查清單
 
 驗證前先把「要驗什麼」寫成清單，來源優先序：
@@ -69,7 +79,7 @@ cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
 
 ## 3a. 登入牆處理（碰到「要登入才能看」時，先自己解，不要直接丟回給使用者）
 
-**硬規則：登入牆截圖 = 該頁未驗證。** 導頁後 `location.pathname` 落在 `/auth/*`、`/login` 的截圖不能存進 evidence/ 當檢查點證據，task.md 也不能寫「需要手動驗證（需 Google OAuth 登入）」然後把 Status 往下推——#166 就是這樣把 6 個 settings 頁面沒看過就 merge，evidence 裡的 `verify-bug-report.png` 其實是 "Welcome back to Dao Dao!"。發 PR 閘門 `pr-verify-unchecked` 會擋這種清單；`layout-probe.mjs` 也會把**被導去登入頁**的 route 標 ❌（目標頁本身在 `/auth/` 底下的不算）。走下面配方 A／B 登入後再驗，全部配方都不通才請使用者手動登入，並在該項寫「（豁免：<使用者說的原因>）」。
+**硬規則：登入牆截圖 = 該頁未驗證。** 導頁後 `location.pathname` 落在 `/auth/*`、`/login` 的截圖不能存進 evidence/ 當檢查點證據，task.md 也不能寫「需要手動驗證（需 Google OAuth 登入）」然後把 Status 往下推——#166 就是這樣把 6 個 settings 頁面沒看過就 merge，evidence 裡的 `verify-bug-report.png` 其實是 "Welcome back to Dao Dao!"。發 PR 閘門 `pr-verify-unchecked` 會擋這種清單；`layout-probe.mjs` 也會把**被導去登入頁**的 route 標 ❌（目標頁本身在 `/auth/` 底下的不算）。走下面配方 A／B 及 §1b 已授權路徑登入後再驗；仍受阻才附查核結果請使用者補必要登入資訊。人工登入後仍要實測，不等於豁免；只有使用者明確決定不驗該項，才記「（豁免：<使用者說的原因>）」。
 
 **daodao 現成配方 A：dev-login 端點（部署後冒煙、要「全新帳號」時優先走這條）**
 
@@ -93,7 +103,7 @@ curl -s ... -d '{"email":"<既有 email>","mode":"user"}'
 
 不需要驗「註冊／寄信」本身時，優先 `mode=user` 登入既有帳號，完全不觸發信件鏈；只是想確認某封信有沒有寄出，用 superadmin token 查 `GET /api/v1/admin/email/history?limit=50`（看 `recipientEmail`／`emailType`／`status`），不必真的寄。
 
-**冒煙完必做清理**（否則排程信會持續寄到 QA 信箱）：
+**冒煙完必做清理**（否則排程信會持續寄到 QA 信箱）：以下只清理本任務新建且獲授權的帳號與資料；沿用既有驗收帳號／共享 fixture 時，不停用帳號或刪除別的任務資料。
 
 ```bash
 # 1) 退訂（該用戶 token）
@@ -209,7 +219,11 @@ python3 "$ROOT/plugin/skills/develop/references/rect-diff.py" \
 5. **旅程列（矩陣 J-xx）多做兩件事**：送出前先掛 `playwright_expect_response`（對 API path），送出後用 `playwright_assert_response` 讀 status 與 body，把狀態碼寫進「實際」欄；錯誤路徑要再確認三件事——server 訊息有顯示在畫面上、和 response body 的 message 一致、使用者輸入沒被清掉（React 19 form action 完成後會 reset 表單，#188 就是這樣把欄位清空的）。靠 toast 一閃而過的訊息要截到圖，截不到就用 `playwright_get_visible_text` 抓文字存進備註
 6. 記入 task.md「驗證」區塊：✅/❌ + 截圖檔名 + 備註；旅程列記在「### 核心旅程矩陣」表格
 
-**失敗**：修復 → 只重驗該項。同一項修 2 次仍失敗 → 停下來，把現象（截圖 + console + 重現步驟）整理給使用者判斷。同一類問題被使用者連續指正兩次以上，代表驗證方法本身有問題（通常是又用了肉眼截圖比對），不是再找一個漏網之魚就好——這是換成量測方法的訊號。
+**發現異常先對照原版**：在歸因或修復前，對明確 base ref 與目前 head／工作樹，用相同角色、fixture、路由、viewport、資料載入完成條件及操作重跑；保存兩邊版本、命令、實際值、截圖與 console／HTTP 結果。資料載入或互動後才失敗時，兩邊都驗到該狀態，不用較早的空資料通過覆蓋較晚的失敗。不能用模擬樣式或 mock 代替原版實際執行。
+
+兩版使用隔離 build／server；切換 ref 或 source 時，停掉本任務舊程序並依實際需要清理本任務產物、冷啟及確認受驗版本，排除 HMR 或殘留 client／server 產物污染。不改其他任務服務，也不覆寫未提交工作。將結果記到 task.md「### 異常原版對照」：本次新增 → 修復重驗；原版已存在 → 保留失敗證據與影響，依授權修復或列待決策，不擅自擴修；無法確定 → 補查，不能先稱既有問題或環境 blocker。證實既有不等於該檢查通過，仍依 verify／finish 的完成條件處理。
+
+**修復後失敗**：只重驗該項。同一項修 2 次仍失敗，先照 [dev.md](phases/dev.md) 的「連續執行原則」查共同假設，再將尚需人決定的事項附現象、證據與重現步驟交審。同一類問題被使用者連續指正兩次以上，代表驗證方法本身有問題（通常是又用了肉眼截圖比對），不是再找一個漏網之魚就好——這是換成量測方法的訊號。
 
 ## 5. 純後端任務的替代驗證
 

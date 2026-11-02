@@ -2,7 +2,7 @@
 
 > 註（2026-09-20）：OpenSpec 已退役，舊 `openspec/` 封存於 `docs/archive/openspec/`，`/openspec-*` skills 不再使用。規格以 `docs/product/` 的 PRD／FRD 與中央 issue 的驗收契約為準；本文已依此改寫。同日退役自動派工 Routine A／B（#241）與 merge 回寫 Routine C；board 狀態由各 skill 呼叫 `bin/pipeline/board.ts` 寫回，所有開發走人工 `/develop`。
 >
-> 最後全面校正：2026-10-28。逐段對照 `plugin/skills/` 正本、`plugin/hooks/`、monorepo 與各 sub-repo 的 workflow、ruleset 與 package.json；涵蓋到 2026-10-23 merge 的變更（PR #309 develop 拆階段、#315 工程驗收、#387 Need Fix 分流與每日 board audit〔issue #338〕、#365 closing keyword 攔截〔issue #364〕、#351／#363／#371／#388／#391 CI review 改版）。各步驟細節以 `plugin/skills/` 正本為準，本文只寫全貌；本文的 `/x` 都是指 `/daodao:x`。
+> 最後全面校正：2026-10-28。逐段對照 `plugin/skills/` 正本、`plugin/hooks/`、monorepo 與各 sub-repo 的 workflow、ruleset 與 package.json；涵蓋到 2026-10-23 merge 的變更（PR #309 develop 拆階段、#315 工程驗收、#387 Need Fix 分流與每日 board audit〔issue #338〕、#365 closing keyword 攔截〔issue #364〕、#351／#363／#371／#388／#391 CI review 改版）。2026-11-01 逐一對照 #404–#446 補齊（develop 依任務類型分流、review 焦點分工、PR 安全前提、閘門預演、AI review 改手動、Codex 補瀏覽器與 Drive、開卡定位 repo 要附依據等）。各步驟細節以 `plugin/skills/` 正本為準，本文只寫全貌；本文的 `/x` 都是指 `/daodao:x`。
 
 ## 簡介
 
@@ -78,13 +78,13 @@ flowchart TD
 | 工具 | 用途 | 安裝方式 |
 |------|------|---------|
 | **Claude Code** | 主力 AI 開發工具，執行 daodao plugin 的 skills 與 hooks | `curl -fsSL https://claude.ai/install.sh \| bash`（原生安裝器） |
-| **Codex CLI** | `/daodao:review-change` 四引擎之一；也可當替代客戶端（讀 `.agents/skills/`，hooks 需先 `/hooks` 信任） | `npm install -g @openai/codex` |
+| **Codex CLI** | `/daodao:review-change` 四引擎之一；也可當替代客戶端（讀 `.agents/skills/`）；在 repo 裡信任專案後一併載入 hooks、Playwright MCP 與報告上傳放行（`.codex/`），能力與 Claude Code 一致，hooks 另需 `/hooks` 信任 | `npm install -g @openai/codex` |
 | **OMP** | `/daodao:review-change` 四引擎之一（OpenRouter 免費模型） | `bun add -g @oh-my-pi/pi-coding-agent` |
 | **OpenCode** | `/daodao:review-change` 四引擎之一（OpenCode Zen 免費模型） | `npm install -g opencode-ai` |
 
 review-change 的引擎缺哪一個就記「未執行」，不會整個失敗；四個都裝 review 覆蓋率最高。
 
-同一套 14 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版只收其中 8 個、Claude.ai 只收 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程，ChatGPT 網頁版另含 PM 驗收；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
+同一套 14 個 skills 在 Claude Code、Codex CLI、ChatGPT 桌面版都能用；ChatGPT 網頁／行動版與 Claude.ai 裝 `daodao-web`，只收其中 7 個（需求、bug 通報、開卡、PR feedback 等不需本機 checkout 的流程；`develop`、`review-change`、`check-commit`、`format-commit`、`verify-deploy`、`move-board-card`、`test-acceptance` 不在內）。安裝方式與平台能力落差見 [plugin/README.md](../plugin/README.md)。
 
 ### 0.2 GitHub CLI（gh）
 
@@ -115,7 +115,7 @@ gh repo list daodaoedu --limit 5
 | **Docker** | latest | 本地 DB 與部分子專案開發需要 |
 | **Git** | 支援 `git worktree` | `/daodao:develop` 以 worktree 隔離每個 issue |
 | **jq** | latest | `pre-pr-gate` hook 必需，缺了會直接擋下 `gh pr create` |
-| **rclone** | latest | develop verify 上傳驗證報告截圖到 Google Drive（一次性設定見 `plugin/skills/develop/references/verify-report.md`） |
+| **rclone** | latest | develop verify 用 `upload-report.py` 上傳驗證報告到 Google 文件，Claude Code 與 Codex 共用（一次性設定見 `plugin/skills/develop/references/verify-report.md`） |
 
 ```bash
 # 確認版本
@@ -127,7 +127,7 @@ node -v && pnpm -v && python3 --version && uv --version && docker --version && g
 流程的 skills 與 hooks 都包在 **daodao plugin** 裡，正本在 `plugin/`，由 GitHub release 發布：
 
 1. **安裝 plugin（每人一次，不需要 clone repo）**，裝完重開 session：
-   - **有本 repo（或任一子專案）**：`.claude/settings.json` 已宣告 marketplace（指向 release、開 `autoUpdate`），在 repo 內開 Claude Code 跑 `/plugin install daodao@daodao` 即可
+   - **有本 repo（或任一子專案）**：`.claude/settings.json` 已宣告 marketplace（指向 GitHub Pages 上的 `marketplace.json`、開 `autoUpdate`），在 repo 內開 Claude Code 跑 `/plugin install daodao@daodao` 即可
    - **沒有 repo**：一行裝好，第一次會順便加 marketplace：
 
      ```bash
@@ -142,7 +142,7 @@ node -v && pnpm -v && python3 --version && uv --version && docker --version && g
 裝好後確認：
 
 ```bash
-claude plugin details daodao@daodao   # 應列出 13 skills 與 hooks
+claude plugin details daodao@daodao   # 應列出 14 skills 與 hooks
 ```
 
 ### 0.5 MCP Servers
@@ -151,8 +151,8 @@ claude plugin details daodao@daodao   # 應列出 13 skills 與 hooks
 |------------|------|---------|
 | **daodao-pg-dev／daodao-pg-prod** | 唯讀查詢 dev／prod DB（經 SSH tunnel） | 專案 `.mcp.json`（已宣告）；需在 shell 設 `DAODAO_MCP_DIR`（daodao-mcp clone 的位置）、`DAODAO_PG_DEV_URL`、`DAODAO_PG_PROD_URL`，連線字串向管理者索取，不寫進 repo |
 | **notion** | 讀 Notion 舊文件 | 專案 `.mcp.json`（已宣告）；需設 `NOTION_TOKEN` |
-| **playwright** | develop verify 的瀏覽器驗收（`browser-verify.md` 指定） | 個人自行安裝 |
-| **Google Drive** | 下載 POC、建立驗證報告文件 | 個人自行安裝 |
+| **playwright** | develop verify 的瀏覽器驗收（`browser-verify.md` 指定） | Claude Code 個人自行安裝；Codex 由 repo 的 `.codex/config.toml` 提供，信任專案後載入 |
+| **Google Drive** | 下載 POC（驗證報告改用 rclone 腳本上傳，不需要這個 MCP） | 個人自行安裝 |
 | **Figma** | 有 Figma 連結時用 `get_screenshot` 取設計稿 | 個人自行安裝 |
 
 ### 0.6 快速確認清單
@@ -288,7 +288,7 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
 2. **現況與希望改動** — `check-product-status` 查到的目前行為與期待的改變
 3. **使用流程與功能規則（FR）** — 操作步驟、每一步的系統行為、欄位限制、權限、例外與錯誤處理；工程審閱定案（例如「90 天／3 段／50 字」）直接寫在這
 4. **驗收情境（TP）** — 每條寫前提、操作、預期結果，含反面條件（不顯示什麼、不出現什麼）；這份清單就是 `/develop` verify 的檢查清單
-5. **待確認與變更** — 分「關鍵待確認」（開工前要定）與「可延後」，加變更紀錄
+5. **待確認與變更** — 分「關鍵待確認」（開工前要定）與「可延後」，記下真正競爭過但不採用的產品方案（一行理由，避免下一輪又被提出），加變更紀錄
 6. **查核與交接附錄** — 由 skill／開發補充來源、查核證據與確認基準
 
 技術設計（API、資料模型、跨 repo 拆分）不寫進 PRD；由 `/develop` start 的 repo 判定與 task.md phases 承接。
@@ -321,11 +321,13 @@ FRD 描述「產品要什麼」，工程師需要知道「現況是什麼、要�
   Status   Todo（預設）：發布後 `pnpm -s tsx bin/pipeline/board.ts set <n> todo` 掛板並回讀
 ```
 
+**涉及 repo 要有依據**（#446）：先查 [feature map](../plugin/docs/feature-map/README.md) 的「主要程式位置」，再到程式碼確認檔案存在，路徑寫進「涉及 repo」的「依據：」；只比對名稱不算（#445 把燈塔的「管理端」對到 `daodao-admin-ui`，實際在 `daodao-f2e`）。讀不到程式碼（例如網頁版）就寫「待確認」，不猜。`check-issue-draft.py` 會擋下沒有依據也沒寫待確認的草稿。開卡者只有 Read 權限時 GitHub 不讓他設 label，skill 照樣開卡並留言請維護者補，不一直要求本人改。
+
 草稿先存本機（任務目錄的 `notes/issue-drafts/`，沒有任務目錄時用 `docs/plans/issue-drafts/`），預覽後發布；對話中已明確授權建立的，不再重複詢問。開卡前先查既有相關卡，避免重複。
 
 **母卡與子卡**（[GitHub Issue 管理規範 §4](automation/github-issue-management.md#4-母卡子卡pr-與相依關係)）：開新功能（一份 PRD）時，母卡只放目標、AC 總表與子卡清單，並依 AC 一次拆好子卡——子卡開在 `daodaoedu/daodao`（`gh issue create --parent <母卡>`），每張對應母卡的部分 AC、約一週內做完，body 保留 `Parent: daodaoedu/daodao#N` 行。只有兩層；技術債、後續改進開獨立卡寫「相關：#n」，不掛子卡。`/develop` 只在子卡或獨立卡開工，不在母卡上開工。單一 repo 的工程交接可用 `subtask-issue.md` 開在 sub-repo，只當交接筆記，不掛 sub-issue、不上 board。
 
-開卡時同時決定**誰驗收**，只問一句：PM 在 dev 環境操作，看得出改前改後的差別嗎？看得出來（畫面改動、使用者感受得到的後端行為、使用者回報的 bug）→ PM 驗收，不掛 label（預設）；看不出來（skill／hook／CI／board 等開發流程、只在 dev 存在的端點、零差異重構）→ 掛 `acceptance:engineering`，理由寫進 body 的「驗收方式」一行；判斷不了就預設 PM。開發中發現判斷錯了，直接加或拔 label。
+開卡時同時決定**誰驗收**，只問一句：PM 在 dev 環境操作，看得出改前改後的差別嗎？看得出來（畫面改動、使用者感受得到的後端行為、使用者回報的 bug）→ PM 驗收，不掛 label（預設）；看不出來（skill／hook／CI／board 等開發流程、只在 dev 存在的端點、零差異重構）→ 掛 `acceptance:engineering`，理由寫進 body 的「驗收方式」一行；判斷不了就預設 PM。開發中發現判斷錯了，直接加或拔 label。2026-10-29 起 App 暫不由 PM 驗收（沒有可安裝的測試版）：只改 App 的卡掛 `acceptance:engineering`，用 Expo web／模擬器冒煙＋證據留言即可關；網頁＋App 都有改的卡照常交 PM，但只驗網頁，App 步驟寫在交接留言的「已知限制」。
 
 開發模式只有一種：人工 `/develop`。`human-driving` label 由 `/develop` start 自動掛上，作為 board 上的人工開工標記。`auto`／`auto:plan-only`／`auto:auto-pr` 等派工 labels 已隨 Routine A／B 退役（#241）不再使用，label 保留不刪。開卡預設 Todo；Ready for Dev 只是管理狀態。
 
@@ -363,17 +365,22 @@ daodao/
 
 #### start — 建立任務
 
+0. **先用一句話重述要做什麼**：對象、在哪裡（repo、頁面、環境）、交付物、怎樣算完成，寫在 task.md 最上面；跟 issue 對不上就先問一個問題再開工
 1. `gh issue view` 讀中央 issue（body 與留言）：需求、PRD／FRD、POC 連結與 Acceptance snapshot。**只在子卡或獨立卡上開工**；是母卡就改挑子卡，或先依 AC 拆子卡。POC 是 Google Drive 資料夾時下載到任務的 `poc/`
 2. **判定涉及哪些 repo**：逐條需求分類（純 UI / API 行為 / 資料欄位）→ grep 程式碼查證（DTO 驗證、schema 欄位），每個 repo 附依據寫進 task.md；`repo:` label 只當參考
 3. **防撞**：建 worktree 前 `pnpm -s tsx bin/pipeline/board.ts set <n> wip --add-label human-driving`（board 移 In Progress＋掛人工開工標記）；在 `projects/<repo>` 內 `git worktree list`、`gh pr list --repo daodaoedu/<repo> --base dev --state open` 查同區域的 in-flight 工作，高重疊時先問
 4. 每個 repo 從整合分支開 worktree：`git worktree add worktrees/<n>-<slug>/<repo> -b feat/<slug> origin/dev`（所有 repo 同名 branch；fix 用 `fix/`）。daodao-worker、daodao-infra 沒有 `dev`，用 `origin/main`
 5. 補 gitignored 檔案：複製 `.env*`（含 `apps/*/`）；裝依賴——repo 自帶 `pnpm-workspace.yaml`（daodao-f2e）直接 `pnpm install`，其他 repo 加 `--ignore-workspace`（否則 monorepo 根的 `pnpm-workspace.yaml` 會讓 install 變 no-op）；裝完 `ls node_modules/.bin` 確認
-6. **產出驗收契約**：從已確認的 PRD／既有 FRD 或 issue 展開 task.md 的 `## 驗收契約`，沿用 FR／TP／AC ID，每條附驗證方式與證據欄。**沒有已確認的驗收契約就不開工**；新增的產品行為列待確認，不因「合理推導」自動成為契約
-7. 寫 `task.md`：連結、範圍、repo 判定依據、驗收契約、phases（依驗收契約與 repo 順序拆）、Port offset、Status、PR、備註；直接進 dev，不停下來建議換 session
+6. **產出驗收契約**：從已確認的 PRD／既有 FRD 或 issue 展開 task.md 的 `## 驗收契約`，沿用 FR／TP／AC ID，每條附驗證方式與證據欄。**沒有已確認的驗收契約就不開工**；新增的產品行為列待確認，不因「合理推導」自動成為契約bug 卡的第一條固定是 `REPRO-01`（正確終態、壞掉終態、分辨兩者的觀察值），dev 的重現、verify 的修正後檢查與 dev 冒煙都對照它。
+7. **設計草圖**（動到 API request／response、validator、schema、跨 repo 契約或狀態流程時才寫）：task.md「## 設計草圖」寫呼叫端用法、型別草圖、parse 邊界、一個被否決的形狀與理由、開放問題；不適用寫一行原因
+8. 寫 `task.md`：連結、範圍、repo 判定依據、驗收契約、phases（依驗收契約與 repo 順序拆）、Port offset、Status、PR、備註；直接進 dev，不停下來建議換 session
 
 #### dev — 逐 phase 實作
 
 跨 repo 順序固定 **storage（migration）→ server（API）→ ai-backend → f2e**。修改、安裝與 commit 都鎖在自己的任務資料夾；`projects/` 只做唯讀查證。每完成一個 phase 的預設動作序列，不問「要 commit 還是先看效果」：
+
+**依 task.md 的「類型」先做第一步**（第一個改動之前）：`fix` 先在實際介面重現並存修正前輸出，有便宜的測試入口就先寫會失敗的測試、單獨 commit 在修正之前，重現不了就不寫修正碼；`refactor` 先存改前基準（UI 用 `rect-probe.mjs` 在 `origin/dev` 量、邏輯用 characterization test），先刪死碼再重整，改名先遷移呼叫端再刪舊的；`perf` 先寫要宣稱的指標、在 `origin/dev` 量基準，修完 A／B 交錯各跑至少 5 次報中位數與範圍。實作需要設計草圖沒預期的欄位或狀態時，先在草圖記偏離原因。
+
 
 1. **自行輕量驗證**：UI → 起 dev server 用瀏覽器看（typecheck 過 ≠ 畫面對），有可互動 POC 的 UI phase 這一步就把 POC 開在旁邊跑基本 probe；API → curl；migration / script / skill → 依 `check-commit` 的「變更類型 × 驗證」對照表。沒有「這種改動不用驗」。碰到 form／mutation／controller／DTO 的 phase 要**真的送出一次**：一筆真實輸入成功、一筆 server 會拒絕的輸入失敗且訊息顯示
 2. **契約及測試完整性檢查**：依 `references/benchmark-gates.md` 跑適用 repo 的 schema／API signal 與測試完整性檢查
@@ -381,23 +388,25 @@ daodao/
 4. 驗證過 → `/check-commit` → `/format-commit`
 5. 更新 `task.md` 的 checkbox 與 Status，直接進下一個 phase；push 已授權時定期 `git push -u origin feat/<slug>`
 
-只有四種情況停下來：全部 phase 完成（進 verify）、碰到 task.md 記載的待決事項且無法繞過、驗證失敗 2 次修不掉、使用者喊停。phase 邊界是繼續點，不是回報暫停點。
+只有四種情況停下來：全部 phase 完成（進 verify）、碰到 task.md 記載的待決事項且無法繞過、驗證失敗 2 次修不掉、使用者喊停。同一項失敗 2 次，先在 task.md 寫出兩次修正的共同假設，做一個能推翻它的觀察；前提被推翻就換方向繼續查，成立仍修不好才停並附上觀察結果。換 session 前先 `wip:` commit（不 push）並更新 task.md「## 接手點」。phase 邊界是繼續點，不是回報暫停點。
 
 #### verify — 總驗收
 
 每個任務都要完成適用的驗證、矩陣與證據，Status 到 `verified` 才進 finish。UI 變更需要瀏覽器與版面檢查；純後端可以用 curl／整合測試取代畫面步驟，但仍要完成核心旅程、讀取權限聲明與適用的證據，不能直跳 finish。dev 階段的快篩只看「這個 phase 有沒有壞」，verify 是對完整驗收清單的總驗收，快篩過了不能跳過。
 
+- **驗證前的環境檢查**：起 dev server 後依 `references/browser-verify.md` §1a 確認 port 是任務 worktree 的程序（不是 `projects/` 版）、f2e 的 API URL 指向任務 server、登入與導頁正常；之後結果異常先重做這一步，再判斷是不是產品問題
 - **逐條驗收**：從 task.md 的驗收契約展開檢查清單，用瀏覽器逐條走過（工具依 `references/browser-verify.md`），含跨 phase 整合、回歸、無障礙、窄螢幕（390px）與反面條件
 - **登入牆不是證據**：導到 `/auth/*` 的截圖等於這頁沒驗過（#166）；要登入的頁面走 dev-login 配方。task.md 不得留「需要手動驗證」清單，每項不是驗掉、就是使用者明確豁免並記原因
-- **POC 並排比對**（有可互動 HTML 原型時必做）：用 `getComputedStyle` 量測產出差異表，probe 要涵蓋 `poc-probe-checklist` 全部類別，量完再逐組看並排截圖補漏。每條 ❌ 不是修掉，就是列進「### POC 差異決策」交使用者裁決，確認後 task.md 寫 `POC 差異決策已確認`。沒有「設計系統」這個免死金牌
+- **POC 並排比對**（有可互動 HTML 原型時必做）：用 `getComputedStyle` 量測產出差異表，probe 要涵蓋 `poc-probe-checklist` 全部類別，量完再逐組看並排截圖補漏。比對設定（probe、選擇器、POC 副本）跑過一次就凍結（`coverage.json` 記 `config_sha256`），要改寫原因與前後雜湊，不能為了讓 ❌ 消失而刪 probe 或放寬選擇器。每條 ❌ 不是修掉，就是列進「### POC 差異決策」交使用者裁決，確認後 task.md 寫 `POC 差異決策已確認`。沒有「設計系統」這個免死金牌
 - **版面探針**（UI repo 必做）：對任務碰到的每條 route，在 390／1024／1440 三個寬度跑 `layout-probe.mjs`，量被導離、`scrollWidth > innerWidth` 橫向溢出、出界元素，「### 版面探針」表貼進 task.md；沒碰頁面寫 `版面探針不適用：<原因>`（#233：settings 每頁多 132px，六個月沒人發現）
 - **版面 rect 對照**（零視覺差異的 refactor 必做）：`rect-probe.mjs` 改前改後各量一次、`rect-diff.py` 比對（#240 抽 `PageShell` 證明 15 頁零差異）
 - **讀取權限驗證**（改到 ACL、隱私、資料範圍篩選，或因此造成列表／詳情不一致時必做，#400）：從使用者入口追到下游各服務的 ACL／查詢／cache（列表、搜尋、詳情未必共用後端），用同一組固定資料驗資料擁有者、同範圍成員、範圍外使用者、被移除者的可見性；改查詢或 DB ACL 要在真實資料庫上證明舊版失敗、新版通過，mock 不算。規則見 `references/read-access-verification.md`；不適用要寫具體理由
 - **核心旅程矩陣**（寫入，或涉及權限／隱私／資料範圍的讀取都必做）：每條「建立／編輯／刪除／送出」旅程至少一列真實輸入成功、一列 server 拒絕的輸入失敗（讀取旅程的錯誤路徑是「拒絕存取且回應不含私人資料」），「實際」欄要有 HTTP 狀態碼，FE／BE 規則來源寫 `檔案:行號`；前端手寫規則對不到 server 規則就是缺口，先修再驗。沒有寫入路徑寫 `核心旅程不適用：<原因>`。這是 #188「畫面像 POC 但無法建立場次」的直接對策，見 `references/journey-matrix.md`
 - **留證據**：截圖存 `evidence/`，命名 `<phase>-<checkpoint>.png`、旅程列 `verify-jNN.png`；task.md 新增「驗證」區塊記通過／失敗／未做 + 矩陣
-- **Google 文件驗證報告**（必做）：依 `references/verify-report.md`，rclone 上傳截圖 → 產生 HTML（核心旅程矩陣放最前）→ 建 Google 文件、設知道連結者可看，連結記進 task.md「驗證」區塊第一行。截圖只留在本機或對話裡等於沒發
-- 同一項失敗 2 次 → 停止重複嘗試，整理已查核的原因與證據
+- **Google 文件驗證報告**（必做）：依 `references/verify-report.md`，寫報告 HTML（核心旅程矩陣放最前，截圖寫成 `evidence/<檔名>`）→ 跑 `upload-report.py` 上傳截圖、建 Google 文件並設知道連結者可看，連結記進 task.md「驗證」區塊第一行。截圖只留在本機或對話裡等於沒發
+- 同一項失敗 2 次 → 照 dev 階段的做法寫出共同假設並驗證，停止重複相同嘗試，整理已查核的原因與證據
 - 全部通過（沒有 `- [ ]` 未勾項、沒有「需要手動驗證」清單、版面探針全 ✅）→ Status `verified`
+- **閘門預演**：先寫好 `notes/pr-body-<repo>.md`，跑 `bash plugin/hooks/pre-pr-gate-preview.sh <任務資料夾> <repo>`，一次列出發 PR 閘門會擋的所有缺漏（不寫 gate ledger），✅ 才進 finish；多 repo 每個 repo 各跑一次
 
 #### finish — 發 PR
 
@@ -407,21 +416,21 @@ daodao/
 
 對每個有變更的 repo：
 
-1. `git status` 確認全部 commit；`git fetch origin dev && git rebase origin/dev`（衝突時列出檔案；openapi 生成物用官方腳本重產）
+1. `git status` 確認全部 commit；`git fetch origin dev && git rebase origin/dev`（衝突時列出檔案；openapi 生成物用官方腳本重產）；rebase 前後各算一次 `git patch-id --stable`，相同就沿用 verify 證據、只更新 head SHA，不同就只重跑受影響的旅程列
 2. `typecheck && lint && test`；既有紅測試用 origin/dev 乾淨 worktree 對照確認非本任務造成
 3. **Clean-context spec audit**：`scripts/build-spec-audit.py` 產 audit pack（diff、驗收契約、已確認決策、適用 REVIEW.md），spawn 不帶開發對話的獨立 subagent 逐 FR／TP／AC 標 PASS / FAIL / UNCERTAIN；FAIL 先修
 4. `/review-change`（四引擎＋誤判知識庫，見 Phase 5）；需要 force push 時先問
 5. push → `gh pr create --base dev --body-file …`（worker、infra 的 base 是 `main`）；body 一律用 `--body-file`。跨 repo 時各 PR body 互相引用並標 merge 順序。**所有 PR（含 daodao root 自己的）用獨立一行 `Refs daodaoedu/daodao#<n>`，不用 `Closes`／`Fixes`／`Resolves`**——closing keyword 會在 PR merge 時就關掉中央卡、board 跟著 Done，跳過 dev 冒煙與 PM 驗收；跨 repo 時其他 repo 的 PR 還沒合就被當完成（#190：f2e 先合、server 懸置一週；#333、#335、#337 也因此被提前關閉）。CI 的 `pr-evidence-gate` 會偵測這類寫法（#364）
-6. PR body 要有「## 驗證證據」：驗證報告連結＋核心旅程矩陣（或 `核心旅程不適用：<原因>`）；body 沿用 Why／How 格式。有「## 驗證證據」時 Auto PR Description 會跳過，不覆寫
+6. PR body 要有「## 驗證證據」：驗證報告連結＋核心旅程矩陣（或 `核心旅程不適用：<原因>`），以及「## 安全前提」：這個變更不會弄壞別處所依賴的 1～2 件事，各標證據等級（1 只是這樣說 → 5 在執行中的 app 重現），改到 REVIEW.md 高風險類別至少第 4 級（跑過真程式），做不到寫原因、交 review 列待查證；body 沿用 Why／How 格式。有「## 驗證證據」時 Auto PR Description 會跳過，不覆寫
 7. task.md Status → `in-review`，記 PR 連結；`board.ts set <n> review` 移卡
-8. **回寫 issue**：`gh issue comment` 列 PR、驗證報告連結、核心旅程摘要、「尚未在 dev 冒煙」、Known incomplete scope；之後用 `/collect-pr-feedback` 收回饋
+8. **回寫 issue**：留言第一行放 marker，先找再更新、找不到才新增（finish 重跑時不重複留言）；列 PR、驗證報告連結、核心旅程摘要、「尚未在 dev 冒煙」、Known incomplete scope；之後用 `/collect-pr-feedback` 收回饋
 
 **pre-pr 閘門**（`plugin/hooks/pre-pr-gate.sh`，攔 `gh pr create`；只在 `worktrees/<task>/` 內有 task.md 時生效（交付閘門設為 block 時，缺 task.md 也會擋），缺 `jq` 時直接擋下；Codex 未信任 hooks 時由 agent 主動做同等檢查）：
 
 | 閘門 | 擋什麼 |
 |---|---|
 | `pr-status-not-verified` | task.md Status 為空或仍是 planning／implementing |
-| `pr-poc-compare-missing` | UI repo 有可互動原型，卻缺比對報告（`notes/poc-compare/report.md`、「### POC 比對」、probe 類別）或差異決策確認行 |
+| `pr-poc-compare-missing` | UI repo 有可互動原型，卻缺比對報告（`notes/poc-compare/report.md`、「### POC 比對」、probe 類別）、有未解析的 probe（選擇器沒對到，或舊版 `coverage.json` 沒有 `unresolved` 欄位），或缺差異決策確認行 |
 | `pr-read-access-evidence-missing` | 讀取權限適用卻缺角色／固定資料／真實 DB 等證據，或沒有不適用理由（#400） |
 | `pr-journey-matrix-missing` | 核心旅程矩陣缺、沒有錯誤路徑列、或有 ⬜／❌ |
 | `pr-deferred-unlinked` | Deferred item 沒子 issue 也沒「待開卡」 |
@@ -436,7 +445,7 @@ daodao/
 
 1. 確認**所有 repo** 的 PR merged（跨 repo 少一支就不算）
 2. **dev 冒煙，通過前不刪任務資料夾**：等 CD run 跑到該 revision，用 task.md 的核心旅程矩陣在 dev 環境重跑全部正常列 + 至少一列錯誤路徑，「dev 冒煙」表回寫 issue comment；失敗走 `report-bug` 並標「已合併，dev 冒煙未過」。merge ≠ 可用（#179、#190 都是在 dev 撞到的）
-3. `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪；clone 模式先確認沒有未 push 的 commit）
+3. 先跑 `pnpm -s tsx bin/pipeline/worktree-audit.ts`（唯讀），回報多個任務共用或複製來的 git metadata（❌）就停下，否則移除會弄壞別的任務（2026-10-10 弄壞 233、214）；沒有 ❌ 才 `git worktree remove`、`git branch -d feat/<slug>`、`rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 comment 才刪；clone 模式先確認沒有未 push 的 commit）
 4. 接 `/verify-deploy`：更新 `docs/product` 功能狀態，依冒煙結果移卡（見 Phase 8）；`Done` 只由驗收通過產生，這裡不提前移
 5. `ls worktrees/` 掃其他已 merge 未收尾的任務
 
@@ -493,6 +502,7 @@ server 的 `pnpm dev` 或 jest 載入 app 時會重寫 `openapi.json`／`openapi
 0. **判斷指令入口** — 依 repo 用 Makefile、pnpm 或 monorepo root 的指令
 1. **格式檢查與自動修復** — `make check`／`pnpm format:check`，有錯先 `make format`／`pnpm format` 再重查
 2. **靜態分析** — lint；TS 專案加跑 typecheck
+2.5 **檢查新增的註解** — lint 不管註解品質，只看這次新增的行，有問題改掉再 commit；靠判斷、不自動修復
 3. **變更對應的驗證，沒跑過不准 commit** — 依變更類型對照：程式改動跑相關測試、workflow 跑 YAML parse、shell 跑 `bash -n`、migration 實跑並重跑確認冪等、UI 開瀏覽器快篩、文件抽查路徑與連結
 4. **回報** — 修不了的由 AI 先定位原因並附修正建議，只有產品取捨才交人決定
 
@@ -539,15 +549,18 @@ commit 完成後、push 到遠端之前，還有一道本地 review。
 git push 前
   → Claude 問「要 review 嗎？」
     → Yes → review-change skill 審查整個 branch
-      步驟 0   建共用 review input：base 的 REVIEW.md 審查準則 + diff + Context Pack + <known_false_positives>（誤判知識庫）
+      步驟 0   建共用 review input：base 的 REVIEW.md 審查準則 + <intent>（PR 說明＋commit 訊息，標為不可信，不能替移除的 auth／驗證 guard 開脫）+ diff + Context Pack + <known_false_positives>（誤判知識庫）
       步驟 1   確認 base 與變更範圍
       步驟 2–5 Codex / OMP（OpenRouter free）/ OpenCode（Zen free）/ Claude Sonnet 5.5 四引擎獨立 review
                前三者有 fallback 模型鏈，Claude 固定 claude-sonnet-5-5；缺少的引擎記為未執行，不宣稱四引擎都過
-      步驟 6.5 OMP／OpenCode／Claude 的表格套 filter（C 類自承看不到 → drop；D 類假設性 → 降 Low），
+      步驟 6.5 OMP／OpenCode／Claude 的表格套 filter（C 類自承看不到、G 類「請確認／需同步」提醒 → drop；D 類假設性 → 降 Low；auth、權限、個資、migration／schema、金流、資料刪除、併發相關的列不套用、交人判斷），
                再跑 verify（A 類「找不到 X」在 head tree 查到反證 → 移出，並列出命中位置供覆核）；
                Codex 是自由文字，由 AI 逐項比對
-      步驟 7   cross-model 分析（幾個引擎共同回報）
+      步驟 7   覆蓋表：確認每個焦點都有引擎完成，沒人完成的焦點記為覆蓋缺口、不算通過；共識數只用來排序
       步驟 8   AI 逐條用程式碼證據查證，分成 已確認缺陷／待產品決策／證據不足／誤判
+               P0／P1 要在 review snapshot 上重跑出錯誤行為才算確認；重現不了的標「靜態推論」，
+               只有 REVIEW.md 高風險類別才阻擋，其他降為待查證；結論依序判斷 BLOCKED（覆蓋缺口或未解 P0／P1）→ ISSUES → PASS
+               交人時附丟棄清單（各引擎被 filter／verify／查證拿掉幾筆與原因）
                有修復授權才修（bug 先補 regression test），否則給修正建議
       步驟 8.5 誤判不再記錄（2026-10-29 起，record 已退役），寫進 review 報告與丟棄清單即可
       → commit／push 依既有授權，不因 review 完成自動執行
@@ -556,7 +569,7 @@ git push 前
 
 ### 5.2 檢查項目
 
-四個引擎都以 base 的 `REVIEW.md` 為審查基準。Codex 與 Claude 看下面四個面向；OMP 與 OpenCode 只回報可直接證明的邏輯與安全缺陷，不報風格或假設性問題：
+四個引擎都以 base 的 `REVIEW.md` 為審查基準，各看一個焦點：Codex 看跨檔契約（唯一能讀 repo 的引擎）、Claude 看 REVIEW.md 的安全與資料契約、OMP 與 OpenCode 看 diff 內的邏輯（只報可直接證明的缺陷，不報風格或假設性問題）。某個焦點的引擎整條 fallback 都失敗時交給另一個可用引擎重跑；Codex 失敗時由 AI 自己用 `git grep` 補查跨檔契約。下面四個面向是共同的審查範圍：
 
 1. **邏輯錯誤** — 條件判斷是否正確？迴圈會不會無窮？null/undefined 有沒有處理？
 2. **安全問題** — 有沒有 SQL injection、XSS、敏感資料洩漏的風險？
@@ -573,7 +586,7 @@ git push 前
 |---|---|
 | 紀錄 | `.github/review-knowledge/false-positives.jsonl`（monorepo 單一來源，sync 派發唯讀副本到各 sub-repo） |
 | 腳本 | `.github/scripts/review-knowledge.cjs` — `prompt-block`（彙整已知樣態餵模型）、`filter`（確定性過濾）、`verify`（A 類 absent-claim 到 head tree `git grep` 查反證）、`test`（每筆紀錄必須是 fixture、已知漏網或寫明不測的原因）；`record` 已於 2026-10-29 退役 |
-| 樣態 | A absent-claim（對 diff 外程式碼做「找不到／缺少」斷言）、B deletion、C unverifiable、D hypothetical、E format、F misattribution — 定義與對策見 [.github/review-knowledge/README.md](../.github/review-knowledge/README.md) |
+| 樣態 | A absent-claim（對 diff 外程式碼做「找不到／缺少」斷言）、B deletion、C unverifiable、D hypothetical、E format、F misattribution、G reminder（只叫人「確認／同步」，沒指出具體過時位置） — 定義與對策見 [.github/review-knowledge/README.md](../.github/review-knowledge/README.md) |
 
 **2026-10-29 起不再收集新誤判**：盤點發現 filter 是寫死的樣態規則，181 筆紀錄只有 18 筆真的被測試跑到，所以把既有紀錄全部轉成回歸測試（35 筆 fixture、47 筆已知漏網、103 筆寫明不測的原因），之後不再 `record`。改 `UNVERIFIABLE_RE`／`HYPOTHETICAL_RE`（或 verify 的 `ABSENT_*_RE`）時，直接在 jsonl 加 `pr` 為 0 的 fixture 與 `expected: keep` 反例，`review-knowledge.cjs test` 要綠；合併到 monorepo main 後由 `sync-claude-config` 派發到各 sub-repo。
 
@@ -589,8 +602,8 @@ Push 到遠端並開 PR 後，GitHub Actions 會自動觸發下列檢查：
 
 ```
 PR opened / updated
-  ├── 1. Auto PR Description — 自動產生 PR 標題和描述（develop 開的 PR 會跳過）
-  ├── 2. AI Code Review — Cloudflare Workers AI 審查 diff
+  ├── 1. Auto PR Description — 自動產生 PR 標題和描述（develop 開的 PR 或作者已填寫描述會跳過）
+  ├── 2. AI Code Review — 貼 `ai-review` label 才跑，Cloudflare Workers AI 審查 diff
   ├── 3. CI — 各 repo 自己的 lint／typecheck／test（見 6.4）
   ├── 4. PR evidence gate — 讀 PR body「## 驗證證據」，並攔指向中央 issue 的 closing keyword
   └── 5. Branch flow rules — 檢查 branch 命名與允許的 base（sub-repo 為 branch-base-check；root 由 branch-guard 負責）
@@ -606,7 +619,7 @@ PR opened / updated
 
 | 項目 | 說明 |
 |------|------|
-| 觸發時機 | PR opened；body 已有「## 驗證證據」（develop 開的 PR）、`auto/*` 分支、`[auto]` 開頭標題或掛 `code-review` label 時跳過 |
+| 觸發時機 | PR opened；body 已有「## 驗證證據」（develop 開的 PR）、`auto/*` 分支、`[auto]` 開頭標題、掛 `code-review` label，或去掉 PR template 的 HTML 註解與標題後仍有內容（作者已填寫）時跳過 |
 | 引擎 | Cloudflare Workers AI（GLM 4.7 Flash，Gemma 4 26B fallback） |
 | 效果 | 根據最多 50 筆 commit subject 產生繁體中文的 Why / How 描述，**覆寫整個標題與 body** |
 | 設定檔 | `.github/workflows/auto-pr-description.yml`（monorepo 單一來源，sync 派發） |
@@ -619,7 +632,7 @@ PR opened / updated
 
 | 項目 | 說明 |
 |------|------|
-| 觸發時機 | PR opened / synchronize / reopened / ready_for_review；draft 與 shared-config sync PR 跳過模型呼叫；synchronize 只審 diff 有變的檔（#368） |
+| 觸發時機 | PR 貼 `ai-review` label（增量審）或 `ai-review:full`（全檔重審）才跑，跑完自動移除 label；draft 與 shared-config sync PR 不跑 |
 | 引擎 | Cloudflare Workers AI（Gemma 4 26B，GPT-OSS 120B fallback） |
 | 效果 | 有限分批提供完整 diff 與 BEFORE／HEAD source，搭配 Context Pack，產生來源可核對的 finding 與明確 coverage report |
 | 設定檔 | `.github/workflows/code-review.yml`（monorepo 單一來源，sync 派發） |
@@ -628,7 +641,7 @@ PR opened / updated
 
 ```
 Plan            immutable merge-base..head；每批 40k bytes、最多 24 批、總 source 800k bytes；放不下先降級脈絡（complete → before-hunks → head-only → hunks），最後才列未審查
-Incremental     synchronize 時讀上次 review 留言內的基準，PR diff 沒變的檔沿用上次結果（rebase／update-branch 不呼叫模型）；掛 `ai-review:full` 後 re-run job（或下次 push）才全審
+Incremental     讀上次 review 留言內的基準，PR diff 沒變的檔沿用上次結果（rebase／update-branch 不呼叫模型）；第一次審或貼 `ai-review:full` 時全審
 Coverage        每個 changed path 入 manifest；產物／binary／超預算等明列未審查，不截前綴
 Context Pack    retrieve-context.sh：route middleware / DTO schema / 刪檔替代者（#168）+ caller / importer / 同模式 ⚠ / in-flight PR
 Known FP        review-knowledge.cjs prompt-block 提供歷史脈絡；不再以 Markdown filter 刪列後轉成 clean
@@ -675,18 +688,20 @@ CI 是最後一道客觀防線：各 repo ruleset 的 required checks 全綠才�
 
 ### 6.5 收集 PR Feedback
 
-CI 和 AI review 跑完後，用 `collect-pr-feedback` skill 一次收集所有回饋：
+CI 跑完（要 AI review 的話先貼 `ai-review` label 等它跑完）後，用 `collect-pr-feedback` skill 一次收集所有回饋：
 
 ```
 使用者說「收集 feedback」或「看 PR review」
   → collect-pr-feedback skill
     1. 確認 PR、head SHA；讀 CI 狀態（gh pr checks）與失敗 job log
     2. 收集 AI Code Review、SonarCloud／Vercel（f2e）與人類 reviewer 的 comment，去重同一根因
+       CI 失敗先分類：疑似偶發（逾時、429、runner 斷線）只 `gh run rerun --failed` 重跑一次，第二次同樣失敗就當真失敗查 log
     3. AI 逐條對程式碼／測試查證：已確認缺陷／待產品決策／證據不足／已解決或不適用
        - 人類要求與模型 High 都只是待查證訊號，多個模型同意也不等於正確
        - `/fp <n> <A-G> <why>` 只採 PR 作者或已驗證成員的回覆，查證後寫進交審表（2026-10-29 起不再 record）
+       - 提醒型 finding 改寫成可執行的查核（`git grep`、跑測試）並附結果；高風險類別一律交人；不為了讓 bot 安靜而改 code
     4. 有修復授權：修已確認缺陷（bug 先補 regression test）→ 走 check-commit／format-commit commit；
-       push 與回覆 reviewer 需另有授權
+       修正在本機全部 commit、跑完受影響的檢查後才一次 push；push 與回覆 reviewer 需另有授權
        只有分析授權：給修正建議與驗證方法，不擅改程式
     5. 交人審核：已修什麼、還有什麼待決策
 ```
@@ -735,7 +750,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 
 1. 確認所有 repo 的 PR merged（`gh pr view`）
 2. **dev 冒煙**（通過前不刪任務資料夾）：CD 跑到該 revision 後，用核心旅程矩陣在 dev 重跑全部正常列＋至少一列錯誤路徑，結果回寫 issue comment；失敗走 `report-bug` 並標「已合併，dev 冒煙未過」，沒過不往下
-3. 每個 repo：`git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`（只更新 origin/dev，不動 `projects/` 的本機分支）
+3. 每個 repo：先跑 `worktree-audit.ts`，沒有 ❌ 才 `git worktree remove`、`git branch -d feat/<slug>`、`git fetch origin dev`（只更新 origin/dev，不動 `projects/` 的本機分支）
 4. `rm -rf worktrees/<n>-<slug>`（矩陣與冒煙結果已在 issue comment 才刪；task.md 其他值得留的內容先摘要進 comment；clone 模式先確認沒有未 push 的 commit）
 5. 接 `/verify-deploy`
 6. `ls worktrees/` 掃其他已 merge 未收尾的任務
@@ -745,13 +760,13 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 ### 8.2 `/verify-deploy`
 
 1. 核對合併範圍與證據：程式實作／測試／部署／目標環境操作各自要有證據；未執行就記未驗證
-2. 目標環境冒煙（同 8.1 步驟 2），表格格式 `## 🔥 dev 冒煙（<環境>，revision <sha>，<日期>）`。跨 repo 要所有 PR 都 merged 且冒煙過才移卡；全部 ✅ 只能在 docs/product 標「dev 冒煙通過，待 PM 驗收」，PM 關 issue 後才標「已驗收」
+2. 目標環境冒煙（同 8.1 步驟 2），表格格式 `## 🔥 dev 冒煙（<環境>，revision <sha>，<日期>）`。冒煙改到共用的場次、模板、組織或 fixture 要記原值、測完改回並回讀；建立與改動的每一筆都列進留言的「### 測試資料」表，沒有就寫「未建立或改動資料」（共用資料被改是 PM 驗收受阻第二大原因）。跨 repo 要所有 PR 都 merged 且冒煙過才移卡；全部 ✅ 只能在 docs/product 標「dev 冒煙通過，待 PM 驗收」，PM 關 issue 後才標「已驗收」
 3. 更新 `docs/product/<功能>/` 的狀態標示（已合併／已測試／已部署／已驗收，附日期與 PR／run）——不可跳過，這是根治「文件說規劃中、程式碼已上線」的關鍵；沒有部署證據不寫已上線
 4. 校準地圖：結構、入口或 build 變更 → 更新該子專案的 `codebase-map` skill；服務依賴或 schema 流程變更 → 更新 `system-map`（在各 sub-repo 的 `.claude/skills/`，infra 沒有）
 5. 用既有開發文件與 issue 驗收契約記錄完成與剩餘事項；OpenSpec 已退役，不再歸檔 change（舊的封存於 `docs/archive/openspec/`）
 6. **移卡＋交接**：冒煙全 ✅ → `board.ts set <n> accept`（移 Acceptance＋assign PM），接著寫好並發「交給 PM 驗收」交接留言（`plugin/templates/issue-status-comment.md`）；冒煙失敗或未冒煙 → `needfix`；母卡還有子卡沒關就留 Review。掛 `acceptance:engineering` 的卡冒煙全 ✅ 時不進 Acceptance，發「工程驗收通過」留言（冒煙表＋驗證報告）後直接關 issue
 
-**交接留言的 PM 步驟只寫畫面上做得到、看得到的操作與預期**。API 送出內容／回讀、regression test、CI、log 放「工程證據（已驗，PM 不需重做）」區塊；只能用 API 或測試驗的 AC 標「工程驗收項」，不列入 PM 步驟（#370、#358：PM 照契約去要 PUT body 與測試輸出，判 BLOCKED 退回）。留言先寫成檔案，發布前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 改到通過再發。
+**交接留言的 PM 步驟只寫畫面上做得到、看得到的操作與預期**。API 送出內容／回讀、regression test、CI、log 放「工程證據（已驗，PM 不需重做）」區塊；只能用 API 或測試驗的 AC 標「工程驗收項」，不列入 PM 步驟（#370、#358：PM 照契約去要 PUT body 與測試輸出，判 BLOCKED 退回）。留言先寫成檔案，發布前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 改到通過再發；warn 表示「」裡引用的畫面文案在 f2e zh-TW locale 找不到，要逐一確認沒寫錯，不擋發布。測試帳號寫 PM 能 Google 登入的帳號，需要團主、團友身分就先把 PM 帳號加進組織或場次。
 
 ### 8.3 Board 與 issue
 
@@ -784,7 +799,7 @@ Todo → In Progress → Review → Acceptance → Done
 | Need Fix | 工程師 | 冒煙失敗，或 PM 退回且寫出哪條 AC 失敗＋看到什麼 |
 
 - **Definition of Done**：AC 全部符合＋已部署到 dev＋驗收通過。預設 PM 驗收；`acceptance:engineering` 卡以 dev 冒煙通過＋證據留言為驗收。
-- **PM 驗收**：每天看「PM 驗收」view（依母卡分組、顯示子卡進度），照交接留言在 dev 操作；通過就關 issue；AC 沒過就留言**哪條 AC 失敗、看到什麼**並移 Need Fix。SLE 2 個工作天，欄位不設上限。
+- **PM 驗收**：每天看「PM 驗收」view（依母卡分組、顯示子卡進度），照交接留言在 dev 操作（也可在 Claude Code／Codex 用 `/test-acceptance` 代為實測、截圖並發驗收報告，PASS 關 issue、FAIL 移 Need Fix、受阻掛 `acceptance:blocked`；先用草稿模式跑過、結論與 PM 一致才發布）；通過就關 issue；AC 沒過就留言**哪條 AC 失敗、看到什麼**並移 Need Fix。SLE 2 個工作天，欄位不設上限。
 - **母卡／子卡定義**：母卡＝一個功能（PRD），只放目標與子卡清單、不直接掛 PR；子卡＝可單獨驗收的一塊，開在中央 repo、只有兩層；技術債與後續改進開獨立卡。見 [GitHub Issue 管理規範 §4](automation/github-issue-management.md#4-母卡子卡pr-與相依關係)。
 - **母卡**：還有子卡沒關（含 bug 子卡）就留 Review，不交 PM、不可先關；PM 驗母卡時看整體串起來能不能用，不重驗子卡 AC。`board.ts audit` 會列出「母卡已 close 仍有子卡未關」與「母卡在 Acceptance 但子卡未全關」。
 
@@ -813,7 +828,7 @@ Todo → In Progress → Review → Acceptance → Done
 遇到操作異常、截圖、對話或 CI 錯誤
   → /report-bug
     1. 先從已有資訊整理草稿：現象、重現步驟、預期與實際、截圖／log；最多問 1–2 個關鍵問題
-    2. skill 自行查核現況與重複卡、判定 repo 與可能根因——不問通報者 repo、SHA、負責人、根因
+    2. skill 自行查核現況與重複卡、判定 repo（從 feature map 的主要程式位置開始、到程式碼確認，不看名字猜）與可能根因——不問通報者 repo、SHA、負責人、根因
     3. AI 自審修訂 → 人審核草稿
     4. 展示標題、內容、目標 repo 與 labels，依授權用 gh issue create 發布（預設 daodaoedu/daodao）
 ```
@@ -854,9 +869,10 @@ Todo → In Progress → Review → Acceptance → Done
 | 階段 | 工具 | 用途 |
 |------|------|------|
 | **前置** | Claude Code + daodao plugin | 主力 AI 開發工具；plugin 提供 14 個 skills 與 6 支 hooks（`/daodao:<skill>`） |
-| **前置** | Codex CLI／OMP／OpenCode | review-change 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`） |
+| **前置** | Codex CLI／OMP／OpenCode | review-change 的另外三個引擎；Codex 也可當替代客戶端（讀 `.agents/skills/`，信任專案後有瀏覽器與報告上傳） |
 | **前置** | GitHub CLI（gh） | PR、issue、CI 狀態、Planning board 操作 |
-| **前置** | MCP：playwright、Google Drive、Figma、daodao-pg-dev／prod | 瀏覽器驗收、驗證報告、設計稿、唯讀查 DB |
+| **前置** | MCP：playwright、Google Drive、Figma、daodao-pg-dev／prod | 瀏覽器驗收、下載 POC、設計稿、唯讀查 DB |
+| **前置** | rclone | 驗證報告上傳到 Google 文件（`upload-report.py`） |
 | **需求** | PRD（既有 FRD 沿用） | 一份文件含功能行為與驗收（FR／TP） |
 | **需求** | Figma + Figma MCP | UI 設計稿與 `get_screenshot` 對照 |
 | **規格** | draft-prd + check-product-status skills | 描述 → AI 查核現況與起草 PRD → 自審修訂 → 人審核 → 確認（L/M 必要；OpenSpec 已退役） |
@@ -871,18 +887,18 @@ Todo → In Progress → Review → Acceptance → Done
 | **Review** | review-change skill | Push 前本地 code review（Codex／OMP／OpenCode／Claude Sonnet 5.5 四引擎） |
 | **Review** | review-knowledge.cjs + false-positives.jsonl | 誤判知識庫：本機 skill 與 CI 共用的紀錄、prompt 提示、確定性過濾、verify、fixture |
 | **PR** | Auto PR Description | Workers AI 為手動開的 PR 產生描述 |
-| **PR** | AI Code Review | Workers AI 審查 diff（增量、coverage check） |
+| **PR** | AI Code Review | 貼 `ai-review` label 觸發，Workers AI 審查 diff（增量、coverage check） |
 | **PR** | PR evidence gate／Branch flow rules | 驗證證據與 closing keyword 檢查；branch 命名與 base 檢查 |
 | **PR** | collect-pr-feedback skill | 收集 CI 與 review 回饋，AI 查證、分類，依授權修正 |
 | **CI** | GitHub Actions | 各 repo 的 required checks（見 6.4） |
 | **CD** | GitHub Actions + Docker／EAS | merge 到 dev 自動部署 dev 環境；prod 另合 prod 分支；worker 手動 wrangler |
 | **同步** | sync-claude-config workflow | 共用 workflow 與誤判知識庫從 daodao repo 同步到子專案；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
-| **發版** | plugin-release workflow | 打包 daodao plugin、建 GitHub release；Claude Code 端自動更新 |
+| **發版** | plugin-release workflow | 改到 `plugin/` 的 PR 合進 main 就自動產生版號、打包並建 GitHub release，`marketplace.json` 部署到 GitHub Pages；Claude Code 端自動更新 |
 | **收尾** | verify-deploy skill | 核對合併／部署證據、dev 冒煙、更新 docs/product 狀態、交 PM 驗收或關工程驗收卡 |
-| **收尾** | `bin/pipeline/acceptance-lint.ts` | 交 PM 驗收留言發布前檢查：PM 步驟不得混入 API／測試證據 |
+| **收尾** | `bin/pipeline/acceptance-lint.ts` | 交 PM 驗收留言發布前檢查：PM 步驟不得混入 API／測試證據、測試帳號不得是 PM 用不了的帳號、裸網址不可緊接全形標點；引用文案不在 f2e locale 時出 warn |
 | **收尾** | notify-related-issue skill | 依實際 PR 與驗收狀態草擬關聯 issue 更新，明確授權才留言或關閉 |
 | **收尾** | product-status-drift workflow | 每週一檢查 docs/product 狀態標示與實際落差，發到 Discord |
-| **board** | move-board-card skill + `bin/pipeline/board.ts` | 七欄語意；`board.ts set／remove／audit`，各 skill 自己移卡；`audit` 每日 09:00 由 `board-audit.yml` 排程跑（只讀）；Routine A／B／C 已於 2026-09-20 退役，見 Phase 9 |
+| **board** | move-board-card skill + `bin/pipeline/board.ts` | 七欄語意；`board.ts set／remove／audit／pending`，各 skill 自己移卡；`pending` 列出 Review／Acceptance／Need Fix 每張卡在等誰決定什麼（只讀）；`audit` 每日 09:00 由 `board-audit.yml` 排程跑（只讀）；Routine A／B／C 已於 2026-09-20 退役，見 Phase 9 |
 | **拆卡** | break-down-plan skill | 把已確認計畫的未完成任務批次開成子 issue（可驗收子卡開在中央 repo；sub-repo 只放工程交接筆記），人工發布，不觸發自動化 |
 | **Bug 追蹤** | report-bug skill | 操作異常或無法立即修復的錯誤整理成草稿，查核後開成 GitHub issue |
 | **記錄** | /post（個人 skill）→ quidproquo.cc | 踩坑經驗記錄與知識分享 |

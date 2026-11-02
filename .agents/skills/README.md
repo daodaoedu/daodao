@@ -11,7 +11,7 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | check-commit | ✅ | 完整 |
 | check-product-status | ✅ | 完整 |
 | collect-pr-feedback | ✅ | 完整 |
-| develop | ✅ | 降級：browser、drive |
+| develop | ✅ | 完整 |
 | draft-prd | ✅ | 完整 |
 | format-commit | ✅ | 完整 |
 | move-board-card | ✅ | 完整 |
@@ -19,7 +19,7 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |
 | review-change | ✅ | 完整 |
-| test-acceptance | ✅ | 降級：browser |
+| test-acceptance | ✅ | 完整 |
 | verify-deploy | ✅ | 完整 |
 
 ## 閘門
@@ -28,5 +28,4 @@ Codex 有自己的 hooks（事件名與 Claude Code 相同）。本 repo 的 .co
 
 ## 其餘落差
 
-- **browser**：這裡預設沒有瀏覽器工具。需要畫面驗證時標記為未完成，或請人工執行後貼回證據；不得只因程式碼看起來對就打勾。
-- **drive**：沒有 Drive connector。驗證報告先存成本機 Markdown，上傳由人工或 Claude Code 完成。
+

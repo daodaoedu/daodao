@@ -11,7 +11,7 @@ templateVersion: 4
 - 使用者問題與完成後可觀察結果：<內容>
 - 本次包含／不包含：<內容>
 - 風險：<UI / API / i18n / migration / permissions / infra>
-- 涉及 repo、相依與部署順序：<內容>
+- 涉及 repo、相依與部署順序：<repo>（依據：<程式碼路徑或 feature map 檔案>）；<相依與部署順序>
 
 ## 子卡
 
