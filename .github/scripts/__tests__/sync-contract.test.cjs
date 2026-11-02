@@ -98,10 +98,21 @@ test('合併 settings 後沒 del(.hooks) 不給過（子專案會指向已刪除
   assert.match(result.stdout + result.stderr, /del\(\.hooks\)/);
 });
 
-test('不再監聽 plugin/ 變更就不給過（plugin 改了不會同步出去）', () => {
-  const result = runContract({ workflowText: workflow.replace("      - 'plugin/**'\n", '') });
+test('加回 push 觸發就不給過（每次 push 都同步會讓 7 個私有 repo 各跑一輪 CI 與 CD）', () => {
+  const result = runContract({ workflowText: workflow.replace('on:\n', 'on:\n  push:\n    branches: [main]\n') });
   assert.notEqual(result.status, 0);
-  assert.match(result.stdout + result.stderr, /plugin/);
+  assert.match(result.stdout + result.stderr, /push/);
+});
+
+test('排程不是每天就不給過（plugin 改了要隔天內同步出去）', () => {
+  const result = runContract({ workflowText: workflow.replace("cron: '17 18 * * *'", "cron: '17 18 * * 1'") });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout + result.stderr, /schedule/);
+});
+
+test('拿掉手動觸發就不給過（急用時要能立刻同步）', () => {
+  const result = runContract({ workflowText: workflow.replace('  workflow_dispatch:\n', '') });
+  assert.notEqual(result.status, 0);
 });
 
 

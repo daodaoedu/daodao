@@ -7,6 +7,8 @@ on:
 jobs:
   generate_description:
     name: Generate PR Description with Workers AI
+    # 同步 PR 已有固定描述、dependabot 自帶描述，跳過可省一次 runner（job 層級跳過不起 runner）
+    if: ${{ !startsWith(github.head_ref, 'chore/sync-claude-config-') && github.actor != 'dependabot[bot]' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
