@@ -14,7 +14,7 @@
 
 同一組織的成員共同管理該組織；建立另一個組織不會自動建立另一個登入帳號。帳號與組織透過成員關係連接，權限仍由後端逐次檢查。目前成員角色只有 `owner` 一種，同組織成員的權限相同；本提案不新增角色。
 
-本提案補上前台的組織選擇與狀態一致性。平台管理後台的全組織管理、官方共同挑戰的歸屬規則，以及學員加入場次的資格維持各自的流程。
+本提案補上前台的組織選擇與狀態一致性。平台管理後台的全組織管理、官方共同挑戰的歸屬規則，以及學員加入場次的資格維持各自的流程。建立組織的流程，以及邀請尚未註冊的人成為 owner，不在本提案範圍，另開卡處理。
 
 ## 2. 帳號與資料關係
 
@@ -58,7 +58,7 @@ erDiagram
     }
 ```
 
-此圖表達概念關係，並非新增資料表的 migration 規格。`ORGANIZATION_TEMPLATE` 表示組織管理模板的關係；平台內建模板可能依既有規則共用，不代表每份模板都必須由單一組織獨占。場次內的學員資格也不由組織成員關係取代。
+此圖表達概念關係，並非新增資料表的 migration 規格。`ORGANIZATION_TEMPLATE` 表示組織管理模板的關係：燈塔模板庫只列出及讀寫 `organization_id` 為目前組織的模板（`organization-template.service.ts`），沒有跨組織共用的模板；`organization_id` 為空的一般練習模板不出現在燈塔。場次內的學員資格也不由組織成員關係取代。
 
 例：帳號甲加入組織 A、B，帳號乙只加入 A。甲可在 A、B 之間切換；甲與乙選 A 時看到同一組織的資料，符合共同管理的預期。
 
@@ -218,7 +218,13 @@ flowchart TD
 | `archive-manager` | `apps/product/src/components/lighthouse/archive-manager.tsx:27` |
 | `cohort-focus` | `apps/product/src/components/lighthouse/cohort-focus.tsx:50` |
 
-後端組織列表依本人 membership 篩選，按組織建立時間升序排列。系列、模板、封存、AI key 等端點已在 service 層檢查成員資格與組織停權（例：`program.service.ts` 的 `assertActiveOrganization`、`getOwned`）。資料庫有獨立的組織與成員關係，不能把「看到同一組織」直接判定為資料混用。
+後端組織列表依本人 membership 篩選，按組織建立時間升序排列。所有燈塔管理端點都會檢查成員資格，但只有部分會檢查組織停權：
+
+| 檢查成員資格與組織停權 | 只檢查成員資格，不檢查停權 |
+|---|---|
+| 系列（`program.service.ts` 的 `assertActiveOrganization`、`getOwned`）、場次（`cohort.service.ts` 的 `getOwned`）、模板（`organization-template.service.ts`）、封存（`lighthouse-archive.service.ts`）、AI key（`organization-ai-credential.service.ts`）、訊息模板（`cohort-message.service.ts`） | 成果摘要（`cohort-outcome.service.ts`）、匯出（`cohort-export.service.ts`）、打卡鼓勵（`cohort-encouragement.service.ts`）、dashboard（`cohort-dashboard.service.ts`）、focus（`cohort-focus.service.ts`）、本期動態的教練視角（`cohort-feed.service.ts`） |
+
+右欄端點在組織停權後，成員仍可讀取或操作，與左欄行為不一致，列入第 7 節的 server 調整範圍。資料庫有獨立的組織與成員關係，不能把「看到同一組織」直接判定為資料混用。
 
 dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、900001（驗收 fixture）、4（島島阿學）。因前台固定取首筆，此帳號目前只能管理組織 2，無法進入「島島阿學」。多組織情境不需等上線才出現，驗收可直接使用此帳號。
 
@@ -232,7 +238,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | 查詢、表單及導覽 | 帶入目前組織、隔離快取、處理未儲存內容及深層連結 |
 | 燈塔路由 | 一般組織頁移到 `app/[locale]/(lighthouse)/lighthouse/o/[organizationId]/`；場次頁路徑不變；舊網址由 middleware redirect |
 | 燈塔站內連結 | 改用共用的連結產生函式，由 layout 的組織參數組成（純邏輯，附測試）；場次頁的返回與編輯連結帶場次實際所屬組織。現有未帶組織的連結見下表 |
-| `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；發起人快覽的組織名稱規則修正（見下方）；補跨組織 regression tests |
+| `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；發起人快覽的組織名稱規則修正（見下方）；成果摘要、匯出、打卡鼓勵、dashboard、focus 及本期動態教練視角補上組織停權檢查（見上方對照表）；補跨組織與停權 regression tests |
 | `daodao-storage` | 新增最小 migration 保存帳號上次的燈塔組織（例：`users` 加可為空、指向組織的欄位，組織刪除時設為空）。已查核無可沿用欄位：`users` 無設定類欄位，`user_preferences` 是推薦用的偏好選項關聯表。上次組織的跨裝置恢復納入本輪 |
 | `daodao-f2e` middleware | 未指定組織的入口與舊網址讀取上次組織並 redirect 到組織路徑（第 4.1 節）；登入守門行為不變 |
 | 文案 | 切換器、停權、無權限、無可用組織等新狀態補中英文文案，需通過 f2e ICU 文案檢查（#311） |
