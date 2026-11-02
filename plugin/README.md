@@ -102,6 +102,8 @@ hooks 不會執行，那就等同沒有閘門，agent 必須自己逐項跑同�
 rclone 設定（見 [verify-report.md](skills/develop/references/verify-report.md)）。以上 2026-10-31 在互動式
 Codex 實測通過；`codex exec`（非互動）一律禁止離開 sandbox，上傳在那裡會被擋。
 
+Windows 使用者請另讀 [Codex hooks 的 Windows 設定](hooks/windows.md)：需要 Python、Git Bash 與 jq；遇到 MXC 的 MSYS 啟動錯誤時可安裝獨立、校驗 SHA-256 的相容 runtime。
+
 **沒有 repo**：加 marketplace 再裝，用 `--sparse` 只抓需要的目錄（約 400KB，不 clone 整個 monorepo）：
 
 ```bash

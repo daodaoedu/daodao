@@ -56,6 +56,28 @@ jobs:
           pnpm plugin:check
           pnpm vitest run plugin/scripts/__tests__/
 
+  windows-hook-regression:
+    name: Windows Codex hook adapter
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install checksum-verified private Bash runtime
+        shell: pwsh
+        run: ./plugin/scripts/setup-windows-hooks.ps1
+      - name: Verify real Windows hook commands
+        shell: pwsh
+        run: python -X utf8 -m unittest discover -s plugin/hooks/__tests__ -p 'test_windows_adapter.py' -v
+      - name: Verify private image preparation
+        shell: pwsh
+        run: python -X utf8 -m unittest discover -s plugin/scripts/__tests__ -p 'test_windows_peflags.py' -v
+
   native-trace-smoke:
     name: Native filesystem trace (${{ matrix.os }})
     strategy:

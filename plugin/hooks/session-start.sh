@@ -153,7 +153,7 @@ if command -v gh >/dev/null 2>&1; then
   mkdir -p "$(dirname "$SYNC_CACHE")"
   cache_age=999999
   if [ -f "$SYNC_CACHE" ]; then
-    cache_mtime=$(stat -f %m "$SYNC_CACHE" 2>/dev/null || stat -c %Y "$SYNC_CACHE" 2>/dev/null || echo 0)
+    cache_mtime=$(stat -c %Y "$SYNC_CACHE" 2>/dev/null || stat -f %m "$SYNC_CACHE" 2>/dev/null || echo 0)
     cache_age=$(( $(date +%s) - cache_mtime ))
   fi
   if [ "$cache_age" -gt 10800 ]; then
