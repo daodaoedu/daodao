@@ -2,8 +2,6 @@ name: Shared Config Regression
 
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -63,8 +61,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # macOS runner 計費約 Linux 的 10 倍：PR 只跑 ubuntu，macOS 留給 main push 與手動觸發
-        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","macos-latest"]') }}
+        # daodao 是 public repo，標準 runner（含 macOS）不計費，PR 照樣跑兩個 OS
+        os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
