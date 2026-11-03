@@ -1,5 +1,7 @@
 # 瀏覽器驗證 — 操作細節
 
+產品Web先讀 [verify-product](../../verify-product/SKILL.md)，從既有feature map選入口與driver，沿用已驗的隔離runtime。本文補充瀏覽器／登入／版面操作，不另建per-feature skill；後端測試不代替UI旅程。
+
 ## 1. 起 dev server
 
 在任務資料夾的 worktree 內起（不是 `projects/`）：

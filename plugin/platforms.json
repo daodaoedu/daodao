@@ -219,6 +219,18 @@
       "optional": [
         "browser"
       ]
+    },
+    "verify-product": {
+      "requires": [
+        "bash",
+        "filesystem",
+        "git",
+        "db"
+      ],
+      "optional": [
+        "browser",
+        "runtests"
+      ]
     }
   }
 }

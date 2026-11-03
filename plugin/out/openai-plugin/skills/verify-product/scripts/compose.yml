@@ -1,0 +1,11 @@
+services:
+  postgres:
+    ports: ['127.0.0.1:${VERIFY_POSTGRES_PORT:?}:5432']
+  redis:
+    ports: ['127.0.0.1:${VERIFY_REDIS_PORT:?}:6379']
+  mailpit:
+    ports: ['127.0.0.1:${VERIFY_SMTP_PORT:?}:1025', '127.0.0.1:${VERIFY_MAILPIT_PORT:?}:8025']
+networks:
+  backend:
+    # Host-run app processes reach these isolated services through loopback published ports.
+    internal: false

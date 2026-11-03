@@ -21,6 +21,7 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | review-change | ✅ | 完整 |
 | test-acceptance | ✅ | 完整 |
 | verify-deploy | ✅ | 完整 |
+| verify-product | ✅ | 完整 |
 
 ## 閘門
 

@@ -33,3 +33,4 @@ Claude.ai 的 sandbox 有檔案系統也能跑指令，但那是一個空的暫�
 | review-change | ❌ | 缺必要能力：bash、filesystem、git |
 | test-acceptance | ❌ | 缺必要能力：filesystem |
 | verify-deploy | ❌ | 缺必要能力：bash、filesystem、git |
+| verify-product | ❌ | 缺必要能力：bash、filesystem、git、db |
