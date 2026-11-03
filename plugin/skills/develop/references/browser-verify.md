@@ -58,20 +58,27 @@ pnpm dev   # port offset ≠ 0 時：pnpm dev --port <預設+offset>
 
 ## 3. 工具選擇
 
-**一律使用 `playwright` MCP**（`mcp__playwright__*`），不使用 `claude-in-chrome` MCP。
+**驗證 POC／產品 UI 是瀏覽器互動，不是公開網頁研究抓取。** 公開研究與內容抓取仍遵循專案 Groundlane-first 及禁止用 Playwright 抓取網頁內容的規則；本節的 Playwright MCP、Chrome／CUA 用於實際導頁、操作、截圖與版面量測。fetch 只回 artifact 外殼、403、登入牆或 Cloudflare 頁，只證明該路徑未取得目標畫面，不能推論其他瀏覽器工具或整個環境不可用。
 
-| 用途 | 工具 |
+宣告「瀏覽器／POC 無法使用」或請使用者豁免前，依當前客戶端執行；使用者指定工具或禁止 fallback 時，以其要求為準：
+
+1. 查**完整 callable inventory**（含 deferred tools），辨識已掛載的 Playwright MCP、Chrome／CUA 入口，不靠固定工具名稱、截斷清單或獨立 Chromium 的失敗判斷 MCP 不存在。
+2. 優先使用已掛載的 Playwright MCP，未掛載時改用可用的 Chrome／CUA；使用者指定入口則依指定。以實際工具名稱對目標 URL 導頁，讀取 snapshot 並截圖。遇到工具錯誤或只到外殼／驗證牆，改試另一個可用瀏覽器入口；若先走 Chrome／CUA 失敗，而 Playwright MCP 可用，就直接切換。每條路徑做一次有界嘗試，仍可修正明確的呼叫錯誤；不重複相同失敗、不為已授權的唯讀驗證反覆問許可。
+3. 共用 browser 被其他 session 佔用時，保留別人的 tab／session，不關閉或重啟共用實例。先選工具支援的新 tab／獨立 profile；不可用時才用獨立 Playwright script。獨立 script 成敗不能代替尚未嘗試的 MCP 路徑。
+4. 可用且已獲授權的路徑仍失敗時，沿用 task.md「### 環境受阻查核」記下目標 URL、完整 inventory 查核結果、工具／入口、實際操作、實際錯誤或落點、snapshot／截圖／log 證據與受影響檢查；工具未掛載也附查核依據。**有可用 MCP 卻未實際嘗試，不能以 POC 受阻請求豁免。** 尚有既有可用來源就繼續，不請使用者重新上傳。缺少登入／權限時依 §3a 及 §1b 查核，只請人補最後仍缺的必要資訊，保留未驗證狀態。
+
+工具名稱與參數以當次 schema 為準：
+
+| 用途 | 能力 |
 |---|---|
-| 導航、互動操作 | `playwright_navigate`、`playwright_click`、`playwright_fill` |
-| 截圖（存檔 + 視覺確認） | `playwright_screenshot`（`savePng` 存到 `$TASK/evidence/`） |
-| 讀取頁面文字 | `playwright_get_visible_text` |
-| 注入 JS（設 cookie、量測尺寸） | `playwright_evaluate` |
-| 讀 console | `playwright_console_logs` |
-| 對照設計稿 | Figma MCP `get_screenshot`（task.md 的 Figma 連結） |
+| 導航、互動操作 | 導頁、snapshot、click、fill |
+| 截圖（存檔 + 視覺確認） | 截圖並存到 `$TASK/evidence/` |
+| 版面量測、設 cookie | 頁面 evaluate 或工具對應能力 |
+| 讀 console | browser console logs |
+| 對照 Figma 設計稿 | Figma MCP 截圖（task.md 的 Figma 連結） |
 
-注意：不要觸發 alert/confirm 對話框（會卡住 session）。
+避免觸發會卡住 session 的 alert／confirm。需要獨立 script 時，在任務 repo 使用已安裝的 Playwright，例：
 
-**多任務競爭瀏覽器時**：playwright MCP 是共用單一瀏覽器實例——兩個 session 同時用會互踩。發現被佔用時，寫一支獨立 Playwright script 用 `npx playwright` 跑 headless 截圖：
 ```bash
 cd "$TASK/<repo>" && npx playwright screenshot --viewport-size=390,844 \
   http://localhost:<port>/<path> ../evidence/<phase>-<checkpoint>.png
