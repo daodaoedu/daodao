@@ -218,6 +218,16 @@ function skillFiles(platform: Platform, opts: { dir: string; conditional: boolea
     })
 
     if (opts.copyRefs) {
+      // Executable resources must retain bytes: rewriting links inside code changes behavior.
+      const scriptsDir = join(SKILLS_DIR, skill, 'scripts')
+      if (existsSync(scriptsDir)) {
+        for (const file of walk(scriptsDir)) {
+          files.push({
+            path: join(opts.dir, skill, relative(join(SKILLS_DIR, skill), file)),
+            content: readFileSync(file, 'utf8'),
+          })
+        }
+      }
       const refDir = join(SKILLS_DIR, skill, 'references')
       if (existsSync(refDir)) {
         for (const f of walk(refDir)) {

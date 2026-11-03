@@ -49,6 +49,9 @@ jobs:
           python3 -m unittest discover -s plugin/hooks/__tests__ -p 'test_read_access_evidence.py' -v
           python3 -m unittest discover -s scripts/__tests__ -p 'test_validation_parity.py' -v
 
+      - name: Product verification harness contracts
+        run: node --test plugin/skills/verify-product/scripts/__tests__/*.test.cjs
+
       - name: Plugin artifacts in sync with canonical skills
         run: |
           corepack enable

@@ -362,12 +362,12 @@ else
       problems="${problems:+${problems}；}有 ⬜／❌ 列（未驗或未過）"
     fi
     bad_rows=$(echo "$matrix_rows" | grep -v '✅' || true)
-    [ -z "$bad_rows" ] || problems="${problems:+${problems}；}有列缺 ✅（實際欄要有攔到的狀態碼）"
+    [ -z "$bad_rows" ] || problems="${problems:+${problems}；}有列缺 ✅（實際欄要有具體 HTTP／UI／job／SMTP 觀察值）"
   fi
   if [ -n "$problems" ]; then
     gate_fail "pr-journey-matrix-missing" "$task_md" "$(cat <<EOF
 ❌ 核心旅程矩陣沒過：$problems
-   verify 階段每條寫入或讀取權限旅程需正常與錯誤路徑；寫入驗訊息與輸入保留，讀取驗拒絕存取及回應不含私人資料；「實際」欄寫攔到的 HTTP 狀態碼。
+   verify 階段每條寫入或讀取權限旅程需正常與錯誤路徑；寫入驗訊息與輸入保留，讀取驗拒絕存取及回應不含私人資料；「實際」依入口填實際 HTTP 狀態、UI 訊息、job ID／狀態轉換或 SMTP 收件結果，並附證據；背景工作不得用「未發請求」代替觀察值。
    格式與輸入目錄見 $PLUGIN_ROOT/skills/develop/references/journey-matrix.md
    任務沒有寫入、權限／隱私／篩選讀取變更時，才可在「## 驗證」寫核心旅程不適用：<具體原因>
    例外：DEV_TASK_SKIP_GATE="<原因>"（會留痕）

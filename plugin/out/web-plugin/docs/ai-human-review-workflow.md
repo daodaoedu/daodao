@@ -27,7 +27,7 @@ AI 讀取來源與當下程式，完成適用檢核、自審修訂，附成果�
 | skill 來源 | `plugin/`（plugin 載入） | `.agents/skills/` | plugin 內的 `skills/` | 手動上傳的 zip |
 | 使用者 repo | ✅ | ✅ | ❌ | ❌ |
 | 閘門 | `plugin/hooks/hooks.json` 自動觸發 | `.codex/hooks.json`，**須先 `/hooks` 信任** | 無，靠 skill 內文逐項執行 | 無 |
-| 收錄 skill | 13 | 13 | 13（含條件式落差說明） | 7（其餘需要 checkout） |
+| 收錄 skill | 15 | 15 | 15（含條件式落差說明） | 7（其餘需要 checkout） |
 
 沒有使用者 repo 的平台上，「跑測試」「已合併」「已部署」一律不得由 agent 宣稱，必須由使用者提供證據。
 

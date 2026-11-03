@@ -6,6 +6,8 @@
 
 與 dev 階段 phase 級快篩的分工：快篩只看「這個 phase 的改動有沒有壞」；verify 是**對完整驗收清單（PRD／既有 FRD 的 Test Points）的總驗收**，含跨 phase 整合、回歸、無障礙與窄螢幕——快篩過了不能跳過 verify。
 
+產品Web的實際操作沿用 **verify-product**（repo 檔案 `verify-product/SKILL.md`，未隨本包出貨） 的app級入口與既有feature map。可用driver先列出再執行；沒有recipe就記缺口。後端整合、worker／SMTP證據與使用者旅程分開，背景事件不捏HTTP碼；格式gate通過不是實跑證明。
+
 1. **起 dev server 並做環境檢查** — 在任務資料夾的 worktree 內起，套用 task.md 的 Port offset，接著照 [browser-verify.md §1a](../browser-verify.md) 逐項確認環境。之後任何一次驅動失敗或結果怪異（掉登入、量到舊頁），先重做 §1a，再判斷是不是產品問題
 2. **逐 phase 驗收** — 從 task.md 的 phases + 已確認的驗收契約展開檢查清單，用瀏覽器實際走過每一條：
    - 瀏覽器與 POC 入口依 [browser-verify.md §3](../browser-verify.md#3-工具選擇) 查完整 callable inventory 並實際操作、fallback；fetch 外殼或單一路徑失敗不能直接請求 POC 豁免。依該節留下受阻證據後仍不可驗時記錄未完成，不以靜態檢查替代瀏覽器通過。

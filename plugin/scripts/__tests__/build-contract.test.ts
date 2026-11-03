@@ -263,3 +263,19 @@ describe('產物的相對連結必須解析得到', () => {
     }
   })
 })
+
+
+describe('executable skill resources', () => {
+  for (const target of ['.agents/skills', 'plugin/out/openai-plugin/skills']) {
+    it(`${target} ships the executable verification runtime and its nested dependencies unchanged`, () => {
+      for (const file of ['runtime.cjs', 'paths.cjs', 'clock.cjs', 'compose.yml', 'drive.cjs', 'features/future-letter.cjs', 'features/future-letter-contracts.cjs']) {
+        const source = join(PLUGIN_ROOT, 'skills/verify-product/scripts', file)
+        const emitted = join(REPO_ROOT, target, 'verify-product/scripts', file)
+        expect(existsSync(emitted), `${target} missing ${file}`).toBe(true)
+        expect(readFileSync(emitted)).toEqual(readFileSync(source))
+      }
+      const output = execFileSync('node', [join(REPO_ROOT, target, 'verify-product/scripts/drive.cjs'), 'list'], { encoding: 'utf8' })
+      expect(output).toContain('future-letter')
+    })
+  }
+})
