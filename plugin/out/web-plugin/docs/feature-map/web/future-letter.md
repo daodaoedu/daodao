@@ -84,3 +84,5 @@
 共用入口：**verify-product**（`skills/verify-product/SKILL.md`，未隨本包出貨）。完成runtime init/launch/doctor後執行 `node "$SKILL_DIR/scripts/drive.cjs" run future-letter`，以兩個普通User fixture從實際足跡表單寄出，再經原delayed job、真SMTP Mailpit、實收HTML href到本人開信及非owner拒絕。另涵蓋首頁摘要入口與登出保留redirect。
 
 先保存原日期／job，再明示加速serverDate與同步browserDate；不改DB/job或直接呼叫deliver。dev-login session不等同OAuth，Mailpit收件不等同外部inbox，沒有等待七天wallclock。其他子功能（草稿／刪除／實踐snapshot等）仍按本feature-map各自recipe／既有e2e實測，這條driver不代替整份feature所有狀態。
+
+維護開信流程：development `0ce57b81`（`cc2dc144` / f2e#1156）會在通知深連結選中已送達信件後自動送出 open 並顯示「你的信到了 💌」dialog；`1f1cc054` 使用舊的「打開這封信」按鈕。Driver 必須在點實收 href **之前**訂閱首次 POST open 回應；兩種流程都要先讀回 opened_at=null，再驗 POST200、原兩欄可見及 opened_at 持久化。已讀重開只GET，不可替代首次開信證據；不要因新UI沒有舊按鈕便判產品失敗。
