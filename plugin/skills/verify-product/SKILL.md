@@ -1,0 +1,48 @@
+---
+name: verify-product
+description: 實際操作產品 Web App，驗證指定功能的使用者路徑、背景副作用與可檢視證據。沿用隔離 runtime、Playwright 與既有 feature map；不以後端測試代替畫面旅程。
+---
+
+# Verify product
+
+這是產品 Web App 的共用驗證入口。先從[既有 feature map](../../docs/feature-map/README.md)找使用者入口、角色與成功終態，再選可用 harness；不按 issue 或功能另建 skill。App、內部 admin 與 dev 部署是不同受驗環境，不由這次 Web 本機結果代替。
+
+沿用本次授權。此流程可啟動自己的隔離服務與合成 fixture，不授權變更共享資料、部署、merge、對外寄信或發布報告。
+
+## 選擇與準備
+
+- 先執行 `node scripts/drive.cjs list`（路徑相對本 skill）。只對已註冊、實跑過的 driver 宣稱可重跑；列不出的功能回到 feature map 的既有 harness。缺 recipe 就記缺口，不用直接 service 呼叫代替使用者入口。
+- [隔離 runtime](references/runtime.md)說明 checkout、依賴、workspace 與精確啟動命令。沿用 infra 的 bootstrap、正式 server 與既有 fixture；不用複製共用 DB。
+- 第一個接入的 driver 是 `future-letter`；其產品說明與 selector 維護在[未來信 feature map](../../docs/feature-map/web/future-letter.md)，不在此複製一份。
+
+## Launch / Doctor
+
+設定獨立 `DAODAO_VERIFY_WORKSPACE`，以 `runtime.cjs init` 指定 server/product/infra/storage checkouts，再 `runtime.cjs launch`。不要在 `projects/` 安裝依賴或產生環境檔；給 runtime 的 checkout 必須是任務擁有的隔離目錄。
+
+開始驅動前執行 `runtime.cjs doctor`。需核對 source 版本、自己的 process/port、API與DB/Redis、登入 fixture、實際 workers、前端 API target及可用畫面；只有HTTP200不夠。任何意外結果後先重做 Doctor；健康但卡住的 UI 要重建已知狀態，不能盲目繼續。
+
+## Drive
+
+執行 `node scripts/drive.cjs run future-letter`。Driver 使用真正產品表單與可辨識輸入，記錄動作及結果，也讀回背景副作用。
+
+外部邊界替換要明列。未來信 recipe 會先從畫面選7天、驗原排程，再推任務 server 的 Date，讓原 delayed job 被真正 worker 消費；不改 DB狀態、job delay或直接呼叫deliver。SMTP使用產品既有設定送入本機Mailpit。dev-login建立已登入session，不是GoogleOAuth驗證。
+
+其他功能優先重用已存在的 Playwright journeys／infra runner。新增 driver 要先從此入口真跑一次，不把未接入、缺 fixture 或不可達路徑當已驗。
+
+## Evidence
+
+遵循[證據邊界](references/proof-standards.md)。結果需包含受驗版本、操作入口、動作、觀察值、artifact、替換及未驗項；UI/API/worker/SMTP使用各自的真實結果，不為填表捏HTTP碼。
+
+保留 action及result、HTTP或job狀態、DB第二視角、截圖／trace／影片。後端整合與直接函式測試分列，不冒稱使用者旅程。`PASS`、agent自述、HTML預覽或格式gate通過都不能獨立證明產品可用。
+
+## Cleanup
+
+每次失敗迭代與最後一輪後執行 `runtime.cjs cleanup`；只停本 workspace 記錄且驗明身份的process與compose project，不按名稱批次kill。需要重跑就從空資料與初始時鐘重新Launch。
+
+清理不刪證據。清理後核對本輪result、trace、影片與截圖實際仍在。runtime私密資料、session與raw trace不上Git；提交可重跑工具和去敏證據摘要即可。
+
+## 交接
+
+報告受驗功能及入口、實際結果、限制與artifact位置。有 prerequisite 阻擋就記嘗試入口與具體原因，不改弱預期求PASS。清楚區分本機user path、backend、dev冒煙及PM驗收。
+
+[維護原則](references/proof-standards.md#維護)要求source與live兩種覆蓋；產品bug與feature-map/harness漂移分流，不用改文件掩蓋產品錯誤。

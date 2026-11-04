@@ -6,9 +6,11 @@
 
 與 dev 階段 phase 級快篩的分工：快篩只看「這個 phase 的改動有沒有壞」；verify 是**對完整驗收清單（PRD／既有 FRD 的 Test Points）的總驗收**，含跨 phase 整合、回歸、無障礙與窄螢幕——快篩過了不能跳過 verify。
 
+產品Web的實際操作沿用 [verify-product](../../../verify-product/SKILL.md) 的app級入口與既有feature map。可用driver先列出再執行；沒有recipe就記缺口。後端整合、worker／SMTP證據與使用者旅程分開，背景事件不捏HTTP碼；格式gate通過不是實跑證明。
+
 1. **起 dev server 並做環境檢查** — 在任務資料夾的 worktree 內起，套用 task.md 的 Port offset，接著照 [browser-verify.md §1a](../browser-verify.md) 逐項確認環境。之後任何一次驅動失敗或結果怪異（掉登入、量到舊頁），先重做 §1a，再判斷是不是產品問題
 2. **逐 phase 驗收** — 從 task.md 的 phases + 已確認的驗收契約展開檢查清單，用瀏覽器實際走過每一條：
-   - 瀏覽器工具依 [browser-verify.md](../browser-verify.md)：Claude 用 `playwright` MCP（不用 `claude-in-chrome`），被其他 session 佔用時改跑 `npx playwright` 腳本；Codex 使用已掛載的瀏覽器入口。無可用工具時記錄未驗證，不以靜態檢查替代瀏覽器通過。公開網頁研究仍依專案 Groundlane 規則，不使用禁止的抓取工具
+   - 瀏覽器與 POC 入口依 [browser-verify.md §3](../browser-verify.md#3-工具選擇) 查完整 callable inventory 並實際操作、fallback；fetch 外殼或單一路徑失敗不能直接請求 POC 豁免。依該節留下受阻證據後仍不可驗時記錄未完成，不以靜態檢查替代瀏覽器通過。
    - 對照 task.md 連結的 POC / Figma 設計稿比對版面
    - **POC 並排比對**（`$TASK/poc/` 有可互動的 HTML 原型時必做——`.dc.html`，或 `index.html + support.js` 這種從 prototype 分支抽出的 Claude Design 原型都算；只有 Figma 或純截圖才跳過）：起 POC 靜態 server、並排截圖、**用 getComputedStyle 量測產出差異表**，見 [poc-compare.md](../poc-compare.md)。行為驗收（Test Points）通過 ≠ 視覺對齊，兩者都要做完才能進 finish。三條硬規則：
      1. probe 表必須涵蓋 [poc-probe-checklist](../poc-probe-checklist.md) 的全部類別（遮罩、按鈕各變體、modal 高度／捲動、input、表格、膠囊…），不能只挑「骨架」量

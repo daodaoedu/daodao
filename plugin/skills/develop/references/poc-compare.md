@@ -1,6 +1,6 @@
 # POC 並排比對 — 操作細節
 
-verify 階段第 3 步「與 POC 比對」的具體流程。適用於 `$TASK/poc/` 有 `.dc.html` 或靜態 HTML 設計稿的任務。
+verify 階段「與 POC 比對」的具體流程。遠端互動原型先依 [browser-verify.md §3](browser-verify.md#3-工具選擇) 取得實際畫面再對照實作；不能把 fetch 外殼當成無法比對。以下靜態 server 與本機 runner 適用於 `$TASK/poc/` 有 `.dc.html` 或靜態 HTML 設計稿的任務。
 
 ## 前置條件
 
@@ -41,7 +41,7 @@ evidence/
 └── ...
 ```
 
-用 `playwright_screenshot`（`savePng` 參數）或 `claude-in-chrome` 的 `computer` action（`save_to_disk`）。
+使用 [browser-verify.md §3](browser-verify.md#3-工具選擇) 選定的瀏覽器截圖工具，依當次 schema 存檔並實際檢視。
 
 ### 2.5 用範本跑（建議）
 

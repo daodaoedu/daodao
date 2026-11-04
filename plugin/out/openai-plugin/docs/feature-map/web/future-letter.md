@@ -78,3 +78,9 @@
 - 摘要條「我的足跡」與節點 aria-label（「今天」）是硬編中文，`/en` 也不會翻譯（apps/product/src/components/future-letter/compact-timeline-strip.tsx:91-93、151）。
 - 送達需要後端排程 worker；在 dev 上驗收「送達／打開」得有已送達的既有信件或後端協助調整時間。
 - 時間軸目前只用 VerticalTimeline（apps/product/src/components/future-letter/future-letter-timeline.tsx:181）；horizontal-timeline 只在 summary 模式出現，兩者 data-testid 不同（apps/product/src/components/future-letter/horizontal-timeline.tsx:58）。
+
+## 可重跑本機驗證
+
+共用入口：[verify-product](../../../skills/verify-product/SKILL.md)。完成runtime init/launch/doctor後執行 `node "$SKILL_DIR/scripts/drive.cjs" run future-letter`，以兩個普通User fixture從實際足跡表單寄出，再經原delayed job、真SMTP Mailpit、實收HTML href到本人開信及非owner拒絕。另涵蓋首頁摘要入口與登出保留redirect。
+
+先保存原日期／job，再明示加速serverDate與同步browserDate；不改DB/job或直接呼叫deliver。dev-login session不等同OAuth，Mailpit收件不等同外部inbox，沒有等待七天wallclock。其他子功能（草稿／刪除／實踐snapshot等）仍按本feature-map各自recipe／既有e2e實測，這條driver不代替整份feature所有狀態。

@@ -119,6 +119,73 @@ class ReadAccessEvidenceTests(unittest.TestCase):
         self.assertTrue(checker.validate(pr(text.replace('不適用：本次純 client 路由，不改該行為', '不適用：')), 'pr'))
 
 
+class JourneyObservationTests(unittest.TestCase):
+    def body(self, actual, expected='送達通知已寄出', evidence=''):
+        return pr(NA + '\n### 核心旅程矩陣\n'
+                  '| ID | 旅程 | 類型 | 輸入 | 預期結果 | 實際 | 證據 |\n'
+                  '|---|---|---|---|---|---|---|\n'
+                  f'| J-01 | 送達通知 | 正常 | 到期信件 | {expected} | {actual} | {evidence} |\n'
+                  '| J-02 | 送達通知 | 錯誤路徑 | 未到期 | 不送信 | ✅ job letter-2 remains delayed; evidence/job-2.json | evidence/job-2.json |')
+
+    def test_generic_success_and_worker_no_request_are_not_observations(self):
+        for actual in ('✅ PASS', '✅ pass；evidence/job.json', '✅ 未發請求',
+                       '✅ 未發請求（worker）；PASS', '✅ 未發請求（worker）；10/10 PASS', '✅ 未發請求 (background worker)',
+                       '✅ 符合預期', '✅ 成功', '✅ 未發請求（queue）',
+                       '✅全部通過', '✅all checks PASS', '✅驗證完成'):
+            with self.subTest(actual=actual):
+                self.assertIn('具體觀察結果', '\n'.join(checker.validate(self.body(actual), 'pr')))
+
+    def test_headerless_legacy_actual_precedes_optional_evidence(self):
+        for actual in ('✅200', '✅ job letter-1 delayed→completed'):
+            text = pr(NA + '\n|J-01|send|正常|input|expected|' + actual + '|evidence/send.json|')
+            self.assertEqual(checker.validate(text, 'pr'), [])
+        text = pr(NA + '\n|J-01|send|正常|input|expected|PASS|✅ evidence/send.json|')
+        self.assertIn('具體觀察結果', '\n'.join(checker.validate(text, 'pr')))
+
+    def test_pass_counts_are_not_http_observations(self):
+        for actual in ('✅100/100 PASS', '✅all 200 checks passed'):
+            self.assertIn('具體觀察結果', '\n'.join(checker.validate(self.body(actual), 'pr')))
+        self.assertEqual(checker.validate(self.body('✅300 rows PASS'), 'pr'), [])
+        self.assertEqual(checker.validate(self.body('✅ HTTP 200；100/100 PASS'), 'pr'), [])
+
+    def test_repeating_expected_text_is_not_an_actual_value(self):
+        self.assertIn('具體觀察結果', '\n'.join(checker.validate(self.body('✅ 送達通知已寄出'), 'pr')))
+        self.assertEqual(checker.validate(self.body('✅ 201', expected='201'), 'pr'), [])
+        self.assertEqual(checker.validate(self.body('✅ 200/201', expected='201'), 'pr'), [])
+
+    def test_ui_validation_has_a_visible_result_even_without_http_request(self):
+        actual = '✅ 未發請求：slug 欄位顯示「只能使用小寫英文」'
+        self.assertEqual(checker.validate(self.body(actual, expected='顯示格式錯誤'), 'pr'), [])
+
+    def test_worker_and_smtp_results_do_not_need_fabricated_http_status(self):
+        for actual in ('✅ job future-letter-1 delayed→completed；evidence/job.json',
+                       '✅ Mailpit 收到1封，message-id=mail-7，To=learner@example.invalid',
+                       '✅ 畫面顯示「已寄出」，送達前時間軸不含原文'):
+            with self.subTest(actual=actual):
+                self.assertEqual(checker.validate(self.body(actual), 'pr'), [])
+
+    def test_checkmark_in_evidence_column_does_not_make_actual_concrete(self):
+        self.assertIn('具體觀察結果', '\n'.join(checker.validate(self.body('PASS', evidence='✅ evidence/job.json'), 'pr')))
+
+    def test_na_read_access_does_not_bypass_observation_check_in_task_scope(self):
+        body = self.body('✅ 未發請求（worker）；PASS').replace('## 驗證證據', '## 驗證')
+        self.assertIn('具體觀察結果', '\n'.join(checker.validate(body, 'task')))
+
+    def test_journey_type_annotation_does_not_bypass_observation_check(self):
+        body = self.body('✅ PASS').replace('| 正常 |', '| 正常（worker） |')
+        self.assertIn('具體觀察結果', '\n'.join(checker.validate(body, 'pr')))
+
+    def test_unverified_rows_keep_the_existing_gate_error_priority(self):
+        for actual in ('⬜', '❌'):
+            with self.subTest(actual=actual):
+                self.assertEqual(checker.validate(self.body(actual), 'pr'), [])
+
+    def test_role_and_unrelated_tables_are_not_journey_observations(self):
+        body = pr(NA + '\n| 角色 | 預期 | 實際 | 資料斷言 | 結果 | 證據 |\n'
+                  '| 本人 | 正常 | PASS | fixture | ✅ | evidence/user.json |')
+        self.assertEqual(checker.validate(body, 'pr'), [])
+
+
 class TrustedReadAccessWorkflowTests(unittest.TestCase):
     def test_trusted_helper_fetch_supports_root_forks_and_subrepos(self):
         import json
