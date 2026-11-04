@@ -220,19 +220,42 @@ async function main() {
     const url = new URL(actualEmailHref); assert.equal(url.origin, runtime.productBase); assert.equal(url.searchParams.get('futureLetterId'), createdId);
     write('actual-email-href.json', { href: actualEmailHref, source: 'a[href] in Mailpit-received SMTP HTML; never constructed by driver' });
     await ownerPage.screenshot({ path: path.join(output, '04-received-email.png'), fullPage: true });
+    const beforeOpenSnapshot = await snapshot('before-email-open');
+    assert.equal(beforeOpenSnapshot.letter.opened_at, null, 'the received link must first open a previously unopened letter');
+    // The current UI opens on navigation; the older UI waits for a button. Install
+    // the listener before clicking the received href so the automatic POST cannot race it.
+    const opened = ownerPage.waitForResponse(response => new URL(response.url()).pathname.endsWith(`/future-letters/${createdId}/open`) && response.request().method() === 'POST', { timeout: 60000 });
+    // Observe rejection immediately even if navigation itself fails first.
+    opened.catch(() => {});
     await Promise.all([ownerPage.waitForURL(url => url.pathname.includes('/me/footprints') && url.searchParams.get('futureLetterId') === createdId), actualLink.click()]);
-    await expect(ownerPage.getByRole('button', { name: '打開這封信', exact: true })).toBeVisible({ timeout: 60000 });
-    const beforeOpen = await ownerPage.locator('body').innerText(); assert.ok(!beforeOpen.includes(bodySentinel));
-    await ownerPage.screenshot({ path: path.join(output, '05-email-link-unopened.png'), fullPage: true });
-    const opened = ownerPage.waitForResponse(response => new URL(response.url()).pathname.endsWith(`/future-letters/${createdId}/open`) && response.request().method() === 'POST');
-    await ownerPage.getByRole('button', { name: '打開這封信', exact: true }).click();
-    const response = await opened; assert.equal(response.status(), 200);
+    const manualButton = ownerPage.getByRole('button', { name: '打開這封信', exact: true });
+    const firstOpenSignal = await Promise.race([
+      opened.then(response => ({ flow: 'automatic-dialog', response })),
+      manualButton.waitFor({ state: 'visible', timeout: 60000 }).then(() => ({ flow: 'manual-button' })),
+    ]);
+    // The new dialog may briefly render its retry button before its effect starts.
+    // Let that UI make its automatic first attempt rather than clicking a retry.
+    if (firstOpenSignal.flow === 'manual-button' && await ownerPage.getByRole('dialog').isVisible()) {
+      firstOpenSignal.flow = 'automatic-dialog';
+    }
+    if (firstOpenSignal.flow === 'manual-button') {
+      const beforeOpen = await ownerPage.locator('body').innerText();
+      assert.ok(!beforeOpen.includes(bodySentinel)); assert.ok(!beforeOpen.includes(currentSentinel));
+      await ownerPage.screenshot({ path: path.join(output, '05-email-link-unopened.png'), fullPage: true });
+      await manualButton.click();
+    }
+    const response = firstOpenSignal.response ?? await opened; assert.equal(response.status(), 200);
+    if (firstOpenSignal.flow === 'automatic-dialog') {
+      await expect(ownerPage.getByRole('dialog')).toBeVisible({ timeout: 60000 });
+      await ownerPage.screenshot({ path: path.join(output, '05-email-link-auto-opened.png'), fullPage: true });
+    }
+    const openingArtifact = firstOpenSignal.flow === 'manual-button' ? '05-email-link-unopened.png' : '05-email-link-auto-opened.png';
     const card = ownerPage.getByTestId('letter-detail-card'); await expect(card).toContainText(bodySentinel); await expect(card).toContainText(currentSentinel);
     await ownerPage.screenshot({ path: path.join(output, '06-owner-opened-letter.png'), fullPage: true });
     write('06-owner-opened-letter.aria.txt', await ownerPage.locator('body').ariaSnapshot());
     const openedSnapshot = await snapshot('opened');
     assertOpenedSnapshot(openedSnapshot.letter);
-    return { observed: { actualEmailHref, browserUrl: ownerPage.url(), apiOpenStatus: response.status(), originalCurrentSelfVisible: true, originalMessageVisible: true, storedOpenedAt: openedSnapshot.letter.opened_at }, artifacts: ['actual-email-href.json', '04-received-email.png', '05-email-link-unopened.png', '06-owner-opened-letter.png', '06-owner-opened-letter.aria.txt', 'snapshot-opened.json', 'trace-owner.zip', 'network.json'] };
+    return { observed: { actualEmailHref, browserUrl: ownerPage.url(), apiOpenStatus: response.status(), openingFlow: firstOpenSignal.flow, beforeOpenStoredOpenedAt: beforeOpenSnapshot.letter.opened_at, originalCurrentSelfVisible: true, originalMessageVisible: true, storedOpenedAt: openedSnapshot.letter.opened_at }, artifacts: ['actual-email-href.json', '04-received-email.png', 'snapshot-before-email-open.json', openingArtifact, '06-owner-opened-letter.png', '06-owner-opened-letter.aria.txt', 'snapshot-opened.json', 'trace-owner.zip', 'network.json'] };
   });
   await checkpoint('U05', 'another logged-in fixture follows the same actual href but cannot read owner content', async () => {
     const context = await newContext('other'); await login(context, other, 'other-after-clock');
