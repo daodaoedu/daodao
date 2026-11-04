@@ -105,6 +105,34 @@ function sectionLines(lines: string[], header: RegExp): { headerIdx: number; idx
 }
 
 /**
+ * #395 specified only 「手機寬度」. Check the PM's numbered step itself, not the
+ * engineering evidence or a preceding desktop step. This checks written prerequisites,
+ * not whether the browser was actually resized or the assertions were performed.
+ */
+function hasMobileWithoutViewport(step: string): boolean {
+  const text = step.replace(/「[^」]*」/g, "").replace(/\*\*/g, "");
+  const pair = /(?<!\d)[1-9]\d*\s*(?:px)?\s*[×xX]\s*[1-9]\d*(?!\d)(?:\s*(?:CSS\s*)?px)?/i;
+  const named = /(?:寬(?:度)?|width)\s*(?:設為|為|[:：=])?\s*[1-9]\d*\s*(?:px)?[，,、\s]*(?:高(?:度)?|height)\s*(?:設為|為|[:：=])?\s*[1-9]\d*\s*(?:px)?/i;
+  let requiresMobile = false;
+  for (const match of text.matchAll(/手機|行動版|響應式|\bmobile\b|\bresponsive\b/gi)) {
+    const before = text.slice(0, match.index).trimEnd();
+    const after = text.slice(match.index + match[0].length);
+    // Exclusions are narrow: 「手機不需登入」 still requests mobile testing.
+    if (/(?:不驗|不測|(?:不需(?:要)?|無需|不用|不必)(?:驗收?|驗證|測試)?|略過|排除)(?:使用|用|再|進行)?$/.test(before) ||
+        /^(?:版|尺寸|檢視)?(?:(?:不需(?:要)?|無需|不用|不必)(?:重測|驗收|驗證|測試)|不(?:驗收|測試|重測)|不適用|由工程(?:驗|提供))/.test(after)) continue;
+    requiresMobile = true;
+    // A later desktop clause cannot supply the missing mobile dimensions.
+    const mobileClause = after.split(/桌面|\bdesktop\b/i)[0];
+    if (pair.test(mobileClause) || named.test(mobileClause)) return false;
+    // Also allow 「設390×866（手機）」, without borrowing a desktop-labelled pair.
+    const precedingClause = before.split(/[。；;\n]/).at(-1) ?? "";
+    if (!/桌面|\bdesktop\b/i.test(precedingClause) &&
+        new RegExp(`${pair.source}[\\s（(]*$`, "i").test(precedingClause)) return false;
+  }
+  return requiresMobile;
+}
+
+/**
  * Lint one comment body. Only the part from the 「請驗收」 heading onwards is checked when
  * present (smoke tables posted in the same comment may legitimately mention PUT/GET).
  * Returned line numbers are 1-based relative to the full body.
@@ -151,6 +179,17 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
   }
 
   if (steps) {
+    for (let n = 0; n < stepIdx.length; n++) {
+      const i = stepIdx[n];
+      const end = stepIdx[n + 1] ?? ((steps.idx.at(-1) ?? i) + 1);
+      if (hasMobileWithoutViewport(lines.slice(i, end).join("\n"))) {
+        findings.push({
+          line: at(i),
+          rule: "mobile-viewport-missing",
+          message: "手機／響應式驗收缺明確視窗尺寸：在同一編號步驟寫出手機寬×高（例如390×866 CSS px，或寬度390、高度866）；不能沿用桌面尺寸或工程證據（#395）",
+        });
+      }
+    }
     // The header line itself counts too (`- 驗收步驟：用 PUT 送出…`).
     for (const i of [steps.headerIdx, ...steps.idx]) {
       // Text inside 「」 is on-screen copy the PM reads (e.g. #292's error「請求資料格式錯誤」), not an instruction.
