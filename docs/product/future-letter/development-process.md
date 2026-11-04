@@ -1,5 +1,7 @@
 # 「寫信給未來的自己」跨專案開發流程紀錄
 
+> 2026-11-04 後續：閱讀彈窗 [f2e#1156](https://github.com/daodaoedu/daodao-f2e/pull/1156) 已合併，development revision `0ce57b81dce39fe29f1930ff01afb96b66252c43` 已部署（[CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/41663870467)）。dev 實際瀏覽器冒煙及指定 PM 帳號的三組驗收步驟重播通過，驗收資料已還原並保留；[需求 #395](https://github.com/daodaoedu/daodao/issues/395) 待正式 PM 驗收。以下保留 2026-08-22 的歷史流程與結果。
+
 > 日期：2026-08-22
 > 範圍：`daodao-storage`、`daodao-server`、`daodao-f2e`、root `daodao`
 > 需求來源：[daodao#148](https://github.com/daodaoedu/daodao/issues/148) 與兩份 FRD
