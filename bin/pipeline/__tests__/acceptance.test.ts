@@ -87,6 +87,63 @@ describe("lintAcceptanceComment", () => {
     expect(rules(body)).toEqual(["steps-missing"]);
   });
 
+  describe("mobile viewport hand-off", () => {
+    const withSteps = (...steps: string[]) => [
+      REQUEST_MARKER, "## 🙋 請驗收：閱讀彈窗", "@peggy1213-create",
+      "### 驗收步驟", ...steps.map((step, i) => `${i + 1}. ${step}`),
+      "### 工程證據（已驗，PM 不需重做）", "手機390×866已驗；桌面1200×818已驗。",
+      "### 驗完收尾", "保留專用信件。",
+    ].join("\n");
+
+    it("rejects #395's unspecified phone width even when engineering has viewport evidence", () => {
+      expect(rules(withSteps("開啟已讀長文信件。用手機寬度也能捲到文章最後。")))
+        .toContain("mobile-viewport-missing");
+    });
+
+    it("does not use desktop dimensions for a mobile requirement in the same or an earlier step", () => {
+      expect(rules(withSteps("桌面1200×818確認彈窗；手機也應正常閱讀。")))
+        .toContain("mobile-viewport-missing");
+      expect(rules(withSteps("桌面1200×818確認彈窗。", "用手機確認可捲到底。")))
+        .toContain("mobile-viewport-missing");
+    });
+
+    it("requires both positive viewport dimensions for responsive viewing", () => {
+      for (const step of ["響應式檢視設為390px寬，確認能閱讀。", "手機視窗設0×866，確認能閱讀。"]) {
+        expect(rules(withSteps(step))).toContain("mobile-viewport-missing");
+      }
+    });
+
+    it("accepts viewport dimensions with phone or responsive instructions and a continuation line", () => {
+      for (const step of [
+        "用手機（或開發者工具設384×500）閱讀。",
+        "設成390×866（手機），重新開啟。",
+        "手機寬度390、高度866，確認長文可捲到底。",
+        "手機設390×866，讀完後確認手機也可關閉。",
+        "手機視窗設 **390 x 866 CSS px**，確認長文可捲到底。",
+        "把瀏覽器響應式檢視設為390×866，閱讀後關閉。",
+        "用手機確認閱讀。\n   視窗設為390×866，再捲至文末。",
+      ]) expect(rules(withSteps(step)), step).not.toContain("mobile-viewport-missing");
+    });
+
+    it("ignores explicitly excluded mobile work and quoted product copy", () => {
+      for (const step of [
+        "本次不驗手機，只在桌面閱讀。",
+        "本次不需手機驗收，只確認桌面列表。",
+        "手機尺寸不適用，只驗桌面。",
+        "本次不需要驗手機，只確認桌面列表。",
+        "手機版不用測試，只確認桌面。",
+        "手機不需重測，英文標籤由工程提供證據。",
+        "不用手機驗收，開啟桌面頁面即可。",
+        "畫面應顯示「請用手機繼續操作」。",
+      ]) expect(rules(withSteps(step)), step).not.toContain("mobile-viewport-missing");
+    });
+
+    it("does not borrow dimensions attached to a later desktop clause", () => {
+      expect(rules(withSteps("手機也要閱讀，桌面設1200×818。")))
+        .toContain("mobile-viewport-missing");
+    });
+  });
+
   // The PM's acceptance tool only accepts a comment with both the exact heading and the mention (#245, #346 BLOCKED).
   const handOff = (heading: string, mention: string) =>
     [REQUEST_MARKER, heading, mention, "- 驗收步驟：", "  1. 打開頁面，應該看到列表", "- 工程證據（已驗，PM 不需重做）：none", "- 驗完收尾：none"].join("\n");
