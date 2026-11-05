@@ -1,7 +1,7 @@
 # 燈塔多組織切換架構
 
 日期：2026-10-23（2026-11-05 依 PM 決策更新範圍）
-狀態：架構方向已確認，隔離分支補齊實作中；尚未部署 dev 或通過 PM 驗收
+狀態：架構方向已確認，本機實作與針對性驗證完成；尚未部署 dev 或通過 PM 驗收
 決策來源：[PM 2026-11-04 確認](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6634331959)。未註冊 owner 流程另案 [#463](https://github.com/daodaoedu/daodao/issues/463)；公開實踐模板 API 隔離另案 [#464](https://github.com/daodaoedu/daodao/issues/464)。跨裝置恢復上次組織保留，公開發起人快覽另拆。
 
 關聯：[#276 Admin 組織設定](https://github.com/daodaoedu/daodao/issues/276)、[#374 第 15 項](https://github.com/daodaoedu/daodao/issues/374)
@@ -224,7 +224,7 @@ flowchart TD
 
 | 檢查成員資格與組織停權 | 只檢查成員資格，不檢查停權 |
 |---|---|
-| 系列（`program.service.ts` 的 `assertActiveOrganization`、`getOwned`）、場次（`cohort.service.ts` 的 `getOwned`）、模板（`organization-template.service.ts`）、封存（`lighthouse-archive.service.ts`）、AI key（`organization-ai-credential.service.ts`）、訊息模板（`cohort-message.service.ts`） | 成果摘要（`cohort-outcome.service.ts`）、匯出（`cohort-export.service.ts`）、打卡鼓勵（`cohort-encouragement.service.ts`）、dashboard（`cohort-dashboard.service.ts`）、focus（`cohort-focus.service.ts`）、本期動態的教練視角（`cohort-feed.service.ts`） |
+| 系列（`program.service.ts` 的 `assertActiveOrganization`、`getOwned`）、場次（`cohort.service.ts` 的 `getOwned`）、模板（`organization-template.service.ts`）、封存（`lighthouse-archive.service.ts`）、AI key（`organization-ai-credential.service.ts`）、訊息模板（`cohort-message.service.ts`） | 成果摘要（`cohort-outcome.service.ts`）、匯出（`cohort-export.service.ts`）、打卡鼓勵（`cohort-encouragement.service.ts`）、dashboard（`cohort-dashboard.service.ts`）、focus（`cohort-focus.service.ts`）、本期動態的教練視角（`cohort-feed.service.ts`）、活動列表與明細（`cohort-activity.service.ts`，發布前 review 補查） |
 
 右欄端點在組織停權後，成員仍可讀取或操作，與左欄行為不一致，列入第 7 節的 server 調整範圍。資料庫有獨立的組織與成員關係，不能把「看到同一組織」直接判定為資料混用。
 
@@ -240,7 +240,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | 查詢、表單及導覽 | 帶入目前組織、隔離快取、處理未儲存內容及深層連結 |
 | 燈塔路由 | 一般組織頁移到 `app/[locale]/(lighthouse)/lighthouse/o/[organizationId]/`；場次頁路徑不變；舊網址由 middleware redirect |
 | 燈塔站內連結 | 改用共用的連結產生函式，由 layout 的組織參數組成（純邏輯，附測試）；場次頁的返回與編輯連結帶場次實際所屬組織。現有未帶組織的連結見下表 |
-| `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；成果摘要、匯出、打卡鼓勵、dashboard、focus 及本期動態教練視角補上組織停權檢查（見上方對照表）；補跨組織與停權 regression tests |
+| `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；成果摘要、匯出、打卡鼓勵、dashboard、focus 、本期動態教練視角及活動列表／明細補上組織停權檢查（見上方對照表）；補跨組織與停權 regression tests |
 | `daodao-storage` | 新增最小 migration 保存帳號上次的燈塔組織（例：`users` 加可為空、指向組織的欄位，組織刪除時設為空）。已查核無可沿用欄位：`users` 無設定類欄位，`user_preferences` 是推薦用的偏好選項關聯表。上次組織的跨裝置恢復納入本輪 |
 | `daodao-f2e` middleware | 未指定組織的入口與舊網址讀取上次組織並 redirect 到組織路徑（第 4.1 節）；登入守門行為不變 |
 | 文案 | 切換器、停權、無權限、無可用組織等新狀態補中英文文案，需通過 f2e ICU 文案檢查（#311） |
@@ -302,7 +302,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 |---|---|---|---|
 | 1 | `cohort-focus` 訊息模板改用場次所屬組織 | f2e（必要時 server 先補第 6 節欄位） | 第 6 節欄位；不等切換器，可最先上 |
 | 2 | 上次組織欄位 migration | storage | 無 |
-| 3 | 場次回應加組織欄位、上次組織 API、六支服務停權檢查 | server | 2 |
+| 3 | 場次回應加組織欄位、上次組織 API、場次服務停權檢查（含活動列表／明細） | server | 2 |
 | 4 | 燈塔路由移到組織路徑、共用組織狀態、middleware redirect、連結產生函式、切換器、文案 | f2e | 3 |
 
 第 1 項若需要第 6 節欄位，server 欄位可先單獨上，不必等 migration。各子卡依 dev-task 流程開發；母卡等子卡全部驗收後才關。
