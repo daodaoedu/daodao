@@ -17,7 +17,7 @@
 - f2e 手機版補修 [#1170](https://github.com/daodaoedu/daodao-f2e/pull/1170)，revision `2f0840bd`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42151377258) 成功；[選定整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42150561562) 12/12。dev 五個頁面 390px、中英文總覽與桌機共 7 項版面檢查通過，HTTPS 入口 2/2。
 - 固定三個 PR head 的[完整整合旅程](https://github.com/daodaoedu/daodao-server/actions/runs/42143219273) 24/24；合併後 dev 對 dev 的 [server schema](https://github.com/daodaoedu/daodao-server/actions/runs/42146088246) 與 [storage schema](https://github.com/daodaoedu/daodao-storage/actions/runs/42146083893) 均成功。這些結果不代替部署後操作或正式 PM 驗收。
 
-工程冒煙與限制：[驗證報告](https://docs.google.com/document/d/1tlfbeeps783W-lG57vSJhZORMuhvYsF0Ar4t0A1u2qg) 分開記錄本機與 dev 受驗版本、原失敗、修正及資料回讀。dev 使用指定 QA 既有帳號；A7/B8 設定還原、B 訊息模板刪除、A 成員資格與身份集合還原，測試場次軟刪除並確認不在有效／封存列表。首次原為空的帳號預設組織保留 A7；API 不提供清空。匯出與角色異動稽核歷程保留。另有兩封預期通知至指定 QA 信箱，未把排程接受當作實際收信證據。兩個不同帳號共同管理、跨帳號快取與實體雙裝置僅有本機或隔離 context 證據，未冒稱 dev 雙帳號／實體裝置完成。本文舊 AC fixture 範例不代表已備妥 PM 帳號資料。
+工程冒煙與限制：[最新工程報告](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6675522296) 分開記錄本機與 dev 受驗版本、原失敗、修正及資料回讀。[Google 歷史圖文報告](https://docs.google.com/document/d/1tlfbeeps783W-lG57vSJhZORMuhvYsF0Ar4t0A1u2qg) 本次因共用 Drive API 配額及寫入權限受阻，尚未同步，不代表目前部署狀態。dev 使用指定 QA 既有帳號；A7/B8 設定還原、B 訊息模板刪除、A 成員資格與身份集合還原，測試場次軟刪除並確認不在有效／封存列表。首次原為空的帳號預設組織保留 A7；API 不提供清空。匯出與角色異動稽核歷程保留。另有兩封預期通知至指定 QA 信箱，未把排程接受當作實際收信證據。兩個不同帳號共同管理、跨帳號快取與實體雙裝置僅有本機或隔離 context 證據，未冒稱 dev 雙帳號／實體裝置完成。本文舊 AC fixture 範例不代表已備妥 PM 帳號資料。
 
 ## 1. 目標與核心規則
 
