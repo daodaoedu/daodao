@@ -5,7 +5,15 @@
 - 介面：Web（apps/product）
 - dev 網址：https://app-dev.daodao.so/lighthouse （無權限頁 https://app-dev.daodao.so/lighthouse/access-required ；舊網址 `/manage` 會轉到這裡）
 - 主要程式位置：apps/product/src/app/[locale]/(lighthouse)/lighthouse/、apps/product/src/app/[locale]/lighthouse/access-required/page.tsx、apps/product/src/components/lighthouse/、apps/product/src/middleware.ts
-- 依據版本：daodao-f2e 70155dce（2026-10-29）
+- 已部署基準：#276 daodao-f2e `2f0840bd`（2026-11-06 dev，含 #1169 HTTPS 代理導向及 #1170 長名稱卡片補修）；工程核心冒煙與五頁手機版重測通過，待 PM 帳號交接重播與正式驗收。
+
+## #276 組織入口
+
+- 一般頁面改為 `/lighthouse/o/<organizationId>` 及其 `/programs`、`/templates`、`/organization`、`/archive`；舊五個入口保留，組織成員由 middleware 依帳號上次有效組織或第一個可管理組織 307 導向；無組織但有場次綁定的講師保留 `/lighthouse/templates` 資源限定入口。舊網址的明確 `?organizationId=` 會搬到路徑；其他 query 保留。
+- 組織切換器可用 `getByRole('combobox', { name: '切換組織' })`（en: `Organization`）。多組織切換、導覽、語系與歷史返回都保留路徑中的組織。
+- 場次深層路徑不變，由 API 回傳的場次歸屬決定組織；開深層連結不改寫帳號上次組織。
+- 訊息送出及場次名單邀請會再次顯示組織與場次名稱供確認；切換組織會清除未送出的視窗。
+- 以下舊頁路徑應預期 redirect；無組織成員資格但有場次資源綁定的講師，只可從 `/lighthouse/templates` 使用所屬場次資源，不因此取得一般組織管理權限。
 
 ## 子功能
 - 總覽 `/lighthouse`：場次卡片（管理本場次、編輯場次設定）、值得慶祝／需要鼓勵統計；沒有場次時顯示空狀態。
