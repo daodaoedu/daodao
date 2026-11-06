@@ -5,7 +5,9 @@
 - 介面：Web（apps/product）
 - dev 網址：https://app-dev.daodao.so/lighthouse （無權限頁 https://app-dev.daodao.so/lighthouse/access-required ；舊網址 `/manage` 會轉到這裡）
 - 主要程式位置：apps/product/src/app/[locale]/(lighthouse)/lighthouse/、apps/product/src/app/[locale]/lighthouse/access-required/page.tsx、apps/product/src/components/lighthouse/、apps/product/src/middleware.ts
-- 已部署基準：#276 daodao-f2e `2f0840bd`（2026-11-06 dev，含 #1169 HTTPS 代理導向及 #1170 長名稱卡片補修）；工程核心冒煙與五頁手機版重測通過，待 PM 帳號交接重播與正式驗收。
+- 已部署基準：#276 daodao-f2e `9e12071d`（2026-11-06 dev，含 #1169 HTTPS、#1170 長名稱卡片及 #1171 中文舊網址代理埠補修）；工程及指定 PM 帳號交接重播通過，已移 Acceptance，待正式 PM 驗收。
+
+- PM 交接：[指定帳號、專用 A17/B18 資料與畫面步驟](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6686549367)；請勿沿用其他卡資料或發布草稿場次。
 
 ## #276 組織入口
 
