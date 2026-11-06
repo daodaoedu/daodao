@@ -1,7 +1,7 @@
 # 燈塔多組織切換架構
 
 日期：2026-10-23（2026-11-06 更新整合與部署證據）
-狀態：程式與兩個冒煙補修皆已合併並部署 dev；工程核心冒煙 48 項、補充確認測試 6 項與最終版面 7 項通過。正式 PM 帳號交接重播與 PM 驗收尚未完成，中央卡保留 Review。
+狀態：已合併並部署 dev；工程核心冒煙及指定 PM 帳號交接重播完成。中央卡已移 Acceptance 並指派 PM，待正式 PM 驗收，尚未 Done。
 決策來源：[PM 2026-11-04 確認](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6634331959)。未註冊 owner 流程另案 [#463](https://github.com/daodaoedu/daodao/issues/463)；公開實踐模板 API 隔離另案 [#464](https://github.com/daodaoedu/daodao/issues/464)。跨裝置恢復上次組織保留，公開發起人快覽另拆。
 
 關聯：[#276 Admin 組織設定](https://github.com/daodaoedu/daodao/issues/276)、[#374 第 15 項](https://github.com/daodaoedu/daodao/issues/374)
@@ -15,9 +15,21 @@
 - f2e [#1123](https://github.com/daodaoedu/daodao-f2e/pull/1123)，revision `0956950a`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42146354101) 成功。
 - f2e 補修 #1169，revision `d336e14c`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42149177846) 成功；補修搭配已合併 server/storage 的[整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42148171737) 24/24。
 - f2e 手機版補修 [#1170](https://github.com/daodaoedu/daodao-f2e/pull/1170)，revision `2f0840bd`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42151377258) 成功；[選定整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42150561562) 12/12。dev 五個頁面 390px、中英文總覽與桌機共 7 項版面檢查通過，HTTPS 入口 2/2。
+- 中文舊網址補修 [f2e#1171](https://github.com/daodaoedu/daodao-f2e/pull/1171)，revision `9e12071d`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42227166713) 成功；[完整整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42225536773) 24/24、middleware62／product956通過。真實 next-intl 使用公開 hostname 加內部埠的中文導向已正規化為公開 HTTPS。
 - 固定三個 PR head 的[完整整合旅程](https://github.com/daodaoedu/daodao-server/actions/runs/42143219273) 24/24；合併後 dev 對 dev 的 [server schema](https://github.com/daodaoedu/daodao-server/actions/runs/42146088246) 與 [storage schema](https://github.com/daodaoedu/daodao-storage/actions/runs/42146083893) 均成功。這些結果不代替部署後操作或正式 PM 驗收。
 
-工程冒煙與限制：[最新工程報告](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6675522296) 分開記錄本機與 dev 受驗版本、原失敗、修正及資料回讀。[Google 歷史圖文報告](https://docs.google.com/document/d/1tlfbeeps783W-lG57vSJhZORMuhvYsF0Ar4t0A1u2qg) 本次因共用 Drive API 配額及寫入權限受阻，尚未同步，不代表目前部署狀態。dev 使用指定 QA 既有帳號；A7/B8 設定還原、B 訊息模板刪除、A 成員資格與身份集合還原，測試場次軟刪除並確認不在有效／封存列表。首次原為空的帳號預設組織保留 A7；API 不提供清空。匯出與角色異動稽核歷程保留。另有兩封預期通知至指定 QA 信箱，未把排程接受當作實際收信證據。兩個不同帳號共同管理、跨帳號快取與實體雙裝置僅有本機或隔離 context 證據，未冒稱 dev 雙帳號／實體裝置完成。本文舊 AC fixture 範例不代表已備妥 PM 帳號資料。
+工程冒煙與限制：[最新工程報告](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6675522296) 分開記錄本機與 dev 受驗版本、原失敗、修正及資料回讀。[Google 歷史圖文報告](https://docs.google.com/document/d/1tlfbeeps783W-lG57vSJhZORMuhvYsF0Ar4t0A1u2qg) 本次因共用 Drive API 配額及寫入權限受阻，尚未同步，不代表目前部署狀態。前輪 dev 工程冒煙使用既有 QA286；A7/B8 設定還原、B 訊息模板刪除、A 成員資格與身份集合還原，測試場次軟刪除並確認不在有效／封存列表。首次原為空的帳號預設組織保留 A7；API 不提供清空。匯出與角色異動稽核歷程保留。另有兩封預期通知至指定 QA 信箱，未把排程接受當作實際收信證據。本輪已補實際 PM306／301 在專用 A17 的雙 owner UI 寫入／回讀／還原；跨帳號快取仍依工程測試證據，兩個獨立 context 不等於實體雙裝置。本文舊 AC fixture 範例不作為本次 PM 操作資料，請使用下方正式交接。
+
+
+### 正式 PM 交接（2026-11-06）
+
+[請驗收留言與16個畫面步驟](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6686549367) 已發布並回讀，Planning 狀態為 Acceptance、已指派 `peggy1213-create`；這是工程交接，不代表 PM 已驗收或 issue 已完成。
+
+指定既有 `peggytest`（306）管理本卡 A17/B18，`Peggy test2`（301）僅管理本卡 A17；不改原有其他組織資格。專用系列41/42、草稿場次117/118、模板71-74、基準留言模板30/31、合成邀請145與合成實踐464/465保留至PM驗完；其他議題的場次113只做唯讀邀請預覽並取消。新草稿場次不進入每週摘要／結束回饋寄送排程，不得為本卡驗收發布。
+
+在最終前端 `9e12071d` 完整重播23項畫面檢查（不重用舊版本結果），另6項直接中英入口、實際語言選單及原生離頁取消／離開全部通過，17項資料／權限回讀通過。單組織工程角色實測後已移除暫時新增資格並還原；兩個PM偏好及A簡介、臨時留言模板均回讀還原，沒有寄留言、邀請或重寄。主PM原為NULL的偏好使用受限fixture清理回復，不把API不提供的清空功能寫成PM操作。
+
+工程登入採 `dev-login mode=user`，不碰Google憑證，亦不宣稱Google OAuth供應商或實體雙裝置已測。跨文件上一頁使用瀏覽器原生離頁提示，站內切換使用站內確認視窗；兩者取消保留、接受離開清空都已實測。前輪把原生提示當成缺少站內視窗的疑似缺陷已排除，不是產品修復項。今日焦點前提有效至2027-01-24，草稿場次至2027-03-01；驗完由工程清理專用資料及受控QA的實踐排程來源，不停用既有帳號或修改其他卡資料。
 
 ## 1. 目標與核心規則
 
