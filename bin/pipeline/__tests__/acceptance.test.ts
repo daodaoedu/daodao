@@ -9,6 +9,18 @@ const fixture = (name: string) => readFileSync(join(dir, name), "utf8");
 const rules = (body: string) => lintAcceptanceComment(body).map((f) => f.rule);
 
 describe("lintAcceptanceComment", () => {
+  it("rejects #471's shipped handoff, then accepts explicit dimensions on both mobile steps", () => {
+    const original = fixture("471-original.md");
+    const missing = lintAcceptanceComment(original).filter((f) => f.rule === "mobile-viewport-missing");
+    expect(missing).toHaveLength(2);
+    expect(missing.map((f) => original.split("\n")[f.line - 1])).toEqual([
+      expect.stringContaining("送出前也先在手機寬度"),
+      expect.stringContaining("在手機寬度重新看成果頁"),
+    ]);
+    const fixed = original.replaceAll("手機寬度", "手機 390×844 CSS px");
+    expect(lintAcceptanceComment(fixed)).toEqual([]);
+  });
+
   it("rejects #370's original comment: no engineering-evidence block, PM chased PUT body/GET read-back from the contract", () => {
     expect(rules(fixture("370-original.md"))).toContain("engineering-evidence-missing");
   });
