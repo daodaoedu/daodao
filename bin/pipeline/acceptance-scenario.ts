@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
-import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, renameSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { z } from "zod";
 import { actorPreflightContractSchema } from "./acceptance-actor-preflight.js";
 
@@ -100,6 +101,124 @@ function pathPresent(path: string): boolean {
   catch (error) { if (error instanceof Error && "code" in error && error.code === "ENOENT") return false; throw error; }
 }
 
+export type MutationResource = Omit<z.infer<typeof resourceSchema>, "usage">;
+export const cleanupAuthorizationSchema = z.object({
+  issue, generation: slug, contractDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  operation: z.enum(["cleanup", "rebuild", "seed", "reset", "dry-run"]),
+  outcome: z.enum(["accepted", "cancelled"]), outcomeEvidence: reference,
+}).strict();
+export type CleanupAuthorization = z.infer<typeof cleanupAuthorizationSchema>;
+type MutationConflict = { issue: string; generation: string; resource: string };
+export class AcceptanceMutationBlocked extends Error {
+  constructor(public readonly reason: string, public readonly conflicts: MutationConflict[] = []) {
+    super(`acceptance mutation blocked: ${reason}`);
+    this.name = "AcceptanceMutationBlocked";
+  }
+}
+
+export function defaultAcceptanceReservationStateDirectory(): string {
+  const configured = process.env.DAODAO_ACCEPTANCE_STATE_DIR;
+  if (configured !== undefined && !configured.trim()) throw new AcceptanceMutationBlocked("invalid-state-directory");
+  return configured ?? join(homedir(), ".daodao", "acceptance-reservations", "dev");
+}
+
+function existingLedger(stateDir: string): Ledger {
+  const marker = join(stateDir, ".initialized"), file = join(stateDir, "ledger.json");
+  if (!pathPresent(marker) || !privateFile(marker, 100)
+      || readFileSync(marker, "utf8") !== "acceptance-reservations-v1\n") throw new AcceptanceMutationBlocked("invalid-state-marker");
+  if (!pathPresent(file) || !privateFile(file, 10 * 1024 * 1024)) throw new AcceptanceMutationBlocked("unsafe-or-missing-ledger");
+  const parsed = ledgerSchema.safeParse(JSON.parse(readFileSync(file, "utf8")));
+  if (!parsed.success) throw new AcceptanceMutationBlocked("invalid-ledger");
+  return parsed.data;
+}
+
+function requirePrivateStateDirectory(stateDir: string): void {
+  const stat = lstatSync(stateDir);
+  if (!stat.isDirectory() || stat.isSymbolicLink() || typeof process.getuid !== "function"
+      || stat.uid !== process.getuid() || (stat.mode & 0o077) !== 0) throw new AcceptanceMutationBlocked("unsafe-state-directory");
+}
+
+/** Explicit initialization never repairs or replaces an existing state file. */
+export function initializeAcceptanceStateDirectory(directory: string): void {
+  const stateDir = resolve(directory), lock = join(stateDir, ".lock");
+  let locked = false;
+  try {
+    if (!pathPresent(stateDir)) mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+    requirePrivateStateDirectory(stateDir);
+    try { mkdirSync(lock, { mode: 0o700 }); locked = true; }
+    catch { throw new AcceptanceMutationBlocked("state-locked"); }
+    const marker = join(stateDir, ".initialized"), file = join(stateDir, "ledger.json");
+    if (pathPresent(marker) || pathPresent(file)) { existingLedger(stateDir); return; }
+    if (readdirSync(stateDir).some(name => name !== ".lock")) throw new AcceptanceMutationBlocked("state-not-empty");
+    writeFileSync(marker, "acceptance-reservations-v1\n", { mode: 0o600, flag: "wx" });
+    writeFileSync(file, JSON.stringify({ version: 1, reservations: [] }) + "\n", { mode: 0o600, flag: "wx" });
+  } catch (error) {
+    if (error instanceof AcceptanceMutationBlocked) throw error;
+    throw new AcceptanceMutationBlocked("state-unreadable-or-unwritable");
+  } finally {
+    if (locked) { try { rmdirSync(lock); } catch { /* A nonempty lock is retained for manual investigation. */ } }
+  }
+}
+
+/** The same lock used by lease writers remains held until the entire mutation completes. */
+export async function withAcceptanceMutationGuard<T>(
+  resources: MutationResource[],
+  directory: string,
+  run: (assertUnreserved: (more: MutationResource[]) => void) => Promise<T>,
+  options: { authorization?: CleanupAuthorization; operation?: CleanupAuthorization["operation"] } = {},
+): Promise<T> {
+  const stateDir = resolve(directory), lock = join(stateDir, ".lock");
+  let locked = false;
+  let ledger: Ledger;
+  let permitted: string | undefined;
+  try {
+    if (!Array.isArray(resources) || resources.length === 0) throw new AcceptanceMutationBlocked("invalid-mutation-resources");
+    requirePrivateStateDirectory(stateDir);
+    try { mkdirSync(lock, { mode: 0o700 }); locked = true; }
+    catch { throw new AcceptanceMutationBlocked("state-locked"); }
+    ledger = existingLedger(stateDir);
+    if (options.authorization !== undefined) {
+      const authorization = cleanupAuthorizationSchema.safeParse(options.authorization);
+      if (!authorization.success || authorization.data.operation !== options.operation) {
+        throw new AcceptanceMutationBlocked("invalid-cleanup-authorization");
+      }
+      const approved = authorization.data;
+      const row = ledger.reservations.find(row => row.issue === approved.issue && row.generation === approved.generation);
+      if (!row || row.state !== "retained" || row.contractDigest !== approved.contractDigest) {
+        throw new AcceptanceMutationBlocked("cleanup-authorization-mismatch");
+      }
+      permitted = `${row.issue}\n${row.generation}`;
+    }
+  } catch (error) {
+    if (locked) { try { rmdirSync(lock); } catch { /* No takeover or recursive removal. */ } }
+    if (error instanceof AcceptanceMutationBlocked) throw error;
+    throw new AcceptanceMutationBlocked("state-unreadable-or-unwritable");
+  }
+  const assertUnreserved = (more: MutationResource[]) => {
+    if (!Array.isArray(more) || more.length > 10000) throw new AcceptanceMutationBlocked("invalid-mutation-resources");
+    const keys = new Set<string>();
+    for (const item of more) {
+      const parsed = resourceSchema.safeParse({ ...item, usage: "write" });
+      if (!parsed.success) throw new AcceptanceMutationBlocked("invalid-mutation-resources");
+      keys.add(resourceKey(parsed.data));
+    }
+    const conflicts: MutationConflict[] = [];
+    for (const row of ledger.reservations.filter(row => row.state === "retained")) {
+      if (`${row.issue}\n${row.generation}` === permitted) continue;
+      for (const held of row.resources) if (keys.has(resourceKey(held))) {
+        conflicts.push({ issue: row.issue, generation: row.generation, resource: resourceKey(held) });
+      }
+    }
+    if (conflicts.length) throw new AcceptanceMutationBlocked("resource-retained", conflicts);
+  };
+  try {
+    assertUnreserved(resources);
+    return await run(assertUnreserved);
+  } finally {
+    try { rmdirSync(lock); } catch { /* A stranded lock fails future operations closed. */ }
+  }
+}
+
 /** Local advisory coordination only: every participant must use this same state directory. */
 export function runScenarioOperation(
   operation: ScenarioOperation,
@@ -124,10 +243,9 @@ export function runScenarioOperation(
   let locked = false;
   let temporary: string | undefined;
   try {
-    // Do not initialize an absent directory during check/release, or silently replace corrupt state.
+    // Only the explicit init command may establish empty state, never an acquire after state loss.
     if (!existsSync(stateDir)) {
-      if (operation !== "acquire") return { ...report, reason: "reservation-not-found" };
-      mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+      return { ...report, reason: operation === "acquire" ? "state-not-initialized" : "reservation-not-found" };
     }
     const dirStat = lstatSync(stateDir);
     if (!dirStat.isDirectory() || dirStat.isSymbolicLink() || typeof process.getuid !== "function"
@@ -135,7 +253,7 @@ export function runScenarioOperation(
     try { mkdirSync(lock, { mode: 0o700 }); locked = true; }
     catch { return { ...report, reason: "state-locked" }; }
     let ledger: Ledger = { version: 1, reservations: [] };
-    if (pathPresent(marker) && (!privateFile(marker, 100) || readFileSync(marker, "utf8") !== "acceptance-reservations-v1\n")) {
+    if (!pathPresent(marker) || !privateFile(marker, 100) || readFileSync(marker, "utf8") !== "acceptance-reservations-v1\n") {
       return { ...report, reason: "invalid-state-marker" };
     }
     if (pathPresent(ledgerFile)) {
@@ -146,7 +264,7 @@ export function runScenarioOperation(
       if (!validated.success) return { ...report, reason: "invalid-ledger" };
       ledger = validated.data;
     } else if (existsSync(marker)) return { ...report, reason: "ledger-missing-after-initialization" };
-    else if (operation !== "acquire") return { ...report, reason: "reservation-not-found" };
+    else return { ...report, reason: "state-not-initialized" };
     const current = ledger.reservations.find(row => row.issue === contract.issue && row.generation === contract.generation);
     if (current && current.contractDigest !== report.contractDigest) return { ...report, reason: "generation-contract-drift" };
     if (current && (current.taskOwner !== contract.taskOwner || current.reviewAt !== contract.retention.reviewAt
@@ -180,8 +298,6 @@ export function runScenarioOperation(
     }
     temporary = join(stateDir, `.ledger-${randomUUID()}.tmp`);
     writeFileSync(temporary, JSON.stringify(ledger, null, 2) + "\n", { mode: 0o600, flag: "wx" });
-    // A missing ledger after initialization may mean data loss, never a fresh empty reservation set.
-    if (!existsSync(marker)) writeFileSync(marker, "acceptance-reservations-v1\n", { mode: 0o600, flag: "wx" });
     renameSync(temporary, ledgerFile);
     temporary = undefined;
     return { ...report, status: operation === "acquire" ? "RESERVED" : "RELEASED" };

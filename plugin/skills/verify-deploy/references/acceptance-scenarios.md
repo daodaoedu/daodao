@@ -19,9 +19,12 @@
 
 ## 共用占用簿
 
-同一部開發機上的所有參與任務使用同一個 state-dir：`~/.daodao/acceptance-reservations/dev`。不要各自放在 task 目錄，否則互相看不到衝突。此版本要求 POSIX uid 與 0700／0600 權限（macOS／Linux）；Windows 缺少 uid 語意時會受阻，不假稱已支援。這是 advisory 協作紀錄，**不是跨機器鎖，也不會阻止未整合的 SQL／API／夜間 reset**。跨機器操作或現有排程仍須由負責人協調；沒有實際停用或排除 reset 的證據，不宣稱 fixture 已受保護。
+同一部開發機上的所有參與任務使用同一個 state-dir：`~/.daodao/acceptance-reservations/dev`。不要各自放在 task 目錄，否則互相看不到衝突。此版本要求 POSIX uid 與 0700／0600 權限（macOS／Linux）；Windows 缺少 uid 語意時會受阻，不假稱已支援。這是本機協作紀錄；已整合的 root fixture 與 storage seed/reset/dry-run 會依[異動攔截規則](acceptance-mutation-guard.md)強制檢查並持鎖。**它不是跨機器鎖，未整合的 SQL／API／排程仍可繞過**。跨機器操作或現有排程仍須由負責人協調；沒有實際停用或排除 reset 的證據，不宣稱 fixture 已受保護。
+
+新環境先明確初始化；`acquire` 不會自動補建遺失的占用簿。既有紀錄遺失時先調查，不能用初始化掩蓋。
 
 ```sh
+pnpm -s tsx bin/pipeline/acceptance-scenario-cli.ts init --state-dir "$HOME/.daodao/acceptance-reservations/dev"
 pnpm -s tsx bin/pipeline/acceptance-scenario-cli.ts validate --contract /private/task/scenario.json --state-dir "$HOME/.daodao/acceptance-reservations/dev"
 pnpm -s tsx bin/pipeline/acceptance-scenario-cli.ts acquire --contract /private/task/scenario.json --state-dir "$HOME/.daodao/acceptance-reservations/dev"
 pnpm -s tsx bin/pipeline/acceptance-scenario-cli.ts check --contract /private/task/scenario.json --state-dir "$HOME/.daodao/acceptance-reservations/dev"
@@ -38,7 +41,7 @@ pnpm -s tsx bin/pipeline/acceptance-scenario-cli.ts check --contract /private/ta
 2. 按卡的領域工具檢查內容前提。#463 仍使用既有 `acceptance-fixture-cli.ts prepare/check/rebuild/cleanup` 與 `docs/testing/acceptance-fixture-lifecycle.md`，不以 generic ledger 取代它的真收信、申請、pending 與到期檢查。
 3. 消耗型情境分開 generation：取消／失敗分支先驗，成功批准、填答、刪除、寄信、AI 生成等消耗步驟最後。工程用過的消耗型資料不交給 PM 重做；要重建新一代並再查。
 4. 請驗收留言列出資料入口、指定帳號、操作順序、有效條件、複查／重建方式與負責 task；工程命令只放工程證據，PM 步驟只放畫面操作。
-5. 正式 PM 通過，或使用者明確取消後，依既定步驟清理／退休**自己建立的**資料，保存前後回讀。既有 PM 帳號不降權、不停用；共用 fixture 不套一般冒煙清理。
+5. 正式 PM 通過，或使用者明確取消後，先依[異動攔截規則](acceptance-mutation-guard.md)準備精確 terminal authorization，在原占用仍保留時依既定步驟清理／退休**自己建立的**資料，保存前後回讀。既有 PM 帳號不降權、不停用；共用 fixture 不套一般冒煙清理。
 6. 最後釋放占用：
 
 ```sh
