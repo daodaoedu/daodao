@@ -277,7 +277,16 @@ export function auditCards(
         .filter((m) => REQUEST_MARKER_RE.test(m.body))
         .map((m) => Date.parse(m.createdAt)));
       const returnedAt = Math.max(-Infinity, ...events
-        .filter((m) => /<!--\s*daodao:acceptance-report\b[^>]*\bresult=(?:FAIL|BLOCKED)\b[^>]*-->/.test(m.body) || (classifyReturnComment(m.body.replace(/<!--\s*daodao:acceptance-request\s*-->/g, "").replace(/^.*請驗收：.*$/gm, "")) !== "other"))
+        .filter((m) => {
+          if (/<!--\s*daodao:acceptance-report\b[^>]*\bresult=(?:FAIL|BLOCKED)\b[^>]*-->/.test(m.body)) return true;
+          const kind = classifyReturnComment(m.body
+            .replace(/<!--\s*daodao:acceptance-request\s*-->/g, "")
+            .replace(/^.*請驗收：.*$/gm, ""));
+          // Handoffs describe what to do if blocked; that is not a new blocked result.
+          const requestAt = m.body.search(REQUEST_MARKER_RE);
+          const reportPrefix = requestAt < 0 ? m.body : m.body.slice(0, requestAt);
+          return kind === "ac-fail" || (kind === "blocked" && classifyReturnComment(reportPrefix) === "blocked");
+        })
         .map((m) => Date.parse(m.createdAt)));
       if (requestedAt > movedAt && requestedAt > returnedAt) {
         push(c, "已重新請驗收，但卡片仍在 Need Fix",

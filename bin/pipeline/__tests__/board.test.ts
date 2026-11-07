@@ -396,11 +396,15 @@ describe("reacceptance status drift", () => {
   it("flags a new request immediately, before the 24-hour grace", () => {
     expect(drift([request])).toEqual(["已重新請驗收，但卡片仍在 Need Fix"]);
   });
+  it("does not treat blocker instructions inside the renewed request as a new blocker", () => {
+    expect(drift([{ ...request, body: request.body + "\n若是帳號或環境測不了，請保留 Acceptance；受阻時由工程排除。" }]))
+      .toEqual(["已重新請驗收，但卡片仍在 Need Fix"]);
+  });
   it("ignores an old request before the latest return", () => {
     expect(drift([{ ...request, createdAt: "2026-09-19T22:00:00Z" }])).toEqual([]);
   });
   it("does not override a later failure or blocker, regardless of input order", () => {
-    for (const body of ["AC-01 FAIL: wrong result", "<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文\nAC-01 FAIL: wrong result", "> ## 🙋 請驗收：重測\nAC-01 FAIL: wrong result", "驗收受阻，帳號無法測試", "<!-- daodao:acceptance-report spec=1 result=FAIL -->\n引用原交接：\n<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文"]) {
+    for (const body of ["AC-01 FAIL: wrong result", "<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文\nAC-01 FAIL: wrong result", "> ## 🙋 請驗收：重測\nAC-01 FAIL: wrong result", "驗收受阻，帳號無法測試", "驗收受阻，帳號無法測試\n引用原文：\n<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文", "<!-- daodao:acceptance-report spec=1 result=FAIL -->\n引用原交接：\n<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文"]) {
       const later = { createdAt: "2026-09-19T23:45:00Z", body };
       expect(drift([later, request])).toEqual([]);
     }
