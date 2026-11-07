@@ -17,6 +17,8 @@ description: 實際操作產品 Web App，驗證指定功能的使用者路徑�
 
 # Verify product
 
+本階段必做[全流程防錯與復盤](../../docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 這是產品 Web App 的共用驗證入口。先從[既有 feature map](../../docs/feature-map/README.md)找使用者入口、角色與成功終態，再選可用 harness；不按 issue 或功能另建 skill。App、內部 admin 與 dev 部署是不同受驗環境，不由這次 Web 本機結果代替。
 
 沿用本次授權。此流程可啟動自己的隔離服務與合成 fixture，不授權變更共享資料、部署、merge、對外寄信或發布報告。

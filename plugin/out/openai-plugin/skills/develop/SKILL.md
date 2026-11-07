@@ -18,6 +18,8 @@ description: "以 issue 為單位的隔離平行開發流程。每個 issue 在 
 
 # Dev Task — Issue 隔離開發流程
 
+本階段必做[全流程防錯與復盤](../../docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 一個 issue = 一個隔離資料夾 = 一個 session。`projects/` 下的 submodule 作為建立 worktree 的來源，保留其目前分支、工作檔案與暫存區；所有任務開發都在 `worktrees/` 進行。來源不在 `dev` 或有未提交變更，不構成開工阻擋。
 
 ```

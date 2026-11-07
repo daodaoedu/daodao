@@ -8,6 +8,8 @@ description: 把操作異常、截圖、對話或 CI 錯誤整理成可追蹤的
 
 # report-bug
 
+本階段必做[全流程防錯與復盤](../../../plugin/docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 > **行為契約**：先讀 workspace 所有可用檔案（context、附件、截圖），再從已有資訊直接起草。草稿完成後才能補問，且整個流程不超過 2 個問題。不要先要求草稿種類、系統、repo 或路徑——這些由 skill 自行查核，不是通報者的責任。遇到間歇性異常（「昨天壞、今天好」），直接把它視為尚未重現的已觀察異常，如實記錄即可，不要求通報者先排除環境或提供重現步驟。
 
 先讀 [AI 檢核與人工審核共用流程](../../../plugin/docs/ai-human-review-workflow.md)。模板：[bug-issue.md](../../../plugin/templates/bug-issue.md)。從本 SKILL 所在位置向上兩層是 plugin root（下文的 `<plugin root>`）。寧可不開卡，也不開猜測的卡或重複卡。
