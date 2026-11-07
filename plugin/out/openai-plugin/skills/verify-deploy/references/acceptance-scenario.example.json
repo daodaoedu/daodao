@@ -1,0 +1,57 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/480",
+  "generation": "navigation-pm-example-20261107",
+  "taskOwner": "480-mobile-navigation-refinement",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "6a542fe3-7bba-42f7-844a-deb9489bd85e",
+      "accountEmail": "tlshare123@gmail.com",
+      "expectedRoles": [
+        "User"
+      ]
+    },
+    {
+      "kind": "actor-access",
+      "accountId": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "accountEmail": "peichun1213@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "6a542fe3-7bba-42f7-844a-deb9489bd85e",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "usage": "read"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "#480 不需要額外內容 seed；必須以指定 User295 與 Admin301 核對手機導覽，工程帳號檢查不能代替 PM 正式 Google 驗收。",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-14T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "沒有本情境建立的遠端內容；PM 驗收後 UI 登出，不停用或降權既有 PM 帳號；保存正式驗收及登出回讀再釋放占用。",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+  },
+  "rebuild": {
+    "instructions": "重新讀取兩個指定帳號的真實角色並完成同帳號網頁重播；若角色或 Google 可登入能力不符，列 BLOCKED，不自動改權限。",
+    "evidenceRef": "plugin/skills/verify-deploy/references/acceptance-actor-preflight.md"
+  }
+}

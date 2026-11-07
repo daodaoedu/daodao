@@ -1,0 +1,63 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/452",
+  "generation": "inventory-20261107-issue-452",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "accountEmail": "wedialogbox@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "bug-report-namespace",
+      "id": "qa452",
+      "usage": "write"
+    },
+    {
+      "environment": "dev",
+      "type": "rate-limit-bucket",
+      "id": "bug-report-actor306",
+      "usage": "consume"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: Known actor usable and /settings/bug-report blank",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/452#issuecomment-6703866839"
+    },
+    {
+      "description": "UNVERIFIED: Exactly one valid report after required-field rejection; do not repeat until rate-limit readiness checked",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/452#issuecomment-6703866839"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: no domain authority required; identity/UI only; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/452#issuecomment-6703866839"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 Engineer marks only reports identified QA452 as closed after PM completion; do not disable account or delete unrelated reports",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/452#issuecomment-6703866839"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 Reopen page or 再回報一則 to blank form; wait documented rate-limit window rather than flood; test records remain tagged",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/452#issuecomment-6703866839"
+  }
+}

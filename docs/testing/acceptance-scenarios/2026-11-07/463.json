@@ -1,0 +1,109 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/463",
+  "generation": "inventory-20261107-issue-463",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "accountEmail": "peichun1213@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ]
+    },
+    {
+      "kind": "actor-access",
+      "accountId": "1948934c-95fd-4d51-a525-8d28e50e1d75",
+      "accountEmail": "vincent.xu.work+qa344@gmail.com",
+      "expectedRoles": [
+        "User"
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "1948934c-95fd-4d51-a525-8d28e50e1d75",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization",
+      "id": "16",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "owner-invitation",
+      "id": "7",
+      "usage": "consume"
+    },
+    {
+      "environment": "dev",
+      "type": "invitation-request",
+      "id": "2",
+      "usage": "consume"
+    },
+    {
+      "environment": "dev",
+      "type": "owner-invitation",
+      "id": "5",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "owner-invitation",
+      "id": "6",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization-namespace",
+      "id": "qa463-pm-manual",
+      "usage": "write"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: org16 active/0members, inv7 pending/request2 user328 unapproved, inv5/6 revoked",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+    },
+    {
+      "description": "UNVERIFIED: On retainedorg16 cancel only; never confirm approval/revoke/resend",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+    },
+    {
+      "description": "UNVERIFIED: New manuallynamedorgs use same controlled recipient; revokepending then suspend",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: Admin invitation management for exactorg16; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: applicant328; engineering only, not PM Google actor; not authorized as a PM Google actor",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 Retainedorg16 untouched; own manualorgs revoke pending then suspend, preserve accepted owners/audit; no physicaldelete supported",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 If inv7 expires: engineer resend sameorg, realQA inbox link, existing328 reapply, samePM301 cancel+unauthorized checks, update IDs. Merged479 lifecycle prepares independent cancel/approve generations; do not repurpose originalorg16.",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558"
+  }
+}

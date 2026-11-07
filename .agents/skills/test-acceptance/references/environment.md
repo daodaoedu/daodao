@@ -36,6 +36,8 @@ PM 專用的測試帳號（不是個人帳號），依實際角色使用，不�
 | admin | 管理後台；需要管理員權限的產品畫面 | `peichun1213@gmail.com`，Google 登入（後台要求帳號有 admin／superadmin 角色） |
 | 團主／講師、團友 | 燈塔場次、共同挑戰 | 請驗收留言必須寫明用哪個 PM 帳號、該帳號已被加進哪個組織／場次；沒寫就 BLOCKED |
 
+驗收前先讀交接的[情境、占用與清理安排](../../verify-deploy/references/acceptance-scenarios.md)。同一組織／場次可能同時供多張卡使用；只清理本卡明確擁有且不影響其他待驗卡的資料，沒有還原／清理回讀時保留給工程處理，不自行刪除整個共用組織。
+
 驗收 fixture 帳號（主鍵 900001–900003，#323）**只能用工程的 dev-login 登入，PM 用不了**。請驗收留言指定 fixture 身分時，該步驟 BLOCKED，請工程改用 PM 帳號或把 PM 帳號加進 fixture 組織／場次（`daodao-storage` 的 `scripts/acceptance_fixtures/README.md`）。這是過去最常見的受阻原因（#277、#279、#281、#354）。
 
 只用一般的登入流程。需要密碼、驗證碼或 Google 再次驗證時暫停該角色的步驟，請使用者自己完成；不在對話裡要密碼，不繞過登入。

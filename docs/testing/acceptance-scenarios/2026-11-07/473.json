@@ -1,0 +1,108 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/473",
+  "generation": "inventory-20261107-issue-473",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "accountEmail": "peichun1213@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ],
+      "organizationOwners": [
+        {
+          "organizationId": 2
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization",
+      "id": "2",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "program",
+      "id": "10",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort",
+      "id": "39",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "program",
+      "id": "46",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort",
+      "id": "127",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "practice",
+      "id": "f94bfd18-d9bd-4565-97bb-c2329a35db34",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "checkin",
+      "id": "1140",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "ai-summary-generation",
+      "id": "org2-cohort127",
+      "usage": "consume"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: Originalcohort39 has0checkins0comments0summary; emptyreason not misconfig",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232"
+    },
+    {
+      "description": "UNVERIFIED: Private draftcohort127 and practice468 with1nonempty syntheticcheckin1140",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232"
+    },
+    {
+      "description": "UNVERIFIED: Existingorg2AIkey unchanged;306 lacksqualification, use301 only",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: existing ownerorg2; cohort39/127 coach access; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 Never modifyorg2key or deleteoriginalemptycohort39; remove onlyQA473 scheduling sources afterPASS; retain summaryversionhistory",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 Engineer readonly owner/key-presence/nonemptycheckin preflight then sameaccount replay. No need copy/change key; exact automatic baseline/reset script not in publichandoff",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232"
+  }
+}

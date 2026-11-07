@@ -1,0 +1,73 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/480",
+  "generation": "inventory-20261107-issue-480",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "6a542fe3-7bba-42f7-844a-deb9489bd85e",
+      "accountEmail": "tlshare123@gmail.com",
+      "expectedRoles": [
+        "User"
+      ]
+    },
+    {
+      "kind": "actor-access",
+      "accountId": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "accountEmail": "peichun1213@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "6a542fe3-7bba-42f7-844a-deb9489bd85e",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "usage": "read"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: 295Userand301Admin exact identity;306remainsAdminnotUser",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+    },
+    {
+      "description": "UNVERIFIED: No specialcohort/membershipnecessary; manageentrycan legitimatelyshowaccess-required",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+    },
+    {
+      "description": "UNVERIFIED: ChineseEnglish and390x844/320x480/1440x900viewports",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: no domain authority required; identity/UI only; user confirmed in current conversation; Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: no domain authority required; identity/UI only; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 Closeunsentcreationpages,logoutbothactors; neverdisable sharedaccounts ordeleteexistingcontent",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 No domainseedneeded. Live actorpreflightcontracts per295/301 then sameaccountnavigationreplay",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663"
+  }
+}
