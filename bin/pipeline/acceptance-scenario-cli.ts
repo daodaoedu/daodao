@@ -1,10 +1,24 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
-import { runScenarioOperation, type ScenarioOperation } from "./acceptance-scenario.js";
+import { initializeAcceptanceStateDirectory, runScenarioOperation, type ScenarioOperation } from "./acceptance-scenario.js";
 
 const args = process.argv.slice(2);
 const operation = args.shift();
+if (operation === "init") {
+  if (args.length !== 2 || args[0] !== "--state-dir" || !args[1].trim()) {
+    console.error("usage: acceptance-scenario-cli.ts init --state-dir <shared-private-directory>");
+    process.exit(2);
+  }
+  try {
+    initializeAcceptanceStateDirectory(args[1]);
+    console.log(JSON.stringify({ status: "INITIALIZED", readiness: "NOT_VERIFIED" }));
+    process.exit(0);
+  } catch {
+    console.error("acceptance-scenario: BLOCKED (state cannot be initialized safely)");
+    process.exit(1);
+  }
+}
 const operations = ["validate", "acquire", "check", "release"];
 const flags = ["--contract", "--state-dir", "--outcome", "--outcome-evidence", "--cleanup-evidence"];
 const valid = operation && operations.includes(operation) && args.length % 2 === 0

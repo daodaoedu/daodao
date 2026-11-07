@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 
+import { initializeAcceptanceStateDirectory } from "../acceptance-scenario.js";
+
 const paths: string[] = [];
 afterEach(() => paths.splice(0).forEach(path => rmSync(path, { recursive: true, force: true })));
 function setup() {
@@ -18,7 +20,7 @@ function setup() {
     cleanup: { instructions: "DO NOT EXECUTE: $(touch forbidden)", evidenceRef: "cleanup.json" },
     rebuild: { instructions: "Keep text as data", evidenceRef: "rebuild.md" },
   };
-  const file = join(dir, "contract.json"), state = join(dir, "state"); writeFileSync(file, JSON.stringify(contract));
+  const file = join(dir, "contract.json"), state = join(dir, "state"); writeFileSync(file, JSON.stringify(contract)); initializeAcceptanceStateDirectory(state);
   return { dir, contract, file, state };
 }
 const cli = fileURLToPath(new URL("../acceptance-scenario-cli.ts", import.meta.url));

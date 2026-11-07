@@ -3,12 +3,13 @@ import { constants, closeSync, existsSync, fstatSync, fsyncSync, lstatSync, mkdi
 import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { AcceptanceMutationBlocked, defaultAcceptanceReservationStateDirectory, cleanupAuthorizationSchema, type CleanupAuthorization } from './acceptance-scenario.js';
 import { newFixtureManifest, runFixture, fixtureManifestSchema, type FixtureManifest, type FixtureCredentials } from './acceptance-fixture.js';
 
 type Command = 'prepare' | 'check' | 'rebuild' | 'cleanup';
 type Runner = typeof runFixture;
 const commands = ['prepare', 'check', 'rebuild', 'cleanup'];
-const flags = ['--run-dir', '--credentials-file'];
+const flags = ['--run-dir', '--credentials-file', '--cleanup-authorization-file'];
 function privateRegular(path: string): void {
   const stat = lstatSync(path);
   if (!stat.isFile() || (stat.mode & 0o077) || stat.uid !== process.getuid?.()) throw new Error('private-file-required');
@@ -31,8 +32,12 @@ function safeDirectory(path: string): void {
 export async function fixtureCli(args: string[], runner: Runner = runFixture): Promise<{ code: number; message: string }> {
   let lock: number | undefined;
   let lockPath: string | undefined;
+  let recordReservationBlock: ((reason: string) => void) | undefined;
   try {
-    if (args.length !== 5 || !commands.includes(args[0]) || !flags.includes(args[1]) || !flags.includes(args[3]) || args[1] === args[3]) throw new Error('arguments');
+    if (![5, 7].includes(args.length) || !commands.includes(args[0])
+        || args.slice(1).some((value, index) => index % 2 === 0 && (!flags.includes(value) || args.filter(arg => arg === value).length !== 1))
+        || !args.includes('--run-dir') || !args.includes('--credentials-file')
+        || (args.includes('--cleanup-authorization-file') && !['cleanup', 'rebuild'].includes(args[0]))) throw new Error('arguments');
     const value = (flag: string) => args[args.indexOf(flag) + 1];
     const directory = resolve(value('--run-dir'));
     const credentialPath = resolve(value('--credentials-file'));
@@ -49,17 +54,33 @@ export async function fixtureCli(args: string[], runner: Runner = runFixture): P
       if (Object.keys(record).sort().join(',') !== 'adminToken,applicantToken,recipientEmail' || ['adminToken','applicantToken','recipientEmail'].some(key => typeof record[key] !== 'string' || !(record[key] as string).trim()) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.recipientEmail as string)) throw new Error('credentials');
       credentials = { adminToken: record.adminToken as string, applicantToken: record.applicantToken as string, recipientEmail: record.recipientEmail as string };
     } finally { closeSync(credentialFd); }
+    let cleanupAuthorization: CleanupAuthorization | undefined;
+    let authorizationPath: string | undefined;
+    let authorizationStat: ReturnType<typeof fstatSync> | undefined;
+    if (args.includes('--cleanup-authorization-file')) {
+      authorizationPath = resolve(value('--cleanup-authorization-file'));
+      privateRegular(authorizationPath);
+      const fd = openSync(authorizationPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+      try {
+        authorizationStat = fstatSync(fd);
+        if (!authorizationStat.isFile() || authorizationStat.nlink !== 1 || (authorizationStat.mode & 0o077)
+            || authorizationStat.uid !== process.getuid?.() || authorizationStat.size > 65536
+            || (authorizationStat.dev === credentialStat.dev && authorizationStat.ino === credentialStat.ino)) throw new Error('authorization-file');
+        cleanupAuthorization = cleanupAuthorizationSchema.parse(JSON.parse(readFileSync(fd, 'utf8')));
+      } finally { closeSync(fd); }
+    }
     safeDirectory(directory);
     const manifestPath = join(directory, 'manifest.json');
     const journalPath = join(directory, 'journal.json');
     const reportPath = join(directory, 'report.json');
     lockPath = join(directory, '.lock');
     for (const path of [manifestPath, journalPath, reportPath, lockPath]) {
-      if (path === credentialPath) throw new Error('input-overwrite');
+      if (path === credentialPath || path === authorizationPath) throw new Error('input-overwrite');
       if (existsSync(path) || (() => { try { lstatSync(path); return true; } catch { return false; } })()) {
         privateRegular(path);
         const stat = lstatSync(path);
-        if (stat.dev === credentialStat.dev && stat.ino === credentialStat.ino) throw new Error('input-overwrite');
+        if ((stat.dev === credentialStat.dev && stat.ino === credentialStat.ino)
+            || (authorizationStat && stat.dev === authorizationStat.dev && stat.ino === authorizationStat.ino)) throw new Error('input-overwrite');
       }
     }
     // A stale lock requires manual PID review; never remove another operation's lock.
@@ -75,6 +96,7 @@ export async function fixtureCli(args: string[], runner: Runner = runFixture): P
       try { fsyncSync(directoryFd); } finally { closeSync(directoryFd); }
     };
     const command = args[0] as Command;
+    recordReservationBlock = reason => atomic(reportPath, { command, ready: false, checkedAt: new Date().toISOString(), findings: [`reservation blocked: ${reason}`] });
     // Invalidate earlier readiness before any state parsing or remote operation can fail.
     atomic(reportPath, { command, ready: false, checkedAt: new Date().toISOString(), findings: ['operation in progress or interrupted'] });
     if (command !== 'prepare' && !existsSync(manifestPath) && !existsSync(journalPath)) throw new Error('manifest-required');
@@ -93,7 +115,7 @@ export async function fixtureCli(args: string[], runner: Runner = runFixture): P
       atomic(manifestPath, next);
     };
     if (command === 'prepare') await save(manifest);
-    const result = await runner(command, manifest, credentials, { fetch: globalThis.fetch, now: () => new Date(), id: randomUUID, save });
+    const result = await runner(command, manifest, credentials, { fetch: globalThis.fetch, now: () => new Date(), id: randomUUID, save, ...(command === 'check' ? {} : { reservationStateDirectory: defaultAcceptanceReservationStateDirectory() }), ...(cleanupAuthorization === undefined ? {} : { cleanupAuthorization }) });
     manifest = result.manifest;
     await save(manifest);
     const redact = (text: string) => Object.values(credentials).reduce((value, secret) => value.split(secret).join('[redacted]'), text).slice(0, 500);
@@ -101,7 +123,13 @@ export async function fixtureCli(args: string[], runner: Runner = runFixture): P
     const completed = command === 'cleanup' || result.ready;
     const status = command === 'cleanup' ? 'CLEANUP_COMPLETE' : result.ready ? (command === 'check' ? 'READY' : 'PREPARED') : 'BLOCKED';
     return { code: completed ? 0 : 1, message: `acceptance-fixture: ${status} (inspect private report)` };
-  } catch {
+  } catch (error) {
+    if (error instanceof AcceptanceMutationBlocked) {
+      const reasons = new Set(['invalid-mutation-resources', 'unsafe-state-directory', 'state-locked', 'invalid-state-marker', 'unsafe-or-missing-ledger', 'invalid-ledger', 'state-unreadable-or-unwritable', 'resource-retained', 'invalid-state-directory', 'invalid-cleanup-authorization', 'cleanup-authorization-mismatch']);
+      const reason = reasons.has(error.reason) ? error.reason : 'reservation-blocked';
+      try { recordReservationBlock?.(reason); } catch { /* Readiness remains invalidated if its diagnostic cannot be replaced. */ }
+      return { code: 2, message: `acceptance-fixture: BLOCKED (reservation ${reason}; inspect shared reservation state)` };
+    }
     return { code: 2, message: 'acceptance-fixture: BLOCKED (invalid input, private files, lock, or operation; inspect private run state)' };
   } finally {
     if (lock !== undefined) { closeSync(lock); if (lockPath) unlinkSync(lockPath); }

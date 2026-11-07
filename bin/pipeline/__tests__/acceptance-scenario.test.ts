@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { chmodSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { acceptanceScenarioSchema, runScenarioOperation } from "../acceptance-scenario.js";
+import { acceptanceScenarioSchema, initializeAcceptanceStateDirectory, runScenarioOperation } from "../acceptance-scenario.js";
 
 const paths: string[] = [];
-function directory() { const path = mkdtempSync(join(tmpdir(), "scenario-")); paths.push(path); return path; }
+function directory() { const path = mkdtempSync(join(tmpdir(), "scenario-")); paths.push(path); initializeAcceptanceStateDirectory(path); return path; }
 afterEach(() => paths.splice(0).forEach(path => rmSync(path, { recursive: true, force: true })));
 const actor = { kind: "actor-access", accountId: "6a542fe3-7bba-42f7-844a-deb9489bd85e", accountEmail: "pm@example.com", expectedRoles: ["User"] };
 function contract(generation = "first", usage = "read") {
@@ -146,7 +146,7 @@ describe("atomic local reservations", () => {
     expect(runScenarioOperation("acquire", contract(), dir, { now }).reason).toBe("state-locked");
     expect(existsSync(join(dir, ".lock"))).toBe(true);
     rmSync(join(dir, ".lock"), { recursive: true });
-    const outside = join(directory(), "untouched.txt"); writeFileSync(outside, "PRIVATE-TOKEN"); symlinkSync(outside, join(dir, "ledger.json"));
+    const outside = join(directory(), "untouched.txt"); writeFileSync(outside, "PRIVATE-TOKEN"); unlinkSync(join(dir, "ledger.json")); symlinkSync(outside, join(dir, "ledger.json"));
     expect(runScenarioOperation("acquire", contract(), dir, { now }).reason).toBe("unsafe-ledger-file");
     expect(readFileSync(outside, "utf8")).toBe("PRIVATE-TOKEN");
   });

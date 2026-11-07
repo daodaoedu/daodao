@@ -1,4 +1,22 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { runScenarioOperation, type CleanupAuthorization } from '../acceptance-scenario.js';
+const privateStates: string[] = [];
+afterEach(() => { for (const path of privateStates.splice(0)) rmSync(path, { recursive: true, force: true }); });
+function emptyReservations() {
+  const path = mkdtempSync(join(tmpdir(), 'fixture-reservations-')); privateStates.push(path);
+  writeFileSync(join(path, '.initialized'), 'acceptance-reservations-v1\n', { mode: 0o600 });
+  writeFileSync(join(path, 'ledger.json'), JSON.stringify({ version: 1, reservations: [] }), { mode: 0o600 });
+  return path;
+}
+function retentionContract(type: string, id: string) {
+  return { kind: 'acceptance-scenario', version: 1, issue: 'https://github.com/daodaoedu/daodao/issues/463', generation: 'pending-pm', taskOwner: 'fixture-test', actors: [{ kind: 'actor-access', accountId: '99ce484c-d37d-488b-9e8d-080ba703864f', accountEmail: 'pm@example.com', expectedRoles: ['Admin'] }], resources: [{ environment: 'dev', type, id, usage: 'read' }], prerequisites: [{ description: 'Pending PM fixture', evidenceRef: 'test/fixture' }], retention: { retainUntil: 'pm-accepted', reviewAt: '2026-11-08T00:00:00Z' }, cleanup: { instructions: 'Preserve until acceptance', evidenceRef: 'test/cleanup' }, rebuild: { instructions: 'New generation only', evidenceRef: 'test/rebuild' } };
+}
+function retained(path: string, type: string, id: string) {
+  return runScenarioOperation('acquire', retentionContract(type, id), path);
+}
 import { DEV_ORIGIN, newFixtureManifest, runFixture, fixtureManifestSchema, type FixtureManifest } from '../acceptance-fixture.js';
 const now = new Date('2026-11-07T00:00:00Z');
 const token = (id:number,role:string) => `x.${Buffer.from(JSON.stringify({id,_id:`uuid-${id}`,roles:[role],isTemp:false})).toString('base64url')}.x`;
@@ -33,7 +51,7 @@ function harness() {
     if(method==='PATCH'){org.status=body.status;return reply(org)}
     throw Error('Unexpected request');
   }) as typeof fetch;
-  const deps={fetch:fetcher,now:()=>now,id:()=> 'replacement-run',save:async(m:FixtureManifest)=>{saves.push(structuredClone(m))}};
+  const deps={reservationStateDirectory:emptyReservations(),fetch:fetcher,now:()=>now,id:()=> 'replacement-run',save:async(m:FixtureManifest)=>{saves.push(structuredClone(m))}};
   return {orgs,rows,members,calls,saves,deps,setUncertain:()=>{uncertain=true}};
 }
 const initial=()=>newFixtureManifest('first-run',now);
@@ -180,5 +198,93 @@ describe('issue463 API-only fixture lifecycle',()=>{
       expect(fixtureManifestSchema.safeParse(m).success).toBe(false);
       await expect(runFixture('prepare',m as FixtureManifest,creds,h.deps)).rejects.toThrow(/manifest/);
     }expect(h.calls).toHaveLength(0);
+  });
+});
+
+
+describe('fixture reservation enforcement', () => {
+  it('blocks retained organization before any network or write journal', async () => {
+    const h = harness(), m = initial(); m.scenarios[0].organizationId = 14;
+    expect(retained(h.deps.reservationStateDirectory, 'organization', '14').status).toBe('RESERVED');
+    await expect(runFixture('cleanup', m, creds, h.deps)).rejects.toThrow(/retained|reservation/i);
+    expect(h.calls).toHaveLength(0); expect(h.saves).toHaveLength(0);
+  });
+  it('preflights extra invitations in every organization before revoking an earlier organization', async () => {
+    const h = harness(), m = await prepared(h);
+    h.rows.get(m.scenarios[1].organizationId!)!.push({ id: 999, email: 'controlled+extra@example.com', status: 'pending', requests: [] });
+    expect(retained(h.deps.reservationStateDirectory, 'owner-invitation', '999').status).toBe('RESERVED');
+    h.calls.length = 0; h.saves.length = 0;
+    await expect(runFixture('cleanup', m, creds, h.deps)).rejects.toThrow(/retained|reservation/i);
+    expect(h.calls.every(c => c.method === 'GET')).toBe(true); expect(h.saves).toHaveLength(0);
+    expect(h.orgs.every(o => o.status === 'active')).toBe(true);
+  });
+  it('blocks a discovered request absent from the manifest before earlier writes', async () => {
+    const h = harness(), m = await prepared(h);
+    h.rows.get(m.scenarios[1].organizationId!)![0].requests = [{ id: 999, userId: 328 }];
+    expect(retained(h.deps.reservationStateDirectory, 'invitation-request', '999').status).toBe('RESERVED');
+    h.calls.length = 0;
+    await expect(runFixture('cleanup', m, creds, h.deps)).rejects.toThrow(/retained|reservation/i);
+    expect(h.calls.every(c => c.method === 'GET')).toBe(true);
+  });
+  it('cleans an accepted generation while its claim remains retained, then releases after readback', async () => {
+    const h = harness(), m = await prepared(h), organization = String(m.scenarios[0].organizationId);
+    const contract = retentionContract('organization', organization);
+    const reservation = runScenarioOperation('acquire', contract, h.deps.reservationStateDirectory);
+    expect(reservation.status).toBe('RESERVED');
+    const authorization: CleanupAuthorization = { issue: contract.issue, generation: contract.generation, contractDigest: reservation.contractDigest!, operation: 'cleanup', outcome: 'accepted', outcomeEvidence: 'test/formal-pm-pass' };
+    const ledgerFile = join(h.deps.reservationStateDirectory, 'ledger.json'), before = readFileSync(ledgerFile, 'utf8');
+    h.calls.length = 0; const result = await runFixture('cleanup', m, creds, { ...h.deps, cleanupAuthorization: authorization });
+    expect(result.status).toBe('retired');
+    expect(h.calls.filter(c => c.method !== 'GET').map(c => c.method)).toEqual(['POST', 'PATCH', 'POST', 'PATCH']);
+    expect(readFileSync(ledgerFile, 'utf8')).toBe(before);
+    expect(runScenarioOperation('release', contract, h.deps.reservationStateDirectory, { release: { outcome: 'accepted', outcomeEvidence: authorization.outcomeEvidence, cleanupEvidence: 'test/cleanup-readback-retired' } }).status).toBe('RELEASED');
+  });
+  it('never lets terminal authorization bypass another retained shared claim', async () => {
+    const h = harness(), m = await prepared(h), contract = retentionContract('organization', String(m.scenarios[0].organizationId));
+    const reservation = runScenarioOperation('acquire', contract, h.deps.reservationStateDirectory);
+    expect(runScenarioOperation('acquire', { ...contract, generation: 'another-pm', issue: 'https://github.com/daodaoedu/daodao/issues/475' }, h.deps.reservationStateDirectory).status).toBe('RESERVED');
+    h.calls.length = 0;
+    await expect(runFixture('cleanup', m, creds, { ...h.deps, cleanupAuthorization: { issue: contract.issue, generation: contract.generation, contractDigest: reservation.contractDigest!, operation: 'cleanup', outcome: 'accepted', outcomeEvidence: 'test/formal-pm-pass' } })).rejects.toThrow(/retained|reservation/i);
+    expect(h.calls).toHaveLength(0); expect(h.orgs.every(o => o.status === 'active')).toBe(true);
+  });
+  it('rejects mismatched or incomplete terminal authorization before network', async () => {
+    const h = harness(), m = await prepared(h), contract = retentionContract('organization', String(m.scenarios[0].organizationId));
+    const reservation = runScenarioOperation('acquire', contract, h.deps.reservationStateDirectory);
+    const good = { issue: contract.issue, generation: contract.generation, contractDigest: reservation.contractDigest!, operation: 'cleanup', outcome: 'accepted', outcomeEvidence: 'test/formal-pm-pass' };
+    h.calls.length = 0;
+    for (const authorization of [{ ...good, contractDigest: '0'.repeat(64) }, { ...good, operation: 'rebuild' }, { ...good, outcome: 'pending' }, { ...good, outcomeEvidence: '' }]) {
+      await expect(runFixture('cleanup', m, creds, { ...h.deps, cleanupAuthorization: authorization } as any)).rejects.toThrow(/authorization|retained|reservation/i);
+    }
+    expect(h.calls).toHaveLength(0);
+  });
+  it.each(['prepare', 'check'] as const)('never accepts cleanup authorization for %s', async command => {
+    const h = harness(), m = await prepared(h); h.calls.length = 0;
+    const authorization: CleanupAuthorization = { issue: 'https://github.com/daodaoedu/daodao/issues/463', generation: 'pending-pm', contractDigest: '0'.repeat(64), operation: 'cleanup', outcome: 'accepted', outcomeEvidence: 'test/formal-pm-pass' };
+    await expect(runFixture(command, m, creds, { ...h.deps, cleanupAuthorization: authorization })).rejects.toThrow(/authorization/i);
+    expect(h.calls).toHaveLength(0);
+  });
+  it('blocks missing shared state and creation namespace without sending HTTP', async () => {
+    const h = harness();
+    await expect(runFixture('prepare', initial(), creds, { ...h.deps, reservationStateDirectory: join(h.deps.reservationStateDirectory, 'missing') })).rejects.toThrow(/reservation|state/i);
+    expect(h.calls).toHaveLength(0);
+    expect(retained(h.deps.reservationStateDirectory, 'organization-namespace', 'qa463-fixture-lifecycle').status).toBe('RESERVED');
+    await expect(runFixture('prepare', initial(), creds, h.deps)).rejects.toThrow(/retained|reservation/i);
+    expect(h.calls).toHaveLength(0);
+  });
+  it('keeps readonly check available while PM reservations and another ledger operation exist', async () => {
+    const h = harness(), m = await prepared(h);
+    retained(h.deps.reservationStateDirectory, 'organization', String(m.scenarios[0].organizationId));
+    mkdirSync(join(h.deps.reservationStateDirectory, '.lock'), { mode: 0o700 });
+    h.calls.length = 0; await runFixture('check', m, creds, h.deps);
+    expect(h.calls.length).toBeGreaterThan(0); expect(h.calls.every(c => c.method === 'GET')).toBe(true);
+  });
+  it('holds the shared lock throughout awaited mutation requests', async () => {
+    const h = harness(); const original = h.deps.fetch; let attempted = 0;
+    const fetch = async (input: any, init: any) => {
+      if (init.method !== 'GET') { attempted++; expect(retained(h.deps.reservationStateDirectory, 'organization', '999').reason).toBe('state-locked'); }
+      return original(input, init);
+    };
+    await runFixture('prepare', initial(), creds, { ...h.deps, fetch: fetch as typeof globalThis.fetch });
+    expect(attempted).toBe(2);
   });
 });

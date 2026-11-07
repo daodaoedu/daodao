@@ -17,6 +17,8 @@ pnpm -s tsx bin/pipeline/acceptance-fixture-cli.ts rebuild --run-dir /private/pa
 pnpm -s tsx bin/pipeline/acceptance-fixture-cli.ts cleanup --run-dir /private/path/run --credentials-file /private/path/credentials.json
 ```
 
+所有異動入口都受[共用占用攔截](../../plugin/skills/verify-deploy/references/acceptance-mutation-guard.md)保護；先明確初始化共用狀態，預設 `~/.daodao/acceptance-reservations/dev`。missing／corrupt／locked 狀態直接受阻，不建立新空狀態代替。正式 PM 驗收／取消後，對已保留的 fixture 要提供精確 `--cleanup-authorization-file` 才能 cleanup／rebuild，清理回讀成功後再 release；不能先釋放占用。
+
 ## 準備與驗收
 
 1. `prepare` 建立全新的兩個組織與邀請。重新執行應續接原 generation；遇到不確定寫入結果先核對日誌，不手動刪檔重跑。

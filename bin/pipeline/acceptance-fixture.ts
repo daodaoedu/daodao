@@ -1,5 +1,6 @@
 /** API-only issue463 fixtures. Invitation tokens never enter this tool. */
 import { z } from 'zod';
+import { defaultAcceptanceReservationStateDirectory, withAcceptanceMutationGuard, type MutationResource, type CleanupAuthorization } from './acceptance-scenario.js';
 export const DEV_ORIGIN = 'https://server-dev.daodao.so/api/v1';
 const ROOT = '/lighthouse/admin/organizations';
 export type FixtureCommand = 'prepare' | 'check' | 'cleanup' | 'rebuild';
@@ -10,7 +11,7 @@ export interface FixtureManifest {
   scenarios: FixtureScenario[];
   journal?: { action: 'create' | 'revoke' | 'suspend'; scenario: 'cancel' | 'approve'; invitationId?: number };
 }
-export interface FixtureDependencies { fetch: typeof fetch; now: () => Date; id: () => string; save: (manifest: FixtureManifest) => Promise<void> }
+export interface FixtureDependencies { fetch: typeof fetch; now: () => Date; id: () => string; save: (manifest: FixtureManifest) => Promise<void>; reservationStateDirectory?: string; cleanupAuthorization?: CleanupAuthorization }
 export interface FixtureResult { manifest: FixtureManifest; ready: boolean; findings: string[]; status?: 'retired' }
 type Org = { id: number; name: string; status: string };
 type Invitation = { id: number; email: string; status: string; expiresAt: string; deliveryStatus: string; requests: { id: number; userId: number }[] };
@@ -39,6 +40,28 @@ export const fixtureManifestSchema = z.object({
 function validate(m: FixtureManifest) { if(!fixtureManifestSchema.safeParse(m).success) fail('Invalid fixture manifest'); }
 /** Never echo response bodies: they may contain private identity data. */
 export async function runFixture(command: FixtureCommand, source: FixtureManifest, credentials: FixtureCredentials, deps: FixtureDependencies): Promise<FixtureResult> {
+  validate(source);
+  if (!['prepare', 'check', 'cleanup', 'rebuild'].includes(command)) fail('Unsupported command');
+  if (deps.cleanupAuthorization !== undefined && command !== 'cleanup' && command !== 'rebuild') fail('Cleanup authorization is not allowed for this command');
+  if (command === 'check') return runFixtureLocked(command, source, credentials, deps, () => {});
+  const resources = fixtureMutationResources(source);
+  return withAcceptanceMutationGuard(resources, deps.reservationStateDirectory ?? defaultAcceptanceReservationStateDirectory(),
+    assertUnreserved => runFixtureLocked(command, source, credentials, deps, assertUnreserved),
+    deps.cleanupAuthorization === undefined ? undefined : { authorization: deps.cleanupAuthorization, operation: command === 'cleanup' ? 'cleanup' : 'rebuild' });
+}
+
+function fixtureMutationResources(manifest: FixtureManifest): MutationResource[] {
+  const resources: MutationResource[] = [{ environment: 'dev', type: 'organization-namespace', id: 'qa463-fixture-lifecycle' }];
+  for (const scenario of manifest.scenarios) {
+    if (scenario.organizationId !== undefined) resources.push({ environment: 'dev', type: 'organization', id: String(scenario.organizationId) });
+    if (scenario.invitationId !== undefined) resources.push({ environment: 'dev', type: 'owner-invitation', id: String(scenario.invitationId) });
+    if (scenario.requestId !== undefined) resources.push({ environment: 'dev', type: 'invitation-request', id: String(scenario.requestId) });
+  }
+  if (manifest.journal?.invitationId !== undefined) resources.push({ environment: 'dev', type: 'owner-invitation', id: String(manifest.journal.invitationId) });
+  return resources;
+}
+
+async function runFixtureLocked(command: FixtureCommand, source: FixtureManifest, credentials: FixtureCredentials, deps: FixtureDependencies, assertUnreserved: (resources: MutationResource[]) => void): Promise<FixtureResult> {
   let manifest = structuredClone(source);
   validate(manifest);
   if (!['prepare', 'check', 'cleanup', 'rebuild'].includes(command)) fail('Unsupported command');
@@ -87,15 +110,38 @@ export async function runFixture(command: FixtureCommand, source: FixtureManifes
     if (!Array.isArray(rows)) fail('Invalid invitation list');
     return rows;
   }
+  async function assertScenarioReservations(s: FixtureScenario) {
+    if (!s.organizationId) return;
+    const resources: MutationResource[] = [{ environment: 'dev', type: 'organization', id: String(s.organizationId) }];
+    for (const row of await invitations(s)) {
+      if (!Number.isSafeInteger(row.id) || row.id <= 0 || !Array.isArray(row.requests)) fail('Invalid invitation mutation scope');
+      resources.push({ environment: 'dev', type: 'owner-invitation', id: String(row.id) });
+      for (const request of row.requests) {
+        if (!Number.isSafeInteger(request.id) || request.id <= 0) fail('Invalid invitation request scope');
+        resources.push({ environment: 'dev', type: 'invitation-request', id: String(request.id) });
+      }
+    }
+    assertUnreserved(resources);
+  }
+  async function preflightAllScenarios() {
+    // Every affected organization is read before the first write; a late conflict must not leave earlier ones retired.
+    for (const scenario of manifest.scenarios) if (scenario.organizationId) {
+      await owned(scenario);
+      await assertScenarioReservations(scenario);
+    }
+  }
   async function persist() { await deps.save(structuredClone(manifest)); }
   async function mutate(s: FixtureScenario, action: 'create' | 'revoke' | 'suspend', path: string, body?: unknown, invitationId?: number) {
     if (manifest.journal) fail('Unresolved write journal');
+    assertUnreserved(fixtureMutationResources(manifest));
+    if (s.organizationId) await assertScenarioReservations(s);
     manifest.journal = { action, scenario: s.kind, ...(invitationId === undefined ? {} : { invitationId }) };
     await persist(); // Failure here prevents the HTTP mutation.
     const result = await api(action === 'suspend' ? 'PATCH' : 'POST', path, body, 'admin', action === 'create' ? 201 : 200);
     if (action === 'create') {
       if (!result || !Number.isSafeInteger(result.id) || result.name !== s.name) fail('Create response cannot establish ownership');
       s.organizationId = result.id;
+      await assertScenarioReservations(s);
     }
     delete manifest.journal;
     await persist();
@@ -108,7 +154,9 @@ export async function runFixture(command: FixtureCommand, source: FixtureManifes
       const matches = (await organizations()).filter(o => o.name === s.name);
       // Zero matches cannot prove an earlier request will not commit later. No blind retry.
       if (matches.length !== 1 || (s.organizationId !== undefined && s.organizationId !== matches[0].id)) fail('Ambiguous creation; manual reconciliation required');
+      assertUnreserved([{ environment: 'dev', type: 'organization', id: String(matches[0].id) }]);
       s.organizationId = matches[0].id;
+      await assertScenarioReservations(s);
     } else {
       const org = await owned(s);
       if (j.action === 'suspend' && org.status !== 'suspended') fail('Ambiguous suspension; manual reconciliation required');
@@ -122,7 +170,7 @@ export async function runFixture(command: FixtureCommand, source: FixtureManifes
   }
   async function prepare() {
     await reconcile();
-    for (const s of manifest.scenarios) if (s.organizationId) await owned(s);
+    await preflightAllScenarios();
     for (const s of manifest.scenarios) {
       if (s.retired) fail('Retired run must be rebuilt');
       if (!s.organizationId) {
@@ -159,7 +207,7 @@ export async function runFixture(command: FixtureCommand, source: FixtureManifes
   async function cleanup() {
     await reconcile();
     // Establish ownership of every known organization before changing any of them.
-    for (const s of manifest.scenarios) if (s.organizationId) await owned(s);
+    await preflightAllScenarios();
     for (const s of manifest.scenarios) {
       if (!s.organizationId) continue;
       const org = await owned(s);
