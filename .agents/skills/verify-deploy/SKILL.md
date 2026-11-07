@@ -10,6 +10,23 @@ description: PR merge 後由 AI 查核合併、驗收與部署證據，更新適
 
 AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚待決策事項。合併、部署與功能可用是不同事實，不能互相替代。
 
+## 0. 先確定收尾目標
+
+PM 卡的「合併＋冒煙」標準交付包含 §2.5 的 PM 同帳號重播、還原保留資料、移 Acceptance 與發布交接；既有授權涵蓋這些標準輸出，不等使用者再次催促。工程冒煙 PASS 不是本流程的停止點。只有使用者明確限縮範圍，或查證後仍無法自行排除的外部阻擋，才保留未完成狀態；「還沒準備 PM 資料／沒開始重播」是待做工作，不是 blocker。
+
+開始前先分開 **工程冒煙後可清理** 與 **保留給 PM** 的資料。PM 資料契約先列帳號／角色、入口、必要值、每一步預期、重設方式與期限；後面的同帳號實跑引用同一份契約，不在工程清理後才補想驗收資料。
+
+對預設 PM 卡，在 daodao checkout root 註冊本輪任務（`TASK` 為實際 task 目錄）：
+
+```bash
+python3 plugin/hooks/check-post-merge-closeout.py begin \
+  --task-dir "$TASK" --issue https://github.com/daodaoedu/daodao/issues/<n>
+```
+
+此指令建立／續用 `post-merge-closeout.json`，並以 `CODEX_THREAD_ID` 或明確 `--session-id` 綁定本 session。無 session ID 的客戶端使用 `--no-bind`，結束前仍手動執行檢查，不宣稱 Stop 自動攔截。`acceptance:engineering` 卡沿用既有工程驗收路徑，不填假的 PM 證據；使用者明確要求只做較小範圍時，記錄原話與未完成事項，不能擅自把完整 PM 交付改成 smoke-only。
+
+收據格式、合法 blocked 與平台限制見 [收尾完成契約](references/closeout-contract.md)。
+
 ## 1. 確認合併與範圍
 
 - 使用 `gh pr view` 或實際可用的 GitHub MCP 查 PR state、mergedAt、merge commit、base 與相關 Issue。Claude／Codex 依 callable inventory 使用等效工具，不依賴特定 hooks 或提問工具。
@@ -56,7 +73,7 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
    全部 ✅ 只代表 AI 冒煙通過，docs/product 標「dev 冒煙通過，待 PM 驗收」；PM 驗收通過後才標「已驗收」（見 §2.6）。任一 ❌ → 走 `report-bug` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。僅工具、登入、環境或 installer 前提不足時記「未冒煙／受阻：<原因>」，不算行為 FAIL 或可用：初次交驗前留 Review 並列出待排除前提；已在 Acceptance 則依 §2.6 留 Acceptance、掛 `acceptance:blocked`。
 
-4a. **交接可執行性檢查（移 Acceptance 前必做）**：工程冒煙通過後，把即將發布的請驗收留言另存檔，從其中的網址開始，使用**指定 PM 測試帳號、相同角色、相同資料**逐步實跑全部網頁步驟，確認每個預期結果都能看見。不得以工程帳號、其他 fixture 或 API 成功代替；不碰 PM 的 Google 憑證，工程可用 `dev-login mode=user` 查核同一既有帳號，但記明登入方式，這不等於正式 PM 驗收。
+4a. **交接可執行性檢查（移 Acceptance 前必做）**：工程冒煙通過後，把即將發布的請驗收留言另存檔，先對草稿跑 `acceptance-lint.ts` 至 exit 0，固定草稿 digest 及逐步帳號／資料／預期，再從其中的網址開始，使用**指定 PM 測試帳號、相同角色、相同資料**逐步實跑全部網頁步驟，確認每個預期結果都能看見。不得以工程帳號、其他 fixture 或 API 成功代替；不碰 PM 的 Google 憑證，工程可用 `dev-login mode=user` 查核同一既有帳號，但記明登入方式，這不等於正式 PM 驗收。
    - 先列每條 AC 的資料前提：資料 ID／直接連結、擁有者、所需 membership／權限、可修改或鎖定狀態、必要欄位值與數量，以及保存／重設方式。只看名稱或沿用舊冒煙資料不算確認；例如 #332 需要真正未鎖定的第 2／5 天資源，名稱含「第5天」不算。
    - 包含取消／確認、會消耗資料、手機或參考稿比對時，依 [可重複驗收](references/repeatable-acceptance.md) 拆分支、安排獨立資料及操作順序；需要重設資料時，交付已實跑的重設腳本／命令與資料回讀證據。純唯讀項不要求重設腳本。手機尺寸寫在對應 PM 步驟；視覺比對列明參考來源與逐項重點。
    - 有既有讀取端點可判定的前提，執行唯讀檢查並保存時間、契約與逐項結果。實踐資源使用 [acceptance-preflight](references/acceptance-preflight.md)；其他資料沿用對應檢查腳本，尚無腳本則保存即時讀取證據與人工檢查表，不填假的 PASS。`acceptance-lint` 仍只檢查文字，不能證明 fixture 或網頁旅程可用。
@@ -125,6 +142,19 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 清單交人核准後，才開卡或修改 skill；不自動改。§4 報告加一行「經驗整理：閘門候選 N／gotchas N／丟棄 N」，沒觸發就寫「未觸發」。
 
 ## 4. AI 自審後交人審閱
+
+對 §0 註冊的 PM 任務，最後回覆前必須執行：
+
+```bash
+python3 plugin/hooks/check-post-merge-closeout.py check \
+  --receipt "$TASK/post-merge-closeout.json"
+```
+
+- `handed-off`／exit 0：合併、部署、冒煙、同帳號逐步重播、還原後前置檢查、資料保留、交接 lint 及留言／Acceptance 遠端回讀齊全，才算本輪工程交付結束。正式 PM 驗收仍未完成，不關卡。
+- `incomplete`／exit 1：繼續完成列出的可做工作，不用「先留 Review，之後再做」代替本輪收尾。不得新增一則自填 PASS 表就算修復，來源證據須保留並自審。
+- `blocked`／exit 3：仍是未完成。保存外部失敗證據、已查路徑、無法自行排除的原因、恢復條件及下一步，清楚回報受阻；可先處理不依賴阻擋的工作，不無限重試。環境恢復後續用原收據，重做受影響步驟，不能沿用舊 blocked 當放行理由。
+
+Stop 入口只檢查明確綁定的本 session／task，放在 Git clean 判斷之前，不掃描其他任務。只有確認客戶端已信任且實際觸發 hook，才能宣稱自動攔截；手動 CLI／hook 測試只證明該入口的行為。
 
 - 檢查文件間狀態一致性、來源連結、FR／TP 對應、未完成項目及 diff；按變更執行適用文件檢查。
 - 報告每項「已完成／未驗證／待決策／不適用」、實際修改文件及證據。人只需審閱修訂與產品／發布決策，不必重新手動搜尋合併證據。
