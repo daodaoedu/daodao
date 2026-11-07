@@ -4,12 +4,15 @@
 
 ## 測試帳號
 
-PM 專用的測試帳號（不是個人帳號），一個角色一個，不互相代用：
+PM 專用的測試帳號（不是個人帳號），依實際角色使用，不互相代用：
 
 | 角色 | 帳號 | 登入方式 |
 |---|---|---|
 | admin | `peichun1213@gmail.com` | Google |
-| 一般使用者 | `wedialogbox@gmail.com` | Google |
+| 一般使用者 | `tlshare123@gmail.com` | Google（使用者已確認可登入） |
+| admin 備用 | `wedialogbox@gmail.com` | Google；目前實際為 Admin，不作一般使用者 |
+
+帳號 ID、預期全域角色及登入能力來源見 [actors.json](actors.json)。這是預期契約，不是即時權限保證；工程交接前須執行[帳號與權限唯讀前置檢查](../../verify-deploy/references/acceptance-actor-preflight.md)。Google 登入能力與工程 dev-login 分開記錄：301／306 為既有 PM 指定帳號，295 由使用者確認；前置檢查不證明 Google OAuth 可用。組織管理員／講師／團友是情境權限，不能從全域 User／Admin 角色推定。
 
 不在報告或截圖裡留密碼、驗證碼或 token。請驗收留言指定別的帳號時照留言；那個帳號 PM 登不進去就 BLOCKED。
 
@@ -29,7 +32,7 @@ PM 專用的測試帳號（不是個人帳號），一個角色一個，不互�
 | 角色 | 用在 | PM 怎麼登入 |
 |---|---|---|
 | 未登入 | 公開頁、登入前流程 | 用沒有登入的瀏覽器視窗（無痕視窗或登出後確認） |
-| 一般使用者 | 產品 Web 的使用者畫面 | `wedialogbox@gmail.com`，Google 登入 |
+| 一般使用者 | 產品 Web 的使用者畫面 | `tlshare123@gmail.com`，Google 登入 |
 | admin | 管理後台；需要管理員權限的產品畫面 | `peichun1213@gmail.com`，Google 登入（後台要求帳號有 admin／superadmin 角色） |
 | 團主／講師、團友 | 燈塔場次、共同挑戰 | 請驗收留言必須寫明用哪個 PM 帳號、該帳號已被加進哪個組織／場次；沒寫就 BLOCKED |
 

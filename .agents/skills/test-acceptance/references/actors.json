@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "environment": "dev",
+  "verifiedAt": "2026-11-07T07:54:12.378Z",
+  "actors": [
+    {
+      "key": "engineering-superadmin",
+      "externalId": "1ae5d7fc-aec9-40a7-b52c-a1c9a5d27150",
+      "email": "vincent.xu.work@gmail.com",
+      "expectedRoles": [
+        "SuperAdmin"
+      ],
+      "audience": "engineering",
+      "googleAccessEvidence": "not authorized as a PM Google actor"
+    },
+    {
+      "key": "pm-user",
+      "externalId": "6a542fe3-7bba-42f7-844a-deb9489bd85e",
+      "email": "tlshare123@gmail.com",
+      "expectedRoles": [
+        "User"
+      ],
+      "audience": "pm",
+      "googleAccessEvidence": "user confirmed in current conversation; Google flow not rerun"
+    },
+    {
+      "key": "pm-admin",
+      "externalId": "99ce484c-d37d-488b-9e8d-080ba703864f",
+      "email": "peichun1213@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ],
+      "audience": "pm",
+      "googleAccessEvidence": "canonical PM Google account; current Google flow not rerun"
+    },
+    {
+      "key": "pm-admin-alternate",
+      "externalId": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "email": "wedialogbox@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ],
+      "audience": "pm",
+      "googleAccessEvidence": "canonical PM Google account; current Google flow not rerun"
+    },
+    {
+      "key": "engineering-user-owner",
+      "externalId": "1948934c-95fd-4d51-a525-8d28e50e1d75",
+      "email": "vincent.xu.work+qa344@gmail.com",
+      "expectedRoles": [
+        "User"
+      ],
+      "audience": "engineering",
+      "googleAccessEvidence": "not authorized as a PM Google actor"
+    },
+    {
+      "key": "engineering-user-peer",
+      "externalId": "815206d1-abaf-4e72-9389-a61b40da571d",
+      "email": "vincent.xu.work+qa345@gmail.com",
+      "expectedRoles": [
+        "User"
+      ],
+      "audience": "engineering",
+      "googleAccessEvidence": "not authorized as a PM Google actor"
+    },
+    {
+      "key": "fixture-owner",
+      "externalId": "00000000-0323-4000-8000-000000900001",
+      "email": "vincent.xu.work+fixture-owner@gmail.com",
+      "expectedRoles": [
+        "User"
+      ],
+      "audience": "engineering",
+      "googleAccessEvidence": "not authorized as a PM Google actor"
+    },
+    {
+      "key": "fixture-coach",
+      "externalId": "00000000-0323-4000-8000-000000900002",
+      "email": "vincent.xu.work+fixture-coach@gmail.com",
+      "expectedRoles": [
+        "User"
+      ],
+      "audience": "engineering",
+      "googleAccessEvidence": "not authorized as a PM Google actor"
+    },
+    {
+      "key": "fixture-learner",
+      "externalId": "00000000-0323-4000-8000-000000900003",
+      "email": "vincent.xu.work+fixture-learner@gmail.com",
+      "expectedRoles": [
+        "User"
+      ],
+      "audience": "engineering",
+      "googleAccessEvidence": "not authorized as a PM Google actor"
+    }
+  ]
+}
