@@ -33,7 +33,7 @@
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/stop-quality-gate.sh", "timeout": 10000 }
+          { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/quiet-stop.py\"", "timeout": 10000 }
         ]
       }
     ]
