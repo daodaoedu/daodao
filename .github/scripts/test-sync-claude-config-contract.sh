@@ -15,9 +15,10 @@ python3 - "$WORKFLOW" <<'PY' || fail "sync workflow 觸發條件不符：須只�
 import sys, yaml
 on = yaml.load(open(sys.argv[1]), Loader=yaml.BaseLoader)["on"]
 assert "push" not in on, "push"
+assert set(on) == {"schedule", "workflow_dispatch"}, list(on)
 assert "workflow_dispatch" in on, "workflow_dispatch"
 crons = [c["cron"].split() for c in on["schedule"]]
-assert any(c[2] == "*" and c[4] == "*" for c in crons), crons
+assert any(len(c) == 5 and c[2:] == ["*", "*", "*"] for c in crons), crons
 PY
 
 # 2026-09-21 起 skills 與 hooks 由 daodao plugin 提供，不再逐檔複製到子專案。

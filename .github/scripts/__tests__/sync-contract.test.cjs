@@ -110,6 +110,16 @@ test('排程不是每天就不給過（plugin 改了要隔天內同步出去）'
   assert.match(result.stdout + result.stderr, /schedule/);
 });
 
+test('排程只在一月執行就不給過', () => {
+  const result = runContract({ workflowText: workflow.replace("cron: '17 18 * * *'", "cron: '17 18 * 1 *'") });
+  assert.notEqual(result.status, 0);
+});
+
+test('加上額外事件觸發就不給過', () => {
+  const result = runContract({ workflowText: workflow.replace('on:\n', 'on:\n  pull_request:\n') });
+  assert.notEqual(result.status, 0);
+});
+
 test('拿掉手動觸發就不給過（急用時要能立刻同步）', () => {
   const result = runContract({ workflowText: workflow.replace('  workflow_dispatch:\n', '') });
   assert.notEqual(result.status, 0);
