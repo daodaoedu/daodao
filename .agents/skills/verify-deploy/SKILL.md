@@ -10,6 +10,8 @@ description: PR merge 後由 AI 查核合併、驗收與部署證據，更新適
 
 AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚待決策事項。合併、部署與功能可用是不同事實，不能互相替代。
 
+共用的準備、操作、證據及資料生命週期依[驗證配方](../../../plugin/docs/verification-recipe.md)；本skill另外核對部署版本、工程交接收據與Planning狀態，不以共用配方取代正式PM規則。
+
 ## 0. 先確定收尾目標
 
 PM 卡的「合併＋冒煙」標準交付包含 §2.5 的 PM 同帳號重播、還原保留資料、移 Acceptance 與發布交接；既有授權涵蓋這些標準輸出，不等使用者再次催促。工程冒煙 PASS 不是本流程的停止點。只有使用者明確限縮範圍，或查證後仍無法自行排除的外部阻擋，才保留未完成狀態；「還沒準備 PM 資料／沒開始重播」是待做工作，不是 blocker。
@@ -73,13 +75,10 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
 
    全部 ✅ 只代表 AI 冒煙通過，docs/product 標「dev 冒煙通過，待 PM 驗收」；PM 驗收通過後才標「已驗收」（見 §2.6）。任一 ❌ → 走 `report-bug` 開卡、comment 標「已合併，dev 冒煙未過」，中央 Issue 不標 Done。僅工具、登入、環境或 installer 前提不足時記「未冒煙／受阻：<原因>」，不算行為 FAIL 或可用：初次交驗前留 Review 並列出待排除前提；已在 Acceptance 則依 §2.6 留 Acceptance、掛 `acceptance:blocked`。
 
-4a. **交接可執行性檢查（移 Acceptance 前必做）**：工程冒煙通過後，把即將發布的請驗收留言另存檔，先對草稿跑 `acceptance-lint.ts` 至 exit 0，固定草稿 digest 及逐步帳號／資料／預期，再從其中的網址開始，使用**指定 PM 測試帳號、相同角色、相同資料**逐步實跑全部網頁步驟，確認每個預期結果都能看見。不得以工程帳號、其他 fixture 或 API 成功代替；不碰 PM 的 Google 憑證，工程可用 `dev-login mode=user` 查核同一既有帳號，但記明登入方式，這不等於正式 PM 驗收。
-   - 先列每條 AC 的資料前提：資料 ID／直接連結、擁有者、所需 membership／權限、可修改或鎖定狀態、必要欄位值與數量，以及保存／重設方式。只看名稱或沿用舊冒煙資料不算確認；例如 #332 需要真正未鎖定的第 2／5 天資源，名稱含「第5天」不算。
-   - 包含取消／確認、會消耗資料、手機或參考稿比對時，依 [可重複驗收](references/repeatable-acceptance.md) 拆分支、安排獨立資料及操作順序；需要重設資料時，交付已實跑的重設腳本／命令與資料回讀證據。純唯讀項不要求重設腳本。手機尺寸寫在對應 PM 步驟；視覺比對列明參考來源與逐項重點。
-   - 有既有讀取端點可判定的前提，執行唯讀檢查並保存時間、契約與逐項結果。帳號先執行[帳號與情境前置檢查](references/acceptance-actor-preflight.md)，核對指定 external ID、email 與完整角色集合；需要組織／場次時列出對應契約。成員資格不代表團主／教練權限，須另附該權限的實跑證據。實踐資源使用 [acceptance-preflight](references/acceptance-preflight.md)；其他資料沿用對應檢查腳本，尚無腳本則保存即時讀取證據與人工檢查表，不填假的 PASS。`acceptance-lint` 仍只檢查文字，不能證明 fixture 或網頁旅程可用。
-   - 瀏覽器確認實際登入帳號，照留言順序實跑，保存各步驟輸入與終態證據。做不到就列「交接受阻」與缺少的前提；初次交驗留 Review，不先把問題丟給 PM。
-   - 實跑後還原用過的 fixture，再檢查初始資料，**保留至 PM 驗完**；不要按一般冒煙清理規則刪掉交接指定資料。若會到期、被 reset 或排程修改，寫出有效期限與可執行的重設方式；依賴尚未開發的設定入口不算準備方式。無法維持前提時不要交驗。
-   - 工程證據附「驗收前置檢查」：檢查時間、指定帳號／角色、資料連結與必要值、唯讀報告、同帳號逐步實跑證據、還原後檢查與保留／到期規則。沒有特殊 fixture 仍須說明如何從指定入口建立；不能以 none 跳過步驟實跑。
+4a. **交接可執行性檢查（移 Acceptance 前必做）**：依[共用驗證配方](../../../plugin/docs/verification-recipe.md)固定每條原步驟／AC的環境、帳號、資料、觀察、證據與收尾。先把最終交接草稿另存並跑最新 `acceptance-lint` 至exit0，固定digest後，以**指定PM測試帳號、相同角色、相同資料**逐步實跑全部網頁步驟；工程可用dev-login mode=user，但不碰Google憑證、不代表正式PM驗收。
+   - 依[可重複驗收](../../../plugin/docs/repeatable-acceptance.md)安排分支、消耗順序、手機尺寸與實跑過的重建方法；純唯讀不要求重設腳本。不能只看名稱當資料前提成立。
+   - 執行[帳號與情境前置檢查](references/acceptance-actor-preflight.md)，核對指定external ID、email、完整角色集合與適用組織／場次；owner／coach需另附權限實跑。實踐資源沿用[acceptance-preflight](references/acceptance-preflight.md)；其餘保存真實唯讀報告，沒有adapter不填假的PASS。
+   - 重播後還原並回讀PM起點，**保留至PM驗完**，附期限及已驗證重建方式。工程證據需含凍結契約、同帳號逐步UI、還原後前提與保留證據；既有closeout驗綁定，不能替代操作。前提不足就記受影響項；初次交驗留Review，不把待準備資料當PM待辦。
 
 5. **回寫 Planning board 並交給 PM**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
 
@@ -94,7 +93,7 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
 
    移 Acceptance 後**立刻**在中央 issue 發交接留言（[issue-status-comment.md](../../../plugin/templates/issue-status-comment.md) 的「交給 PM 驗收」段）：第一行隱藏標記 `<!-- daodao:acceptance-request -->`（PM 的 [test-acceptance](../test-acceptance/SKILL.md) 靠它找規格）、`@peggy1213-create`、測試網址（直接點進對應頁面）、白話驗收步驟、對照的 AC、工程證據、驗證報告連結、已知限制、驗完收尾（驗收建立的資料怎麼處理），以及「通過請關 issue；退回請留言哪條 AC 沒過並移 Need Fix」。沒發交接留言等於 PM 不知道輪到他。
 
-   **驗收步驟只寫 PM 在畫面上做得到、看得到的操作與預期**。冒煙表裡的 API 送出內容／回讀、regression test、CI、log 改寫成「工程證據（已驗，PM 不需重做）」區塊並附連結，不要搬進 PM 步驟；只能用 API 或測試驗的 AC 標工程驗收項，不列入 PM 步驟。驗收契約「必須證據」欄寫了 API 回讀或測試時，「對照的 AC」要寫明由工程提供、PM 依畫面判定（#370、#358 的 PM 照契約去要 PUT body、GET 回讀與 regression test 輸出，判 BLOCKED 退回）。手機步驟必須逐條寫明寬×高 CSS px；來源未指定時工程以 390×844 CSS px 實跑後補入，詳見 [尺寸與最新 gate](references/repeatable-acceptance.md#尺寸與視覺比對)。留言先寫成檔案，發布前必跑最新 `origin/main` 的檢查（不能只跑共享 root 的舊版本；fetch 失敗不交驗）：
+   **驗收步驟只寫 PM 在畫面上做得到、看得到的操作與預期**。冒煙表裡的 API 送出內容／回讀、regression test、CI、log 改寫成「工程證據（已驗，PM 不需重做）」區塊並附連結，不要搬進 PM 步驟；只能用 API 或測試驗的 AC 標工程驗收項，不列入 PM 步驟。驗收契約「必須證據」欄寫了 API 回讀或測試時，「對照的 AC」要寫明由工程提供、PM 依畫面判定（#370、#358 的 PM 照契約去要 PUT body、GET 回讀與 regression test 輸出，判 BLOCKED 退回）。手機步驟必須逐條寫明寬×高 CSS px；來源未指定時工程以 390×844 CSS px 實跑後補入，詳見 [尺寸與最新 gate](../../../plugin/docs/repeatable-acceptance.md#尺寸與視覺比對)。留言先寫成檔案，發布前必跑最新 `origin/main` 的檢查（不能只跑共享 root 的舊版本；fetch 失敗不交驗）：
 
    ```bash
    # 在 daodao root 執行；留言檔放 repo 外的暫存位置
@@ -129,17 +128,13 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
 3. 結構、入口或 build 流程有變更時更新適用 codebase-map；服務依賴／schema 流程有變更時，先查 canonical system-map 與實際同步機制，再同步可確認的副本，不假定固定有六份。
 4. 相關 repo／文件不可存取時留下具體路徑、建議修訂與限制；不宣稱跨 repo 已同步。不相關項目標為不適用。
 
-## 3.5 這次該被擋卻沒擋的（符合條件才做）
+## 3.5 這次該被擋卻沒擋的
 
-只在以下情況做：dev 冒煙有 ❌、verify 同一項失敗兩次以上、PM 退回，或這張卡本身是漏到 dev／prod 的 bug。要在 develop cleanup 刪掉任務資料夾**之前**做，task.md 的失敗紀錄是唯一素材。
+當 dev 冒煙失敗、同項 verify 反覆失敗、PM 退回／受阻或 bug 已漏到目標環境時，在 cleanup 前使用 [prevent-repeat-failures](../prevent-repeat-failures/SKILL.md) 整理原始證據；需求／設計時已知的風險也可由該 skill 選擇較早的防線，不必等驗收失敗。
 
-每條教訓分到三類之一：
+產出「原因 → 預防 → 攔截點 → 驗證 → 實際狀態」紀錄，先查現有機制，區分執行漏掉、版本落後與機制缺口。需要新工具的候選放 `notes/issue-drafts/`；判斷項回既有 skill，已覆蓋或一次性事件記不採用理由。所有後續實作與發布依本輪既有授權；只有提案授權時不自動開卡或改共用規則，已明確授權的本機改善不重問。
 
-1. **能用腳本、lint 或閘門抓到**：寫成 issue 草稿（`notes/issue-drafts/`），標「閘門候選」，指出最適合掛的位置（pre-pr-gate、check-pr-evidence、acceptance-lint 等）。新閘門要先在事故修正前的版本跑出 ❌、修正後 ✅。
-2. **需要判斷、寫不成檢查**：提議一條 develop `gotchas.md` 的「症狀 → 做法（#n）」。
-3. **一次性的**：丟掉，寫一行理由。
-
-清單交人核准後，才開卡或修改 skill；不自動改。§4 報告加一行「經驗整理：閘門候選 N／gotchas N／丟棄 N」，沒觸發就寫「未觸發」。
+§4 報告列已完成防線及仍待驗證的接入／啟用；此回顧不取代原產品的交接、PM驗收或完成條件。
 
 ## 4. AI 自審後交人審閱
 

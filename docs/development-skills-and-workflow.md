@@ -21,13 +21,16 @@
 | 審查 | review-change、collect-pr-feedback | 查證 findings、修正已授權問題、重跑受影響驗證 | 產品取捨、剩餘風險及新增範圍 |
 | 通知 | notify-related-issue | 核對 PR／Issue 狀態、草擬有證據的更新、查重 | 尚未授權的留言／關閉操作 |
 | 合併收尾 | verify-deploy、develop cleanup | 核實全部 repo merged、dev 冒煙、文件校準、清理前檢查 | 冒煙結果、未決完成範圍及必要清理授權 |
+| 防止重犯 | prevent-repeat-failures | 查證事故與現有防線，選需求到驗收的預防／攔截／驗證關卡，完成授權內改善與反例驗證 | 原因分類、必要決策及尚未授權的接入／發布 |
 | board | move-board-card | Planning board 七欄語意（含 PM 驗收的 Acceptance）、`bin/pipeline/board.ts set／remove／audit`、內建 workflow 限制 | 卡片狀態不對、想找哪些卡漏移 |
 
 ## 四平台的 skill 來源
 
-上述 15 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版在 repo 裡讀 `.agents/skills/`、在 repo 外裝 `plugin/out/openai-plugin/`，ChatGPT 網頁／行動版與 Claude.ai 用 `plugin/out/web-plugin/`（`daodao-web`，只收 7 個不需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
+上述 16 個 skill 的完整規則只有一份，在 `plugin/skills/<name>/SKILL.md`；四個平台的檔案都是 `pnpm plugin:build` 的產物：Claude Code 直接載入 `plugin/`，Codex 與 ChatGPT 桌面版在 repo 裡讀 `.agents/skills/`、在 repo 外裝 `plugin/out/openai-plugin/`，ChatGPT 網頁／行動版與 Claude.ai 用 `plugin/out/web-plugin/`（`daodao-web`，只收 8 個不強制需要 checkout 的流程）。安裝方式、能力落差與查證依據見 [plugin/README.md](../plugin/README.md)。子專案仍需讀其 AGENTS／CLAUDE 與實際 scripts。行銷、營運及寄信 skill 不屬於本次開發流程覆蓋。
 
 Codex 有自己的 hooks（`.codex/hooks.json`，與 Claude Code 指向同一批腳本），但**首次使用要先 `/hooks` 信任**才會觸發；沒信任就等同沒有閘門，須主動執行相同檢查並保留輸出。ChatGPT 與 Claude.ai 沒有閘門機制，一律由 skill 內文逐項執行。工具不可用標限制；缺少獨立 agent 不把自審冒稱獨立 review。檔案存在不證明各客戶端端到端實測通過。
+
+共用驗證內容見[驗證配方](../plugin/docs/verification-recipe.md)及[可重複驗收](../plugin/docs/repeatable-acceptance.md)；工程與正式PM入口仍有各自的工具、身分、發布與完成條件。防線紀錄由`prevent-repeat-failures`維護，不因共用配方而新增skill。
 
 ## 文件與執行基準
 
@@ -49,4 +52,4 @@ Codex 有自己的 hooks（`.codex/hooks.json`，與 Claude Code 指向同一批
 
 ## 從重複錯誤改善
 
-三條規則與機械檢查見 [把第二次錯誤變成規則](automation/agent-learning-loop.md)。先執行 `pnpm agent:check`；任務試行時另檢查自己的 agent-handoff.json；新 delivery hook 預設 off，完整 trace 尚未驗證，不自動攔截既有任務。這是本機／CI 契約檢查，不代表 agent 行為、部署或各客戶端 hook 已驗證。
+先使用 [prevent-repeat-failures](../plugin/skills/prevent-repeat-failures/SKILL.md) 將事故對應到需求至驗收的關卡；既有三條規則與機械檢查見 [把第二次錯誤變成規則](automation/agent-learning-loop.md)。近期案例見 [驗收受阻原因整理](testing/acceptance-blockers-2026-11-07.md)。先執行 `pnpm agent:check`；任務試行時另檢查自己的 agent-handoff.json；新 delivery hook 預設 off，完整 trace 尚未驗證，不自動攔截既有任務。這是本機／CI 契約檢查，不代表 agent 行為、部署或各客戶端 hook 已驗證。

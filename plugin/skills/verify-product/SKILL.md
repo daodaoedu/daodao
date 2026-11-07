@@ -9,6 +9,8 @@ description: 實際操作產品 Web App，驗證指定功能的使用者路徑�
 
 沿用本次授權。此流程可啟動自己的隔離服務與合成 fixture，不授權變更共享資料、部署、merge、對外寄信或發布報告。
 
+準備、逐步觀察、證據範圍及資料收尾沿用[共用驗證配方](../../docs/verification-recipe.md)；以下只維護本機driver/runtime的專用操作。
+
 ## 選擇與準備
 
 - 先執行 `node scripts/drive.cjs list`（路徑相對本 skill）。只對已註冊、實跑過的 driver 宣稱可重跑；列不出的功能回到 feature map 的既有 harness。缺 recipe 就記缺口，不用直接 service 呼叫代替使用者入口。
@@ -31,9 +33,7 @@ description: 實際操作產品 Web App，驗證指定功能的使用者路徑�
 
 ## Evidence
 
-遵循[證據邊界](references/proof-standards.md)。結果需包含受驗版本、操作入口、動作、觀察值、artifact、替換及未驗項；UI/API/worker/SMTP使用各自的真實結果，不為填表捏HTTP碼。
-
-保留 action及result、HTTP或job狀態、DB第二視角、截圖／trace／影片。後端整合與直接函式測試分列，不冒稱使用者旅程。`PASS`、agent自述、HTML預覽或格式gate通過都不能獨立證明產品可用。
+依[共用證據邊界](../../docs/verification-recipe.md#證據邊界)記錄動作、觀察、artifact、替換及未驗項；UI／API／worker／SMTP各用自身真實結果。本機driver的時間加速與維護細節見[產品driver證據](references/proof-standards.md)。
 
 ## Cleanup
 

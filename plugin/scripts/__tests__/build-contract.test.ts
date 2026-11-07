@@ -226,7 +226,7 @@ describe('產物的相對連結必須解析得到', () => {
   // 跟 canonical 同深度，repo 根連結本來就是對的；(2) standalone 包沒帶 docs/
   // 與 templates/，skill 內的相對連結全指空。死連結不會報錯，agent 只會讀不到規則
   // 然後照自己的意思做事，所以這裡逐條實際解析。
-  const LINK = /\]\(([^)#:]+\.(?:md|mjs|py|json|sh))\)/g
+  const LINK = /\]\(([^)#:]+\.(?:md|mjs|py|json|sh))(?:#[^)]*)?\)/g
 
   function walkMd(dir: string): string[] {
     return readdirSync(dir).flatMap((e) => {
@@ -255,6 +255,24 @@ describe('產物的相對連結必須解析得到', () => {
       expect(brokenLinks(root)).toEqual([])
     })
   }
+
+  it('nested verification references remain navigable to the shipped shared recipe', () => {
+    const cases = [
+      ['.agents/skills/develop/references/phases/verify.md', 'plugin/docs/verification-recipe.md'],
+      ['.agents/skills/verify-product/references/proof-standards.md', 'plugin/docs/verification-recipe.md'],
+      ['plugin/out/openai-plugin/skills/develop/references/phases/verify.md', 'plugin/out/openai-plugin/docs/verification-recipe.md'],
+      ['plugin/out/openai-plugin/skills/verify-product/references/proof-standards.md', 'plugin/out/openai-plugin/docs/verification-recipe.md'],
+    ]
+    for (const [from, target] of cases) {
+      const file = join(REPO_ROOT, from)
+      const links = [...readFileSync(file, 'utf8').matchAll(/\[[^\]]+\]\(([^)#]*verification-recipe\.md)(?:#[^)]*)?\)/g)]
+      expect(links.length, from).toBeGreaterThan(0)
+      for (const link of links) {
+        expect(resolve(dirname(file), link[1]), from).toBe(join(REPO_ROOT, target))
+        expect(existsSync(resolve(dirname(file), link[1])), from).toBe(true)
+      }
+    }
+  })
 
   it('standalone 包自己帶 docs 與 templates', () => {
     for (const bundle of ['plugin/out/openai-plugin', 'plugin/out/web-plugin']) {
