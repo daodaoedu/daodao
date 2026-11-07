@@ -11,9 +11,9 @@
 | develop verify | 任務 worktree、同版完整 AC、適用 API／UI／DB；依工程規則選帳號與工具 | 任務 evidence／矩陣及工程報告；`verified` 與發 PR 閘門仍由 develop 決定 |
 | verify-product | 自己的隔離 runtime、已註冊 driver 或既有 harness；工程 session與外部邊界替換須明示 | driver action/result、artifact與清理；不代表 dev 部署或正式 PM 驗收 |
 | verify-deploy | 已部署的指定 revision、dev正常／錯誤旅程、指定PM帳號與相同資料的工程重播 | 凍結交接、lint／前置檢查／closeout、還原保留資料；發布／移 Acceptance 依 verify-deploy |
-| test-acceptance | dev最新請驗收留言，指定PM測試帳號、Google與正式發布身分 | 遵守該 skill 的內建瀏覽器／直接貼圖留言規則，不另存本機草稿或截圖；判定與移卡仍由該 skill 主流程執行 |
+| test-acceptance | dev最新請驗收留言，指定PM測試帳號、Google與正式發布身分 | 依該 skill 的能力檢查選擇工具與附件路徑，暫存／回讀／清理依其 environment；判定與移卡仍由該 skill 主流程執行 |
 
-PM瀏覽器與登入細則只由 test-acceptance 的 environment 維護；工程登入與 fallback只由 develop／verify-product維護。不能把工程 dev-login、自動化 fallback、localhost、資料庫或 shell 步驟帶進正式 PM 流程。工程使用者沒有 PM 工作階段時，保留 PM側待辦，不要求他代登入另一人的專用帳號。
+PM瀏覽器與登入細則只由 test-acceptance 的 environment 維護；工程登入與環境替換只由 develop／verify-product維護。不能把工程 dev-login、localhost、資料庫或 shell 操作冒充 PM 的產品畫面步驟；同一自動化工具可供不同流程使用，仍須各自通過身分與能力檢查。工程使用者沒有 PM 工作階段時，保留 PM側待辦，不要求他代登入另一人的專用帳號。
 
 ## 準備同一份可執行契約
 
@@ -28,7 +28,7 @@ PM瀏覽器與登入細則只由 test-acceptance 的 environment 維護；工程
 | 順序 | 分支依賴、消耗前必須完成的觀察、獨立資料或安全重建方法 |
 | 畫面條件 | 原來源要求的viewport／參考稿與要觀察的差異；純後端不加無關UI要求 |
 | 副作用與收尾 | 本輪允許的寫入、通知／排程／模型呼叫，預期終態、還原／清理／保留責任與方法 |
-| 證據通道 | 原skill指定的存放或直接交付方式，必要截圖在第一個產品步驟前先確認能交付 |
+| 證據通道 | 原skill指定的存放或直接交付方式，消耗／不可逆步驟前先確認必要證據能保全與交付；發布受阻與獨立非消耗觀察分開 |
 
 取消／確認、資料消耗、手機尺寸、參考稿與重建細節只在 [可重複驗收](repeatable-acceptance.md) 維護。工程補尺寸與 PM不自行猜尺寸的責任分開；檢查表不改變原 skill 的證據存放政策。
 
@@ -36,7 +36,7 @@ PM瀏覽器與登入細則只由 test-acceptance 的 environment 維護；工程
 
 1. **查目前前提**：確認真正受驗環境、版本、實際登入帳號／角色與資料，不以名稱、舊截圖或 registry 當即時保證。工程依原skill做 Doctor／actor／fixture檢查；PM從指定畫面確認，不要求PM跑工程API。缺前提先記受影響項，不能換錯帳號或降低預期求通過。
 2. **操作原入口**：依同一契約實做每個原步驟，保存動作與實際終態。背景任務、DB／HTTP或直接service檢查各列自身範圍，不能代替沒有走過的畫面。缺 driver時依原入口找既有 harness；沒有可行recipe就記缺口，不假裝已接入。
-3. **每個分支各記結果**：沿用原編號／AC，列輸入、預期、實際、時間／版本及證據。PM在本輪會話中維持逐項檢查表，依其流程直接交付一則含圖報告；不因共用配方新增本機草稿／截圖目錄。工程沿用任務證據與driver result。
+3. **每個分支各記結果**：沿用原編號／AC，列輸入、預期、實際、時間／版本及證據。PM依自己的流程維持逐項檢查表並交付一則含圖報告；必要暫存及清理由其 environment 統一維護。工程沿用任務證據與driver result。
 4. **狀態改變前再核對**：一次性操作前先完成依賴同資料的閱讀、取消、尺寸等觀察；缺項或前提漂移就停止受影響操作。正常提交後變consumed可能是預期，不自動重設PM答案或回滾正式結果。
 5. **異常先分範圍**：記實際觀察與依賴關係；環境／帳號／資料受阻不直接判產品FAIL。是否需二次重現、何時可判PASS、如何處理BLOCKED，由原skill決定，不統一成一種判定標準。多個必要阻擋各有恢復證據，不能用部分修復稱全部解除。
 6. **依生命週期收尾**：先留下判定所需證據，再執行下節適用的還原、保留或清理，最後回讀。未完成的必要收尾仍列未完成；不刪證據、不把未驗項移走湊全綠。
