@@ -7,6 +7,14 @@ HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$HOOKS_DIR/lib.sh"
 hook_normalize_input
 
+# Post-merge work can be unfinished even after every product checkout is clean.
+# Only an explicitly bound session is checked; other parallel tasks are untouched.
+closeout_output=$(printf '%s' "$HOOK_RAW" | python3 "$HOOKS_DIR/check-post-merge-closeout.py" stop)
+closeout_result=$?
+[ "$closeout_result" -ne 0 ] && exit "$closeout_result"
+
+# Capture advisories so successful Stop delivers exactly one model-visible JSON.
+quality_advisories() (
 PROJECT_ROOT="$HOOK_CWD"
 
 # 找到 git root（可能在 worktree 內）
@@ -125,3 +133,20 @@ fi
 echo ""
 
 exit 0
+)
+quality_output=$(quality_advisories)
+python3 -c '
+import json, sys
+try:
+    messages = []
+    if sys.argv[1]:
+        result = json.loads(sys.argv[1])
+        messages.append("Post-merge closeout: " + result["state"] + "; completed=" + str(result["completed"]).lower() + ". " + result["limitation"])
+    if sys.argv[2].strip():
+        messages.append(sys.argv[2].strip())
+    if messages:
+        print(json.dumps({"systemMessage": "\n\n".join(messages)}, ensure_ascii=False))
+except (ValueError, KeyError, TypeError):
+    print("post-merge closeout produced an invalid Stop response", file=sys.stderr)
+    sys.exit(2)
+' "$closeout_output" "$quality_output"
