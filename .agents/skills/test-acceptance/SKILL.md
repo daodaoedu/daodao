@@ -10,6 +10,8 @@ description: "PM 驗收：依當前可用工具實測 Planning board 上 Status=
 
 # test-acceptance
 
+本階段必做[全流程防錯與復盤](../../../plugin/docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 代替 PM（`peggy1213-create`）執行工程師交付的「🙋 請驗收」留言：照留言步驟在 dev 實測、留證據、寫繁體中文驗收報告，再依 [move-board-card](../move-board-card/SKILL.md)「Need Fix 只收 AC 失敗」的分流移卡。上游是 [verify-deploy](../verify-deploy/SKILL.md) 發的交接留言（格式見 [issue-status-comment.md](../../../plugin/templates/issue-status-comment.md)「交給 PM 驗收」段，發前有 `acceptance-lint` 把關）。
 
 帳號、網址、各客戶端怎麼開瀏覽器放在 [references/environment.md](references/environment.md)；各功能怎麼到、用什麼選擇器、要哪個角色，查共用的 [feature map](../../../plugin/docs/feature-map/README.md)。本檔只寫流程。
@@ -122,6 +124,11 @@ FAIL 之後，依賴它的步驟標 BLOCKED；流程允許時繼續測獨立的�
 3. 全部必測項 PASS 且規格要求的產品測試資料清理完成才是 `PASS`。沒有執行任何測試、只測一部分、必要產品清理延後，都不能是 PASS。證據暫存依 environment 在發布回讀後清理，屬於交付收尾；未完成時不改寫已確認的產品結果，但不得移卡或關卡。
 
 範圍外的觀察不影響結果，寫在「已知限制」段當附帶觀察。一次驗多張卡時每張各自判定。
+
+## 整理結果時先完成復盤
+
+PASS／FAIL／BLOCKED 都在本次既有報告記簡短復盤：原預期與本次觀察、有效或漏掉的前置／防線、仍需工程調查的事項及追蹤位置。只使用已取得的證據，不為復盤額外測試、推定根因或更改 AC；沒有改善項記理由。FAIL／BLOCKED 將原步驟與證據交回對應 owner，工程按 prevent-repeat-failures 選最早防線；本 skill 不修改產品、skill 或 hook，也不新增未授權 GitHub 寫入。
+
 
 ## 8. 報告、發布與移卡
 

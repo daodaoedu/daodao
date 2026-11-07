@@ -8,6 +8,8 @@ description: 由 AI 查核 branch 變更與多引擎 findings，自審並在授�
 
 # Code Review
 
+本階段必做[全流程防錯與復盤](../../../plugin/docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 用 **OpenAI Codex CLI**、**OMP**、**OpenCode**、**Claude Sonnet 5.5** 對當前 branch 做四引擎獨立 review。OMP（OpenRouter）與 OpenCode（opencode zen）reviewer 強制使用免費模型，各自有三段 fallback 鏈。
 
 ## 執行原則與跨客戶端使用

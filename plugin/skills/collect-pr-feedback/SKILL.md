@@ -5,6 +5,8 @@ description: 收集 PR 的 CI 與 reviewer feedback，由 AI 查證、分類與�
 
 # Collect PR Feedback
 
+本階段必做[全流程防錯與復盤](../../docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自審，再交人審閱結果與待決策事項。只要求「看 review／收集 feedback」時，先完成分析與修正建議；要求修正、或已有修復授權時，直接處理證據充分且符合既定需求的問題。不把每則留言都變成人的分析工作。
 
 ## 1. 確認 PR 與工具

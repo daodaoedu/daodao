@@ -8,6 +8,8 @@ description: PR merge 後由 AI 查核合併、驗收與部署證據，更新適
 
 # Post-Merge Wrap-up
 
+本階段必做[全流程防錯與復盤](../../../plugin/docs/ai-human-review-workflow.md#全流程防錯與復盤)：開始時查相關風險與前階段未解項，交接時附實際檢查、證據與短復盤；依本 skill 權限處理，不新增產品 AC。
+
 AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚待決策事項。合併、部署與功能可用是不同事實，不能互相替代。
 
 共用的準備、操作、證據及資料生命週期依[驗證配方](../../../plugin/docs/verification-recipe.md)；本skill另外核對部署版本、工程交接收據與Planning狀態，不以共用配方取代正式PM規則。
@@ -128,9 +130,9 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
 3. 結構、入口或 build 流程有變更時更新適用 codebase-map；服務依賴／schema 流程有變更時，先查 canonical system-map 與實際同步機制，再同步可確認的副本，不假定固定有六份。
 4. 相關 repo／文件不可存取時留下具體路徑、建議修訂與限制；不宣稱跨 repo 已同步。不相關項目標為不適用。
 
-## 3.5 這次該被擋卻沒擋的
+## 3.5 本輪復盤與防線回流
 
-當 dev 冒煙失敗、同項 verify 反覆失敗、PM 退回／受阻或 bug 已漏到目標環境時，在 cleanup 前使用 [prevent-repeat-failures](../prevent-repeat-failures/SKILL.md) 整理原始證據；需求／設計時已知的風險也可由該 skill 選擇較早的防線，不必等驗收失敗。
+每輪收尾都先按共用流程做復盤；無事故時記有效防線、未驗證限制與是否有改善項。當 dev 冒煙失敗、同項 verify 反覆失敗、PM 退回／受阻或 bug 已漏到目標環境時，在 cleanup 前使用 [prevent-repeat-failures](../prevent-repeat-failures/SKILL.md) 整理原始證據；需求／設計時已知的風險也可由該 skill 選擇較早的防線，不必等驗收失敗。
 
 產出「原因 → 預防 → 攔截點 → 驗證 → 實際狀態」紀錄，先查現有機制，區分執行漏掉、版本落後與機制缺口。需要新工具的候選放 `notes/issue-drafts/`；判斷項回既有 skill，已覆蓋或一次性事件記不採用理由。所有後續實作與發布依本輪既有授權；只有提案授權時不自動開卡或改共用規則，已明確授權的本機改善不重問。
 
