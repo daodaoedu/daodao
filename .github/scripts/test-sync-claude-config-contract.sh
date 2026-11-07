@@ -10,23 +10,16 @@ fail() {
   exit 1
 }
 
-for path in \
-  "plugin/**" \
-  ".github/workflows/auto-pr-description.yml" \
-  ".github/workflows/code-review.yml" \
-  ".github/scripts/retrieve-context.sh" \
-  ".github/scripts/test-retrieve-context.sh" \
-  ".github/scripts/test-code-review-contract.sh" \
-  ".github/scripts/review-knowledge.cjs" \
-  ".github/scripts/build-review-batches.py" \
-  ".github/scripts/run-review-batches.py" \
-  ".github/scripts/__tests__/test_review_*.py" \
-  ".github/workflows/pr-evidence-gate.yml" \
-  ".github/scripts/check-pr-evidence.sh" \
-  ".github/scripts/test-pr-evidence.sh" \
-  ".github/review-knowledge/**"; do
-  grep -Fq -- "- '$path'" "$WORKFLOW" || fail "push paths 未監聽 $path"
-done
+# 批次同步：每次 push 都同步會讓 7 個私有 repo 各跑一輪 PR 檢查與 CD，吃掉大量 Actions 額度
+python3 - "$WORKFLOW" <<'PY' || fail "sync workflow 觸發條件不符：須只有每日 schedule 與 workflow_dispatch，不可有 push"
+import sys, yaml
+on = yaml.load(open(sys.argv[1]), Loader=yaml.BaseLoader)["on"]
+assert "push" not in on, "push"
+assert set(on) == {"schedule", "workflow_dispatch"}, list(on)
+assert "workflow_dispatch" in on, "workflow_dispatch"
+crons = [c["cron"].split() for c in on["schedule"]]
+assert any(len(c) == 5 and c[2:] == ["*", "*", "*"] for c in crons), crons
+PY
 
 # 2026-09-21 起 skills 與 hooks 由 daodao plugin 提供，不再逐檔複製到子專案。
 # 子專案拿到的是指向 marketplace 的 settings.json；內容正確性由 plugin 那端的測試守。

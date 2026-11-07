@@ -892,7 +892,7 @@ Todo → In Progress → Review → Acceptance → Done
 | **PR** | collect-pr-feedback skill | 收集 CI 與 review 回饋，AI 查證、分類，依授權修正 |
 | **CI** | GitHub Actions | 各 repo 的 required checks（見 6.4） |
 | **CD** | GitHub Actions + Docker／EAS | merge 到 dev 自動部署 dev 環境；prod 另合 prod 分支；worker 手動 wrangler |
-| **同步** | sync-claude-config workflow | 共用 workflow 與誤判知識庫從 daodao repo 同步到子專案；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
+| **同步** | sync-claude-config workflow | 共用 workflow 與誤判知識庫從 daodao repo 同步到子專案，每天批次一次（UTC 18:17，急用時手動觸發 workflow_dispatch）；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
 | **發版** | plugin-release workflow | 改到 `plugin/` 的 PR 合進 main 就自動產生版號、打包並建 GitHub release，`marketplace.json` 部署到 GitHub Pages；Claude Code 端自動更新 |
 | **收尾** | verify-deploy skill | 核對合併／部署證據、dev 冒煙、更新 docs/product 狀態、交 PM 驗收或關工程驗收卡 |
 | **收尾** | `bin/pipeline/acceptance-lint.ts` | 交 PM 驗收留言發布前檢查：PM 步驟不得混入 API／測試證據、測試帳號不得是 PM 用不了的帳號、裸網址不可緊接全形標點；引用文案不在 f2e locale 時出 warn |

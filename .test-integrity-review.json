@@ -1,0 +1,7 @@
+{
+  "base": "7058b11d0c5ea409ac195efeca111d0940abb725",
+  "test_diff_sha256": "6896fbc9e6c816e0094c82a6d055f124eae9457f374a93408c280e81d86a15d0",
+  "reviewer": "Human user in the Codex conversation",
+  "reason": "PR #461 將共用設定同步由 push 改為每日排程；舊 push-path 測試已由禁止 push、每日排程與手動觸發測試取代，並新增限月份及額外事件的反向測試。",
+  "evidence": "2026-11-07 Codex conversation: after the assistant explained PR #461 replaces the obsolete push-trigger test, presented the daily-sync contract fixes and proposed commit, and asked whether to approve the test replacement and commit, the user replied 「好」. Local validation: Node tests 38/38; integrity scanner tests 17/17; sync contract and bash syntax passed."
+}
