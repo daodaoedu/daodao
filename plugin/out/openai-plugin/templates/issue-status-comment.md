@@ -47,9 +47,9 @@ templateVersion: 1
 - AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。
 - issue 內文驗收契約的「必須證據」欄若寫了 API 回讀或測試，PM 會照著要；所以「對照的 AC」要寫明那些由工程提供、PM 依畫面判定。
 - 第一行的隱藏標記 `<!-- daodao:acceptance-request -->`、標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具（[test-acceptance](../skills/test-acceptance/SKILL.md)）靠標記找出這則留言，缺任一個就判 BLOCKED（#245、#346）。標記在 GitHub 上看不到，不影響 PM 閱讀。
-- 取消與確認等分支拆成獨立編號步驟，提供不同專用資料；獨立的閱讀／取消／尺寸檢查先做，刪除排最後。無法提供兩筆時，交付已實跑的重設方式與相依順序。手機步驟明寫寬×高 CSS px；參考稿比對附可用來源及逐項重點。完整資料／重設契約見 [可重複驗收](../skills/verify-deploy/references/repeatable-acceptance.md)。
+- 取消與確認等分支拆成獨立編號步驟，提供不同專用資料；獨立的閱讀／取消／尺寸檢查先做，刪除排最後。無法提供兩筆時，交付已實跑的重設方式與相依順序。手機步驟明寫寬×高 CSS px；來源未給尺寸時，工程先用 390×844 CSS px 實跑後寫入各手機步驟，不把尺寸選擇留給 PM；參考稿比對附可用來源及逐項重點。完整資料／重設契約見 [可重複驗收](../skills/verify-deploy/references/repeatable-acceptance.md)。
 - 交驗前先用指定 PM 帳號，從本留言連結照全部步驟實跑；資料前提逐項查核，測完還原並保留給 PM。格式 lint 不證明前提成立。實踐資源可用 [唯讀前置檢查](../skills/verify-deploy/references/acceptance-preflight.md)，報告放工程證據，不要求 PM 自己跑。
-- 發出前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 不發。`warn [quoted-copy-not-in-locale]` 代表步驟用「」引用的文字在 f2e 的 zh-TW locale 找不到：是畫面文案就對照畫面改正（#346 全形「！」對半形「!」、#333 舊文案「帶領人」已改「教練」）；是使用者輸入的內容或步驟描述就忽略。
+- 發出前依 [最新交接檢查](../skills/verify-deploy/references/repeatable-acceptance.md) fetch `origin/main`，從乾淨隔離 worktree 執行該 revision 的 `acceptance-lint.ts` 並保存 revision／結果；不要只跑可能過期的共享 root，有 error 或 fetch 失敗不發。`warn [quoted-copy-not-in-locale]` 代表步驟用「」引用的文字在 f2e 的 zh-TW locale 找不到：是畫面文案就對照畫面改正（#346 全形「！」對半形「!」、#333 舊文案「帶領人」已改「教練」）；是使用者輸入的內容或步驟描述就忽略。
 
 ```markdown
 <!-- daodao:acceptance-request -->

@@ -1,18 +1,43 @@
 # 燈塔多組織切換架構
 
-日期：2026-10-23  
-狀態：架構提案，尚未實作或驗收  
+日期：2026-10-23（2026-11-06 更新整合與部署證據）
+狀態：已合併並部署 dev；工程核心冒煙及指定 PM 帳號交接重播完成。中央卡已移 Acceptance 並指派 PM，待正式 PM 驗收，尚未 Done。
+決策來源：[PM 2026-11-04 確認](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6634331959)。未註冊 owner 流程另案 [#463](https://github.com/daodaoedu/daodao/issues/463)；公開實踐模板 API 隔離另案 [#464](https://github.com/daodaoedu/daodao/issues/464)。跨裝置恢復上次組織保留，公開發起人快覽另拆。
+
 關聯：[#276 Admin 組織設定](https://github.com/daodaoedu/daodao/issues/276)、[#374 第 15 項](https://github.com/daodaoedu/daodao/issues/374)
 
 版本銜接：[#393](https://github.com/daodaoedu/daodao/pull/393) 已合併的文件記錄 query 參數版本在隔離分支完成實作與本機 Chrome 代表旅程驗證，當時尚未合併相關程式、部署或通過整體驗收。本提案改採組織路徑，並新增舊網址導向與重要操作確認條件；上述既有驗證不代表此路徑方案已實作或驗收。
+
+部署證據（2026-11-06）：
+
+- storage [#295](https://github.com/daodaoedu/daodao-storage/pull/295)，revision `6049496a`，[dev CD](https://github.com/daodaoedu/daodao-storage/actions/runs/42144561943) 成功，migration `101_add_last_lighthouse_organization.sql` 執行 OK。
+- server [#583](https://github.com/daodaoedu/daodao-server/pull/583)，revision `a1f49502`，[dev CD](https://github.com/daodaoedu/daodao-server/actions/runs/42144885531) 成功。
+- f2e [#1123](https://github.com/daodaoedu/daodao-f2e/pull/1123)，revision `0956950a`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42146354101) 成功。
+- f2e 補修 #1169，revision `d336e14c`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42149177846) 成功；補修搭配已合併 server/storage 的[整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42148171737) 24/24。
+- f2e 手機版補修 [#1170](https://github.com/daodaoedu/daodao-f2e/pull/1170)，revision `2f0840bd`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42151377258) 成功；[選定整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42150561562) 12/12。dev 五個頁面 390px、中英文總覽與桌機共 7 項版面檢查通過，HTTPS 入口 2/2。
+- 中文舊網址補修 [f2e#1171](https://github.com/daodaoedu/daodao-f2e/pull/1171)，revision `9e12071d`，[dev CD](https://github.com/daodaoedu/daodao-f2e/actions/runs/42227166713) 成功；[完整整合旅程](https://github.com/daodaoedu/daodao-f2e/actions/runs/42225536773) 24/24、middleware62／product956通過。真實 next-intl 使用公開 hostname 加內部埠的中文導向已正規化為公開 HTTPS。
+- 固定三個 PR head 的[完整整合旅程](https://github.com/daodaoedu/daodao-server/actions/runs/42143219273) 24/24；合併後 dev 對 dev 的 [server schema](https://github.com/daodaoedu/daodao-server/actions/runs/42146088246) 與 [storage schema](https://github.com/daodaoedu/daodao-storage/actions/runs/42146083893) 均成功。這些結果不代替部署後操作或正式 PM 驗收。
+
+工程冒煙與限制：[最新工程報告](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6675522296) 分開記錄本機與 dev 受驗版本、原失敗、修正及資料回讀。[Google 歷史圖文報告](https://docs.google.com/document/d/1tlfbeeps783W-lG57vSJhZORMuhvYsF0Ar4t0A1u2qg) 本次因共用 Drive API 配額及寫入權限受阻，尚未同步，不代表目前部署狀態。前輪 dev 工程冒煙使用既有 QA286；A7/B8 設定還原、B 訊息模板刪除、A 成員資格與身份集合還原，測試場次軟刪除並確認不在有效／封存列表。首次原為空的帳號預設組織保留 A7；API 不提供清空。匯出與角色異動稽核歷程保留。另有兩封預期通知至指定 QA 信箱，未把排程接受當作實際收信證據。本輪已補實際 PM306／301 在專用 A17 的雙 owner UI 寫入／回讀／還原；跨帳號快取仍依工程測試證據，兩個獨立 context 不等於實體雙裝置。本文舊 AC fixture 範例不作為本次 PM 操作資料，請使用下方正式交接。
+
+
+### 正式 PM 交接（2026-11-06）
+
+[請驗收留言與16個畫面步驟](https://github.com/daodaoedu/daodao/issues/276#issuecomment-6686549367) 已發布並回讀，Planning 狀態為 Acceptance、已指派 `peggy1213-create`；這是工程交接，不代表 PM 已驗收或 issue 已完成。
+
+指定既有 `peggytest`（306）管理本卡 A17/B18，`Peggy test2`（301）僅管理本卡 A17；不改原有其他組織資格。專用系列41/42、草稿場次117/118、模板71-74、基準留言模板30/31、合成邀請145與合成實踐464/465保留至PM驗完；其他議題的場次113只做唯讀邀請預覽並取消。新草稿場次不進入每週摘要／結束回饋寄送排程，不得為本卡驗收發布。
+
+在最終前端 `9e12071d` 完整重播23項畫面檢查（不重用舊版本結果），另6項直接中英入口、實際語言選單及原生離頁取消／離開全部通過，17項資料／權限回讀通過。單組織工程角色實測後已移除暫時新增資格並還原；兩個PM偏好及A簡介、臨時留言模板均回讀還原，沒有寄留言、邀請或重寄。主PM原為NULL的偏好使用受限fixture清理回復，不把API不提供的清空功能寫成PM操作。
+
+工程登入採 `dev-login mode=user`，不碰Google憑證，亦不宣稱Google OAuth供應商或實體雙裝置已測。跨文件上一頁使用瀏覽器原生離頁提示，站內切換使用站內確認視窗；兩者取消保留、接受離開清空都已實測。前輪把原生提示當成缺少站內視窗的疑似缺陷已排除，不是產品修復項。今日焦點前提有效至2027-01-24，草稿場次至2027-03-01；驗完由工程清理專用資料及受控QA的實踐排程來源，不停用既有帳號或修改其他卡資料。
 
 ## 1. 目標與核心規則
 
 同一個登入帳號可以加入多個組織。使用者在燈塔選擇「目前組織」後，總覽、系列與場次、模板庫、組織設定、成員與封存應一致顯示該組織的內容。
 
-上次選擇的組織隨帳號保存，下次登入或換裝置時自動恢復。燈塔管理頁沿用現有登入守門（f2e `middleware.ts`：未登入導向登入頁，登入後返回原頁）。燈塔以外私人空間的登入守門與個人進度保存另案處理，見[草稿](../../plans/issue-drafts/private-space-login-guard.md)。
+上次選擇的組織隨帳號保存，下次登入或換裝置時自動恢復。燈塔管理頁沿用現有登入守門（f2e `middleware.ts`：未登入導向登入頁，登入後返回原頁）。燈塔以外的 `/spaces` 私人頁也已套用 session 守門（`lib/auth/private-access.ts`），`/spaces/public/{token}` 公開分享保留匿名存取；個人進度保存的延伸需求見[歷史草稿](../../plans/issue-drafts/private-space-login-guard.md)，不把該草稿當作登入守門尚未實作的證據。
 
-同一組織的成員共同管理該組織；建立另一個組織不會自動建立另一個登入帳號。帳號與組織透過成員關係連接，權限仍由後端逐次檢查。目前成員角色只有 `owner` 一種，同組織成員的權限相同；本提案不新增角色。
+同一組織的成員共同管理該組織；建立另一個組織不會自動建立另一個登入帳號。帳號與組織透過成員關係連接，權限仍由後端逐次檢查。目前每位成員的資料庫角色都是 `owner`，同組織成員權限相同；介面統稱「組織成員」，本輪不新增角色層級，也不新增指定負責人欄位。
 
 本提案補上前台的組織選擇與狀態一致性。平台管理後台的全組織管理、官方共同挑戰的歸屬規則，以及學員加入場次的資格維持各自的流程。建立組織的流程，以及邀請尚未註冊的人成為 owner，不在本提案範圍，另開卡處理。
 
@@ -111,7 +136,7 @@ flowchart TD
 - 業界常見做法亦同：Clerk 官方指南建議多組織 app 把組織放在路徑（`/orgs/:slug/...`，亦可用組織 ID），並由 middleware 依路徑同步目前組織；Supabase 的組織頁放在組織路徑、專案頁以專案 ID 反查組織，與本提案的組織頁／場次頁分工相同。
 - 使用組織 ID 而非 slug：組織目前沒有 slug 欄位，本輪不新增。
 
-舊網址（`/lighthouse`、`/lighthouse/programs`、`/lighthouse/templates`、`/lighthouse/organization`、`/lighthouse/archive`）視為「未指定組織的入口」，由 middleware 依下表規則 redirect 到對應的組織路徑，既有書籤與信件連結不失效。上述 URL 為提案，現有頁面尚未支援。語系切換、導覽及瀏覽器上一頁／下一頁都應保留或恢復對應的組織。
+舊網址（`/lighthouse`、`/lighthouse/programs`、`/lighthouse/templates`、`/lighthouse/organization`、`/lighthouse/archive`）視為「未指定組織的入口」，由 middleware 依下表規則 redirect 到對應的組織路徑，既有書籤與信件連結不失效。組織成員入口已部署 dev。例外：沒有組織成員資格、但具有後端授權場次資源綁定的講師，可保留 `/lighthouse/templates` 的資源限定入口，不導向組織管理頁，也不取得組織模板建立或其他管理權限。語系切換、導覽及瀏覽器上一頁／下一頁都應保留或恢復對應的組織。
 
 | 進入情境 | 選擇規則 |
 |---|---|
@@ -119,17 +144,17 @@ flowchart TD
 | URL 指定無權限或已停權組織 | 顯示無法管理及返回可用組織的入口，不靜默換成別的組織 |
 | 未指定組織，上次選擇仍有效 | 恢復該帳號上次選擇，寫入 URL |
 | 未指定組織，沒有有效的上次選擇 | 預設第一個可管理組織，寫入 URL |
-| 沒有任何可管理組織 | 顯示無可用組織狀態；區分未開通、組織停權與查詢失敗 |
+| 沒有任何可管理組織 | 顯示無可用組織狀態；區分未開通、組織停權與查詢失敗。上述有場次綁定講師的 `/lighthouse/templates` 資源入口例外 |
 
 只有一個可管理組織時，顯示組織名稱即可；有多個時提供切換器。停權組織可以列出並標示不可管理，但不作為自動預設值。這些是本提案建議的產品行為。
 
 後端組織列表（`listForUser`）不篩停權組織，f2e `middleware.ts` 只要列表非空就放行燈塔頁。因此「只剩停權組織」的帳號會進到燈塔頁面，停權狀態須由共用組織狀態判斷並顯示，不能只靠 middleware 擋。
 
-各頁不能再各自讀取 `organizations[0]`。共用狀態負責提供 `currentOrganization`、載入狀態及選擇錯誤；組織資料尚未確認前，不送出該組織的業務讀寫請求。取得本人組織清單、以及經後端授權以確認深層資源歸屬的請求不受此前置條件限制，避免解析組織時循環等待。
+各頁不能再各自讀取 `organizations[0]`。共用狀態負責提供 `currentOrganization`、載入狀態及選擇錯誤；組織資料尚未確認前，不送出該組織的業務讀寫請求。取得本人組織清單、經後端授權以確認深層資源歸屬的請求，以及無組織講師的本人場次綁定／已授權資源請求不受此前置條件限制，避免解析組織時循環等待；這些例外不開放一般組織業務讀寫。
 
 ### 4.1 在 middleware 補上組織參數
 
-f2e `middleware.ts` 每次進入燈塔頁已呼叫 `/api/v1/lighthouse/organizations`。未指定組織的入口（含上節的舊網址）在此一併讀取帳號上次組織，依上表規則直接 redirect 到 `/lighthouse/o/{organizationId}/...`；頁面因此不會先以「無組織」狀態渲染再換網址，也不多一次請求。場次／系列深層連結不經此 redirect，依第 6 節由頁面以資源歸屬決定。middleware 取得上次組織失敗時不擋頁，退回「第一個可管理組織」規則。
+f2e `middleware.ts` 每次進入燈塔頁已呼叫 `/api/v1/lighthouse/organizations`。組織成員的未指定組織入口（含上節的舊網址；無組織講師資源入口依前述例外）在此一併讀取帳號上次組織，依上表規則直接 redirect 到 `/lighthouse/o/{organizationId}/...`；頁面因此不會先以「無組織」狀態渲染再換網址，也不多一次請求。場次／系列深層連結不經此 redirect，依第 6 節由頁面以資源歸屬決定。middleware 取得上次組織失敗時不擋頁，退回「第一個可管理組織」規則。
 
 ### 4.2 上次組織的寫入規則
 
@@ -222,7 +247,7 @@ flowchart TD
 
 | 檢查成員資格與組織停權 | 只檢查成員資格，不檢查停權 |
 |---|---|
-| 系列（`program.service.ts` 的 `assertActiveOrganization`、`getOwned`）、場次（`cohort.service.ts` 的 `getOwned`）、模板（`organization-template.service.ts`）、封存（`lighthouse-archive.service.ts`）、AI key（`organization-ai-credential.service.ts`）、訊息模板（`cohort-message.service.ts`） | 成果摘要（`cohort-outcome.service.ts`）、匯出（`cohort-export.service.ts`）、打卡鼓勵（`cohort-encouragement.service.ts`）、dashboard（`cohort-dashboard.service.ts`）、focus（`cohort-focus.service.ts`）、本期動態的教練視角（`cohort-feed.service.ts`） |
+| 系列（`program.service.ts` 的 `assertActiveOrganization`、`getOwned`）、場次（`cohort.service.ts` 的 `getOwned`）、模板（`organization-template.service.ts`）、封存（`lighthouse-archive.service.ts`）、AI key（`organization-ai-credential.service.ts`）、訊息模板（`cohort-message.service.ts`） | 成果摘要（`cohort-outcome.service.ts`）、匯出（`cohort-export.service.ts`）、打卡鼓勵（`cohort-encouragement.service.ts`）、dashboard（`cohort-dashboard.service.ts`）、focus（`cohort-focus.service.ts`）、本期動態的教練視角（`cohort-feed.service.ts`）、活動列表與明細（`cohort-activity.service.ts`，發布前 review 補查） |
 
 右欄端點在組織停權後，成員仍可讀取或操作，與左欄行為不一致，列入第 7 節的 server 調整範圍。資料庫有獨立的組織與成員關係，不能把「看到同一組織」直接判定為資料混用。
 
@@ -238,7 +263,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | 查詢、表單及導覽 | 帶入目前組織、隔離快取、處理未儲存內容及深層連結 |
 | 燈塔路由 | 一般組織頁移到 `app/[locale]/(lighthouse)/lighthouse/o/[organizationId]/`；場次頁路徑不變；舊網址由 middleware redirect |
 | 燈塔站內連結 | 改用共用的連結產生函式，由 layout 的組織參數組成（純邏輯，附測試）；場次頁的返回與編輯連結帶場次實際所屬組織。現有未帶組織的連結見下表 |
-| `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；發起人快覽的組織名稱規則修正（見下方）；成果摘要、匯出、打卡鼓勵、dashboard、focus 及本期動態教練視角補上組織停權檢查（見上方對照表）；補跨組織與停權 regression tests |
+| `daodao-server` | 場次 GET 回應加入 `organizationId` 與組織名稱（第 6 節）；新增讀寫帳號上次燈塔組織的 API（例：`GET`／`PUT /api/v1/lighthouse/preferences`，讀取時驗證成員資格與組織狀態），寫入規則見第 4.2 節；成果摘要、匯出、打卡鼓勵、dashboard、focus 、本期動態教練視角及活動列表／明細補上組織停權檢查（見上方對照表）；補跨組織與停權 regression tests |
 | `daodao-storage` | 新增最小 migration 保存帳號上次的燈塔組織（例：`users` 加可為空、指向組織的欄位，組織刪除時設為空）。已查核無可沿用欄位：`users` 無設定類欄位，`user_preferences` 是推薦用的偏好選項關聯表。上次組織的跨裝置恢復納入本輪 |
 | `daodao-f2e` middleware | 未指定組織的入口與舊網址讀取上次組織並 redirect 到組織路徑（第 4.1 節）；登入守門行為不變 |
 | 文案 | 切換器、停權、無權限、無可用組織等新狀態補中英文文案，需通過 f2e ICU 文案檢查（#311） |
@@ -259,7 +284,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 
 **連動的公開資訊**：server `activity.service.ts:331-339` 的發起人快覽取 `orgMemberships[0].organization.name`，查詢未排序。多組織發起人在公開頁顯示哪個組織名稱不固定，回應的 `organizationName` 亦同。不屬燈塔管理頁，但源自同一個「單一組織」假設，此外，取名稱的查詢會納入停權組織，也會納入此人不是最早 owner 的組織，與後段計算主辦場次的規則不一致。
 
-快覽目前只在 `/activities` 從某張活動卡點開（f2e `host-preview-dialog.tsx:83-85`，顯示「某組織的發起人」），因此本輪修正為：
+快覽目前只在 `/activities` 從某張活動卡點開（f2e `host-preview-dialog.tsx:83-85`，顯示「某組織的發起人」）。**依 PM 最新決策，以下規則作為另案候選，排除本輪 #276 實作與驗收**：
 
 - 快覽 API 新增選填的 `cohortId`；活動卡帶入該卡場次，組織名稱取該場次所屬組織，與卡片一致。
 - 未帶 `cohortId` 時，只從此人實際主辦、且為 active 的組織中取；恰好一個才顯示，多個則不顯示組織名稱，不任意挑選。
@@ -290,7 +315,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 | AC-19 | 開啟舊網址（`/lighthouse`、`/lighthouse/programs` 等）或舊書籤 | redirect 到上次組織（或第一個可管理組織）對應的 `/lighthouse/o/{id}/...` 頁面 |
 | AC-20 | 在 B 的場次發訊息給學員或邀請成員 | 確認畫面顯示 B 與場次名稱；確認前切換組織時，視窗關閉且未送出 |
 | AC-16 | 在 B 的任一管理頁點導覽、場次返回、編輯場次或成果頁的組織設定連結 | 一律停留在對應的組織（場次相關連結為場次所屬組織），不回到預設組織 |
-| AC-17 | 多組織發起人在 A、B 各有公開活動，分別從 A、B 的活動卡點開發起人快覽 | 各自顯示該卡所屬組織名稱；不顯示停權組織；未帶場次且主辦多個組織時不顯示組織名稱 |
+| AC-17（另案，本輪不驗） | 多組織發起人在 A、B 各有公開活動，分別從 A、B 的活動卡點開發起人快覽 | 各自顯示該卡所屬組織名稱；不顯示停權組織；未帶場次且主辦多個組織時不顯示組織名稱 |
 
 ## 9. 拆卡與開發順序
 
@@ -300,7 +325,7 @@ dev 已有多組織帳號：user 301 同時屬於組織 2、3（停權）、9000
 |---|---|---|---|
 | 1 | `cohort-focus` 訊息模板改用場次所屬組織 | f2e（必要時 server 先補第 6 節欄位） | 第 6 節欄位；不等切換器，可最先上 |
 | 2 | 上次組織欄位 migration | storage | 無 |
-| 3 | 場次回應加組織欄位、上次組織 API、發起人快覽修正 | server | 2 |
+| 3 | 場次回應加組織欄位、上次組織 API、場次服務停權檢查（含活動列表／明細） | server | 2 |
 | 4 | 燈塔路由移到組織路徑、共用組織狀態、middleware redirect、連結產生函式、切換器、文案 | f2e | 3 |
 
 第 1 項若需要第 6 節欄位，server 欄位可先單獨上，不必等 migration。各子卡依 dev-task 流程開發；母卡等子卡全部驗收後才關。

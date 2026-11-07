@@ -28,7 +28,7 @@
 
 ## 尺寸與視覺比對
 
-手機／響應式步驟寫清楚 **寬×高 CSS px**，例如「手機 390×866」；桌面亦標明自己的尺寸，不能拿桌面數字充當手機尺寸。若用實機，交接附實測 viewport。尺寸寫在對應驗收步驟，不能只藏在工程報告中。
+手機／響應式步驟寫清楚 **寬×高 CSS px**，例如「手機 390×866」；桌面亦標明自己的尺寸，不能拿桌面數字充當手機尺寸。若用實機，交接附實測 viewport。尺寸寫在對應驗收步驟，不能只藏在工程報告中。來源只要求手機、未指定尺寸時，由工程採用 **390×844 CSS px**，先以該尺寸實跑並確認實際 viewport，再把尺寸寫入每個手機編號步驟；這是測試環境補齊，不需要 PM 另選尺寸。來源已有尺寸時沿用來源；有多頁時逐頁寫明適用尺寸。不得只寫「手機版」「手機寬度」便交驗。
 
 要求符合參考稿時，提供可開啟的參考連結或已保存的對照圖，列出要看的項目（如彈窗寬度、底色、遮罩、關閉鈕與文字區），以及已確認的差異。數值比對由工程量測，PM 看畫面；不同內文或語系的高度差不能直接拿來判像素一致。同內容精準量測仍依 [poc-compare.md](../../develop/references/poc-compare.md) 執行。
 
@@ -49,3 +49,26 @@
 `acceptance-lint` 的 `mobile-viewport-missing` 會擋下手機／響應式編號步驟缺寬高的交接；尺寸須寫在同一編號步驟，不借用桌面或工程證據段。
 
 格式 lint 只能檢查可辨識的文字缺項，不能證明 fixture 獨立、操作順序遵守或畫面實際完成；上述前置檢查與逐項證據仍需實跑。
+
+
+## 使用最新交接檢查
+
+共享 root 可能停在舊文件分支。#471 曾從舊 root 執行沒有手機尺寸規則的 linter，即使 `origin/main` 已合併 #469，仍回報 OK。每次發交接前先 fetch main，再從該 revision 的乾淨隔離 worktree 執行 linter；不要切換、pull 或 reset 共享 root。保存 gate revision、命令與結果，不能用舊 checkout 的 OK 代替。
+
+在 daodao root 執行（`comment_file` 使用留言檔絕對路徑）：
+
+```bash
+(
+set -e   # 任一步失敗即停止，不會繼續放行
+comment_file=/absolute/path/acceptance-comment.md
+git fetch origin main
+gate_dir=$(mktemp -d /tmp/daodao-acceptance-gate.XXXXXX)
+git worktree add --detach "$gate_dir" origin/main
+git -C "$gate_dir" rev-parse HEAD
+pnpm -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" "$comment_file"
+# 有 error 先改留言再以同一 gate 重跑；通過並保存結果後才發布及清理
+git worktree remove "$gate_dir"
+)
+```
+
+fetch／建立隔離 worktree／linter 任一失敗，就保留未交驗並排除工程前提，不改用舊 gate 放行。此檢查只驗文字；仍須同帳號、同資料、同尺寸實跑並還原。
