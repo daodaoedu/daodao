@@ -31,6 +31,7 @@ OpenAI 有 Claude plugin 轉投的官方路徑（platform.openai.com/plugins）�
 | format-commit | ✅ | 完整 |
 | move-board-card | ✅ | 完整 |
 | notify-related-issue | ✅ | 完整 |
+| prevent-repeat-failures | ✅ | 降級：hooks |
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |
 | review-change | ✅ | 完整 |

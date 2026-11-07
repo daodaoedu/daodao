@@ -8,6 +8,8 @@
 | R2 需求者只回答產品問題 | 多次要求 repo、API、根因與固定負責人；逐格模板增加負擔 | intake 最多兩題，禁止 repo／sha／owner／root-cause 欄位；沿用 skill-evals 的 captured trace 檢查，來源不改寫 |
 | R3 只寫明列的任務檔案 | 共用 dirty checkout 的其他成果被捲入提交／改動 | handoff 的 writes 必須屬於 owned_paths 的明列檔案，禁止絕對路徑與 traversal；develop 使用隔離 worktree，提交前另核對真實 Git diff／staged paths |
 
+跨階段事故回顧與防線選擇由 [prevent-repeat-failures](../../plugin/skills/prevent-repeat-failures/SKILL.md) 負責，涵蓋預防、攔截、驗證；本文件保留既有 R1／R2／R3 契約及其執行配方，不重做 validator。
+
 ## 第二次發生時
 
 先停止重試同一修法，從失敗輸出或對話抽出同一錯誤的兩次證據，在任務目錄保存 `agent-handoff.json`。`recurrences` 加一筆 count ≥ 2，逐項評估 lint、型別、目錄限制；填 control 與 regression_ref。只有機械限制無法合理表達時才選 prompt，並寫 why_not_mechanical。缺少評估或回歸位置，檢查失敗。

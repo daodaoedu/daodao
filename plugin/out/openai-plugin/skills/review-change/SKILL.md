@@ -17,7 +17,7 @@ description: 由 AI 查核 branch 變更與多引擎 findings，自審並在授�
 - AI 先查證每項 finding、去重、檢查需求與適用測試，再交人審閱。只要求 review 時不擅改程式；已有修復授權時直接完成範圍內安全修正與自審，不把逐條分析交給人。
 - Snapshot 包含整個 branch 及 tracked 工作樹變更，可能含他人工作；開始前列出範圍與排除項目。新 untracked 檔案若屬本次工作，另行讀取納入證據並記錄內容版本，不為 review 改動真實 index。
 
-先讀本 repo 的 **REVIEW.md**（repo 檔案 `REVIEW.md`，未隨本包出貨） 與目標 repo 適用規則，將產品決策及實作約束列入查核；不以四引擎投票取代依據。
+先讀本 repo 的 **REVIEW.md**（`../REVIEW.md`，未隨本包出貨） 與目標 repo 適用規則，將產品決策及實作約束列入查核；不以四引擎投票取代依據。
 
 ## CI review 的覆蓋與證據
 
