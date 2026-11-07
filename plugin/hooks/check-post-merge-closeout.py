@@ -289,6 +289,23 @@ def validate(receipt, now=None):
             'remote handoff needs this issue comment URL')
     require(handoff.get('board_status') == 'Acceptance' and handoff.get('issue_state') == 'OPEN', 'remote handoff must read back Acceptance and OPEN, not Review/Done')
     try:
+        # Installed plugin hooks live outside the checkout; the bound task owns its config.
+        roots = [task, *task.parents, Path(__file__).resolve().parents[2]]
+        config_path = next((root / 'bin/pipeline/types.ts' for root in roots
+                            if (root / 'bin/pipeline/types.ts').is_file()), None)
+        config = config_path.read_text() if config_path else ''
+        pm_match = re.search(r'export const PM_LOGIN = "([^"\n]+)";', config)
+        pm_login = pm_match.group(1) if pm_match else None
+    except OSError:
+        pm_login = None
+    assignees = handoff.get('assignees')
+    labels = handoff.get('labels')
+    require(isinstance(pm_login, str) and bool(pm_login.strip())
+            and isinstance(assignees, list) and pm_login in assignees,
+            'remote handoff must read back the configured PM assignment')
+    require(isinstance(labels, list) and all(isinstance(label, str) for label in labels) and 'acceptance:blocked' not in labels,
+            'remote handoff must read back cleared acceptance blockers')
+    try:
         observed = timestamp(handoff.get('observed_at'))
         require(restored is not None and restored <= observed <= now, 'remote handoff readback must follow restored preflight')
     except (ValueError, TypeError):

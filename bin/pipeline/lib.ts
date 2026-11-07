@@ -267,6 +267,23 @@ export function auditCards(
         push(c, "Review 但沒有關聯 PR", "確認是否為子卡等驗收，否則移回 In Progress");
       }
     }
+    // A renewed request after the last return requires a fresh board handoff.
+    // Compare event times rather than API order; newer FAIL/BLOCKED keeps the return valid.
+    if (status === "Need Fix" && c.issueState === "OPEN") {
+      const movedAt = c.statusUpdatedAt ? Date.parse(c.statusUpdatedAt) : NaN;
+      const events = (c.comments ?? []).map((m) => ({ ...m, body: m.body.split("\n").filter((line) => !/^\s*>/.test(line)).join("\n") })).filter((m) =>
+        Number.isFinite(Date.parse(m.createdAt)) && Date.parse(m.createdAt) <= now.getTime());
+      const requestedAt = Math.max(-Infinity, ...events
+        .filter((m) => REQUEST_MARKER_RE.test(m.body))
+        .map((m) => Date.parse(m.createdAt)));
+      const returnedAt = Math.max(-Infinity, ...events
+        .filter((m) => /<!--\s*daodao:acceptance-report\b[^>]*\bresult=(?:FAIL|BLOCKED)\b[^>]*-->/.test(m.body) || (classifyReturnComment(m.body.replace(/<!--\s*daodao:acceptance-request\s*-->/g, "").replace(/^.*請驗收：.*$/gm, "")) !== "other"))
+        .map((m) => Date.parse(m.createdAt)));
+      if (requestedAt > movedAt && requestedAt > returnedAt) {
+        push(c, "已重新請驗收，但卡片仍在 Need Fix",
+          "核對最新交接與 AC 修復證據後，執行 board.ts set <n> accept 並回讀 PM 指派；稽核不自動移卡");
+      }
+    }
     // Need Fix only takes AC failures (#338): blocked acceptance and new requirements go elsewhere
     const columnHours = columnDays * 24;
     if (status === "Need Fix" && c.issueState === "OPEN" && columnHours >= NEED_FIX_COMMENT_GRACE_HOURS) {

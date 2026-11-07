@@ -85,7 +85,7 @@ class CloseoutTests(unittest.TestCase):
                 'lint': self.evidence('evidence/lint.json', {'draft_sha256': draft['sha256'], 'exit_code': 0, 'observed_at': '2026-11-06T00:59:00Z'}),
                 'handoff': self.evidence('evidence/remote.json', {'draft_sha256': draft['sha256'],
                     'comment_url': 'https://github.com/daodaoedu/daodao/issues/401#issuecomment-123',
-                    'board_status': 'Acceptance', 'issue_state': 'OPEN', 'observed_at': '2026-11-06T01:12:00Z'})}
+                    'board_status': 'Acceptance', 'issue_state': 'OPEN', 'pm_login': 'peggy1213-create', 'assignees': ['peggy1213-create'], 'labels': [], 'observed_at': '2026-11-06T01:12:00Z'})}
 
     def validate(self, data):
         self.write(data)
@@ -329,6 +329,32 @@ class CloseoutTests(unittest.TestCase):
             elif change == 'expired': d['retention']['expires_at'] = '2026-11-05T00:00:00Z'
             else: del d['retention']['reset']
             self.assertTrue(self.validate(d)[1])
+
+    def test_installed_plugin_uses_bound_task_monorepo_pm_config(self):
+        import shutil
+        d = self.complete()
+        config = self.task.parent / 'bin/pipeline/types.ts'
+        config.parent.mkdir(parents=True)
+        config.write_text('export const PM_LOGIN = "peggy1213-create";')
+        installed = self.task.parent / 'plugin-cache/version/hooks/check-post-merge-closeout.py'
+        installed.parent.mkdir(parents=True)
+        shutil.copy2(SCRIPT, installed)
+        self.write(d)
+        spec = importlib.util.spec_from_file_location('installed_closeout', installed)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        self.assertEqual(checker.validate(self.receipt, now=NOW), ('handed-off', []))
+        config.write_text('export const PM_LOGIN = "another-pm";')
+        self.assertTrue(checker.validate(self.receipt, now=NOW)[1])
+
+    def test_rehandoff_requires_pm_assignment_and_cleared_blocker(self):
+        for fields in [{'assignees': []}, {'labels': ['acceptance:blocked']}, {'labels': None}, {'labels': [{'name': 'acceptance:blocked'}]}, {'pm_login': 'vincentxuu', 'assignees': ['vincentxuu']}, {'board_status': 'Need Fix'}]:
+            with self.subTest(fields=fields):
+                d = self.complete()
+                remote = json.loads((self.task / d['handoff']['path']).read_text())
+                remote.update(fields)
+                d['handoff'] = self.evidence('evidence/remote.json', remote)
+                self.assertTrue(self.validate(d)[1])
 
     def test_remote_review_is_not_acceptance_and_lint_must_match_draft(self):
         d = self.complete()

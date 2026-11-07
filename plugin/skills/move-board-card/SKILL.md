@@ -144,3 +144,12 @@ pnpm exec vitest run bin/pipeline --exclude "**/worktrees/**"
 - 不修改 labels 集合、不刪舊 label（從個別卡片拔死 label 是 `audit` 建議項，可以做）。
 - 不改 GitHub 內建 workflow 的目標欄位（API 無 mutation，只能在 board 設定頁手動改）。
 - `Ready for Dev` 只是管理狀態，設定它需在使用者要求範圍內。
+
+
+## 退回後重新交接（#471 防漏移卡）
+
+首次交接與重新請驗收共用完成條件。PM 卡完成修復／前置排除後，重新核對受影響 AC、指定帳號、資料還原、入口及手機 viewport；更新草稿並跑 acceptance-lint，重播與證據規則沿用 verify-deploy。發布重新請驗收留言後，執行 `pnpm -s tsx bin/pipeline/board.ts set <n> accept`，已排除受阻時一併使用 `--remove-label acceptance:blocked`。最後回讀最新留言 URL、Acceptance、issue OPEN、PM_LOGIN 指派及受阻 label 已移除，保存至 task 收尾證據，全部成立才可報「已重新交 PM」。發布成功但移卡失敗時保存 URL，標交接未完成，回讀後只補失敗步驟，不重發留言。
+
+驗收前置受阻留 Acceptance 並掛 acceptance:blocked，僅 AC 失敗進 Need Fix。audit 發現新請驗收留言晚於移進 Need Fix 且沒有更晚 FAIL／BLOCKED 時，立即報狀態矛盾，不等待 24 小時；只提醒查核，不自動移卡。較新的失敗或受阻不得被舊請驗收留言覆蓋。
+
+這項流程工具本身走工程驗收；不因它檢查 PM 產品卡而要求 PM 驗收流程工具。

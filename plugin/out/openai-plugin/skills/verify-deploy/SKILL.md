@@ -161,3 +161,12 @@ Stop 入口只檢查明確綁定的本 session／task，放在 Git clean 判斷�
 - 報告第一行寫明「已合併／已部署／dev 冒煙通過」三個事實各自的狀態；三者不齊不寫「功能完成」。
 - 本機文件修訂不等於 commit、push、部署或關閉 Issue。這些動作依既有明確授權及目標 repo 流程進行；不因 PR merged 自動發布或 merge 其他 PR。Board 回寫與交接留言（§2.5 第 5 步）是本 skill 的標準輸出，不另外要授權，但只依冒煙結果移卡；本 skill 不移 Done，也不關中央 issue（那是 PM 驗收通過的動作）；例外是 `acceptance:engineering` 的卡冒煙全部 ✅ 時，依 §2.5 第 5 步留證據後關 issue。
 - 遠端動作如已授權，執行後讀回確認；部分失敗保留成功項目與待處理項目，避免重複操作。
+
+
+## 退回後重新交接（#471 防漏移卡）
+
+首次交接與重新請驗收共用完成條件。PM 卡完成修復／前置排除後，重新核對受影響 AC、指定帳號、資料還原、入口及手機 viewport；更新草稿並跑 acceptance-lint，重播與證據規則沿用 verify-deploy。發布重新請驗收留言後，執行 `pnpm -s tsx bin/pipeline/board.ts set <n> accept`，已排除受阻時一併使用 `--remove-label acceptance:blocked`。最後回讀最新留言 URL、Acceptance、issue OPEN、PM_LOGIN 指派及受阻 label 已移除，保存至 task 收尾證據，全部成立才可報「已重新交 PM」。發布成功但移卡失敗時保存 URL，標交接未完成，回讀後只補失敗步驟，不重發留言。
+
+驗收前置受阻留 Acceptance 並掛 acceptance:blocked，僅 AC 失敗進 Need Fix。audit 發現新請驗收留言晚於移進 Need Fix 且沒有更晚 FAIL／BLOCKED 時，立即報狀態矛盾，不等待 24 小時；只提醒查核，不自動移卡。較新的失敗或受阻不得被舊請驗收留言覆蓋。
+
+這項流程工具本身走工程驗收；不因它檢查 PM 產品卡而要求 PM 驗收流程工具。
