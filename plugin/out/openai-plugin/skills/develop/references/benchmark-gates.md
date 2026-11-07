@@ -12,7 +12,7 @@ python3 <daodao-root>/scripts/check-test-integrity.py --base <explicit-base>
 
 Claude root settings 另註冊 Write／Edit 的 `test-integrity-guard.py`，阻擋新增 skip／focus／todo；需在實際客戶端確認觸發。Shell 寫檔、Codex 與移除 assertion 不由此 hook 保護，仍依 CLI／CI 核對。
 
-CLI 包含 tracked staged／unstaged；新增測試尚未 staged 時需另讀檔，完成已授權提交後再用 `--head HEAD` 核對。新增 skip／focus／todo 阻擋；刪除或替換 assertion／test 要查明原因並交人審核具體 diff。依 **工具說明**（repo 檔案 `scripts/check-test-integrity.md`，未隨本包出貨） 記錄綁定 base 與 test diff digest 的審核依據，不自行製造人工 receipt。此 heuristic 不能抓所有語意弱化，仍需跑測試，並依 root `AGENTS.md`「測試規範」的兩種假想修改自審測試內容。
+CLI 包含 tracked staged／unstaged；新增測試尚未 staged 時需另讀檔，完成已授權提交後再用 `--head HEAD` 核對。新增 skip／focus／todo 阻擋；刪除或替換 assertion／test 要查明原因並交人審核具體 diff。依 **工具說明**（`../scripts/check-test-integrity.md`，未隨本包出貨） 記錄綁定 base 與 test diff digest 的審核依據，不自行製造人工 receipt。此 heuristic 不能抓所有語意弱化，仍需跑測試，並依 root `AGENTS.md`「測試規範」的兩種假想修改自審測試內容。
 
 ## Schema signal（涉及 server／storage／AI 資料定義時）
 

@@ -12,7 +12,7 @@
 
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, normalize, relative, resolve } from 'node:path'
+import { dirname, join, normalize, relative, resolve, sep } from 'node:path'
 
 const PLUGIN_ROOT = resolve(import.meta.dirname, '..')
 const REPO_ROOT = resolve(PLUGIN_ROOT, '..')
@@ -164,7 +164,7 @@ function gapSection(platform: Platform, missing: string[], conditional: boolean)
  */
 type LinkMode = 'in-repo' | 'standalone' | 'flatten'
 
-function rewriteBody(body: string, opts: { pluginRoot: string; mode: LinkMode }): string {
+function rewriteBody(body: string, opts: { pluginRoot: string; mode: LinkMode; sourcePath: string; outputPath: string }): string {
   let out = body.replaceAll('${CLAUDE_PLUGIN_ROOT}', opts.pluginRoot)
 
   if (opts.mode === 'flatten') {
@@ -172,16 +172,21 @@ function rewriteBody(body: string, opts: { pluginRoot: string; mode: LinkMode })
   }
 
   if (opts.mode === 'in-repo') {
-    // A：docs/ 與 templates/ 沒有複製到 .agents/，指回 repo 裡的 canonical
-    out = out.replaceAll('](../../docs/', `](../../../${opts.pluginRoot}/docs/`)
-    out = out.replaceAll('](../../templates/', `](../../../${opts.pluginRoot}/templates/`)
-    // B 與 sibling skill 保持原樣：深度相同，本來就指得到
-    return out
+    // 以來源檔解析目標，避免把 repo/docs 與 plugin/docs 混為一談。
+    return out.replace(/\]\((\.\.?\/[^)#]+)(#[^)]*)?\)/g,
+      (whole, link: string, fragment: string = '') => {
+        const target = resolve(dirname(opts.sourcePath), link)
+        const commonRoots = ['docs', 'templates'].map(dir => join(PLUGIN_ROOT, dir))
+        if (!commonRoots.some(root => target === root || target.startsWith(`${root}${sep}`))) return whole
+        const fromDir = dirname(resolve(REPO_ROOT, opts.outputPath))
+        const rewritten = relative(fromDir, target).replaceAll('\\', '/')
+        return `](${rewritten}${fragment})`
+      })
   }
 
-  // standalone：A 與 sibling 保持原樣（docs/ 與 templates/ 會一起打包），
-  // B 指到的是 repo 檔案，沒出貨，改成說明避免死連結
-  return out.replace(/\[([^\]]+)\]\(\.\.\/\.\.\/\.\.\/(?:\.\.\/)*([^)]+)\)/g, '**$1**（repo 檔案 `$2`，未隨本包出貨）')
+  // standalone 的可達性由 resolveBundleLinks 依實際出貨清單判定；
+  // 不能按 ../ 深度猜，巢狀 reference 也可能指向已打包的共用 docs。
+  return out
 }
 
 // ---------------------------------------------------------------- emitters
@@ -214,7 +219,7 @@ function skillFiles(platform: Platform, opts: { dir: string; conditional: boolea
         renderFrontmatter(fields, order, platform, skill) +
         `\n${BANNER}\n\n` +
         gapSection(platform, gaps, opts.conditional) +
-        rewriteBody(body, { pluginRoot, mode }),
+        rewriteBody(body, { pluginRoot, mode, sourcePath: join(SKILLS_DIR, skill, 'SKILL.md'), outputPath: join(opts.dir, skill, 'SKILL.md') }),
     })
 
     if (opts.copyRefs) {
@@ -234,7 +239,7 @@ function skillFiles(platform: Platform, opts: { dir: string; conditional: boolea
           const raw = readFileSync(f, 'utf8')
           files.push({
             path: join(opts.dir, skill, relative(join(SKILLS_DIR, skill), f)),
-            content: /\.(md|mjs|js|ts|py|json)$/.test(f) ? rewriteBody(raw, { pluginRoot, mode }) : raw,
+            content: /\.(md|mjs|js|ts|py|json)$/.test(f) ? rewriteBody(raw, { pluginRoot, mode, sourcePath: f, outputPath: join(opts.dir, skill, relative(join(SKILLS_DIR, skill), f)) }) : raw,
           })
         }
       }
@@ -284,10 +289,10 @@ function resolveBundleLinks(files: OutFile[], base: string): OutFile[] {
     if (!f.path.endsWith('.md')) return f
     const fromDir = dirname(inBundle(f.path))
     const content = f.content.replace(
-      /\[([^\]]+)\]\((\.\.?\/[^)#:]+\.(?:md|mjs|py|json|sh))\)/g,
-      (whole, label: string, link: string) => {
+      /\[([^\]]+)\]\((\.\.?\/[^)#:]+\.(?:md|mjs|py|json|sh))(#[^)]*)?\)/g,
+      (whole, label: string, link: string, fragment: string = '') => {
         const target = normalize(join(fromDir, link))
-        return emitted.has(target) ? whole : `**${label}**（\`${target}\`，未隨本包出貨）`
+        return emitted.has(target) ? whole : `**${label}**（\`${target}${fragment}\`，未隨本包出貨）`
       },
     )
     return content === f.content ? f : { ...f, content }
@@ -381,7 +386,7 @@ function buildClaudeAi(platform: Platform): OutFile[] {
   const { files, included, excluded, degraded } = skillFiles(platform, {
     dir: join(platform.target, 'skills'),
     conditional: false,
-    copyRefs: false,
+    copyRefs: true,
   })
 
   // 包成 plugin：claude.ai 與 ChatGPT 工作區都能直接從 repo 同步整包安裝，

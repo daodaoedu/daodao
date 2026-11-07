@@ -231,6 +231,18 @@
         "browser",
         "runtests"
       ]
+    },
+    "prevent-repeat-failures": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "bash",
+        "git",
+        "gh",
+        "runtests",
+        "subagent",
+        "hooks"
+      ]
     }
   }
 }

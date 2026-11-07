@@ -15,7 +15,7 @@
 
 `VALID` 只表示 schema 合格；`RESERVED`／`RETAINED` 只表示本機占用紀錄符合。工具始終回報 `readiness: NOT_VERIFIED`，不能將它們改稱 READY 或 PM 驗收通過。真正可交接仍需：即時帳號／權限與資料檢查、同帳號逐步網頁重播、還原後再查，以及實際保留安排。
 
-2026-11-07 的十張待驗卡安排見**逐卡契約快照**（repo 檔案 `docs/testing/acceptance-scenarios/2026-11-07/README.md`，未隨本包出貨），後續須依最新留言重新核對，不把日期快照視為即時清單。
+2026-11-07 的十張待驗卡安排見**逐卡契約快照**（`../docs/testing/acceptance-scenarios/2026-11-07/README.md`，未隨本包出貨），後續須依最新留言重新核對，不把日期快照視為即時清單。
 
 ## 共用占用簿
 

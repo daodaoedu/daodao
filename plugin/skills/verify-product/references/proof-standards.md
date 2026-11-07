@@ -1,24 +1,10 @@
-# 以功能行為為單位的證據
+# 產品 driver 的證據與維護
 
-一個feature的使用者入口與成功終態在既有feature map維護。驗證需實際操作該入口，同時留下動作與結果，並核對儲存或背景副作用。
+動作／結果、artifact、替換、第二視角與各邊界可支持的結論，只在[共用驗證配方](../../../docs/verification-recipe.md#證據邊界)維護。本文件補產品driver特有的條件，不另定一套PASS或發布規則。
 
-| 證據範圍 | 可支持的結論 | 不可替代 |
-|---|---|---|
-| 瀏覽器表單／點擊、實際HTTP、結果畫面 | 此入口在此角色及版本的行為 | 未操作的其他入口、OAuth或部署 |
-| Worker／queue事件與持久化讀回 | 原job處理、狀態／副作用 | 使用者能從畫面完成流程 |
-| 真SMTP到本機mailbox | 此SMTP邊界收件內容與實際href | Gmail／Outlook inbox或spam placement |
-| 外部邊界capture／mock | 已觀察的送出內容／呼叫 | 真SMTP、外部收件或整條產品旅程 |
-| Unit／直接service測試 | 被測邏輯與已覆蓋情境 | UI、真排程觸發或端到端旅程 |
+一個feature的入口、角色與成功終態在既有feature map維護。driver應從該入口操作，不以直接service取代使用者路徑。
 
-替換可以存在，但要寫清位置與結論範圍。時間加速先保留原日期與原job，再讓實worker處理；用DB setter、改delay或直接呼叫deliver，只能算fixture／後端情境，不能當自然送達的user path。
-
-## 結果紀錄
-
-每輪至少記：feature/entry、actors及prerequisites、source版本與環境、動作、觀察值、artifact refs、substitutions與unverified。UI用實際畫面及HTTP；worker用job ID／事件／副作用；SMTP用實收message。不要為通過格式gate填「未發請求(worker)」或只有「✅PASS」。
-
-capture動作和結果，確認可讀的第二視角（如DB row、檔案或mailbox）。需要登入的feature，登入牆只證明入口被擋；session fixture不證明OAuth。截圖只看到終態而沒有動作來源，不能獨立證明操作成功。
-
-agent回報、檔案mtime、cached畫面、編譯成功及格式checker都是proxy。檢查原始artifact，能重跑就用同一recipe重跑。格式checker只找缺項，不替代source及live查核。
+時間加速先保留原日期與原job，再讓實worker處理；用DB setter、改delay或直接呼叫deliver，只能算fixture／後端情境，不能當自然送達的user path。SMTP進本機mailbox、capture與真實inbox各自依共用配方限縮結論。
 
 ## 維護
 

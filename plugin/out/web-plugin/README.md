@@ -24,6 +24,7 @@ Claude.ai 的 sandbox 有檔案系統也能跑指令，但那是一個空的暫�
 | collect-pr-feedback | ✅ | 降級：filesystem、bash |
 | draft-prd | ✅ | 降級：filesystem |
 | notify-related-issue | ✅ | 完整 |
+| prevent-repeat-failures | ✅ | 降級：filesystem、bash、git、runtests、subagent、hooks |
 | report-bug | ✅ | 降級：filesystem |
 | request-feature | ✅ | 降級：filesystem |
 | check-commit | ❌ | 缺必要能力：bash、filesystem、runtests |

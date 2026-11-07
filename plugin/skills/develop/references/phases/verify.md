@@ -6,6 +6,8 @@
 
 與 dev 階段 phase 級快篩的分工：快篩只看「這個 phase 的改動有沒有壞」；verify 是**對完整驗收清單（PRD／既有 FRD 的 Test Points）的總驗收**，含跨 phase 整合、回歸、無障礙與窄螢幕——快篩過了不能跳過 verify。
 
+準備、逐項觀察、證據與資料生命週期沿用[共用驗證配方](../../../../docs/verification-recipe.md)；本階段仍負責完整AC、工程矩陣／報告及`verified`閘門，不使用正式PM的登入或發布政策。
+
 產品Web的實際操作沿用 [verify-product](../../../verify-product/SKILL.md) 的app級入口與既有feature map。可用driver先列出再執行；沒有recipe就記缺口。後端整合、worker／SMTP證據與使用者旅程分開，背景事件不捏HTTP碼；格式gate通過不是實跑證明。
 
 1. **起 dev server 並做環境檢查** — 在任務資料夾的 worktree 內起，套用 task.md 的 Port offset，接著照 [browser-verify.md §1a](../browser-verify.md) 逐項確認環境。之後任何一次驅動失敗或結果怪異（掉登入、量到舊頁），先重做 §1a，再判斷是不是產品問題
@@ -21,7 +23,7 @@
    - **版面 rect 對照**（零視覺差異的 refactor 必做）：抽共用元件／換 className／搬 DOM 時，layout-probe 只證明「沒有溢出」，不證明「版面沒變」。讀 dev 階段存的 `$TASK/evidence/rect-before.json`，用 `references/rect-probe.mjs` 量改後、`rect-diff.py` 比對 rect 與 computedStyle；沒有改前基準時到 `origin/dev` 的 worktree 補量，並在 task.md 寫明是事後補量（見 [browser-verify.md §4b](../browser-verify.md)），差異表貼進 task.md。#240 抽 `PageShell` 就是這樣證明 15 頁 45 組零差異的
 3. **核心旅程矩陣**（寫入，或涉及權限／隱私／資料範圍的讀取都必做）— 依 [journey-matrix.md](../journey-matrix.md) 列出正常與錯誤路徑，記錄實際 HTTP 狀態碼與資料斷言。寫入須驗 server 拒絕、畫面訊息與輸入保留；讀取須從入口走到下游，並依 [read-access-verification.md](../read-access-verification.md) 填角色矩陣、固定資料、真實 DB／快取撤權／期限邊界的適用證據。每個任務填讀取權限適用聲明；兩類行為都不涉及才可宣告核心旅程不適用。FE／BE 規則來源仍寫 `檔案:行號`，不以畫面或 mock 通過取代真正行為。
 4. **留證據** — `fix` 任務重跑 dev 階段的重現步驟，修正後輸出存成 `$TASK/evidence/repro-after.txt`，並補一列鄰近輸入、角色或入口的錯誤路徑；每個檢查點截圖存到 `$TASK/evidence/`，命名 `<phase>-<checkpoint>.png`；旅程列命名 `verify-jNN.png`
-5. **記錄結果** — task.md 新增「驗證」區塊：檢查清單 + 通過/失敗 + 截圖檔名 + 核心旅程矩陣。保留同版完整的最新結果；較晚在真實資料或互動狀態發現的失敗，不能被早期空資料通過取代。歷次證據可留存，但標明版本、情境與哪份是交付依據。讀取權限適用時保留同一組 fixture ID、實際登入角色與各 repo ref；mock、真實資料庫、部署後操作的結果分列。若包含原生 App 驗收，先確認可安裝的測試 build、裝置與對應版本；OTA 發布成功或 Expo web 通過不等於實機可驗收。
+5. **記錄結果** — task.md 新增「驗證」區塊：檢查清單 + 通過/失敗 + 截圖檔名 + 核心旅程矩陣。同版完整結果、版本漂移與逐項證據依共用配方處理；較晚的真實互動失敗不能被早期空資料通過取代。讀取權限適用時保留同一組 fixture ID、實際登入角色與各 repo ref；mock、真實資料庫、部署後操作的結果分列。若包含原生 App 驗收，先確認可安裝的測試 build、裝置與對應版本；OTA 發布成功或 Expo web 通過不等於實機可驗收。
 6. **異常歸因與失敗處理** — 發現問題先依 [browser-verify.md 驗證迴圈](../browser-verify.md#4-驗證迴圈) 做同情境原版／新版實測，保存版本與證據並分類「本次新增／原版已存在／無法確定」。既有問題仍記失敗與影響，不擅自擴大本卡範圍，也不因此宣稱檢查全綠；未確定先補查。修復後重驗該項（同一項失敗 2 次，先照 [dev.md](dev.md)「連續執行原則」寫出共同假設並驗證，停止重複相同嘗試；整理已查核原因、證據與阻塞，能繼續查明的技術問題由 AI 調查，不要交人猜根因或無限重試）。
 7. **產出 Google 文件驗證報告**（必做）— 把「驗證」區塊 + 核心旅程矩陣 + evidence/ 截圖整理成一份 Google 文件（截圖嵌圖，不是留在本機資料夾），連結記進 task.md「驗證」區塊第一行；操作細節與一次性 rclone 設定見 [verify-report.md](../verify-report.md)
 8. 全部通過 → task.md Status → `verified`，進入 finish。「全部」包含：「## 驗證」沒有任何 `- [ ]` 未勾項目、沒有「需要手動驗證」清單、「### 版面探針」全 ✅。Status 與摘要必須依完整最新結果推導；不得先改 Status、移走失敗表／未驗項目或只保留通過子集，讓閘門看似通過。明確受阻就保留未完成，附環境查核與仍缺的證據，不把 blocker 自動轉為豁免。
