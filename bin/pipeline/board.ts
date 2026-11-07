@@ -155,7 +155,7 @@ function cmdAudit(): void {
   const links = getCentralIssueLinks(items.map((it) => it.issueNumber!));
   // Return comments are only judged for Need Fix cards (#338)
   const comments = getIssueComments(
-    items.filter((it) => it.status === "Need Fix").map((it) => it.issueNumber!)
+    items.filter((it) => it.status === "Need Fix").map((it) => it.issueNumber!), 15, true
   );
   const cards: AuditCard[] = items.map((it) => {
     const l = links.get(it.issueNumber!);

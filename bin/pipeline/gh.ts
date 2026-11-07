@@ -1,7 +1,7 @@
 /**
  * Thin gh CLI wrappers for the Planning board CLI. All I/O lives here.
  */
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { prTargets } from "./lib.js";
 import { BOARD, CENTRAL_REPO, OWNER, type BoardCategory, type BoardStatus } from "./types.js";
 
@@ -259,13 +259,14 @@ export function getCentralIssueLinks(numbers: number[]): Map<number, IssueLinks>
  */
 export function getIssueComments(
   numbers: number[],
-  last = 15
+  last = 15,
+  complete = false
 ): Map<number, Array<{ createdAt: string; body: string; url: string; author?: string }>> {
   const result = new Map<number, Array<{ createdAt: string; body: string; url: string; author?: string }>>();
   for (let i = 0; i < numbers.length; i += 20) {
     const fields = numbers
       .slice(i, i + 20)
-      .map((n) => `i${n}: issue(number: ${n}) { number comments(last: ${last}) { nodes { createdAt body url author { login } } } }`)
+      .map((n) => `i${n}: issue(number: ${n}) { number comments(last: ${last}) { pageInfo { hasPreviousPage startCursor } nodes { createdAt body url author { login } } } }`)
       .join("\n");
     const query = `query { repository(owner: "${OWNER}", name: "${CENTRAL_REPO}") { ${fields} } }`;
     const out = sh(`gh api graphql -f query='${query}'`);
@@ -273,13 +274,21 @@ export function getIssueComments(
     for (const raw of Object.values(repo)) {
       const node = raw as {
         number: number;
-        comments: { nodes: Array<{ createdAt: string; body: string; url: string; author: { login: string } | null }> };
+        comments: { pageInfo: { hasPreviousPage: boolean; startCursor: string | null }; nodes: Array<{ createdAt: string; body: string; url: string; author: { login: string } | null }> };
       } | null;
       if (node) {
-        result.set(
-          node.number,
-          node.comments.nodes.map((c) => ({ createdAt: c.createdAt, body: c.body, url: c.url, author: c.author?.login })),
-        );
+        const comments = [...node.comments.nodes];
+        let page = node.comments.pageInfo;
+        while (complete && page.hasPreviousPage) {
+          if (!page.startCursor) throw new Error("Comment pagination missing cursor");
+          const cursor = JSON.stringify(page.startCursor);
+          const olderQuery = `query { repository(owner: "${OWNER}", name: "${CENTRAL_REPO}") { issue(number: ${node.number}) { comments(last: 100, before: ${cursor}) { pageInfo { hasPreviousPage startCursor } nodes { createdAt body url author { login } } } } } }`;
+          const older = JSON.parse(execFileSync("gh", ["api", "graphql", "-f", `query=${olderQuery}`], { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] })).data.repository.issue.comments as typeof node.comments;
+          if (older.pageInfo.hasPreviousPage && older.pageInfo.startCursor === page.startCursor) throw new Error("Comment pagination did not advance");
+          comments.unshift(...older.nodes);
+          page = older.pageInfo;
+        }
+        result.set(node.number, comments.map((c) => ({ createdAt: c.createdAt, body: c.body, url: c.url, author: c.author?.login })));
       }
     }
   }

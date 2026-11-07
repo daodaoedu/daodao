@@ -386,3 +386,27 @@ describe("Need Fix triage (#338)", () => {
     expect(audit(card({ number: 389, status: "Todo", issueState: "CLOSED", labels: [BOARD_AUDIT_LABEL] }))).toEqual([]);
   });
 });
+
+
+describe("reacceptance status drift", () => {
+  const request = { createdAt: "2026-09-19T23:30:00Z", body: "<!-- daodao:acceptance-request -->\n## 🙋 請驗收：重測" };
+  const drift = (comments: AuditCard["comments"], status = "Need Fix") =>
+    problems(card({ status, statusUpdatedAt: "2026-09-19T23:00:00Z", comments }))
+      .filter((p) => p.includes("重新請驗收"));
+  it("flags a new request immediately, before the 24-hour grace", () => {
+    expect(drift([request])).toEqual(["已重新請驗收，但卡片仍在 Need Fix"]);
+  });
+  it("ignores an old request before the latest return", () => {
+    expect(drift([{ ...request, createdAt: "2026-09-19T22:00:00Z" }])).toEqual([]);
+  });
+  it("does not override a later failure or blocker, regardless of input order", () => {
+    for (const body of ["AC-01 FAIL: wrong result", "<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文\nAC-01 FAIL: wrong result", "> ## 🙋 請驗收：重測\nAC-01 FAIL: wrong result", "驗收受阻，帳號無法測試", "<!-- daodao:acceptance-report spec=1 result=FAIL -->\n引用原交接：\n<!-- daodao:acceptance-request -->\n## 🙋 請驗收：原文"]) {
+      const later = { createdAt: "2026-09-19T23:45:00Z", body };
+      expect(drift([later, request])).toEqual([]);
+    }
+  });
+  it("ignores discussion after the request and cards already in Acceptance", () => {
+    expect(drift([request, { createdAt: "2026-09-19T23:50:00Z", body: "補充證據" }])).toHaveLength(1);
+    expect(drift([request], "Acceptance")).toEqual([]);
+  });
+});
