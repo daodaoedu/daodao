@@ -70,7 +70,7 @@
 | statechart | 用 TLA+ 檢查狀態機，畫成 Mermaid，回報走到違規狀態的最短路徑 | 未採用 | 只有 `docs/automation/dual-subscription-development-workflow.md` 第 507 行一張說明用的 stateDiagram，沒有做檢查 | — |
 | runtime-forensics playbook | 對執行中的程序加儀器取得 CPU／heap 訊號再診斷，不從原始碼推論 | 未採用 | 沒找到 | — |
 | trace-forensics playbook | 從已存在的 trace／profile 檔案診斷 | 未採用 | 沒找到（`plugin/hooks/import-agent-trace.py` 是 agent 寫檔紀錄，用途不同） | — |
-| eval playbook／「Test a skill change blind」 | 盲測 skill 的改動：受測模型看不到評分標準，與基準版本比較 | 部分採用 | `scripts/skill-evals/`（不讓模型看到 rubric、用隔離 workspace、分數根據獨立擷取的 trace）、`.github/workflows/skill-evals.yml`。CI 只測 scorer，不跑模型，也沒有新舊 skill 的 A／B 比較 | — |
+| eval playbook／「Test a skill change blind」 | 盲測 skill 的改動：受測模型看不到評分標準，與基準版本比較 | 部分採用 | `scripts/skill-evals/`（不讓模型看到 rubric、用隔離 workspace、分數根據獨立擷取的 trace）、`.github/workflows/skill-evals.yml`。CI 只測 scorer、不跑模型；`prevent-repeat-failures/references/skill-validation.md`已補新舊比較、匿名評審與trace核對的必做流程，真實client比較成效仍須逐案驗證 | — |
 | 指南：先講好完成條件 | 在開工前用可通過／可失敗的條件定義「完成」 | 已採用 | `start.md` 1.5 驗收契約、每個 phase 檔的「完成條件」、`plugin/templates/central-issue.md` 的 AC | — |
 | 指南：平行工作各用各的工作區 | 平行任務各自隔離，不共用同一個 worktree | 已採用 | `plugin/skills/develop/SKILL.md`（`worktrees/<n>-<slug>/`）、`clone-mode.md`、`parallel-dev.md` 的 port offset | — |
 

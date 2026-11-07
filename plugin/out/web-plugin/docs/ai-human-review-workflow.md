@@ -49,6 +49,8 @@ PM 卡的 post-merge 收尾，依 verify-deploy 登記 task-scoped 完成契約�
 
 每次階段交接做短復盤，正式驗收 PASS／FAIL／BLOCKED 後及任務結束前做整體復盤，依 [prevent-repeat-failures](../skills/prevent-repeat-failures/SKILL.md)「交付、復盤與回流」將改善帶回最早有效的階段。正常通過也確認防線是否實際執行；發現漏檢、僥倖通過或工具漂移不能以 PASS 蓋過。產品完成與防線改善分開追蹤，不讓未實作候選被當作已生效，也不因額外改善而改寫原 AC 或 PM 權限。
 
+skill 修改若影響觸發、決策、授權或交接，交付前依 [Skill 行為驗證](../skills/prevent-repeat-failures/references/skill-validation.md) 做適用盲測；結構／打包測試、agent行為與產品驗證分開陳述。純文字格式修正不強制跑模型。
+
 ## 重複錯誤升級與交付契約
 
 同一錯誤第二次發生，先停止同樣的重試，保存兩次證據；逐項評估 lint rule、型別與目錄限制。只改提示詞是最後手段，必須說明機械防線無法適用的理由。沿用現有 skill 和 gate，不整包照搬外部 skills。
