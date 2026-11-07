@@ -66,8 +66,11 @@ export async function runFixture(command: FixtureCommand, source: FixtureManifes
     if (!me || me.id !== claims._id || me.role !== (actor === 'admin' ? 5 : 2)) fail('Authenticated identity mismatch');
   }
   await identity(credentials.adminToken, 301, 'Admin', 'admin');
-  await identity(credentials.applicantToken, 328, 'User', 'applicant');
-  await api('GET', ROOT, undefined, 'applicant', 403);
+  // Retirement needs only the live admin; expired/drifted applicant sessions must not strand fixtures.
+  if (command !== 'cleanup') {
+    await identity(credentials.applicantToken, 328, 'User', 'applicant');
+    await api('GET', ROOT, undefined, 'applicant', 403);
+  }
   async function organizations(): Promise<Org[]> {
     const rows = await api('GET', ROOT);
     if (!Array.isArray(rows)) fail('Invalid organization list');

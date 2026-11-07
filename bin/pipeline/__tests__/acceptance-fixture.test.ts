@@ -150,6 +150,31 @@ describe('issue463 API-only fixture lifecycle',()=>{
     h.rows.get(m.scenarios[0].organizationId!)![0].expiresAt=new Date(now.getTime()+3_599_999).toISOString();
     expect((await runFixture('check',m,creds,h.deps)).ready).toBe(false);
   });
+  it.each(['expired','promoted'] as const)('cleanup retires owned fixtures without using the %s applicant session',async(drift)=>{
+    const h=harness(),m=await prepared(h);let applicantRequests=0;
+    const fetchWithApplicantDrift=async(input:any,init:any)=>{
+      if(init.headers.authorization.includes(creds.applicantToken)){
+        applicantRequests++;
+        return new Response(JSON.stringify(drift==='expired'?{success:false}:{data:{id:'uuid-328',role:5}}),{status:drift==='expired'?401:200});
+      }
+      return h.deps.fetch(input,init);
+    };
+    const result=await runFixture('cleanup',m,creds,{...h.deps,fetch:fetchWithApplicantDrift as typeof fetch});
+    expect(result.status).toBe('retired');expect(applicantRequests).toBe(0);
+    expect(h.orgs.every(o=>o.status==='suspended')).toBe(true);
+  });
+  it('cleanup still rejects an expired admin before any business write',async()=>{
+    const h=harness(),m=await prepared(h);h.calls.length=0;
+    const fetchWithExpiredAdmin=async(input:any,init:any)=>init.headers.authorization.includes(creds.adminToken)?new Response(JSON.stringify({success:false}),{status:401}):h.deps.fetch(input,init);
+    await expect(runFixture('cleanup',m,creds,{...h.deps,fetch:fetchWithExpiredAdmin as typeof fetch})).rejects.toThrow(/401/);
+    expect(h.calls).toHaveLength(0);expect(h.orgs.every(o=>o.status==='active')).toBe(true);
+  });
+  it.each(['prepare','check','rebuild'] as const)('%s still rejects applicant live-role drift before any business writes',async(command)=>{
+    const h=harness(),m=await prepared(h);h.calls.length=0;
+    const fetchWithPromotedApplicant=async(input:any,init:any)=>init.headers.authorization.includes(creds.applicantToken)?new Response(JSON.stringify({data:{id:'uuid-328',role:5}})):h.deps.fetch(input,init);
+    await expect(runFixture(command,m,creds,{...h.deps,fetch:fetchWithPromotedApplicant as typeof fetch})).rejects.toThrow(/identity/);
+    expect(h.calls.every(c=>c.method==='GET')).toBe(true);
+  });
   it('strictly rejects secret fields, malformed journal and overlapping scenario IDs before network',async()=>{
     const h=harness();for(const m of [{...initial(),token:'secret'},{...initial(),journal:{action:'accept',scenario:'cancel'}},{...initial(),scenarios:initial().scenarios.map(s=>({...s,organizationId:1}))}]){
       expect(fixtureManifestSchema.safeParse(m).success).toBe(false);

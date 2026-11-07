@@ -6,6 +6,8 @@
 
 只支援 server-dev。既有 PM 301 必須仍為 Admin，申請人 328 必須仍為 User；不得調整角色或可信 Email 來湊前提。使用合法登入取得的 token。收件人使用經確認可收到信的 QA 信箱或別名，且不能匹配已有可信登入 Email，否則會直接加入 owner 而非產生 pending 邀請。
 
+`cleanup` 僅要求有效管理員及資源歸屬核對；申請人的 token 過期或角色變動不應阻擋退休資料。`prepare`、`check`、`rebuild` 仍須完整驗證申請人。
+
 建立權限 0600 的 JSON 憑證檔，包含 `adminToken`、`applicantToken`、`recipientEmail`，內容不放 Git、公開報告或命令列。執行以下指令時使用絕對路徑：
 
 ```sh
