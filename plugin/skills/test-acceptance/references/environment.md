@@ -79,7 +79,7 @@ toast 短暫出現時即時擷取；必要時用頁面 `[data-sonner-toast]` 文
 
 | 項目 | 怎麼確認 | 記錄 |
 |---|---|---|
-| GitHub 發布身分 | `gh api user --jq .login`，或 connector 的目前使用者、瀏覽器 GitHub 右上角頭像 | 實際 login 與用的是哪一條路 |
+| GitHub 發布身分 | Codex 內建瀏覽器中的 GitHub 右上角頭像 | 瀏覽器帳號必須是 `peggy1213-create`；GitHub connector 目前登入 `vincentxuu`，不使用 connector 執行本 skill 的 GitHub 操作 |
 | 操作與證據能力 | 在選用工具打開指定 dev、確認原步驟／viewport／截圖與附件路徑 | 實際工具、觀察及成功／失敗／未驗證；測試與發布分開 |
 | 每個角色的登入狀態 | 在要用的瀏覽器打開 dev 網址，看登入者 | 角色 → 瀏覽器／context → 實際帳號 |
 | dev 可用 | 打開請驗收留言的網址，不是錯誤頁、不是登入牆 | 網址與看到的頁面標題 |
@@ -88,6 +88,7 @@ toast 短暫出現時即時擷取；必要時用頁面 `[data-sonner-toast]` 文
 ## Codex 內建瀏覽器與 GitHub
 
 - 依需求檢查手機版文字或排版時，可調整 Codex 內建瀏覽器至留言或 AC 指定的 viewport；確認實際寬高，完成後還原。
-- 可在 Codex 內建瀏覽器開啟 GitHub；每次寫入前確認登入帳號為 `peggy1213-create`。
+- 從流程一開始就開啟 Codex 內建瀏覽器並前往 GitHub；只用確認登入 `peggy1213-create` 的瀏覽器工作階段執行本 skill 授權的 GitHub 操作，每次寫入前再次確認帳號。
+- GitHub connector 目前登入者是 `vincentxuu`；忽略該登入者，不使用 connector，也不以它的身分資訊判定瀏覽器帳號。瀏覽器不是 `peggy1213-create` 或無法確認帳號時，停止 GitHub 寫入並回報，不改用 connector 或其他帳號。
 - 截圖由內建瀏覽器直接複製並貼入 issue 留言；不建立留言草稿，不將截圖另存本機。
 - 本段優先於本文件任何允許暫存截圖、建立草稿或使用其他瀏覽器的衝突指示。
