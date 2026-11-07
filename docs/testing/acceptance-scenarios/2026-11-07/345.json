@@ -1,0 +1,102 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/345",
+  "generation": "inventory-20261107-issue-345",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "accountEmail": "wedialogbox@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ],
+      "organizationOwners": [
+        {
+          "organizationId": 24
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization",
+      "id": "24",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "program",
+      "id": "44",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort",
+      "id": "121",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "practice",
+      "id": "e83a9fcd-db67-439b-9b45-76d69ddb7f10",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "checkin",
+      "id": "1139",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "comment-template-namespace",
+      "id": "pm345",
+      "usage": "write"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort-comments",
+      "id": "cohort-121",
+      "usage": "write"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: Draft cohort121 and draft practice467, synthetic learner only",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957"
+    },
+    {
+      "description": "UNVERIFIED: Need encouragement and celebration each exactly1 row; known QA comment history and five-day synthetic checkin",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957"
+    },
+    {
+      "description": "UNVERIFIED: Locale/viewport routes Chinese+English",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: organization24 owner/coach for program44 cohort121; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 Delete own PM345- templates only; retain QA comment history; engineer removes exact task scheduling sources after PASS, never disable actors",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 Issue-specific reset+readback; source says execute this card reset but latest handoff omits exact command; preserve existing comments/history",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957"
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/276",
+  "generation": "inventory-20261107-issue-276",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "accountEmail": "wedialogbox@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ],
+      "organizationOwners": [
+        {
+          "organizationId": 17
+        },
+        {
+          "organizationId": 18
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization",
+      "id": "17",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization",
+      "id": "18",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "program",
+      "id": "41",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "program",
+      "id": "42",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort",
+      "id": "117",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort",
+      "id": "118",
+      "usage": "read"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: Only latest corrected step11 remains; prior PM FAIL not replaced with PASS",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592"
+    },
+    {
+      "description": "UNVERIFIED: A17/B18, draft117/118, synthetic learner and distinct baseline templates retained",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592"
+    },
+    {
+      "description": "UNVERIFIED: No actual message send, invitation, publish or baseline delete",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: owner access to organizations17/18 and coach access to programs41/42 cohorts117/118; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 Cancel drafts/dialogs; engineer cleanup exact issue276 data only after acceptance; do not send comments/publish/delete baselines",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 Existing pm276-reset.py requires explicit --execute and exact original fixture baseline; re-read and same-account replay required",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592"
+  }
+}

@@ -1,0 +1,242 @@
+{
+  "observedAt": "2026-11-07T09:07:53.137884+00:00",
+  "scope": "checked data predicates only; no full READY, Google or PM acceptance claim",
+  "cards": [
+    {
+      "issue": 276,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/276#issuecomment-6701979592",
+      "checks": [
+        {
+          "check": "cohorts117/118 remain private draft",
+          "status": "PASS"
+        },
+        {
+          "check": "A/B synthetic learner counts",
+          "status": "PASS"
+        },
+        {
+          "check": "no sent cohort comments",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "Navigation confirmation UI, retained template details/pending invitation exact values not rechecked",
+        "Browser drafts not opened or sent"
+      ]
+    },
+    {
+      "issue": 345,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/345#issuecomment-6702110957",
+      "checks": [
+        {
+          "check": "current focus121 exact1+1 synthetic rows",
+          "status": "PASS"
+        },
+        {
+          "check": "cohort121/private draft + practice467/private draft",
+          "status": "PASS"
+        },
+        {
+          "check": "one nonempty synthetic checkin",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No template create/delete or message send; current13 comments retained as history",
+        "Existing local postmerge-readonly-preflight.cjs is stale program32/cohort94, not current44/121; not run",
+        "UI wording/viewport/notification delivery not rechecked"
+      ]
+    },
+    {
+      "issue": 357,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282",
+      "checks": [
+        {
+          "check": "two exact practices owned by PM306",
+          "status": "PASS"
+        },
+        {
+          "check": "private draft and challenge flags",
+          "status": "PASS"
+        },
+        {
+          "check": "original practiceAction baselines",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No save/restore executed; UI disabled fields, viewport and outbound update payload not rechecked"
+      ]
+    },
+    {
+      "issue": 358,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/358#issuecomment-6703661922",
+      "checks": [
+        {
+          "check": "original exact practice owner306",
+          "status": "PASS"
+        },
+        {
+          "check": "privacy remains public",
+          "status": "PASS"
+        },
+        {
+          "check": "not soft deleted",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No unchanged save or UI submit performed; baseline is current readable state only"
+      ]
+    },
+    {
+      "issue": 452,
+      "stateForCheckedDataPredicates": "NO_DOMAIN_SEED_REQUIRED_UI_UNVERIFIED",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/452#issuecomment-6703866839",
+      "checks": [
+        {
+          "check": "handoff requires existing account and empty browser form, no fixed domain seed",
+          "status": "NOT_APPLICABLE"
+        }
+      ],
+      "notChecked": [
+        "Browser blank form and required field validation not opened",
+        "Shared actor/IP rate-limit bucket readiness not queried; no valid report sent",
+        "Only submit once under existing handoff; do not flood or reuse earlier return status as current bucket readiness"
+      ]
+    },
+    {
+      "issue": 463,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/463#issuecomment-6702020558",
+      "checks": [
+        {
+          "check": "originalorg16 active with0members",
+          "status": "PASS"
+        },
+        {
+          "check": "inv7 pendingunaccepted/unrevoked + request2user328unapproved",
+          "status": "PASS"
+        },
+        {
+          "check": "inv5/6 revoked",
+          "status": "PASS"
+        },
+        {
+          "check": "inv7 unexpired",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No UI cancellation or real QA inbox checked in this run",
+        "New manualorg/invitation mutations not run; no approve/revoke/resend",
+        "Originalpendinginvitation still expires2026-11-13 09:13:07Taipei; reviewAt not auto-release"
+      ]
+    },
+    {
+      "issue": 471,
+      "stateForCheckedDataPredicates": "BLOCKED_FOR_REPLAY",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/471#issuecomment-6685747869",
+      "checks": [
+        {
+          "check": "valid joinedlearner count6",
+          "status": "PASS"
+        },
+        {
+          "check": "PM306 still unanswered",
+          "status": "BLOCKED_FOR_REPLAY"
+        },
+        {
+          "check": "initial completion count1",
+          "status": "BLOCKED_FOR_REPLAY"
+        },
+        {
+          "check": "initial anonymous4star count1",
+          "status": "BLOCKED_FOR_REPLAY"
+        },
+        {
+          "check": "114/115 no submissions/anonymousratings",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No answertext read; anonymous answers only independently aggregated, neverjoinedtoidentity",
+        "Current consumed status does not prove productbug orwho submitted; no timestamp columns oncompletiontable",
+        "LatestPMcomment reports earlier submission thenrequestsrestore; no newformalPMresultafterlatestengineerrestore",
+        "Do not reset while potentialPMsession/statusunknown; preservecompletion/answers",
+        "Sharedorganization14 retain rule superseded via approved notification; no cleanup"
+      ]
+    },
+    {
+      "issue": 473,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/473#issuecomment-6702806232",
+      "checks": [
+        {
+          "check": "originalcohort39 empty checkins/comments/no summary",
+          "status": "PASS"
+        },
+        {
+          "check": "dedicatedcohort127 nonemptycheckin and current persistedsummary",
+          "status": "PASS"
+        },
+        {
+          "check": "existing ownKey status remains verified",
+          "status": "PASS"
+        },
+        {
+          "check": "draft private synthetic practice/cohort",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No AI generate/regenerate request, no providerhealthcheck/call or keyread/change",
+        "Current summaryversion4 is retainedhistory, not evidenceofnewgeneration success orfuturequota",
+        "UI rendering/viewport not rechecked"
+      ]
+    },
+    {
+      "issue": 475,
+      "stateForCheckedDataPredicates": "CHECKED_PREDICATES_PASS",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/475#issuecomment-6702764726",
+      "checks": [
+        {
+          "check": "exact frozen domain baseline digest",
+          "status": "PASS"
+        },
+        {
+          "check": "frozen plan corresponds current handoff",
+          "status": "PASS"
+        },
+        {
+          "check": "all10cohort/enrollment readsHTTP200",
+          "status": "PASS"
+        }
+      ],
+      "notChecked": [
+        "No browser URL/locale/viewport/calendar interactions run",
+        "No session edits, member leave/rejoin, resets or otherworktreeartifact writes",
+        "No productACL/cache/expiry behavior newly certified; this confirms fixturebaselineonly"
+      ]
+    },
+    {
+      "issue": 480,
+      "stateForCheckedDataPredicates": "NO_DOMAIN_SEED_REQUIRED",
+      "sourceExpectation": "https://github.com/daodaoedu/daodao/issues/480#issuecomment-6704012663",
+      "checks": [
+        {
+          "check": "latest handoff navigation only has no dedicatedcohort/contentfixture",
+          "status": "NOT_APPLICABLE"
+        }
+      ],
+      "notChecked": [
+        "Actor and globalrole checks provided by parent; this childdidnotrepeat",
+        "No GoogleOAuth/navigation/viewport check run now"
+      ]
+    }
+  ]
+}

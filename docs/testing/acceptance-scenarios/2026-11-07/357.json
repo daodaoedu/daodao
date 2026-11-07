@@ -1,0 +1,91 @@
+{
+  "kind": "acceptance-scenario",
+  "version": 1,
+  "issue": "https://github.com/daodaoedu/daodao/issues/357",
+  "generation": "inventory-20261107-issue-357",
+  "taskOwner": "acceptance-scenario-lifecycle",
+  "actors": [
+    {
+      "kind": "actor-access",
+      "accountId": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "accountEmail": "wedialogbox@gmail.com",
+      "expectedRoles": [
+        "Admin"
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "environment": "dev",
+      "type": "account",
+      "id": "4707bee9-6918-4705-beb0-daa1d56d5a99",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "organization",
+      "id": "33",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "program",
+      "id": "47",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "cohort",
+      "id": "128",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "practice-template",
+      "id": "76",
+      "usage": "read"
+    },
+    {
+      "environment": "dev",
+      "type": "practice",
+      "id": "0851dbc6-fd5e-4d29-b63d-2b9f5011445e",
+      "usage": "write"
+    },
+    {
+      "environment": "dev",
+      "type": "practice",
+      "id": "9647024b-dc9a-4681-863c-9590cc9124db",
+      "usage": "write"
+    }
+  ],
+  "prerequisites": [
+    {
+      "description": "UNVERIFIED: Both practices private drafts owned by306",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282"
+    },
+    {
+      "description": "UNVERIFIED: Challenge name/startDate/duration locked; challenge action baseline 每天讀十頁合成測試筆記",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282"
+    },
+    {
+      "description": "UNVERIFIED: Personal action baseline 每天讀十頁個人測試筆記; no publish/start",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282"
+    },
+    {
+      "description": "UNVERIFIED scoped role / login: owner of both exact practices; joined cohort128; canonical PM Google account; current Google flow not rerun",
+      "evidenceRef": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282"
+    }
+  ],
+  "retention": {
+    "retainUntil": "pm-accepted",
+    "reviewAt": "2026-11-08T00:00:00Z"
+  },
+  "cleanup": {
+    "instructions": "只在正式驗收或明確取消後執行，先查其他卡依賴並保存回讀；本契約不授權自動清理。 PM restores action text; engineer removes exact issue357 scheduling sources after acceptance; preserve accounts and other cards",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282"
+  },
+  "rebuild": {
+    "instructions": "既有步驟仍需核對版本/權限/資料歸屬，不自動執行。 Use exact owned IDs; restore initial text+locked fields, readonly readback then same-account replay; do not run prepare blindly (creates resources)",
+    "evidenceRef": "https://github.com/daodaoedu/daodao/issues/357#issuecomment-6703751282"
+  }
+}

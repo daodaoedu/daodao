@@ -144,3 +144,105 @@ describe("GET-only actor preflight", () => {
     }
   });
 });
+
+const tokenFor = (payload: unknown = { id: 295, _id: accountId, isTemp: false }) =>
+  `${Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url")}.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.server-validated-signature`;
+const ownerContract = () => ({ ...contract, organizationOwners: [{ organizationId: 17 }] });
+const coachContract = (proof: "organization-owner" | "joined-enrollment" = "organization-owner") => ({
+  ...contract, cohortCoaches: [{ organizationId: 17, programId: 22, cohortId: 44, status: "published", proof }],
+});
+const ownerMembers = [{ userId: 295, role: "owner", nickname: "PRIVATE owner" }];
+const programs = [{ id: 22, organizationId: 17 }];
+const coachDetail = { id: 44, programId: 22, status: "published", joinToken: "PRIVATE join link" };
+const coachRows = [{ userId: 295, role: "assistant", status: "joined", email: "PRIVATE email" }];
+
+describe("explicit scoped owner and coach authority", () => {
+  it("requires explicit authority proof mode and rejects unbound or duplicate scopes", () => {
+    for (const value of [
+      { ...contract, organizationOwners: [] },
+      { ...contract, organizationOwners: [{ organizationId: 17, userId: 295 }] },
+      { ...contract, organizationOwners: [{ organizationId: 17 }, { organizationId: 17 }] },
+      { ...contract, cohortCoaches: [{ organizationId: 17, programId: 22, cohortId: 44, status: "published" }] },
+      { ...contract, cohortCoaches: [{ organizationId: 17, programId: 22, cohortId: 44, status: "published", proof: "global-admin" }] },
+    ]) expect(actorPreflightContractSchema.safeParse(value).success).toBe(false);
+  });
+  it("proves the authenticated actor's owner row, rather than any other owner's presence", async () => {
+    const fetch = fetcher([actor, organizations, ownerMembers]);
+    const report = await runActorPreflight(ownerContract(), tokenFor(), { fetch });
+    expect(report).toMatchObject({ status: "PASS", organizationRole: "VERIFIED", cohortCoachRole: "NOT_VERIFIED", googleLogin: "NOT_VERIFIED" });
+    expect(fetch.mock.calls.map(call => call[0])).toEqual([
+      "https://server-dev.daodao.so/api/v1/auth/me",
+      "https://server-dev.daodao.so/api/v1/lighthouse/organizations",
+      "https://server-dev.daodao.so/api/v1/lighthouse/organizations/17/members",
+    ]);
+    expect(JSON.stringify(report)).not.toMatch(/PRIVATE|server-validated-signature/);
+    for (const members of [
+      [{ userId: 296, role: "owner" }], [{ userId: 295, role: "member" }],
+      [{ userId: 295 }], [{ userId: 295, role: "owner" }, { userId: 295, role: "owner" }],
+    ]) {
+      const report = await runActorPreflight(ownerContract(), tokenFor(), { fetch: fetcher([actor, organizations, members]) });
+      expect(report).toMatchObject({ status: "BLOCKED", organizationRole: "NOT_VERIFIED" });
+    }
+  });
+  it("does not treat global Admin as organization owner", async () => {
+    const fetch = fetcher([{ user: { ...actor.user, roles: ["Admin"] } }, organizations, [{ userId: 296, role: "owner" }]]);
+    expect((await runActorPreflight({ ...ownerContract(), expectedRoles: ["Admin"] }, tokenFor(), { fetch })).status).toBe("BLOCKED");
+  });
+  it("requires active scoped organization and a server-accepted permanent JWT row key", async () => {
+    const suspended = fetcher([actor, [{ id: 17, status: "suspended" }], ownerMembers]);
+    expect((await runActorPreflight(ownerContract(), tokenFor(), { fetch: suspended })).status).toBe("BLOCKED");
+    expect(suspended).toHaveBeenCalledTimes(2);
+    for (const token of ["opaque-token", tokenFor({ id: "295", _id: accountId, isTemp: false }), tokenFor({ id: 295, _id: accountId, isTemp: true }), tokenFor({ id: 0, _id: accountId, isTemp: false }), tokenFor({ id: 295 }), tokenFor({ id: 295, _id: "4707bee9-6918-4705-beb0-daa1d56d5a99", isTemp: false })]) {
+      const fetch = fetcher([actor, organizations, ownerMembers]);
+      expect((await runActorPreflight(ownerContract(), token, { fetch })).status).toBe("BLOCKED");
+      expect(fetch).toHaveBeenCalledTimes(1);
+    }
+    const wrongIdentity = fetcher([{ user: { ...actor.user, id: "4707bee9-6918-4705-beb0-daa1d56d5a99" } }, organizations, ownerMembers]);
+    expect((await runActorPreflight(ownerContract(), tokenFor(), { fetch: wrongIdentity })).status).toBe("BLOCKED");
+    expect(wrongIdentity).toHaveBeenCalledTimes(1);
+  });
+  it("checks owner-derived effective coach in the exact organization/program/cohort", async () => {
+    const fetch = fetcher([actor, organizations, programs, coachDetail, ownerMembers]);
+    const report = await runActorPreflight(coachContract(), tokenFor(), { fetch });
+    expect(report).toMatchObject({ status: "PASS", cohortCoachRole: "VERIFIED" });
+    expect(report.results.some(row => row.check === "cohort-44-self-joined-coach")).toBe(false);
+    expect(fetch.mock.calls.map(call => call[0])).toEqual([
+      "https://server-dev.daodao.so/api/v1/auth/me",
+      "https://server-dev.daodao.so/api/v1/lighthouse/organizations",
+      "https://server-dev.daodao.so/api/v1/lighthouse/programs?organizationId=17",
+      "https://server-dev.daodao.so/api/v1/lighthouse/programs/22/cohorts/44",
+      "https://server-dev.daodao.so/api/v1/lighthouse/organizations/17/members",
+    ]);
+    expect(JSON.stringify(report)).not.toMatch(/PRIVATE|server-validated-signature/);
+  });
+  it("does not equate joined learner, invited coach or another actor's coach row with a joined coach", async () => {
+    const joined = await runActorPreflight(coachContract("joined-enrollment"), tokenFor(), { fetch: fetcher([actor, organizations, programs, coachDetail, coachRows]) });
+    expect(joined).toMatchObject({ status: "PASS", cohortCoachRole: "VERIFIED", organizationRole: "NOT_VERIFIED" });
+    for (const rows of [
+      [{ userId: 295, role: "member", status: "joined" }],
+      [{ userId: 295, role: "assistant", status: "invited" }],
+      [{ userId: 295, role: "owner", status: "exited" }],
+      [{ userId: 296, role: "owner", status: "joined" }],
+      [{ userId: 295, role: "owner" }],
+      [coachRows[0], coachRows[0]],
+    ]) expect((await runActorPreflight(coachContract("joined-enrollment"), tokenFor(), { fetch: fetcher([actor, organizations, programs, coachDetail, rows]) })).status).toBe("BLOCKED");
+  });
+  it("rejects parent, cohort and status substitution even when all endpoints return 200", async () => {
+    for (const [programData, cohortData] of [
+      [[{ id: 22, organizationId: 18 }], coachDetail],
+      [[{ id: 23, organizationId: 17 }], coachDetail],
+      [programs, { ...coachDetail, id: 45 }],
+      [programs, { ...coachDetail, programId: 23 }],
+      [programs, { ...coachDetail, status: "draft" }],
+    ]) expect((await runActorPreflight(coachContract(), tokenFor(), { fetch: fetcher([actor, organizations, programData, cohortData, ownerMembers]) })).status).toBe("BLOCKED");
+  });
+  it("fails closed when the actor lacks the current management API prerequisite", async () => {
+    const values = [actor, organizations, programs]; let index = 0;
+    const fetch = vi.fn(async () => index < values.length
+      ? new Response(JSON.stringify({ data: values[index++] }))
+      : new Response("PRIVATE missing organization membership", { status: 403 }));
+    const report = await runActorPreflight(coachContract("joined-enrollment"), tokenFor(), { fetch });
+    expect(report).toMatchObject({ status: "BLOCKED", cohortCoachRole: "NOT_VERIFIED" });
+    expect(JSON.stringify(report)).not.toContain("PRIVATE");
+  });
+});

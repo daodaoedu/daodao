@@ -45,8 +45,36 @@ PASS exit 0，BLOCKED exit 1，參數／輸出檔錯誤 exit 2。保存契約、
 
 - `/auth/me` 核對 external UUID、email 與完整全域角色集合。401、403、讀取失敗、缺欄位或契約不符皆 BLOCKED。
 - `/lighthouse/organizations` 核對本人可列出的指定組織與組織狀態；`/me/cohorts` 核對本人已加入的指定場次及場次狀態。
-- 組織 membership 不代表 owner，joined enrollment 不代表 coach。這兩種管理權限、私密內容可見性與實際操作仍須另附權限讀取／同帳號網頁證據；本工具不能代替。
+- 只有 organizations／cohorts 時，membership 不代表 owner，joined enrollment 不代表 coach。需要 owner／coach 時使用下方明確權限契約；私密內容可見性與實際操作仍須同帳號網頁證據。
 - `googleLogin` 與 `accountActive` 不由此工具證明。工程 dev-login 成功不代表 PM 可 Google 登入；現有 auth/me active 欄位的 controller fallback 不足以可靠判斷停用狀態，不據此填 PASS。
 - 新增的檢查是人工執行的交接步驟，未新增 hook 強制閘門。通過不等於瀏覽器重播、部署或正式 PM 驗收通過。
 
 工程別名與固定 fixture 僅供已授權的工程情境；能收信不代表有相同 Google 身分。沿用其他任務帳號或資料前先確認占用。會消耗／破壞資料的情境，另列任務、資料 ID、保留期限、清理及重建方式；PM 驗收前不得套用共用 reset 清除其待驗資料。
+
+## 團主與教練權限
+
+需要權限證據時，不能只填 organizations／cohorts 的成員資格。契約可額外指定：
+
+```json
+{
+  "organizationOwners": [{"organizationId": 900001}],
+  "cohortCoaches": [{
+    "organizationId": 900001,
+    "programId": 900001,
+    "cohortId": 900001,
+    "status": "published",
+    "proof": "organization-owner"
+  }]
+}
+```
+
+組織必須 active，成員清單中必須有同一登入者的 `role: owner`。工具先以同一 bearer 的 `/auth/me` 核對 UUID、email 及全域角色；之後要求同一 JWT 的 `_id` 與預期 UUID 相同，再以 numeric id 比對成員列，不把自行解碼視為本機驗簽。這依賴現有 server issuer 一起簽入 id 與 external `_id` 的契約（`auth.controller.ts:145-197`）；auth/me 以 external UUID 查本人，管理 middleware 使用 numeric id，因此不是工具獨立查 DB 證明兩者對應。temporary／無 numeric id 的 token 無法提供此證據。
+
+教練檢查核對 organization → program → cohort 的精確父子關係與場次狀態，再依指定 proof：
+
+- `organization-owner`：同一帳號的組織 owner，代表現行產品授予的管理端有效教練存取，**不代表已加入的教練 enrollment**。
+- `joined-enrollment`：同一帳號的 enrollment 必須 role=owner 或 assistant，status=joined。invited、exited、removed 或 member 都不算教練證據。
+
+現有管理端 detail／roster API 本身仍要求組織成員資格；只有 enrollment、但無該組織成員資格的身分，這條安全讀取路徑可能 BLOCKED。工具不繞過現有 API 授權、不更改產品角色政策；這種情境需另附可用的實際畫面或經授權讀取證據。
+
+有指定且全部符合的類別才回報 `organizationRole`／`cohortCoachRole: VERIFIED`；未指定維持 NOT_VERIFIED，總結果仍以每條必要檢查為準。Google 登入與 accountActive 仍是 NOT_VERIFIED。資料占用、保留、重建及清理另依[情境契約](acceptance-scenarios.md)。
