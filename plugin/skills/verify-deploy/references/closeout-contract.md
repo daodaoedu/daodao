@@ -6,9 +6,9 @@
 
 `begin` 新建 version 2 收據，在 task 目錄建立 `post-merge-closeout.json`，既有事實與證據不覆寫；每次 begin 只更新 `last_begin_at`，要求 blocked 在本輪重新觀察，避免手動客戶端一直沿用舊 502。`goal` 固定 `pm-handoff`，不能自行縮成 smoke-only。每筆本機證據用 task-relative `path` 與實際檔案的 SHA256；token、密碼、Google 憑證不進收據。
 
-舊 version 1 收據的 `check`／Stop 維持相容；缺少 lifecycle 的 legacy 收據不能宣稱受生命週期保護。`begin` 續用時不自動升版。要交驗時，人工檢查原證據是否仍有效、補齊下述 lifecycle 及來源、審閱必要值與 baseline 後，才明確將 `version` 改為 2；不能只改版本數字。version 1 若已有 lifecycle 宣告也必須通過其驗證。
+舊 version 1 收據的 `check`／Stop 維持相容；缺少 lifecycle 的 legacy 收據不能宣稱受生命週期保護；CLI／Stop會明示 `lifecycle_validation: legacy-not-verified`，不把相容通過當新防線已驗。`begin` 續用時不自動升版。要交驗時，人工檢查原證據是否仍有效、補齊下述 lifecycle 及來源、審閱必要值與 baseline 後，才明確將 `version` 改為 2；不能只改版本數字。version 1 若已有 lifecycle 宣告也必須通過其驗證。
 
-`preflight --receipt <收據絕對路徑>` 要求 version 2，容許 pending／handed-off，驗證本機證據直到 lint（含 lifecycle），只跳過遠端 handoff 完成條件；exit 0 為 ready-to-handoff，不是交接完成。發布順序與最新來源單一 SHA 隔離工作樹配方見 verify-deploy §2.5：最新 lint／coverage → preflight → 真實留言／移 Acceptance → 真實遠端回讀 → 寫入 handoff 並設 handed-off → 同一 pinned worktree 的 latest checker check（另階段執行）；postcheck 成功才移除工作樹。這是人工 CLI 配方，不是新增全域 hook 或自動啟用證據。
+`preflight --receipt <收據絕對路徑> --draft <實際發布檔絕對路徑> --issue <中央卡號>` 要求 version 2，容許 pending／handed-off，驗證本機證據直到 lint（含 lifecycle），要求實際發布檔digest等於plan.draft、中央卡號等於receipt.issue，避免驗A發B；只跳過遠端 handoff 完成條件；exit 0 為 ready-to-handoff，不是交接完成。發布順序與最新來源單一 SHA 隔離工作樹配方見 verify-deploy §2.5：最新 lint／coverage → preflight → 真實留言／移 Acceptance → 真實遠端回讀 → 寫入 handoff 並設 handed-off → 同一 pinned worktree 的 latest checker check（另階段執行）；postcheck 成功才移除工作樹。這是人工 CLI 配方，不是新增全域 hook 或自動啟用證據。
 
 完成收據包含：
 

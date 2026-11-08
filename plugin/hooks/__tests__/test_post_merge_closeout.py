@@ -217,7 +217,8 @@ class CloseoutTests(unittest.TestCase):
                 state, errors = self.checker().validate(self.receipt, now=NOW, preflight=True)
                 self.assertEqual(state, 'incomplete'); self.assertTrue(errors)
         d = self.blocked(); d['version'] = 2; self.write(d)
-        self.assertEqual(self.run_cli('preflight', '--receipt', str(self.receipt)).returncode, 3)
+        self.assertEqual(self.run_cli('preflight', '--receipt', str(self.receipt),
+                              '--draft', str(self.task / 'notes/handoff.md'), '--issue', '401').returncode, 3)
 
     def test_preflight_cli_and_version_upgrade_contract(self):
         d, _ = self.lifecycle()
@@ -229,12 +230,17 @@ class CloseoutTests(unittest.TestCase):
         a['fixtures'][0]['known_transitions'][0]['at'] = future
         self.save_lifecycle(d, a)
         d['state'] = 'pending'; del d['handoff']; self.write(d)
-        result = self.run_cli('preflight', '--receipt', str(self.receipt))
+        result = self.run_cli('preflight', '--receipt', str(self.receipt),
+                              '--draft', str(self.task / 'notes/handoff.md'), '--issue', '401')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('ready-to-handoff', result.stdout)
+        self.assertEqual(json.loads(result.stdout)['lifecycle_validation'], 'assessed')
         d = self.complete(); self.write(d)
-        self.assertEqual(self.run_cli('check', '--receipt', str(self.receipt)).returncode, 0)
-        self.assertEqual(self.run_cli('preflight', '--receipt', str(self.receipt)).returncode, 1)
+        legacy = self.run_cli('check', '--receipt', str(self.receipt))
+        self.assertEqual(legacy.returncode, 0)
+        self.assertEqual(json.loads(legacy.stdout)['lifecycle_validation'], 'legacy-not-verified')
+        self.assertEqual(self.run_cli('preflight', '--receipt', str(self.receipt),
+                              '--draft', str(self.task / 'notes/handoff.md'), '--issue', '401').returncode, 1)
         self.receipt.unlink()
         result = self.run_cli('begin', '--task-dir', str(self.task), '--issue', d['issue'])
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -327,8 +333,9 @@ elif name == 'mktemp':
             path = fake_bin / name
             path.write_text(stub.replace('#!PYTHON', '#!' + sys.executable))
             path.chmod(0o755)
-        for invalid in [True, False]:
-            with self.subTest(invalid=invalid):
+        for scenario in ['transition', 'valid', 'draft-mismatch', 'issue-mismatch']:
+            with self.subTest(scenario=scenario):
+                invalid = scenario == 'transition'
                 d, assessment = self.lifecycle()
                 future = datetime.now(timezone.utc) + timedelta(days=7)
                 d['retention']['expires_at'] = future.isoformat()
@@ -338,17 +345,21 @@ elif name == 'mktemp':
                 self.save_lifecycle(d, assessment)
                 d['state'] = 'pending'; del d['handoff']; self.write(d)
                 calls.write_text('')
+                publication = (self.task / d['plan']['draft']['path']).read_text()
+                if scenario == 'draft-mismatch': publication += '\nUnreviewed PM step\n'
+                (self.task / 'draft.md').write_text(publication)
+                invocation = recipe.replace('--issue 401', '--issue 402').replace('comment 401', 'comment 402').replace('set 401 accept', 'set 402 accept') if scenario == 'issue-mismatch' else recipe
                 env = {**self.env, 'PATH': str(fake_bin) + ':' + os.environ['PATH'],
                        'TASK': str(self.task), 'CALL_LOG': str(calls),
                        'FAKE_GATE': str(gate), 'CHECKER_SOURCE': str(SCRIPT)}
-                result = subprocess.run(['bash', '-c', recipe], cwd=self.task, env=env,
+                result = subprocess.run(['bash', '-c', invocation], cwd=self.task, env=env,
                                         capture_output=True, text=True)
                 commands = [json.loads(line) for line in calls.read_text().splitlines()]
                 publishes = [c for c in commands if c[:3] == ['gh', 'issue', 'comment']]
                 boards = [c for c in commands if c[0] == 'pnpm' and any(x.endswith('/board.ts') for x in c)]
-                if invalid:
+                if scenario != 'valid':
                     self.assertNotEqual(result.returncode, 0)
-                    self.assertIn('known fixture transition', result.stdout)
+                    if invalid: self.assertIn('known fixture transition', result.stdout)
                     self.assertEqual(publishes, []); self.assertEqual(boards, [])
                 else:
                     self.assertEqual(result.returncode, 0, result.stderr)
@@ -376,6 +387,7 @@ elif name == 'mktemp':
         message = json.loads(result.stdout)
         self.assertEqual(set(message), {'systemMessage'})
         self.assertIn('handed-off', message['systemMessage'])
+        self.assertIn('legacy-not-verified', message['systemMessage'])
         self.assertIn('變更統計', json.loads(result.stdout)['systemMessage'])
         self.assertIn('檔案就緒清單', json.loads(result.stdout)['systemMessage'])
 

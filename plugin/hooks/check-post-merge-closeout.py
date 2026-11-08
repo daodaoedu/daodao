@@ -114,7 +114,7 @@ def draft_mentions(text, value):
     return re.search(left + r'(\*\*|__|\*|_)' + literal + r'\1' + right, text) is not None
 
 
-def validate(receipt, now=None, preflight=False):
+def validate(receipt, now=None, preflight=False, publication_draft=None, publication_issue=None):
     """Return (state, errors); invalid or missing evidence is always incomplete."""
     errors = []
     now = timestamp(now) if now is not None else datetime.now(timezone.utc)
@@ -238,6 +238,16 @@ def validate(receipt, now=None, preflight=False):
             require(valid_lists and steps == ids, 'plan steps differ from the actual PM draft numbered steps')
         except (OSError, ValueError):
             errors.append('PM draft must use one dedicated 驗收步驟 section with unique numbered screen steps')
+    if preflight and (publication_draft is not None or publication_issue is not None):
+        try:
+            publication = Path(publication_draft)
+            require(publication.is_file() and bool(draft_hash) and sha256(publication) == draft_hash,
+                    'publication draft must match the frozen plan draft digest')
+        except (OSError, ValueError, TypeError):
+            errors.append('publication draft must be a readable file matching the frozen draft')
+        require(type(publication_issue) is int and publication_issue > 0
+                and issue == f'https://github.com/daodaoedu/daodao/issues/{publication_issue}',
+                'publication issue must match the receipt central issue')
     baseline_hash = proof(plan.get('baseline'), 'plan baseline')
     replay = proof(data.get('replay'), 'PM replay', True)
     restore = proof(data.get('restore'), 'restored preflight', True)
@@ -381,6 +391,18 @@ def validate(receipt, now=None, preflight=False):
     return ('handed-off' if not errors else 'incomplete'), errors
 
 
+def lifecycle_status(receipt, state):
+    """Disclose legacy compatibility without treating it as lifecycle protection."""
+    try:
+        data = load(Path(receipt))
+        retention = data.get('retention')
+        if data.get('version') == 1 and (not isinstance(retention, dict) or 'lifecycle' not in retention):
+            return 'legacy-not-verified'
+    except (OSError, ValueError, TypeError):
+        return 'not-verified'
+    return 'assessed' if state in ('handed-off', 'ready-to-handoff') else 'not-verified'
+
+
 def cache_binding(session):
     root = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home() / '.cache')))
     return root / 'daodao-harness/post-merge' / (hashlib.sha256(session.encode()).hexdigest() + '.json')
@@ -405,6 +427,8 @@ def main(argv=None):
     check.add_argument('--receipt', type=Path, required=True)
     pre = commands.add_parser('preflight', help='before publication: 0 ready / 1 incomplete / 3 blocked')
     pre.add_argument('--receipt', type=Path, required=True)
+    pre.add_argument('--draft', type=Path, required=True, help='the actual file passed to gh issue comment')
+    pre.add_argument('--issue', type=int, required=True, help='the actual central issue number being published to')
     release = commands.add_parser('release', help='explicit user stop/scope-change only; unbind without claiming completion')
     release.add_argument('--session-id')
     release.add_argument('--reason', required=True)
@@ -466,8 +490,11 @@ def main(argv=None):
         print(json.dumps({'released': True, 'completed': False, 'audit': str(audit)}))
         return 0
     if args.command in ('check', 'preflight'):
-        state, errors = validate(args.receipt, preflight=args.command == 'preflight')
-        print(json.dumps({'state': state, 'errors': errors, 'limitation': LIMITATION}, ensure_ascii=False))
+        state, errors = validate(args.receipt, preflight=args.command == 'preflight',
+                                 publication_draft=getattr(args, 'draft', None),
+                                 publication_issue=getattr(args, 'issue', None))
+        print(json.dumps({'state': state, 'errors': errors, 'limitation': LIMITATION,
+                          'lifecycle_validation': lifecycle_status(args.receipt, state)}, ensure_ascii=False))
         return 3 if state == 'blocked' else (0 if state in ('handed-off', 'ready-to-handoff') else 1)
     try:
         raw = sys.stdin.read()
@@ -499,7 +526,12 @@ def main(argv=None):
         else:
             registration['began_at'] = datetime.now(timezone.utc).isoformat()
             binding.write_text(json.dumps(registration) + '\n')
-        print(json.dumps({'state': state, 'completed': state == 'handed-off', 'limitation': LIMITATION}, ensure_ascii=False))
+        lifecycle_validation = lifecycle_status(receipt, state)
+        limitation = LIMITATION
+        if lifecycle_validation == 'legacy-not-verified':
+            limitation += ' Retention lifecycle: legacy-not-verified.'
+        print(json.dumps({'state': state, 'completed': state == 'handed-off', 'limitation': limitation,
+                          'lifecycle_validation': lifecycle_validation}, ensure_ascii=False))
         return 0
     print('post-merge closeout incomplete: ' + '; '.join(errors), file=sys.stderr)
     return 2

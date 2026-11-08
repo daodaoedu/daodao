@@ -112,7 +112,7 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
    git -C "$gate_dir" rev-parse HEAD   # 保存確切 gate SHA 與執行時間
    pnpm -C "$gate_dir" install --ignore-workspace --frozen-lockfile
    pnpm -C "$gate_dir" -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" <留言檔絕對路徑>.md --issue <n> --coverage <coverage絕對路徑>.json
-   python3 "$gate_dir/plugin/hooks/check-post-merge-closeout.py" preflight --receipt "$TASK/post-merge-closeout.json"
+   python3 "$gate_dir/plugin/hooks/check-post-merge-closeout.py" preflight --receipt "$TASK/post-merge-closeout.json" --draft <留言檔絕對路徑>.md --issue <n>
    # 只有 ready-to-handoff / exit 0 可執行以下發布及移卡
    gh issue comment <n> --repo daodaoedu/daodao --body-file <留言檔絕對路徑>.md
    pnpm -C "$gate_dir" -s exec tsx "$gate_dir/bin/pipeline/board.ts" set <n> accept --remove-label acceptance:blocked
@@ -132,7 +132,7 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
    )
    ```
 
-   preflight 是不需遠端 handoff 的本機檢查，只容許 version 2，通過代表 ready-to-handoff；仍需上面的實際發布、回讀與 check 才能完成工程交接。worktree 保留至 postcheck 成功；中途失敗保留它及成功操作證據，只補失敗步驟，不重發已成功留言。
+   preflight 是不需遠端 handoff 的本機檢查，只容許 version 2；`--draft` 必須與收據凍結稿 digest 相同，`--issue` 必須與收據中央卡一致，且後續留言與移卡沿用相同參數。通過代表 ready-to-handoff；仍需上面的實際發布、回讀與 check 才能完成工程交接。worktree 保留至 postcheck 成功；中途失敗保留它及成功操作證據，只補失敗步驟，不重發已成功留言。
 
    `Need Fix` 的卡由下一次 `/develop` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才移 Acceptance；部分 merged 留 Review 並在 comment 寫明剩哪些。
 
