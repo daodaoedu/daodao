@@ -18,6 +18,8 @@ AI 完成適用的證據查核、文件修訂與自審，人審核結果及尚�
 
 PM 卡的「合併＋冒煙」標準交付包含 §2.5 的 PM 同帳號重播、還原保留資料、移 Acceptance 與發布交接；既有授權涵蓋這些標準輸出，不等使用者再次催促。工程冒煙 PASS 不是本流程的停止點。只有使用者明確限縮範圍，或查證後仍無法自行排除的外部阻擋，才保留未完成狀態；「還沒準備 PM 資料／沒開始重播」是待做工作，不是 blocker。
 
+準備 fixture 前先審查資料生命週期：從實際 scheduler／時間判定、consume 操作及外部更新來源，列出每筆必要值與已知轉移；不能用「目前 active」推論直到 PM 驗完都有效。依 [收尾完成契約](references/closeout-contract.md) 保存來源與審查，選擇能涵蓋保留期限的資料。
+
 開始前先分開 **工程冒煙後可清理** 與 **保留給 PM** 的資料。PM 資料契約先列帳號／角色、入口、必要值、每一步預期、重設方式與期限；依[情境與占用契約](references/acceptance-scenarios.md)逐卡記錄資源及 read/write/consume，登記共用占用與保留安排；準備、重建或清理資料時走[已整合的異動攔截入口](references/acceptance-mutation-guard.md)，不能繞過保留中的 claim；不能清掉其他待驗卡使用的父層組織／場次。後面的同帳號實跑引用同一份契約，不在工程清理後才補想驗收資料。
 
 對預設 PM 卡，在 daodao checkout root 註冊本輪任務（`TASK` 為實際 task 目錄）：
@@ -27,7 +29,7 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
   --task-dir "$TASK" --issue https://github.com/daodaoedu/daodao/issues/<n>
 ```
 
-此指令建立／續用 `post-merge-closeout.json`，並以 `CODEX_THREAD_ID` 或明確 `--session-id` 綁定本 session。無 session ID 的客戶端使用 `--no-bind`，結束前仍手動執行檢查，不宣稱 Stop 自動攔截。`acceptance:engineering` 卡沿用既有工程驗收路徑，不填假的 PM 證據；使用者明確要求只做較小範圍時，記錄原話與未完成事項，不能擅自把完整 PM 交付改成 smoke-only。
+此指令新建 version 2 的 `post-merge-closeout.json`；續用舊收據不會自動升版。version 1 的 check／Stop 相容不代表具備生命週期保護；交驗前必須人工審查並補齊 lifecycle 證據、明確升為 version 2，再跑 preflight（見完成契約）。並以 `CODEX_THREAD_ID` 或明確 `--session-id` 綁定本 session。無 session ID 的客戶端使用 `--no-bind`，結束前仍手動執行檢查，不宣稱 Stop 自動攔截。`acceptance:engineering` 卡沿用既有工程驗收路徑，不填假的 PM 證據；使用者明確要求只做較小範圍時，記錄原話與未完成事項，不能擅自把完整 PM 交付改成 smoke-only。
 
 收據格式、合法 blocked 與平台限制見 [收尾完成契約](references/closeout-contract.md)。
 
@@ -80,12 +82,12 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
 4a. **交接可執行性檢查（移 Acceptance 前必做）**：依[共用驗證配方](../../docs/verification-recipe.md)固定每條原步驟／AC的環境、帳號、資料、觀察、證據與收尾。先把最終交接草稿另存並跑最新 `acceptance-lint` 至exit0，固定digest後，以**指定PM測試帳號、相同角色、相同資料**逐步實跑全部網頁步驟；工程可用dev-login mode=user，但不碰Google憑證、不代表正式PM驗收。
    - 依[可重複驗收](../../docs/repeatable-acceptance.md)安排分支、消耗順序、手機尺寸與實跑過的重建方法；純唯讀不要求重設腳本。不能只看名稱當資料前提成立。
    - 執行[帳號與情境前置檢查](references/acceptance-actor-preflight.md)，核對指定external ID、email、完整角色集合與適用組織／場次；owner／coach需另附權限實跑。實踐資源沿用[acceptance-preflight](references/acceptance-preflight.md)；其餘保存真實唯讀報告，沒有adapter不填假的PASS。
-   - 重播後還原並回讀PM起點，**保留至PM驗完**，附期限及已驗證重建方式。工程證據需含凍結契約、同帳號逐步UI、還原後前提與保留證據；既有closeout驗綁定，不能替代操作。前提不足就記受影響項；初次交驗留Review，不把待準備資料當PM待辦。
+   - 重播後還原並回讀PM起點，**保留至PM驗完**，附期限及已驗證重建方式。還原回讀後重新審查必要值與基準，保存綁定同版草稿／baseline 的 lifecycle 證據，確認已知時間轉移不會在 [handoff, expires_at) 內破壞起點；發布前必跑最新 checker preflight。工程證據需含凍結契約、同帳號逐步UI、還原後前提與保留證據；既有closeout驗綁定，不能替代操作。前提不足就記受影響項；初次交驗留Review，不把待準備資料當PM待辦。
 
 5. **回寫 Planning board 並交給 PM**（中央卡在 board 上時必做，這是卡片離開 `Review` 的唯一路徑）：
 
    ```bash
-   # 全部 ✅ 且卡片沒有 `acceptance:engineering`：移 Acceptance，並自動 assign PM（PM_LOGIN）＋回讀；不移 Done、不關 issue
+   # 全部 ✅ 且卡片沒有 `acceptance:engineering`：移 Acceptance，並自動 assign PM（PM_LOGIN）＋回讀；此行僅示意分流，PM 卡實際執行必須用下方 preflight 發布鏈，不單獨執行；不移 Done、不關 issue
    pnpm -s tsx bin/pipeline/board.ts set <n> accept
    # 全部 ✅ 且卡片有 `acceptance:engineering`：不進 Acceptance。先發冒煙結果留言（標題「工程驗收通過」，附冒煙表與驗證報告），再關 issue，內建 workflow 會移 Done
    gh issue close <n> --repo daodaoedu/daodao --reason completed
@@ -93,27 +95,47 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
    pnpm -s tsx bin/pipeline/board.ts set <n> needfix
    ```
 
-   移 Acceptance 後**立刻**在中央 issue 發交接留言（[issue-status-comment.md](../../templates/issue-status-comment.md) 的「交給 PM 驗收」段）：第一行隱藏標記 `<!-- daodao:acceptance-request -->`（PM 的 [test-acceptance](../test-acceptance/SKILL.md) 靠它找規格）、`@peggy1213-create`、測試網址（直接點進對應頁面）、白話驗收步驟、對照的 AC、工程證據、驗證報告連結、已知限制、驗完收尾（驗收建立的資料怎麼處理），以及「通過請關 issue；退回請留言哪條 AC 沒過並移 Need Fix」。沒發交接留言等於 PM 不知道輪到他。
+   依下方單一發布鏈先在中央 issue 發交接留言，再移 Acceptance 並立刻回讀（[issue-status-comment.md](../../templates/issue-status-comment.md) 的「交給 PM 驗收」段）：第一行隱藏標記 `<!-- daodao:acceptance-request -->`（PM 的 [test-acceptance](../test-acceptance/SKILL.md) 靠它找規格）、`@peggy1213-create`、測試網址（直接點進對應頁面）、白話驗收步驟、對照的 AC、工程證據、驗證報告連結、已知限制、驗完收尾（驗收建立的資料怎麼處理），以及「通過請關 issue；退回請留言哪條 AC 沒過並移 Need Fix」。沒發交接留言等於 PM 不知道輪到他。
 
    **驗收步驟只寫 PM 在畫面上做得到、看得到的操作與預期**。冒煙表裡的 API 送出內容／回讀、regression test、CI、log 改寫成「工程證據（已驗，PM 不需重做）」區塊並附連結，不要搬進 PM 步驟；只能用 API 或測試驗的 AC 標工程驗收項，不列入 PM 步驟。驗收契約「必須證據」欄寫了 API 回讀或測試時，「對照的 AC」要寫明由工程提供、PM 依畫面判定（#370、#358 的 PM 照契約去要 PUT body、GET 回讀與 regression test 輸出，判 BLOCKED 退回）。手機步驟必須逐條寫明寬×高 CSS px；來源未指定時工程以 390×844 CSS px 實跑後補入，詳見 [尺寸與最新 gate](../../docs/repeatable-acceptance.md#尺寸與視覺比對)。留言先寫成檔案，發布前必跑最新 `origin/main` 的檢查（不能只跑共享 root 的舊版本；fetch 失敗不交驗）：
 
    先依 [原始 AC 覆蓋檢查](../test-acceptance/references/ac-coverage.md) 產生並審閱逐 Required AC coverage JSON，與同版交接稿一起檢查。partial 只能交局部驗收，不得要求整卡 PASS／關閉；不要用 text-only 取代這一步。
 
+   下面是人工執行的 command recipe，不代表已安裝或保證觸發的 hook。先把 `TASK` 設為 task 絕對路徑，收據及所有本機證據已備妥；所有 `<…>` 換成真實值。下列單一 `set -e` 子 shell 不可拆開跳過 preflight；fetch／checkout 失敗不回退舊 checker。最新 lint 仍須與凍結草稿一致，不能以此次重跑改寫原本早於 UI 重播的 lint 時間。
+
    ```bash
    # 在 daodao root 執行；留言檔放 repo 外的暫存位置
    (
-   set -e   # 任一步失敗即停止此子 shell，不會執行發布
+   set -e
    git fetch origin main
+   gate_sha=$(git rev-parse origin/main)
    gate_dir=$(mktemp -d /tmp/daodao-acceptance-gate.XXXXXX)
-   git worktree add --detach "$gate_dir" origin/main
-   git -C "$gate_dir" rev-parse HEAD   # 保存此次 gate revision
+   printf 'gate_dir=%s gate_sha=%s\n' "$gate_dir" "$gate_sha"
+   git worktree add --detach "$gate_dir" "$gate_sha"
+   git -C "$gate_dir" rev-parse HEAD   # 保存確切 gate SHA 與執行時間
    pnpm -C "$gate_dir" install --ignore-workspace --frozen-lockfile
    pnpm -C "$gate_dir" -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" <留言檔絕對路徑>.md --issue <n> --coverage <coverage絕對路徑>.json
-   # 有 error 就改到通過再發；warn 是引用的文案在 locale 找不到，逐一確認
-   git worktree remove "$gate_dir"
+   python3 "$gate_dir/plugin/hooks/check-post-merge-closeout.py" preflight --receipt "$TASK/post-merge-closeout.json"
+   # 只有 ready-to-handoff / exit 0 可執行以下發布及移卡
    gh issue comment <n> --repo daodaoedu/daodao --body-file <留言檔絕對路徑>.md
+   pnpm -C "$gate_dir" -s exec tsx "$gate_dir/bin/pipeline/board.ts" set <n> accept --remove-label acceptance:blocked
+   # 保存 gate_dir／gate_sha；保留 worktree 給下一階段回讀與 postcheck
    )
    ```
+
+   發布鏈成功後，操作員使用同一 pinned worktree 接續回讀實際 comment 內容／URL、board Acceptance、issue OPEN、checker 實際選取的 PM_LOGIN 指派（優先 task 父層的 `types.ts`，找不到才使用 pinned worktree 設定）與 blocked label 已移除，保存原始輸出與 observed_at。可用 `gh issue view <n> --repo daodaoedu/daodao --json state,assignees,labels,comments` 回讀 issue，board 依既有 board 工具另行回讀。審閱後建立 task-relative、SHA256 綁定的 handoff JSON，更新 receipt.handoff；**只有真實遠端回讀全部成立後**，才把 receipt.state 設為 handed-off。這是實際操作員要完成的動作，不能以文件範例或虛構 PASS 代替。
+
+   `gate_dir` 在子 shell 內建立：先從執行紀錄取回其真實絕對路徑（發布鏈需保存此路徑），在後續 shell 設為該值，再執行：
+
+   ```bash
+   (
+   set -e
+   python3 "$gate_dir/plugin/hooks/check-post-merge-closeout.py" check --receipt "$TASK/post-merge-closeout.json"
+   git worktree remove "$gate_dir"
+   )
+   ```
+
+   preflight 是不需遠端 handoff 的本機檢查，只容許 version 2，通過代表 ready-to-handoff；仍需上面的實際發布、回讀與 check 才能完成工程交接。worktree 保留至 postcheck 成功；中途失敗保留它及成功操作證據，只補失敗步驟，不重發已成功留言。
 
    `Need Fix` 的卡由下一次 `/develop` start 移回 `In Progress`。跨 repo 中央卡只有在**所有** repo 的 PR 都 merged 且冒煙通過時才移 Acceptance；部分 merged 留 Review 並在 comment 寫明剩哪些。
 
