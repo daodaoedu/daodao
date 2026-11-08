@@ -19,6 +19,24 @@ POC 比對的陷阱在 [poc-compare.md](poc-compare.md)「`.dc.html` POC 的已�
 - **practices 的 `/summary`、`/edit` 量到的是詳情頁**：非 owner 會被 `isOwner && isExpired` 導回詳情頁。測試資料用**登入者本人擁有、且 `end_date` 已過**的 practice。dev-login JWT 的 `id` 是 `users.id`（內部整數），`_id` 才是 external UUID，判斷 owner 要用 `users.id` 對 `practices.user_id`。（#240）
 - **不同 route 需要不同身分**：`/auth/onboarding` 要 dev-login `mode=temp` 的新用戶、`/auth/verify-email/pending` 要未登入、`/practices/copy-success` 要帶 `?practiceId=`。rect-probe 的 `routes.json` 每條可指定 `user`／`temp`／`none`。（#239）
 
+### 同帳號重播與 PM 環境不一致（#473）
+
+- **工程同帳號 PASS，PM 英文畫面卻顯示通用錯誤**：先對照同一部署 revision、身份與 fixture，再沿 PM 實際語系的直接網址重播錯誤分支。記錄 browser locale、頁面 HTML 語系與畫面訊息；API 的409或未新增版本，只證明拒絕結果，具體原因仍須在畫面確認。英文與中文的 fallback 可能不同，兩種語系要各留自己的證據。
+- **390px 窄視窗仍漏掉3px溢出**：同時記錄 `innerWidth`、`document.documentElement.clientWidth` 與 `scrollWidth`。經典捲軸可使390px viewport只有375px可用寬；document要以同元素clientWidth判斷。表格與導覽的內部水平捲動另看overflow祖先，保持合法scroll容器。用 `--scrollbars classic` 重播桌機縮窄視窗，`--height 844` 固定原驗收高度；這只作用測試browser context，不改OS設定。
+- **CSS 都寫Noto Sans TC，實際字寬卻不同**：測量先等 `document.fonts.ready` 與兩個paint frames。報告中的declared font-family是宣告，FontFaceSet是註冊/載入狀態，platformFonts則只是代表文字節點的實際字型採樣；讀不到時保留unavailable與原因。依PM實際字型條件補查，不把宣告或 `fonts.check()` 當作已使用該字型的證據。
+
+在含Playwright依賴的子專案目錄執行，例如英文窄視窗；把route換成本任務已確認的直接頁面與有效fixture：
+
+```bash
+node <daodao-root>/plugin/skills/develop/references/layout-probe.mjs \
+  --base https://app-dev.daodao.so \
+  --routes /en/settings \
+  --locale en-US --widths 390 --height 844 --scrollbars classic \
+  --out ./evidence/layout-en-classic
+```
+
+需登入的頁面沿用既有dev-login與cookie準備方式。其他語系給其對應route與locale，桌機尺寸另行執行並保留原報告。探針只驗實際量到的語系/畫面與幾何；業務操作、錯誤文案與PM正式驗收仍各自留證據。
+
 ### admin-ui
 
 - **驗完 product 再驗 admin-ui，admin 被踢回登入頁**：localhost 的 cookie 不分 port，product 留下的一般用戶 `auth_token` 會一起送到 admin-ui 代理的 server，而 server 讀 cookie 優先於 Bearer，`/auth/me` 回非 admin。驗 admin 前先把 `document.cookie` 的 `auth_token` 換成 admin token。（#218）

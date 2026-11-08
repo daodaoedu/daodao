@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error -- 探針是 .mjs（沒有型別宣告），這裡只測行為
-import { isClippedByAncestor, isLoginWall, targetPathname } from "../layout-probe.lib.mjs";
+import { horizontalOverflow, isClippedByAncestor, isHorizontallyOutside, isLoginWall, targetPathname } from "../layout-probe.lib.mjs";
+
+describe("horizontalOverflow", () => {
+  it("經典捲軸下仍抓到超出可用寬度的3px（#473）", () => {
+    expect(horizontalOverflow(378, 375)).toBe(3);
+  });
+
+  it("內容符合經典捲軸或overlay可用寬度時沒有溢出", () => {
+    expect(horizontalOverflow(375, 375)).toBe(0);
+    expect(horizontalOverflow(390, 390)).toBe(0);
+    expect(horizontalOverflow(350, 375)).toBe(0);
+  });
+
+  it("不把真實1px document溢出當矩形四捨五入", () => {
+    expect(horizontalOverflow(376, 375)).toBe(1);
+  });
+});
+
+describe("isHorizontallyOutside", () => {
+  it("右界是clientWidth，不是包含捲軸的innerWidth", () => {
+    expect(isHorizontallyOutside({ left: 66, right: 378.39 }, 375)).toBe(true);
+  });
+
+  it("保留1px矩形誤差容忍，但不放過左右真正出界", () => {
+    expect(isHorizontallyOutside({ left: -1, right: 376 }, 375)).toBe(false);
+    expect(isHorizontallyOutside({ left: -1.1, right: 375 }, 375)).toBe(true);
+    expect(isHorizontallyOutside({ left: 0, right: 376.1 }, 375)).toBe(true);
+    expect(isHorizontallyOutside({ left: 0, right: 390 }, 390)).toBe(false);
+  });
+});
 
 describe("targetPathname", () => {
   it("去掉 locale 前綴與 query", () => {
@@ -51,8 +80,8 @@ describe("isClippedByAncestor", () => {
   const el = (overflowX: string, parent: unknown = null) => ({ overflowX, parentElement: parent });
   const getOverflowX = (n: { overflowX: string }) => n.overflowX;
 
-  it("祖先有 overflow-x hidden／auto／scroll 就算被裁切", () => {
-    for (const ox of ["hidden", "auto", "scroll"]) {
+  it("祖先有 overflow-x hidden／clip／auto／scroll 就算被裁切", () => {
+    for (const ox of ["hidden", "clip", "auto", "scroll"]) {
       const body = el("visible");
       const wrapper = el(ox, body);
       const target = el("visible", wrapper);
