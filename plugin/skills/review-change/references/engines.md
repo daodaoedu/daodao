@@ -57,7 +57,7 @@ done
 _REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$_REPO_ROOT"
 # 主力 + fallback（空白分隔，依序嘗試；整條鏈可用 CODE_REVIEW_MODELS 覆寫）
-_CODE_REVIEW_MODELS=${CODE_REVIEW_MODELS:-"openrouter/thinkingmachines/inkling:free openrouter/nvidia/nemotron-3-super-120b-a12b:free openrouter/inclusionai/ling-3.0-flash-fin:free"}
+_CODE_REVIEW_MODELS=${CODE_REVIEW_MODELS:-"openrouter/dots-studio/dots-3-note-preview:free openrouter/nvidia/nemotron-3.5-super-vl:free openrouter/nvidia/nemotron-3-ultra-550b-a55b:free"}
 for _m in $_CODE_REVIEW_MODELS; do
   case "$_m" in
     openrouter/*:free) ;;
@@ -100,15 +100,17 @@ done
 ```
 
 - timeout: 300000（5 分鐘）；`</dev/null` 不可省略，否則 `omp -p` 會卡在 `phase: readPipedInput` 等 stdin EOF
-- fallback 鏈（用「刪除 auth guard」fixture + 本步驟真實 prompt 各跑 5 次實測，全數 5/5 命中、零漏報）：
-  1. `openrouter/thinkingmachines/inkling:free`（主力，平均 3s）
-  2. `openrouter/nvidia/nemotron-3-super-120b-a12b:free`（14s）
-  3. `openrouter/inclusionai/ling-3.0-flash-fin:free`（2s）
-- OMP 鏈一律走 `openrouter/`，OpenCode 鏈一律走 `opencode/`，兩邊 provider 不交叉
-- 備用（同樣 5/5，換模型時優先從這裡挑）：`openrouter/dots-studio/dots-3-note-preview:free`（4s）、`openrouter/nex-agi/nex-n2.5-pro:free`（5s）、`openrouter/nvidia/nemotron-3-ultra-550b-a55b:free`（39s，偏慢）
-- **`openrouter/poolside/laguna-s-2.1:free` 已停用**：同一份 fixture 5 次有 1 次回「No issues found」，漏報刪掉的 authorization guard；`laguna-xs-2.1:free` 更差（3 次漏 2 次）。換模型時務必先跑漏報測試，不要只看「有沒有輸出」
-- **候選模型必須支援 tool use**：`--no-tools` 只關內建工具，MCP server 的 tool 仍會送給 provider，不支援 tool use 的模型會直接 `404 No endpoints found that support tool use`（已實測 `z-ai/glm-5.2:free` 因此不可用）
-- 已知不可用：`z-ai/glm-5.2:free`（無 tool use endpoint）、`cohere/north-mini-code:free`（422 Provider returned error）、`qwen/qwen3.8-27b:free`（逾時）
+- fallback 鏈（2026-11-07，OMP v18.18.0、上述原始 prompt、`--thinking off` 實測；[樣本與限制](omp-model-validation.md)）：
+  1. `openrouter/dots-studio/dots-3-note-preview:free`（主力：兩類缺陷各 4/4 命中，普通乾淨樣本 3/3 正確）
+  2. `openrouter/nvidia/nemotron-3.5-super-vl:free`（備援：兩類缺陷各 1/1 命中，含注入誘餌的乾淨樣本 1/1 正確；樣本較少）
+  3. `openrouter/nvidia/nemotron-3-ultra-550b-a55b:free`（最後備援：兩類缺陷各 4/4 命中，但普通乾淨樣本 1/3 誤報，須逐項查證）
+- 這些是小型合成樣本，不代表大型 PR、長 context 或跨檔契約的審查品質。`dots` 與 `ultra` 都曾把不影響執行的注入誘餌註解誤報為 High；finding 必須回到程式碼證據查證，不能直接當作阻擋依據。
+- 舊預設 `thinkingmachines/inkling:free`、`nvidia/nemotron-3-super-120b-a12b:free`、`inclusionai/ling-3.0-flash-fin:free` 及舊備用 `nex-agi/nex-n2.5-pro:free` 已不在當次 OpenRouter 免費目錄，不再沿用過往可用結論。目錄隨時會變，執行前以 [Models API](https://openrouter.ai/api/v1/models) 與實際 OMP 回應確認。
+- OMP 鏈一律走 `openrouter/`，OpenCode 鏈一律走 `opencode/`，兩邊 provider 不交叉。
+- 本輪不採用：`cohere/north-mini-code:free` 可回覆，但漏報刪除 ownership guard；`nvidia/nemotron-3.5-lightning:free` 漏報未等待 async 寫入，且曾同時輸出 finding 與 clean 字樣；`recursive/flint-v1.0:free` 在現行 `--thinking off` 下回 400（reasoning mandatory），不是模型全面不可用。
+- **`openrouter/poolside/laguna-s-2.1:free` 維持停用**：過往同一份 fixture 5 次有 1 次漏報刪掉的 authorization guard；`laguna-xs-2.1:free` 3 次漏 2 次。換模型時先跑已知缺陷、普通乾淨樣本與注入誘餌，不能只看是否有輸出或只測 happy path。
+- **候選模型必須支援 tool use**：`--no-tools` 只關內建工具，既有 MCP 設定仍可能送工具給 provider。目錄宣告支援不代表 OMP 相容，須用本步驟真實 CLI 參數確認；無 tool use endpoint 的歷史案例為 `z-ai/glm-5.2:free`。
+- 免費端點會排隊或限流；本輪 `dots` 一次因 `429 free-models-per-min` 重試後花 38.6s 才完成。失敗／逾時仍記覆蓋缺口，不能解讀成 No issues found。
 - 若 `omp` 不存在：告知用戶 `bun add -g @oh-my-pi/pi-coding-agent`
 - 若 auth 失敗：執行 `omp auth-broker` 或設定所選 provider 的 credential
 - `CODE_REVIEW_MODELS` 每一項都只接受 `openrouter/*:free`；沒有 `:free` 後綴就直接停止，避免誤扣款

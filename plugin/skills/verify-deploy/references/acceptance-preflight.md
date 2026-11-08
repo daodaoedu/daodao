@@ -34,7 +34,7 @@ pnpm -s tsx bin/pipeline/acceptance-preflight-cli.ts \
 1. 先跑前置檢查，保存契約、時間、資料連結與結果。缺第 5 天、鎖定資源、錯擁有者等任一必要前提不符，先補資料，不交驗。
 2. 瀏覽器確認同一 PM 帳號，從即將發出的留言連結開始，照順序跑每一步，留下可辨識資料與結果的截圖。API PASS 不證明畫面可操作；工程 dev-login 實跑不宣稱正式 PM Google 驗收。
 3. 還原實跑變動後再跑前置檢查，確認 PM 接手原始狀態；保留資料至驗收完成。會到期或被共用 reset 修改時，附有效期限與已驗證的重設方式。
-4. 工程證據附唯讀報告、網頁實跑報告、還原與保留說明；不把 JSON 欄位或指令放進 PM 步驟。留言仍跑 `acceptance-lint.ts`，它只驗文案。
+4. 工程證據附唯讀報告、網頁實跑報告、還原與保留說明；不把 JSON 欄位或指令放進 PM 步驟。留言依 [原始 AC 覆蓋檢查](../../test-acceptance/references/ac-coverage.md) 帶 `--issue` 與 `--coverage` 跑 `acceptance-lint.ts`；它核對文字及來源／覆蓋結構，不證明資料前提或畫面已實跑。
 
 其他類型先沿用現有對應工具；無工具時保存即時來源、人工核對的 expected／actual、時間、帳號與資料座標，明列未自動化範圍，不冒用本工具的 PASS。安裝在沒有 daodao checkout 的客戶端時，請工程在 checkout 跑工具提供報告，不能宣稱已自動執行。
 

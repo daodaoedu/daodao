@@ -766,7 +766,7 @@ PR 全部 merged 後，在任務資料夾的 session 說「merge 了」：
 5. 用既有開發文件與 issue 驗收契約記錄完成與剩餘事項；OpenSpec 已退役，不再歸檔 change（舊的封存於 `docs/archive/openspec/`）
 6. **移卡＋交接**：冒煙全 ✅ → `board.ts set <n> accept`（移 Acceptance＋assign PM），接著寫好並發「交給 PM 驗收」交接留言（`plugin/templates/issue-status-comment.md`）；冒煙失敗或未冒煙 → `needfix`；母卡還有子卡沒關就留 Review。掛 `acceptance:engineering` 的卡冒煙全 ✅ 時不進 Acceptance，發「工程驗收通過」留言（冒煙表＋驗證報告）後直接關 issue
 
-**交接留言的 PM 步驟只寫畫面上做得到、看得到的操作與預期**。API 送出內容／回讀、regression test、CI、log 放「工程證據（已驗，PM 不需重做）」區塊；只能用 API 或測試驗的 AC 標「工程驗收項」，不列入 PM 步驟（#370、#358：PM 照契約去要 PUT body 與測試輸出，判 BLOCKED 退回）。留言先寫成檔案，發布前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`，有 error 改到通過再發；warn 表示「」裡引用的畫面文案在 f2e zh-TW locale 找不到，要逐一確認沒寫錯，不擋發布。測試帳號寫 PM 能 Google 登入的帳號，需要團主、團友身分就先把 PM 帳號加進組織或場次。
+**交接留言的 PM 步驟只寫畫面上做得到、看得到的操作與預期**。API 送出內容／回讀、regression test、CI、log 放「工程證據（已驗，PM 不需重做）」區塊；只能用 API 或測試驗的 AC 標「工程驗收項」，不列入 PM 步驟（#370、#358：PM 照契約去要 PUT body 與測試輸出，判 BLOCKED 退回）。留言先寫成檔案，發布前依 [最新交接檢查](../plugin/docs/repeatable-acceptance.md) fetch origin/main 並準備乾淨隔離 checker，再在該 checkout 跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔> --issue <n> --coverage <coverage.json>`，有 error 改到通過再發；warn 表示「」裡引用的畫面文案在 f2e zh-TW locale 找不到，要逐一確認沒寫錯，不擋發布。測試帳號寫 PM 能 Google 登入的帳號，需要團主、團友身分就先把 PM 帳號加進組織或場次。
 
 ### 8.3 Board 與 issue
 
@@ -895,7 +895,7 @@ Todo → In Progress → Review → Acceptance → Done
 | **同步** | sync-claude-config workflow | 共用 workflow 與誤判知識庫從 daodao repo 同步到子專案，每天批次一次（UTC 18:17，急用時手動觸發 workflow_dispatch）；sync PR 在目標 repo required checks 全綠後自動 squash merge，紅燈留給人 |
 | **發版** | plugin-release workflow | 改到 `plugin/` 的 PR 合進 main 就自動產生版號、打包並建 GitHub release，`marketplace.json` 部署到 GitHub Pages；Claude Code 端自動更新 |
 | **收尾** | verify-deploy skill | 核對合併／部署證據、dev 冒煙、更新 docs/product 狀態、交 PM 驗收或關工程驗收卡 |
-| **收尾** | `bin/pipeline/acceptance-lint.ts` | 交 PM 驗收留言發布前檢查：PM 步驟不得混入 API／測試證據、測試帳號不得是 PM 用不了的帳號、裸網址不可緊接全形標點；引用文案不在 f2e locale 時出 warn |
+| **收尾** | `bin/pipeline/acceptance-lint.ts` | 交 PM 驗收留言發布前綁定原始 Required AC、交接稿與逐 AC coverage；關卡前核對正式 PM 報告／spec／最新結果，partial 不得關整卡。PM 步驟不得混入 API／測試證據、測試帳號不得是 PM 用不了的帳號、裸網址不可緊接全形標點；引用文案不在 f2e locale 時出 warn |
 | **收尾** | notify-related-issue skill | 依實際 PR 與驗收狀態草擬關聯 issue 更新，明確授權才留言或關閉 |
 | **收尾** | product-status-drift workflow | 每週一檢查 docs/product 狀態標示與實際落差，發到 Discord |
 | **board** | move-board-card skill + `bin/pipeline/board.ts` | 七欄語意；`board.ts set／remove／audit／pending`，各 skill 自己移卡；`pending` 列出 Review／Acceptance／Need Fix 每張卡在等誰決定什麼（只讀）；`audit` 每日 09:00 由 `board-audit.yml` 排程跑（只讀）；Routine A／B／C 已於 2026-09-20 退役，見 Phase 9 |
