@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -34,5 +34,43 @@ describe('verify report 上傳腳本：截圖網址替換', () => {
     expect(r.status).not.toBe(0)
     expect(r.stdout).toBe('')
     expect(r.stderr).toContain('missing.png')
+  })
+})
+
+function files(html: string, evidence: Record<string, string>) {
+  const dir = mkdtempSync(join(tmpdir(), 'verify-report-files-'))
+  const evidenceDir = join(dir, 'evidence')
+  mkdirSync(evidenceDir)
+  for (const [name, body] of Object.entries(evidence)) writeFileSync(join(evidenceDir, name), body)
+  writeFileSync(join(dir, 'report.html'), html)
+  return spawnSync('python3', [SCRIPT, 'files', '--html', join(dir, 'report.html'), '--evidence', evidenceDir], {
+    encoding: 'utf8',
+  })
+}
+
+// daodao#451：整個 evidence/ 同步到公開 Drive 資料夾，未遮罩截圖、log、含信箱的 API 回應跟著外流
+describe('verify report 上傳腳本：只上傳報告引用的檔案', () => {
+  it('只列出 HTML 引用的截圖，evidence/ 裡其他檔案（log、未遮罩截圖）不上傳', () => {
+    const r = files('<img src="evidence/masked.png"><img src="evidence/masked.png"><img src=\'evidence/b c.png\'>', {
+      'masked.png': 'x',
+      'b c.png': 'x',
+      'unmasked.png': 'x',
+      'server.log': 'token',
+      'api-roundtrip.txt': 'someone@gmail.com',
+    })
+    expect(r.status).toBe(0)
+    expect(r.stdout).toBe('b c.png\nmasked.png\n')
+  })
+
+  it('引用本機不存在的檔案就失敗並列出檔名', () => {
+    const r = files('<img src="evidence/missing.png">', { 'a.png': 'x' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toContain('missing.png')
+  })
+
+  it('檔名帶路徑（跳出 evidence/）就失敗', () => {
+    const r = files('<img src="evidence/../secret.png">', { 'a.png': 'x' })
+    expect(r.status).not.toBe(0)
+    expect(r.stderr).toContain('../secret.png')
   })
 })
