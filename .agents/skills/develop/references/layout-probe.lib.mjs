@@ -1,8 +1,16 @@
-// layout-probe 的兩條判定規則，抽出來讓 bin 的 vitest 可以測（探針本體是 top-level-await 腳本，import 會直接執行）。
+// layout-probe 的判定規則；探針本體是 top-level-await 腳本，import 會直接執行。
 // `isClippedByAncestor` 會被序列化送進瀏覽器執行（見 layout-probe.mjs 的 page.evaluate），
 // 所以它只能用參數拿到的 getter，不可引用這個模組的其他東西。
 
 const LOGIN_WALL = /\/(auth\/login|auth\/signin|login|signin|sign-in)(\/|$)/;
+
+/** document 的 clientWidth 已扣除經典捲軸，innerWidth 只能作為觀測值。 */
+export const horizontalOverflow = (scrollWidth, clientWidth) =>
+  Math.max(0, scrollWidth - clientWidth);
+
+/** 元素矩形可能有小數誤差；document 整數寬度的溢出不套用這個容忍值。 */
+export const isHorizontallyOutside = (rect, clientWidth) =>
+  rect.left < -1 || rect.right > clientWidth + 1;
 
 /** 去掉 route 的 locale 前綴與 query，取得預期落點 pathname。 */
 export const targetPathname = (route) =>
@@ -37,7 +45,7 @@ export const isLoginWall = (pathname, route) => {
 export const isClippedByAncestor = (el, getOverflowX, stopAt) => {
   let a = el.parentElement;
   while (a && a !== stopAt) {
-    if (/(hidden|auto|scroll)/.test(getOverflowX(a))) return true;
+    if (/^(hidden|clip|auto|scroll)$/.test(getOverflowX(a))) return true;
     a = a.parentElement;
   }
   return false;
