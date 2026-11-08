@@ -21,6 +21,8 @@ from urllib.parse import urlparse
 
 LIMITATION = 'Evidence bindings/completeness checked; browser actions and remote truth still require audit.'
 BLOCKERS = {'maintenance', 'tool', 'auth', 'permission', 'product-decision'}
+# PM steps run on the deployed dev product: the user-facing app and the internal admin back office.
+DEV_PRODUCT_HOSTS = {'app-dev.daodao.so', 'admin-dev.daodao.so'}
 
 
 def timestamp(value):
@@ -211,7 +213,7 @@ def validate(receipt, now=None):
             require(bool(re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', account)), 'PM account must be an explicit existing email')
         for url in fixtures:
             parsed = urlparse(url)
-            require(parsed.scheme == 'https' and parsed.hostname == 'app-dev.daodao.so', 'PM fixture URL must use the deployed dev product')
+            require(parsed.scheme == 'https' and parsed.hostname in DEV_PRODUCT_HOSTS, 'PM fixture URL must use the deployed dev product')
     contexts = plan.get('step_contexts')
     valid_contexts = (valid_lists and isinstance(contexts, dict) and set(contexts) == set(steps))
     if valid_contexts:
