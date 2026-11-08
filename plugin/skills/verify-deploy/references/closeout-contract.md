@@ -15,7 +15,7 @@
 | replay | PM UI 重播結果；同一草稿 digest／帳號／資料／步驟，每步 PASS 並附原始證據，含起訖時間 |
 | restore | 重播之後的唯讀前置檢查 PASS；基準與實際還原資料一致，不只宣稱「已還原」 |
 | retention | 同一份 PM 資料仍保留、尚未到期、已實跑的重設證據；純唯讀項改附未變更與基準回讀證據，不要求重設腳本。不得指向工程清理已刪的資料 |
-| lint | 對同一草稿執行既有 acceptance-lint，exit 0 並記錄早於 UI 重播開始的 observed_at；不在重播後才補齊草稿必填欄位 |
+| lint | 對同一草稿帶原 issue 與逐 AC coverage 執行 acceptance-lint（`--issue`、`--coverage`），exit 0 並記錄早於 UI 重播開始的 observed_at；不在重播後才補齊草稿必填欄位 |
 | handoff | 發布的交接留言、同草稿 digest、Acceptance／issue OPEN、assignees 含 PM_LOGIN、labels 不含 acceptance:blocked 的遠端回讀 |
 
 handoff 結構化證據的 `pm_login` 必須從當前 `bin/pipeline/types.ts` 的 PM_LOGIN 取得，`assignees` 與 `labels` 保存 GitHub 回讀的 login／label 名稱陣列；checker 優先從綁定 task 的父目錄定位 monorepo 的 bin/pipeline/types.ts 讀取 PM_LOGIN（支援安裝版 plugin），repo-local 執行才可退回腳本所在 monorepo，無法讀取就不放行；核對設定 PM 與清除受阻，仍不能自行證明遠端資料真實。
