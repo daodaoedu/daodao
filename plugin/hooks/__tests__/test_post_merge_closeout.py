@@ -307,6 +307,39 @@ class CloseoutTests(unittest.TestCase):
             d['replay'] = self.evidence('evidence/replay.json', replay)
             self.assertTrue(self.validate(d)[1], field)
 
+    def with_fixture(self, url):
+        """Rebind the single planned fixture everywhere (draft, plan, replay, restore, retention)."""
+        old = 'https://app-dev.daodao.so/practices/401'
+        d = self.complete()
+        draft = self.evidence('notes/handoff.md', (self.task / d['plan']['draft']['path']).read_text().replace(old, url))
+        d['plan'].update(draft=draft, fixtures=[url],
+                         step_contexts={k: {**v, 'fixture': url} for k, v in d['plan']['step_contexts'].items()})
+        replay = json.loads((self.task / d['replay']['path']).read_text())
+        replay.update(fixtures=[url], draft_sha256=draft['sha256'])
+        for step in replay['steps']:
+            step['fixture'] = url
+        d['replay'] = self.evidence('evidence/replay.json', replay)
+        restore = json.loads((self.task / d['restore']['path']).read_text())
+        restore['fixtures'] = [url]
+        d['restore'] = self.evidence('evidence/restore.json', restore)
+        d['retention']['fixtures'] = [{'url': url, 'retained': True}]
+        for key in ['lint', 'handoff']:
+            item = json.loads((self.task / d[key]['path']).read_text())
+            item['draft_sha256'] = draft['sha256']
+            d[key] = self.evidence(d[key]['path'], item)
+        return d
+
+    def test_admin_dev_backoffice_fixture_is_a_deployed_dev_surface(self):
+        # #451/#463: PM steps that happen in the dev admin back office must not force an incomplete receipt.
+        self.assertEqual(self.validate(self.with_fixture('https://admin-dev.daodao.so/admin/feedback?id=13')), ('handed-off', []))
+
+    def test_production_or_lookalike_fixture_hosts_are_rejected(self):
+        for url in ['https://app.daodao.so/practices/401', 'https://admin.daodao.so/admin/feedback',
+                    'http://admin-dev.daodao.so/admin/feedback', 'https://admin-dev.daodao.so.evil.example/admin',
+                    'https://server-dev.daodao.so/api/v1/feedback/mine', 'https://evil-admin-dev.daodao.so/admin']:
+            with self.subTest(url=url):
+                self.assertIn('PM fixture URL must use the deployed dev product', self.validate(self.with_fixture(url))[1])
+
     def test_missing_or_extra_planned_step_context_is_rejected(self):
         for change in ['missing', 'extra']:
             d = self.complete()
