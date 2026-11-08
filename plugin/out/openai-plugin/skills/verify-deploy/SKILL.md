@@ -97,6 +97,8 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
 
    **驗收步驟只寫 PM 在畫面上做得到、看得到的操作與預期**。冒煙表裡的 API 送出內容／回讀、regression test、CI、log 改寫成「工程證據（已驗，PM 不需重做）」區塊並附連結，不要搬進 PM 步驟；只能用 API 或測試驗的 AC 標工程驗收項，不列入 PM 步驟。驗收契約「必須證據」欄寫了 API 回讀或測試時，「對照的 AC」要寫明由工程提供、PM 依畫面判定（#370、#358 的 PM 照契約去要 PUT body、GET 回讀與 regression test 輸出，判 BLOCKED 退回）。手機步驟必須逐條寫明寬×高 CSS px；來源未指定時工程以 390×844 CSS px 實跑後補入，詳見 [尺寸與最新 gate](../../docs/repeatable-acceptance.md#尺寸與視覺比對)。留言先寫成檔案，發布前必跑最新 `origin/main` 的檢查（不能只跑共享 root 的舊版本；fetch 失敗不交驗）：
 
+   先依 [原始 AC 覆蓋檢查](../test-acceptance/references/ac-coverage.md) 產生並審閱逐 Required AC coverage JSON，與同版交接稿一起檢查。partial 只能交局部驗收，不得要求整卡 PASS／關閉；不要用 text-only 取代這一步。
+
    ```bash
    # 在 daodao root 執行；留言檔放 repo 外的暫存位置
    (
@@ -105,7 +107,8 @@ python3 plugin/hooks/check-post-merge-closeout.py begin \
    gate_dir=$(mktemp -d /tmp/daodao-acceptance-gate.XXXXXX)
    git worktree add --detach "$gate_dir" origin/main
    git -C "$gate_dir" rev-parse HEAD   # 保存此次 gate revision
-   pnpm -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" <留言檔絕對路徑>.md
+   pnpm -C "$gate_dir" install --ignore-workspace --frozen-lockfile
+   pnpm -C "$gate_dir" -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" <留言檔絕對路徑>.md --issue <n> --coverage <coverage絕對路徑>.json
    # 有 error 就改到通過再發；warn 是引用的文案在 locale 找不到，逐一確認
    git worktree remove "$gate_dir"
    gh issue comment <n> --repo daodaoedu/daodao --body-file <留言檔絕對路徑>.md
