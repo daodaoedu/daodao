@@ -21,7 +21,7 @@ class WindowsHooks(unittest.TestCase):
         config = json.loads((ROOT / '.codex' / 'hooks.json').read_text(encoding='utf-8'))
         self.assertEqual(set(config), {'description', 'hooks'})
         handlers = [h for groups in config['hooks'].values() for g in groups for h in g['hooks']]
-        self.assertEqual(len(handlers), 6)
+        self.assertEqual(len(handlers), 7)
         self.assertTrue(all(h.get('commandWindows') for h in handlers))
 
     def test_normalization_preserves_file_content(self):
