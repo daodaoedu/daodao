@@ -39,12 +39,12 @@ description: "PM 驗收：依當前可用工具實測 Planning board 上 Status=
 
 ## 1. 開工前檢查（依受影響動作分流）
 
-先依 [environment.md](references/environment.md)「瀏覽器」與「截圖與留言」確認可用工具及實際能力，逐項記錄觀察，不記憑證：
+一開始就開啟 Codex 內建瀏覽器並前往 GitHub，再依 [environment.md](references/environment.md)「瀏覽器」與「截圖與留言」確認可用工具及實際能力，逐項記錄觀察，不記憑證：
 
-1. **GitHub 發布身分**：從流程一開始就開啟 Codex 內建瀏覽器並前往 GitHub，確認瀏覽器工作階段登入 `peggy1213-create`。GitHub connector 目前登入者是 `vincentxuu`，忽略該登入者，不使用 connector 執行本 skill 的 GitHub 操作，也不以 connector 身分資訊判定瀏覽器帳號。若瀏覽器不是 `peggy1213-create` 或無法確認帳號 → 停止所有 GitHub 寫入並回報，不改憑證、不改用 connector 或其他帳號。
+1. **GitHub 發布身分**：只用 Codex 內建瀏覽器中的 GitHub 工作階段確認帳號是 `peggy1213-create`；GitHub connector 目前登入 `vincentxuu`，忽略該登入身分，不用 connector 做本 skill 的 GitHub 操作。瀏覽器不是 `peggy1213-create` 或無法確認時，停止 GitHub 寫入；不改憑證，不要求工程使用者代登入 PM。
 2. **測試帳號與畫面操作**：在實際選用的瀏覽器確認指定 Google 測試帳號、角色及所需操作能力。帳號不符／無法確認 → 停止該角色步驟，不改用手邊帳號或 dev-login。
 3. **dev 與畫面條件**：指定網址可開，環境、語系、實際 viewport 及必要對話框符合原步驟；缺少能力僅阻擋受影響項，不因工具品牌判 BLOCKED。
-4. **證據交付**：用 Codex 內建瀏覽器擷取本輪實測所需畫面，直接貼到 issue 驗收留言；截圖不另存本機或 repo，也不建立留言草稿。確認 GitHub 工作階段登入 `peggy1213-create` 且貼上的圖片能回讀。必要截圖無法直接貼上時，不發缺圖報告，標記證據交付 BLOCKED；不得改用目前登入 `vincentxuu` 的 GitHub connector。
+4. **證據交付**：確認本輪實測畫面能擷取、保全並經已確認身分的路徑附到報告，發布後可回讀圖片。沒有直接貼圖時先查 Codex 內建瀏覽器支援的附件上傳；若內建瀏覽器不可用，或帳號不是 `peggy1213-create`，停止 GitHub 發布並回報。只有工具名稱或 schema 不算成功證據；依 environment 記錄實際成功、失敗或未驗證。
 
 先通過 §2 的卡片資格檢查，再做產品實測。測試與發布分開：發布受阻時，可在正確測試帳號下繼續獨立、非消耗的觀察並保留本次證據，不發不完整報告、不移卡、不關卡。一次性提交、刪除或其他不可逆步驟前，須完成相依觀察且已驗證必要證據能保全與交付；不為查工具能力先消耗資料。全部可行路徑均失敗才說明具體缺口，不反覆要求使用者切換 session。
 
@@ -103,7 +103,7 @@ description: "PM 驗收：依當前可用工具實測 Planning board 上 Status=
 1. 打開 [feature map](../../docs/feature-map/README.md) 的共用規則，以及這次每個功能的檔案，**先讀「陷阱」段**，再讀到達路徑與選擇器（#357 草稿實跑漏讀，卡在加入頁的同意勾選框）。
 2. 重查 Status 與規格留言：不再是 Acceptance 就不開始；規格改了就先更新清單。測到一半發現規格改了：記下測的是哪一版，停下受影響的部分，仍清理本次建立的資料。
 3. 依[共用驗證配方](../../docs/verification-recipe.md#執行與逐項記錄)，在本輪會話維持全部必測分支檢查表（原步驟／AC、資料、依賴、預期、實際、證據與結果），每完成一項即更新；證據暫存／交付依 environment。消耗操作前須完成相依觀察；分支與漏驗處理見[可重複驗收](../../docs/repeatable-acceptance.md)。
-4. 需要瀏覽器測試時，先從 Codex 內建瀏覽器開始並用它操作、檢視真實畫面；只有必須登入第二個測試帳號時才改用 Edge 登入該帳號。需要手機版測試時，在 Codex 內建瀏覽器調整到留言或 AC 指定的 viewport，確認實際寬高，測完還原。流程開始時即在 Codex 內建瀏覽器開啟 GitHub，確認登入 `peggy1213-create` 後，使用這個瀏覽器工作階段完成本 skill 授權的報告留言及卡片狀態操作；忽略目前登入 `vincentxuu` 的 GitHub connector，不使用 connector，也不可沿用其他工作階段的登入結論。無法確認瀏覽器帳號時停止所有 GitHub 寫入並回報。只有需要登入第二個測試帳號時才可改用 Edge，除此之外不控制使用者的電腦。
+4. 需要瀏覽器測試時，先從 Codex 內建瀏覽器開始並用它操作、檢視真實畫面；可在 Codex 內建瀏覽器或 Edge 登入所需帳號，並重新確認實際登入者。需要手機版測試時，在 Codex 內建瀏覽器調整到留言或 AC 指定的 viewport，確認實際寬高，測完還原。擷取本次必要截圖；切換工具後重查帳號、環境及能力，不能沿用另一個工作階段的登入結論。
 
 照步驟用真實畫面操作。API 結果不能證明畫面操作可用；每個預期結果都要親眼看到，不能用讀程式碼、工程師說法或舊報告代替。
 
@@ -183,8 +183,8 @@ PASS／FAIL／BLOCKED 都在本次既有報告記簡短復盤：原預期與本�
 
 ## Codex 內建瀏覽器與 GitHub
 
-- 需要瀏覽器測試時，先從 Codex 內建瀏覽器開始並用它操作、檢視真實畫面；只有必須登入第二個測試帳號時才改用 Edge 登入該帳號。
+- 需要瀏覽器測試時，先從 Codex 內建瀏覽器開始並用它操作、檢視真實畫面；需要切換測試帳號時，可在 Codex 內建瀏覽器或 Edge 登入所需帳號，並重新確認實際登入者。
 - 需要檢查手機版文字或排版時，在 Codex 內建瀏覽器調整到留言或 AC 指定的 viewport；確認實際寬高，完成測試後還原。
-- 可在 Codex 內建瀏覽器開啟 GitHub，確認登入 `peggy1213-create` 後，執行本 skill 授權的 issue 留言及卡片狀態操作；每次寫入前再次確認帳號。
+- 從流程一開始就在 Codex 內建瀏覽器前往 GitHub，只用登入 `peggy1213-create` 的工作階段執行本 skill 授權的 GitHub 操作，每次寫入前確認帳號；GitHub connector 目前登入 `vincentxuu`，忽略該登入身分，不使用 connector 執行 GitHub 操作，也不以 connector 的身分資訊判定瀏覽器帳號；瀏覽器未登入 `peggy1213-create` 或無法確認帳號時，停止 GitHub 寫入並回報，不改用 connector 或其他帳號。
 - 不建立留言草稿；直接把內建瀏覽器的截圖貼入 issue 留言，不另存截圖到本機。
 - 本補充優先於本文件其他允許暫存截圖、建立草稿或改用其他瀏覽器的衝突指示。
