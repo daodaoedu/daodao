@@ -1,7 +1,0 @@
-{
-  "base": "39ccf875bf771ccd6b7a8faa1d0a6dfd1c0005e7",
-  "test_diff_sha256": "aa0d0f1f979a947ee8375b2770c6e5d071d04ffe8fad6312f5ef65cfbb7cfd99",
-  "reviewer": "vincentxuu",
-  "reason": "新增 visibility-change-guard 後 .codex/hooks.json 的 handler 數由 6 變 7，斷言跟著更新、未放寬",
-  "evidence": "https://github.com/daodaoedu/daodao/pull/522 （使用者 2026-11-09 於 Claude Code 對話中明確同意）"
-}
