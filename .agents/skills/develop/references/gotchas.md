@@ -77,3 +77,7 @@ node <daodao-root>/plugin/skills/develop/references/layout-probe.mjs \
 - **讀 API 錯誤訊息**：server 回的錯誤長這樣：`{ success: false, error: { message } }`。前端用 `packages/api/src/errors.ts` 的 `apiErrorFromBody` 解析，不要直接讀 `response.error.message`。表單送出失敗時保留使用者輸入，不要清空。（task 154、353、188、377、383）
 - **權限查詢失敗不等於沒權限**：燈塔權限 API 失敗時 middleware 會導到 `/lighthouse/access-required?reason=unavailable`。這時要顯示「暫時無法確認」的錯誤文案和重試，不能顯示「沒開通」。其他需要權限判斷的頁面也一樣，要把「查詢失敗」和「沒權限」分成兩種狀態。（#384、#354）
 - **後台建立共同挑戰回「此組織目前已停權」**：共用的測試組織被停權了，不是功能壞掉。建立前先在後台確認組織狀態；停權時改用「lighthouse test」組織，或請 admin 恢復。（#179、#180、#295）
+
+## GitHub 組織設定與帳務
+
+- **public repo 切成 private 後，整個組織的 Actions 都跑不起來，錯誤是 `account is locked due to a billing issue`**：secret scanning、push protection、code scanning 在 public repo 免費，切成 private 後設定會留著，變成按 active committer 計費的 Advanced Security。組織沒有付款方式時，GitHub 收不到錢就鎖帳務，連 public repo 的 job 也不會啟動（2026-11-07 daodao-server 被切回 private，產生 $3.80，11/8 起全組織 CI／CD 停擺）。agent 不可自行切可見性：`visibility-change-guard.sh` 會擋 `gh repo edit --visibility` 與 `gh api repos/… -f visibility=/private=`。真的要切時，先請使用者關掉 repo 的 Advanced Security 功能（或改套「Legacy - private/internal repositories」安全設定），再由使用者自己用 `! gh repo edit …` 執行。Advanced Security 是 license 計費，Budgets 無法設成到上限就停用，只能收通知。被鎖後的解法是在 org 的 Payment information 綁付款方式，預扣驗證通過後就會解鎖。
