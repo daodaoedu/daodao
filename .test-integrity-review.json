@@ -1,7 +1,0 @@
-{
-  "base": "46bfba40a5a353f13d97045379a0a4dfe3c82cf3",
-  "test_diff_sha256": "e4f2a88732062e7adb8bffe6f8b5610a43777b2ee0783ca53583cb89f3c36309",
-  "reviewer": "User in this Codex conversation",
-  "reason": "Existing hidden/auto/scroll assertions retained; renamed test extends coverage to clip.",
-  "evidence": "Codex conversation for daodao#473 prevention: user replied ok immediately after the full commit proposal explicitly requested approval for retained hidden/auto/scroll assertions extended with clip. PR https://github.com/daodaoedu/daodao/pull/508 includes this decision for human inspection."
-}
