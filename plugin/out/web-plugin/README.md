@@ -31,7 +31,6 @@ Claude.ai 的 sandbox 有檔案系統也能跑指令，但那是一個空的暫�
 | develop | ❌ | 缺必要能力：bash、filesystem、git、worktree、runtests |
 | format-commit | ❌ | 缺必要能力：git |
 | move-board-card | ❌ | 缺必要能力：bash |
-| poc-branch-handoff | ❌ | 缺必要能力：filesystem、git、worktree |
 | review-change | ❌ | 缺必要能力：bash、filesystem、git |
 | test-acceptance | ❌ | 缺必要能力：filesystem |
 | verify-deploy | ❌ | 缺必要能力：bash、filesystem、git |

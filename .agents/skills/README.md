@@ -16,7 +16,6 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | format-commit | ✅ | 完整 |
 | move-board-card | ✅ | 完整 |
 | notify-related-issue | ✅ | 完整 |
-| poc-branch-handoff | ✅ | 完整 |
 | prevent-repeat-failures | ✅ | 完整 |
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |

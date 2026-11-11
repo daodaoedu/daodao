@@ -38,8 +38,6 @@ daodao/
 | 「發 PR」「開發完成」 | **finish**（Phase 4；前置：verify 必須通過，`task.md` Status = `verified`） | [references/phases/finish.md](references/phases/finish.md) |
 | 「merge 了」「收尾」 | **cleanup**（Phase 5） | [references/phases/cleanup.md](references/phases/cleanup.md) |
 
-若使用者要把既有 POC 整理成工程審查分支、且不是接手 issue 開發，改用 [poc-branch-handoff](../poc-branch-handoff/SKILL.md)；若同時要建立 Planning 卡，再另外用 [request-feature](../request-feature/SKILL.md)。
-
 接手既有任務時，先讀 `task.md` 的 Status 決定階段：`planning` → start（從 1.5 驗收契約接續）；`implementing` 且還有未勾的 phase → dev，phase 全部勾完 → verify；`verified` → finish；`in-review` → 等 merge，merge 後 cleanup。已勾的 phase 和已有的 commit 視為完成，不重做；「接手點」裡「只是自述」的項目，到 verify 時要重驗。
 
 實跑卡住（環境、登入、toast、寄信、DB、GraphQL 限流）先查 [references/gotchas.md](references/gotchas.md)；多任務並行、撞 port、issue 依賴、rebase 時機見 [references/parallel-dev.md](references/parallel-dev.md)。

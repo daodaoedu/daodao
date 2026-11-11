@@ -211,19 +211,6 @@
         "hooks"
       ]
     },
-    "poc-branch-handoff": {
-      "requires": [
-        "filesystem",
-        "git",
-        "worktree"
-      ],
-      "optional": [
-        "bash",
-        "gh",
-        "browser",
-        "runtests"
-      ]
-    },
     "test-acceptance": {
       "requires": [
         "gh",

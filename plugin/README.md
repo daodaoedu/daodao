@@ -1,6 +1,6 @@
 # daodao plugin
 
-島島阿學的開發流程打包成一個可安裝的 plugin：17 個 skill、PR 證據閘門 hooks、Issue／PR 模板。
+島島阿學的開發流程打包成一個可安裝的 plugin：16 個 skill、PR 證據閘門 hooks、Issue／PR 模板。
 支援 Claude Code、Codex、ChatGPT、Claude.ai 四個平台。
 
 ## 單一真相源
@@ -61,7 +61,7 @@ claude plugin install daodao --marketplace https://daodaoedu.github.io/daodao/ma
 ```
 
 裝完**重開 session** 才載入；skill 會是 `/daodao:develop` 這種帶命名空間的形式。
-`claude plugin details daodao@daodao` 可確認 17 skills + 6 hooks 都在。
+`claude plugin details daodao@daodao` 可確認 16 skills + 6 hooks 都在。
 
 沒辦法讓別人「自動」裝好——官方明講 repo 設定啟用外部來源 plugin 不會幫別人安裝，
 自動的只有 marketplace 註冊，`install` 每人跑一次。
@@ -113,7 +113,7 @@ codex plugin add daodao@daodao
 
 - Codex 的 marketplace 只接受本機路徑或 git，不吃 `marketplace.json` 網址，所以不能用 Claude Code 那個 Pages 網址
 - marketplace 名稱跟 Claude Code 一致叫 `daodao`（取自 `.agents/plugins/marketplace.json`）。2026-10-31 前裝過舊名 `daodao-local` 的人，先 `codex plugin marketplace remove daodao-local` 再重加
-- 這樣裝的只有 17 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
+- 這樣裝的只有 16 個 skill，不含 hooks；閘門只在 repo 裡開 Codex 時才有
 
 ### ChatGPT
 
@@ -230,7 +230,7 @@ Claude.ai 少掉的 8 個是 `develop`、`review-change`、`check-commit`、`ver
 
 分工原則：**開發、驗收、commit 一律在 repo 裡用 Claude Code 或 Codex**；網頁版只當需求入口
 （寫 PRD、開卡、回報 bug、看 PR）。在 repo 裡開的 Codex 補上瀏覽器與 Drive 後，跟 Claude Code
-的 17 個 skill 已經沒有能力落差。
+的 16 個 skill 已經沒有能力落差。
 
 ## 平台事實（2026-09-21 查證）
 

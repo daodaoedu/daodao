@@ -65,7 +65,6 @@ commit 時必須依序執行：
 | 開 issue、開卡、新增任務 | `plugin/skills/request-feature/SKILL.md` |
 | 收到想法、Issue、PRD／FRD、POC 或開發分支，要整理需求 | `plugin/skills/draft-prd/SKILL.md` |
 | 使用者遇到操作異常，或開發／CI 錯誤要追蹤 | `plugin/skills/report-bug/SKILL.md` |
-| 將既有 POC 整理成工程審查分支 | `plugin/skills/poc-branch-handoff/SKILL.md` |
 | 開始開發 issue、接手任務、發 PR | `plugin/skills/develop/SKILL.md` |
 | 收集 PR feedback、看 PR review | `plugin/skills/collect-pr-feedback/SKILL.md` |
 | PR merged 後收尾 | `plugin/skills/verify-deploy/SKILL.md` |
