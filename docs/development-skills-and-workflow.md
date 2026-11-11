@@ -14,7 +14,7 @@
 | Bug | report-bug | 整理現象、查現況與重複卡、區分事實與推測 | 問題描述與預期行為 |
 | 開卡／拆任務 | request-feature、break-down-plan | 同版需求到任務對照、相依、查重與發布預覽 | 工作範圍與尚未授權的發布／啟動 |
 | 開發 | develop | 隔離工作目錄、技術規劃、實作、適用測試與自審修正 | 未決產品行為及必要例外 |
-| POC 交接 | poc-branch-handoff | 從既有 POC 整理出 current-dev 基礎、範圍集中的工程審查分支與驗證說明 | POC 範圍、未驗證限制及必要發布決策 |
+| POC 交接 | poc-branch-handoff | 從既有 POC 整理出以使用者選定 base 為基礎、範圍集中的工程審查分支與驗證說明 | POC 範圍、未驗證限制及必要發布決策 |
 | PM 驗收 | test-acceptance | 對 Status=Acceptance 的卡，依最新「## 🙋 請驗收」留言逐步實測、截圖，以 peggy1213-create 發報告並移 Done／Need Fix／Review | 驗收結論與受阻項目 |
 | 產品實跑 | verify-product | app級Launch／Doctor／Drive／Evidence／Cleanup；既有feature map提供各功能配方 | 實際覆蓋、替換與未驗範圍 |
 | 驗收 | develop verify | 逐原 FR／TP／AC 驗證、POC 差異、核心旅程矩陣（記錄各類實際觀察，HTTP路徑含錯誤碼）、Google 文件報告 | 結果、POC 差異決策與未解差異是否可接受 |
