@@ -5,12 +5,12 @@
 誰會讀：
 
 - [request-feature](../../skills/request-feature/SKILL.md)、[report-bug](../../skills/report-bug/SKILL.md)：開卡定位 repo 時，從各功能的「主要程式位置」開始，再到程式碼確認，把路徑寫進「涉及 repo」的依據。只比對功能名稱不算依據（例：燈塔是講師的管理端，但在 `daodao-f2e`，不在 `daodao-admin-ui`）。
-- **develop**（`skills/develop/SKILL.md`，未隨本包出貨） verify 階段：決定瀏覽器驗證怎麼走、用哪些選擇器（**browser-verify.md**（`skills/develop/references/browser-verify.md`，未隨本包出貨））。
-- **test-acceptance**（`skills/test-acceptance/SKILL.md`，未隨本包出貨）：照請驗收留言實測時，補到達路徑、選擇器與前置條件。請驗收留言與這裡不一致時以留言為準，差異回報後再更新這裡。
+- **develop**（`skills\develop\SKILL.md`，未隨本包出貨） verify 階段：決定瀏覽器驗證怎麼走、用哪些選擇器（**browser-verify.md**（`skills\develop\references\browser-verify.md`，未隨本包出貨））。
+- **test-acceptance**（`skills\test-acceptance\SKILL.md`，未隨本包出貨）：照請驗收留言實測時，補到達路徑、選擇器與前置條件。請驗收留言與這裡不一致時以留言為準，差異回報後再更新這裡。
 
 ## 使用規則
 
-- **角色，不是帳號**：這裡只寫角色（未登入、一般使用者、temp 使用者、團主／講師、admin）。角色對應哪個帳號、怎麼登入，看 **test-acceptance 的 environment.md**（`skills/test-acceptance/references/environment.md`，未隨本包出貨）。不在這裡寫信箱、密碼或 token。
+- **角色，不是帳號**：這裡只寫角色（未登入、一般使用者、temp 使用者、團主／講師、admin）。角色對應哪個帳號、怎麼登入，看 **test-acceptance 的 environment.md**（`skills\test-acceptance\references\environment.md`，未隨本包出貨）。不在這裡寫信箱、密碼或 token。
 - **選擇器優先序**：`data-testid`／`testID` → role + accessible name（附 zh-TW 文字與 i18n key）→ `aria-label` → route。不用產生的 CSS class、hash、子元素索引或 DOM 位置。找不到穩定選擇器就寫「無穩定選擇器，建議補 data-testid」，不要硬湊。
 - **每條選擇器附依據**（`path:line`，路徑相對子專案根目錄）。行號會漂移；對不上時以實測為準，順手更新。
 - **前置條件不夠就回報，不降低驗證標準**：資料不足以走完旅程時，該旅程算失敗或受阻，原因寫進該功能的「陷阱」。

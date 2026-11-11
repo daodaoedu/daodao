@@ -1,10 +1,10 @@
 # 開發與驗收文件範本
 
-依據：**Issue 到開發、驗收與合併提案**（`../docs/automation/issue-to-acceptance-workflow.md`，未隨本包出貨）。本目錄為可手動複製的 Markdown 範本；`schemaVersion` 與 `templateVersion` 是各模板的版本標記，不代表已有 JSON schema validator、文件生成器、Google 同步器或 merge gate。
+依據：**Issue 到開發、驗收與合併提案**（`..\docs\automation\issue-to-acceptance-workflow.md`，未隨本包出貨）。本目錄為可手動複製的 Markdown 範本；`schemaVersion` 與 `templateVersion` 是各模板的版本標記，不代表已有 JSON schema validator、文件生成器、Google 同步器或 merge gate。
 
 ## 使用順序
 
-一般需求與 bug 的 labels、Board 狀態、父子／PR 關聯及關閉時機，統一依 **GitHub Issue 管理規範**（`../docs/automation/github-issue-management.md`，未隨本包出貨）設定。
+一般需求與 bug 的 labels、Board 狀態、父子／PR 關聯及關閉時機，統一依 **GitHub Issue 管理規範**（`..\docs\automation\github-issue-management.md`，未隨本包出貨）設定。
 
 可用 [request-feature](../skills/request-feature/SKILL.md) 開卡（Claude Code `/daodao:request-feature`；Codex 讀 `.agents/skills/request-feature/`）。例如：「用 request-feature 根據這份需求開 Issue，先放 Todo」。skill 會讀本目錄模板、查重、發布與回讀；本目錄本身不執行自動化。
 
@@ -37,8 +37,8 @@ PRD（或既有 FRD）保存需求決策；確認後的同版需求／驗收 sna
 
 ## 與 benchmark 的關係
 
-參考 **Harness-Governed Generation**（`../docs/research/harness-governed-generation-benchmark.md`，未隨本包出貨） 的薄 spec＋厚 gate：PRD 保留產品行為、必要約束與驗收，開發文件承接架構設計，驗收報告提供證據。共用 schema／API 定義以連結引用；不因計畫新增 gate 就刪除尚無驗證覆蓋的需求。本次調整模板與 skill，不表示研究文中的所有 gate 已實作。
+參考 **Harness-Governed Generation**（`..\docs\research\harness-governed-generation-benchmark.md`，未隨本包出貨） 的薄 spec＋厚 gate：PRD 保留產品行為、必要約束與驗收，開發文件承接架構設計，驗收報告提供證據。共用 schema／API 定義以連結引用；不因計畫新增 gate 就刪除尚無驗證覆蓋的需求。本次調整模板與 skill，不表示研究文中的所有 gate 已實作。
 
 ## 與既有 auto 範本的關係
 
-**issue-template-auto.md**（`../templates/issue-template-auto.md`，未隨本包出貨） 是已退役自動派工的舊模板，新卡不使用。
+**issue-template-auto.md**（`..\templates\issue-template-auto.md`，未隨本包出貨） 是已退役自動派工的舊模板，新卡不使用。

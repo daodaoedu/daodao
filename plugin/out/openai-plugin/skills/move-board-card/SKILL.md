@@ -78,7 +78,7 @@ request-feature 開卡時判斷並掛 label，理由寫進 body 的「驗收方�
 
 ### 母卡與子卡（GitHub sub-issues）
 
-正式定義見 **GitHub Issue 管理規範 §4**（`../docs/automation/github-issue-management.md#4-母卡子卡pr-與相依關係`，未隨本包出貨）（三種卡、要不要掛子卡、只有兩層、子卡開在中央 repo、母卡不直接掛 PR）。這裡只列 board 狀態的部分：驗收單位是**子卡或獨立卡**；母卡代表整個需求，狀態跟著子卡走。
+正式定義見 **GitHub Issue 管理規範 §4**（`..\docs\automation\github-issue-management.md#4-母卡子卡pr-與相依關係`，未隨本包出貨）（三種卡、要不要掛子卡、只有兩層、子卡開在中央 repo、母卡不直接掛 PR）。這裡只列 board 狀態的部分：驗收單位是**子卡或獨立卡**；母卡代表整個需求，狀態跟著子卡走。
 
 | | 什麼時候進 Acceptance | PM 驗什麼 |
 |---|---|---|
