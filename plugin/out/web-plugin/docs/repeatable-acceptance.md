@@ -30,11 +30,11 @@
 
 手機／響應式步驟寫清楚 **寬×高 CSS px**，例如「手機 390×866」；桌面亦標明自己的尺寸，不能拿桌面數字充當手機尺寸。若用實機，交接附實測 viewport。尺寸寫在對應驗收步驟，不能只藏在工程報告中。來源只要求手機、未指定尺寸時，由工程採用 **390×844 CSS px**，先以該尺寸實跑並確認實際 viewport，再把尺寸寫入每個手機編號步驟；這是測試環境補齊，不需要 PM 另選尺寸。來源已有尺寸時沿用來源；有多頁時逐頁寫明適用尺寸。不得只寫「手機版」「手機寬度」便交驗。
 
-要求符合參考稿時，提供可開啟的參考連結或已保存的對照圖，列出要看的項目（如彈窗寬度、底色、遮罩、關閉鈕與文字區），以及已確認的差異。數值比對由工程量測，PM 看畫面；不同內文或語系的高度差不能直接拿來判像素一致。同內容精準量測仍依 **poc-compare.md**（`skills\develop\references\poc-compare.md`，未隨本包出貨） 執行。
+要求符合參考稿時，提供可開啟的參考連結或已保存的對照圖，列出要看的項目（如彈窗寬度、底色、遮罩、關閉鈕與文字區），以及已確認的差異。數值比對由工程量測，PM 看畫面；不同內文或語系的高度差不能直接拿來判像素一致。同內容精準量測仍依 **poc-compare.md**（`skills/develop/references/poc-compare.md`，未隨本包出貨） 執行。
 
 ## PM 操作與證據
 
-第一個測試操作前，依呼叫入口的證據通道維持全部必測分支檢查表，保留原步驟／AC、資料、依賴與預期。工程放任務證據；正式 PM 的檢查表、附件交付與必要暫存依 **test-acceptance environment**（`skills\test-acceptance\references\environment.md#截圖與留言`，未隨本包出貨），不在此另訂工具或存放限制。每一分支獨立判定；多分支共用AC不代表可以合成一列PASS。
+第一個測試操作前，依呼叫入口的證據通道維持全部必測分支檢查表，保留原步驟／AC、資料、依賴與預期。工程放任務證據；正式 PM 的檢查表、附件交付與必要暫存依 **test-acceptance environment**（`skills/test-acceptance/references/environment.md#截圖與留言`，未隨本包出貨），不在此另訂工具或存放限制。每一分支獨立判定；多分支共用AC不代表可以合成一列PASS。
 
 | 原步驟／AC 與分支 | 資料連結 | 預期 | 實際／證據檔 | 結果 |
 |---|---|---|---|---|
@@ -55,7 +55,7 @@
 
 共享 root 可能停在舊文件分支。#471 曾從舊 root 執行沒有手機尺寸規則的 linter，即使 `origin/main` 已合併 #469，仍回報 OK。每次發交接前先 fetch main，再從該 revision 的乾淨隔離 worktree 執行 linter；不要切換、pull 或 reset 共享 root。保存 gate revision、命令與結果，不能用舊 checkout 的 OK 代替。
 
-先依 **原始 AC 覆蓋檢查**（`skills\test-acceptance\references\ac-coverage.md`，未隨本包出貨） 建立並審閱與同版交接稿綁定的 coverage JSON；不把局部步驟 PASS 當成整張 issue 通過。
+先依 **原始 AC 覆蓋檢查**（`skills/test-acceptance/references/ac-coverage.md`，未隨本包出貨） 建立並審閱與同版交接稿綁定的 coverage JSON；不把局部步驟 PASS 當成整張 issue 通過。
 
 在 daodao root 執行（兩個檔案都使用絕對路徑，中央卡編號需與來源一致）：
 

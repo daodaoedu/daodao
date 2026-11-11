@@ -88,7 +88,7 @@
 
 ## 可重跑本機驗證
 
-共用入口：**verify-product**（`skills\verify-product\SKILL.md`，未隨本包出貨）。完成runtime init/launch/doctor後執行 `node "$SKILL_DIR/scripts/drive.cjs" run future-letter`，以兩個普通User fixture從實際足跡表單寄出，再經原delayed job、真SMTP Mailpit、實收HTML href到本人開信及非owner拒絕。另涵蓋首頁摘要入口與登出保留redirect。
+共用入口：**verify-product**（`skills/verify-product/SKILL.md`，未隨本包出貨）。完成runtime init/launch/doctor後執行 `node "$SKILL_DIR/scripts/drive.cjs" run future-letter`，以兩個普通User fixture從實際足跡表單寄出，再經原delayed job、真SMTP Mailpit、實收HTML href到本人開信及非owner拒絕。另涵蓋首頁摘要入口與登出保留redirect。
 
 先保存原日期／job，再明示加速serverDate與同步browserDate；不改DB/job或直接呼叫deliver。dev-login session不等同OAuth，Mailpit收件不等同外部inbox，沒有等待七天wallclock。其他子功能（草稿／刪除／實踐snapshot等）仍按本feature-map各自recipe／既有e2e實測，這條driver不代替整份feature所有狀態。
 
