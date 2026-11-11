@@ -4,7 +4,9 @@
 begin --task-dir TASK --issue URL [--session-id ID | --no-bind] creates/resumes
 TASK/post-merge-closeout.json. Default session is CODEX_THREAD_ID. Populate the
 receipt with task-relative {path, sha256} evidence; check --receipt PATH returns
-0 handed-off, 1 incomplete, 3 genuinely blocked. stop reads the hook event JSON
+0 handed-off, 1 incomplete, 3 genuinely blocked. New receipts are v2;
+preflight --receipt PATH validates local lifecycle evidence before publication
+and returns 0 ready-to-handoff without requiring a remote handoff. stop reads the hook event JSON
 from stdin and checks only the explicitly bound session. It never scans tasks.
 The complete/blocked fixtures in __tests__/test_post_merge_closeout.py document
 all structured evidence fields; the skill explains when to collect them.
@@ -112,7 +114,7 @@ def draft_mentions(text, value):
     return re.search(left + r'(\*\*|__|\*|_)' + literal + r'\1' + right, text) is not None
 
 
-def validate(receipt, now=None):
+def validate(receipt, now=None, preflight=False, publication_draft=None, publication_issue=None):
     """Return (state, errors); invalid or missing evidence is always incomplete."""
     errors = []
     now = timestamp(now) if now is not None else datetime.now(timezone.utc)
@@ -149,7 +151,10 @@ def validate(receipt, now=None):
             errors.append(label + ': missing, changed, or unsafe task evidence')
             return {} if structured else None
 
-    require(data.get('version') == 1, 'closeout version must be 1')
+    version = data.get('version')
+    require(type(version) is int and version in (1, 2), 'closeout version must be 1 or 2')
+    if preflight:
+        require(version == 2, 'preflight requires version 2 after a reviewed lifecycle upgrade')
     require(data.get('goal') == 'pm-handoff', 'goal must explicitly remain pm-handoff; no inferred smoke-only completion')
     issue = data.get('issue', '')
     require(isinstance(issue, str) and bool(re.fullmatch(r'https://github\.com/[^/]+/[^/]+/issues/[1-9][0-9]*', issue)), 'issue must identify the central GitHub issue')
@@ -188,7 +193,10 @@ def validate(receipt, now=None):
         require(bool(attempt_times) and observed_at is not None and max(attempt_times) == observed_at, 'blocker observed_at must equal latest actual attempt')
         return ('blocked' if not errors else 'incomplete'), errors
 
-    require(state == 'handed-off', 'closeout remains incomplete: PM fixture/replay/handoff is not optional unfinished work')
+    if preflight:
+        require(state in ('pending', 'handed-off'), 'preflight state must be pending or handed-off')
+    else:
+        require(state == 'handed-off', 'closeout remains incomplete: PM fixture/replay/handoff is not optional unfinished work')
     merged = proof(data.get('merged'), 'merged', True)
     require(merged.get('merged') is True, 'merge evidence must confirm merged=true')
     deployed = proof(data.get('deployed'), 'deployed', True)
@@ -230,6 +238,16 @@ def validate(receipt, now=None):
             require(valid_lists and steps == ids, 'plan steps differ from the actual PM draft numbered steps')
         except (OSError, ValueError):
             errors.append('PM draft must use one dedicated 驗收步驟 section with unique numbered screen steps')
+    if preflight and (publication_draft is not None or publication_issue is not None):
+        try:
+            publication = Path(publication_draft)
+            require(publication.is_file() and bool(draft_hash) and sha256(publication) == draft_hash,
+                    'publication draft must match the frozen plan draft digest')
+        except (OSError, ValueError, TypeError):
+            errors.append('publication draft must be a readable file matching the frozen draft')
+        require(type(publication_issue) is int and publication_issue > 0
+                and issue == f'https://github.com/daodaoedu/daodao/issues/{publication_issue}',
+                'publication issue must match the receipt central issue')
     baseline_hash = proof(plan.get('baseline'), 'plan baseline')
     replay = proof(data.get('replay'), 'PM replay', True)
     restore = proof(data.get('restore'), 'restored preflight', True)
@@ -276,6 +294,62 @@ def validate(receipt, now=None):
     except (ValueError, TypeError):
         errors.append('PM retention needs an expiry timestamp')
     proof(retention.get('reset'), 'executed reset/readback proof')
+    # Legacy receipts remain readable; declared lifecycle evidence cannot bypass checks via v1.
+    if version == 2 or 'lifecycle' in retention:
+        lifecycle = proof(retention.get('lifecycle'), 'PM retention lifecycle', True)
+        require(lifecycle.get('kind') == 'pm-retention-lifecycle'
+                and type(lifecycle.get('version')) is int and lifecycle['version'] == 1,
+                'retention lifecycle must identify version 1 of pm-retention-lifecycle')
+        require(bool(draft_hash) and lifecycle.get('draft_sha256') == draft_hash
+                and bool(baseline_hash) and lifecycle.get('baseline_sha256') == baseline_hash,
+                'retention lifecycle must bind the same draft and baseline')
+        try:
+            reviewed = timestamp(lifecycle.get('observed_at'))
+            require(restored is not None and restored <= reviewed <= now,
+                    'retention lifecycle review must follow restored readback, with nonfuture time')
+        except (ValueError, TypeError):
+            errors.append('retention lifecycle needs an observed_at timestamp')
+        entries = lifecycle.get('fixtures')
+        valid_entries = (isinstance(entries, list) and all(isinstance(entry, dict) for entry in entries))
+        urls = [entry.get('url') for entry in entries] if valid_entries else []
+        require(valid_lists and valid_entries and all(isinstance(url, str) for url in urls)
+                and len(urls) == len(fixtures) and set(urls) == set(fixtures),
+                'retention lifecycle must cover every planned fixture exactly once')
+        try:
+            expires = timestamp(retention.get('expires_at'))
+        except (ValueError, TypeError):
+            expires = None
+        for entry in entries if valid_entries else []:
+            require(isinstance(entry.get('required_values'), dict) and bool(entry['required_values']),
+                    'lifecycle fixture needs reviewed required_values')
+            require(isinstance(entry.get('reason'), str) and bool(entry['reason'].strip()),
+                    'lifecycle fixture needs a review reason')
+            proof(entry.get('evidence'), 'lifecycle fixture review/source')
+            timed = entry.get('time_dependent')
+            require(type(timed) is bool, 'lifecycle time_dependent must be a boolean')
+            transitions = entry.get('known_transitions')
+            valid_transitions = isinstance(transitions, list) and all(isinstance(item, dict) for item in transitions)
+            require(valid_transitions, 'lifecycle known_transitions must be a list of source-bound transitions')
+            if timed is False:
+                require(valid_transitions and not transitions,
+                        'non-time-dependent lifecycle cannot declare known transitions')
+            if timed is True or 'valid_until' in entry:
+                try:
+                    valid_until = timestamp(entry.get('valid_until'))
+                    require(expires is not None and valid_until >= expires,
+                            'required fixture state cannot expire before the PM retention deadline')
+                except (ValueError, TypeError):
+                    errors.append('time-dependent fixture needs a timezone-aware valid_until')
+            for transition in transitions if valid_transitions else []:
+                require(isinstance(transition.get('effect'), str) and bool(transition['effect'].strip()),
+                        'known transition needs its effect on the required state')
+                proof(transition.get('evidence'), 'known transition source')
+                try:
+                    at = timestamp(transition.get('at'))
+                    require(expires is not None and at >= expires,
+                            'known fixture transition occurs before the PM retention deadline')
+                except (ValueError, TypeError):
+                    errors.append('known transition needs a timezone-aware timestamp')
     lint = proof(data.get('lint'), 'handoff lint', True)
     require(bool(draft_hash) and lint.get('draft_sha256') == draft_hash and type(lint.get('exit_code')) is int and lint['exit_code'] == 0, 'handoff lint must pass on the same draft')
     try:
@@ -284,6 +358,8 @@ def validate(receipt, now=None):
                 'handoff lint must pass before the same frozen draft UI replay starts')
     except (ValueError, TypeError):
         errors.append('handoff lint needs an observed_at timestamp before UI replay')
+    if preflight:
+        return ('ready-to-handoff' if not errors else 'incomplete'), errors
     handoff = proof(data.get('handoff'), 'remote handoff readback', True)
     require(bool(draft_hash) and handoff.get('draft_sha256') == draft_hash, 'published handoff must match the replayed draft')
     require(isinstance(handoff.get('comment_url'), str)
@@ -315,6 +391,18 @@ def validate(receipt, now=None):
     return ('handed-off' if not errors else 'incomplete'), errors
 
 
+def lifecycle_status(receipt, state):
+    """Disclose legacy compatibility without treating it as lifecycle protection."""
+    try:
+        data = load(Path(receipt))
+        retention = data.get('retention')
+        if data.get('version') == 1 and (not isinstance(retention, dict) or 'lifecycle' not in retention):
+            return 'legacy-not-verified'
+    except (OSError, ValueError, TypeError):
+        return 'not-verified'
+    return 'assessed' if state in ('handed-off', 'ready-to-handoff') else 'not-verified'
+
+
 def cache_binding(session):
     root = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home() / '.cache')))
     return root / 'daodao-harness/post-merge' / (hashlib.sha256(session.encode()).hexdigest() + '.json')
@@ -337,6 +425,10 @@ def main(argv=None):
     begin.add_argument('--no-bind', action='store_true', help='manual-check-only client; no automatic Stop claim')
     check = commands.add_parser('check', help='strict closeout: 0 handed-off / 1 incomplete / 3 blocked')
     check.add_argument('--receipt', type=Path, required=True)
+    pre = commands.add_parser('preflight', help='before publication: 0 ready / 1 incomplete / 3 blocked')
+    pre.add_argument('--receipt', type=Path, required=True)
+    pre.add_argument('--draft', type=Path, required=True, help='the actual file passed to gh issue comment')
+    pre.add_argument('--issue', type=int, required=True, help='the actual central issue number being published to')
     release = commands.add_parser('release', help='explicit user stop/scope-change only; unbind without claiming completion')
     release.add_argument('--session-id')
     release.add_argument('--reason', required=True)
@@ -355,7 +447,7 @@ def main(argv=None):
             if not same_task or receipt_data.get('issue') != args.issue or receipt_data.get('goal') != 'pm-handoff':
                 parser.error('existing receipt belongs to a different task/issue/goal; do not overwrite it')
         else:
-            receipt_data = {'version': 1, 'task_dir': str(task), 'issue': args.issue,
+            receipt_data = {'version': 2, 'task_dir': str(task), 'issue': args.issue,
                 'goal': 'pm-handoff', 'state': 'pending', 'merged': None, 'deployed': None, 'smoke': None,
                 'plan': None, 'replay': None, 'restore': None, 'retention': None, 'lint': None, 'handoff': None}
         if not args.no_bind:
@@ -397,10 +489,13 @@ def main(argv=None):
             parser.error('release needs an existing exact-session binding and task-owned user directive evidence')
         print(json.dumps({'released': True, 'completed': False, 'audit': str(audit)}))
         return 0
-    if args.command == 'check':
-        state, errors = validate(args.receipt)
-        print(json.dumps({'state': state, 'errors': errors, 'limitation': LIMITATION}, ensure_ascii=False))
-        return 3 if state == 'blocked' else (0 if state == 'handed-off' else 1)
+    if args.command in ('check', 'preflight'):
+        state, errors = validate(args.receipt, preflight=args.command == 'preflight',
+                                 publication_draft=getattr(args, 'draft', None),
+                                 publication_issue=getattr(args, 'issue', None))
+        print(json.dumps({'state': state, 'errors': errors, 'limitation': LIMITATION,
+                          'lifecycle_validation': lifecycle_status(args.receipt, state)}, ensure_ascii=False))
+        return 3 if state == 'blocked' else (0 if state in ('handed-off', 'ready-to-handoff') else 1)
     try:
         raw = sys.stdin.read()
         event = json.loads(raw) if raw.strip() else {}
@@ -431,7 +526,12 @@ def main(argv=None):
         else:
             registration['began_at'] = datetime.now(timezone.utc).isoformat()
             binding.write_text(json.dumps(registration) + '\n')
-        print(json.dumps({'state': state, 'completed': state == 'handed-off', 'limitation': LIMITATION}, ensure_ascii=False))
+        lifecycle_validation = lifecycle_status(receipt, state)
+        limitation = LIMITATION
+        if lifecycle_validation == 'legacy-not-verified':
+            limitation += ' Retention lifecycle: legacy-not-verified.'
+        print(json.dumps({'state': state, 'completed': state == 'handed-off', 'limitation': limitation,
+                          'lifecycle_validation': lifecycle_validation}, ensure_ascii=False))
         return 0
     print('post-merge closeout incomplete: ' + '; '.join(errors), file=sys.stderr)
     return 2
