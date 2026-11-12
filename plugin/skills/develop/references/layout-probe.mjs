@@ -111,7 +111,12 @@ const measureFloating = ({ sel, insetSrc }) => {
     }
     const cs = getComputedStyle(el);
     const inset = sampleInset(
-      [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomLeftRadius, cs.borderBottomRightRadius].map((v) => parseFloat(v)),
+      // border-radius 可能是 "24px"、"50%" 或橢圓 "24px 12px"；水平百分比依寬、垂直依高換成 px
+      [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomLeftRadius, cs.borderBottomRightRadius].map((v) => {
+        const [x, y = x] = v.trim().split(/\s+/);
+        const px = (part, side) => (part.endsWith("%") ? (parseFloat(part) / 100) * side : parseFloat(part));
+        return [px(x, r.width), px(y, r.height)];
+      }),
       r.width,
       r.height
     );
@@ -252,13 +257,19 @@ for (const width of widths) {
           continue;
         }
         // 等進場動畫真的結束再量：固定 400ms 不夠側邊抽屜（Sheet）滑入，會量到滑入途中多出的 2–3px（daodao#524）
-        await page.waitForTimeout(50);
-        await page.evaluate(() => Promise.race([
-          Promise.all(document.getAnimations()
-            .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
-            .map((a) => a.finished.catch(() => {}))),
-          new Promise((resolve) => setTimeout(resolve, 3000)),
-        ]));
+        // 至少等 400ms（與舊版相同，讓延遲掛上的浮層出現），之後重複等到沒有進行中的有限長度動畫，總上限 3 秒
+        await page.waitForTimeout(400);
+        await page.evaluate(async () => {
+          const deadline = Date.now() + 3000;
+          const running = () => document.getAnimations()
+            .filter((a) => a.playState === "running" && a.effect?.getComputedTiming().endTime !== Infinity);
+          for (let list = running(); list.length && Date.now() < deadline; list = running()) {
+            await Promise.race([
+              Promise.all(list.map((a) => a.finished.catch(() => {}))),
+              new Promise((resolve) => setTimeout(resolve, Math.max(0, deadline - Date.now()))),
+            ]);
+          }
+        });
         await applyMeasurementEnvironment(page);
         const f = await page.evaluate(measureFloating, { sel: FLOATING, insetSrc: cornerSampleInset.toString() });
         if (!f) row.problems.push(`--open ${sel} 點了沒有出現可量的浮層（role=menu|listbox|dialog／radix popper）`);

@@ -129,6 +129,13 @@ describe("cornerSampleInset", () => {
     expect(inset).toBeLessThan(20);
   });
 
+  // 50% 圓角在非正方形浮層上是橢圓角：400×200 → 每角 (200, 100)
+  it("橢圓角（50% 的 pill／橢圓浮層）取樣點落在橢圓內", () => {
+    const inset = cornerSampleInset([[200, 100], [200, 100], [200, 100], [200, 100]], 400, 200);
+    expect(((200 - inset) / 200) ** 2 + ((100 - inset) / 100) ** 2).toBeLessThanOrEqual(1);
+    expect(inset).toBeLessThan(100);
+  });
+
   it("無法解析的半徑視為 0", () => {
     expect(cornerSampleInset([Number.NaN, Number.NaN, 0, 0], 300, 200)).toBe(6);
   });
