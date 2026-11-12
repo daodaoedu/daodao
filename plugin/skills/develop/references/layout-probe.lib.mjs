@@ -50,3 +50,29 @@ export const isClippedByAncestor = (el, getOverflowX, stopAt) => {
   }
   return false;
 };
+
+/**
+ * 浮層遮擋取樣點的內縮量（px）。
+ * 角落取樣點 (i, i) 必須落在圓角內：半徑 (rx, ry) 的橢圓角需 ((rx−i)/rx)² + ((ry−i)/ry)² ≤ 1；
+ * 圓角時即 i ≥ R × (1 − 1/√2)。固定內縮 6px 遇到 24px 圓角的抽屜時，角落點會落在圓角外、
+ * 量到背後的遮罩，誤判為「被遮住」（daodao#524）。
+ * 半徑依 CSS 以對應邊長一半為上限（pill 常寫 9999px 或 50%）。
+ *
+ * @param radii 四個角的半徑：數字（圓角）或 [rx, ry]（橢圓角），單位 px
+ * @param width 浮層寬
+ * @param height 浮層高
+ * @param min 最小內縮
+ */
+export const cornerSampleInset = (radii, width, height, min = 6) => {
+  const limit = Math.floor(Math.min(width, height) / 2);
+  const clamp = (v, max) => Math.max(0, Math.min(Number.isFinite(v) ? v : 0, max));
+  const inside = (i, rx, ry) => rx === 0 || ry === 0 || ((rx - i) / rx) ** 2 + ((ry - i) / ry) ** 2 <= 1;
+  let inset = min;
+  for (const radius of radii) {
+    const [rawX, rawY] = Array.isArray(radius) ? radius : [radius, radius];
+    const rx = clamp(rawX, width / 2);
+    const ry = clamp(rawY, height / 2);
+    while (inset < limit && !inside(inset, rx, ry)) inset++;
+  }
+  return Math.max(min, Math.min(inset, Math.max(min, limit)));
+};

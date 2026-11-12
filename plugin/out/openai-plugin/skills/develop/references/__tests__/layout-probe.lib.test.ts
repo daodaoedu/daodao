@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 // @ts-expect-error -- 探針是 .mjs（沒有型別宣告），這裡只測行為
-import { horizontalOverflow, isClippedByAncestor, isHorizontallyOutside, isLoginWall, targetPathname } from "../layout-probe.lib.mjs";
+import { cornerSampleInset, horizontalOverflow, isClippedByAncestor, isHorizontallyOutside, isLoginWall, targetPathname } from "../layout-probe.lib.mjs";
 
 describe("horizontalOverflow", () => {
   it("經典捲軸下仍抓到超出可用寬度的3px（#473）", () => {
@@ -104,5 +104,39 @@ describe("isClippedByAncestor", () => {
 
   it("沒有 parent 時回 false", () => {
     expect(isClippedByAncestor(el("visible"), getOverflowX, null)).toBe(false);
+  });
+});
+
+describe("cornerSampleInset", () => {
+  // 取樣點 (i, i) 在半徑 R 的圓角內 ⇔ (R − i)·√2 ≤ R
+  const insideCorner = (i: number, r: number) => (r - i) * Math.SQRT2 <= r;
+
+  // daodao#524：24px 圓角的抽屜，固定內縮 6px 會落在圓角外、量到背後遮罩
+  it("圓角較大時內縮到圓角內，取樣點不會落在圓角外", () => {
+    const inset = cornerSampleInset([24, 0, 24, 0], 420, 900);
+    expect(insideCorner(inset, 24)).toBe(true);
+    expect(insideCorner(6, 24)).toBe(false);
+  });
+
+  it("沒有圓角或圓角很小時維持最小內縮 6px", () => {
+    expect(cornerSampleInset([0, 0, 0, 0], 300, 200)).toBe(6);
+    expect(cornerSampleInset([8, 8, 8, 8], 300, 200)).toBe(6);
+  });
+
+  it("pill 樣式的超大半徑以邊長一半為上限，取樣點仍在浮層內", () => {
+    const inset = cornerSampleInset([9999, 9999, 9999, 9999], 120, 40);
+    expect(insideCorner(inset, 20)).toBe(true);
+    expect(inset).toBeLessThan(20);
+  });
+
+  // 50% 圓角在非正方形浮層上是橢圓角：400×200 → 每角 (200, 100)
+  it("橢圓角（50% 的 pill／橢圓浮層）取樣點落在橢圓內", () => {
+    const inset = cornerSampleInset([[200, 100], [200, 100], [200, 100], [200, 100]], 400, 200);
+    expect(((200 - inset) / 200) ** 2 + ((100 - inset) / 100) ** 2).toBeLessThanOrEqual(1);
+    expect(inset).toBeLessThan(100);
+  });
+
+  it("無法解析的半徑視為 0", () => {
+    expect(cornerSampleInset([Number.NaN, Number.NaN, 0, 0], 300, 200)).toBe(6);
   });
 });
