@@ -31,6 +31,8 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 
 ## 2. 收集並查證
 
+接手 CI 失敗且有修復授權時，修改前先讀 [CI 修復證據契約](references/ci-repair.md)，啟動 worktree 回條與原生 pre-push 檢查。未重現完整失敗、只有探針或環境受阻時，不把候選修法當成已驗證修復發布；同一問題兩次失敗先觀察並重檢共同假設。一般 review／唯讀調查不啟動回條。
+
 1. 收集 CI/checks、AI review、第三方 bot（如 f2e 的 SonarCloud、Vercel）與人類 review，保留來源連結、comment ID、commit、已解決／過時狀態；一般討論與自動描述不直接視為缺陷。
 2. 查閱失敗 job 日誌與對應程式碼／測試。先判斷 finding 是否仍適用目前 head，再確認觸發條件及影響。CI 失敗先分三種：
    - **diff 改到的程式壞了**：修 code。
@@ -67,3 +69,4 @@ AI 先讀取、查證與去重 feedback，完成授權範圍內的修正及自�
 - 只有已授權時才 push／回覆／resolve thread；發布前準備具體內容。文字以結構化工具或 body-file 傳送，避免把外部留言插入 shell。
 - **修正併成一次 push**：所有已確認的修正都在本機 commit、跑完受影響的檢查後，才一次 push。處理順序是衝突 → review → CI；碰到 rebase 衝突就回報需要 rebase 的 repo 並停下，不往下處理 CI。每次 push 都會重跑 CI（AI Code Review 改為貼 `ai-review` label 才跑，需要再審時再貼），也會讓 PR body 的驗證證據對到舊 head。
 - 遠端寫入後讀回確認；逾時先查是否成功，不盲目重送。Push 後使用新 head 查 CI，不沿用舊 head 的通過結果。修正或 rebase 後的驗證證據是否還有效，依 develop finish 步驟 2 的 patch-id 判斷。
+- 已啟動 CI 修復回條時，發布與完成檢查使用 [契約的原生 gate／發布 wrapper](references/ci-repair.md)。Git push 成功只代表已發布；wrapper 回傳 3 表示遠端尚未驗證，不是完成。保留未解風險與實際環境限制，直到當前 SHA 的完整檢查通過。

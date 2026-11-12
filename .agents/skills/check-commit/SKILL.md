@@ -17,6 +17,8 @@ commit 前的品質檢查。發現錯誤時先嘗試自動修復，修不了的�
 
 先確認 staged 範圍與相關未提交差異；只修本次授權檔案，格式工具會改其他檔案時改用可限制路徑的方式。驗證後 diff 有改變就重跑受影響檢查，不把舊版本結果當新版本通過。
 
+CI 修復且已啟動回條時，另跑 [CI 修復證據檢查](../collect-pr-feedback/references/ci-repair.md) 的 `check --phase publish`；缺完整重現、只有局部探針或證據已過期，就保留為候選修法，不能以其他綠燈替代。
+
 ## 步驟 0：判斷指令入口（依 repo 而異）
 
 - 有 `Makefile`（daodao-ai-backend、daodao-admin-ui）→ 用 `make check` / `make format` / `make lint`
