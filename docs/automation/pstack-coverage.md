@@ -40,9 +40,9 @@
 | babysit playbook | 一次處理一支 PR 到可以 merge；CI 失敗分類，碰到需要人決定的事就停 | 已採用 | `plugin/skills/collect-pr-feedback/SKILL.md`（CI 失敗分三類、偶發只重跑一次、base 過期先 fetch、修正併成一次 push） | #415 |
 | bugbot-triage（reference） | 分流 bot review finding，濾掉雜訊 | 已採用 | `.github/scripts/review-knowledge.cjs`（G 類提醒型、高風險類別不降級）、`.github/review-knowledge/`；#423 把既有紀錄全部轉成回歸測試 | #415、#423 |
 | shipping playbook | 每支 PR 各自驗證，只 land 已驗證的那段，之後不碰 stack | 部分採用 | `finish.md` 用 `git patch-id --stable` 判斷證據能否沿用，issue 留言加 marker 避免重複；`verify-deploy` 做 merge 後查核。缺：stacked PR 由 root 開始依序 land 的程序 | #417 |
-| pause-safely playbook | 在安全邊界停下，留 WIP checkpoint 與接手紀錄 | 已採用 | `dev.md` 第 6 步（`wip:` commit、更新 task.md「## 接手點」）；`plugin/skills/develop/references/task-template.md` 的「## 接手點」 | #411 |
+| pause-safely playbook | 在安全邊界停下，留 WIP checkpoint 與接手紀錄 | 已採用 | `dev.md` 第 7 步（`wip:` commit、更新 task.md「## 接手點」）；`plugin/skills/develop/references/task-template.md` 的「## 接手點」 | #411 |
 | session-pickup playbook | 讀前一段的紀錄接手，不重做 | 已採用 | `plugin/skills/develop/SKILL.md` 第 39 行依 task.md Status 決定接手階段；只有自述、沒附證據的項目到 verify 要重驗；`plugin/hooks/session-start.sh` 開場注入 worktree 狀態 | #411 |
-| autonomous-run playbook | 先定可檢查的退出條件，用 wake 機制一路跑到完成 | 部分採用 | 每個 phase 檔都有「完成條件」；`dev.md` 第 6 步規定 phase 之間連續執行。缺：wake／loop 機制（排程已退役，見 `docs/automation/README.md`） | — |
+| autonomous-run playbook | 先定可檢查的退出條件，用 wake 機制一路跑到完成 | 部分採用 | 每個 phase 檔都有「完成條件」；`dev.md` 第 7 步規定 phase 之間連續執行。缺：wake／loop 機制（排程已退役，見 `docs/automation/README.md`） | — |
 | autopilot-full／autopilot-stack | 每支 PR 一個 owner 從建置做到 merge；由沒寫過那段程式的 swarm 驗證後才 merge | 未採用 | 2026-09-20 起 Routine A／B／C 刻意退役，所有變更都走人審 PR（`docs/workflow.md` 第 894 行） | — |
 | orchestrate playbook | 一個協調者管理多日、多 PR、大量 subagent 的長期專案 | 未採用 | `plugin/skills/develop/references/parallel-dev.md` 只寫 2–3 個並行任務的約定，沒有協調者角色 | — |
 | hillclimb playbook | 針對單一指標持續迭代改善 | 未採用 | 沒找到；`docs/automation/review-false-positive-research.md` 有 precision／recall 目標，但沒有迭代流程 | — |
@@ -79,7 +79,7 @@
 | pstack 項目 | 一句話機制 | 狀態 | daodao 對應位置／缺什麼 | 相關 PR |
 |---|---|---|---|---|
 | architect | 寫 code 前先畫出型別、簽名與模組結構，實作期間持續對照 | 部分採用 | `start.md` 1.5a 設計草圖（呼叫端用法、型別草圖、邊界、被否決的形狀）；`dev.md` 第 4 步偏離紀錄。只在動到 API、schema 或狀態時才寫；沒有模組結構，也沒有平行設計探索 | #418 |
-| figure-it-out | 大型或無人監看的工作：依任務調整嚴謹度，跑假設迴圈並記錄決策 | 部分採用 | develop 的 task.md 有 phases，`dev.md` 第 6 步「兩次修正共同假設」。缺：大型遷移專用的 playbook 與決策紀錄 | #411 |
+| figure-it-out | 大型或無人監看的工作：依任務調整嚴謹度，跑假設迴圈並記錄決策 | 部分採用 | develop 的 task.md 有 phases，`dev.md` 第 7 步「兩次修正共同假設」。缺：大型遷移專用的 playbook 與決策紀錄 | #411 |
 | how | 解釋子系統架構、執行流程、程式該放哪一層 | 部分採用 | `check-product-status` 限於需求現況查核；feature map 涵蓋功能的到達路徑。缺：一般架構導覽 | #419 |
 | why | 跨各種證據來源（版控、issue、文件、聊天）查設計理由與 regression | 部分採用 | `plugin/skills/report-bug/SKILL.md` 第 29 行（`git log`／`git blame`／`gh pr view`）；1.5a 記設計理由；PRD 模板 §5「不採用的方案」。缺：查聊天、文件等其他證據類別 | #417、#418 |
 | teach | 結合 how 和 why，讓人真正理解 | 未採用 | 沒找到 | — |
@@ -107,7 +107,7 @@
 
 | pstack 項目 | 一句話機制 | 狀態 | daodao 對應位置／缺什麼 | 相關 PR |
 |---|---|---|---|---|
-| attack-the-premise | 同一前提下的修正失敗兩次，先寫出前提並直接驗證 | 已採用 | `dev.md` 第 6 步「兩次修正共同假設」與推翻觀察 | #411 |
+| attack-the-premise | 同一前提下的修正失敗兩次，先寫出前提並直接驗證 | 已採用 | `dev.md` 第 7 步「兩次修正共同假設」與推翻觀察 | #411 |
 | boundary-discipline | 驗證集中在系統邊界，內部信任型別 | 已採用 | `REVIEW.md` 第 20 行；`start.md` 1.5a「邊界：在哪一層 parse」；`benchmark-gates.md` 規定規則來源優先序（server zod → openapi） | #418 |
 | build-the-lever | 做出能完成或證明工作的工具，不手工做 | 已採用 | `ADR-0001`「常駐檢查進場條件」；`layout-probe.mjs`、`poc-compare.mjs`、`bin/pipeline/board.ts` | #418 |
 | encode-lessons-in-structure | 第二次寫同樣的指示時，改寫成 lint、腳本或檢查 | 已採用 | `ai-human-review-workflow.md` 第 44 行；`ADR-0001`；`pre-pr-gate.sh` 每條規則都附事故來源 | — |
@@ -127,7 +127,7 @@
 | prove-it-works | 對真實產物驗證，不用代理指標 | 已採用 | `check-product-status` 第 4 步四級證據；`agent-learning-loop.md` R1；`pre-pr-gate.sh` 的 `pr-verify-unchecked` | — |
 | redesign-from-first-principles | 新需求進來時，問「如果第一天就有，設計會不會不同」 | 已採用 | `start.md` 1.5a「如果這個需求一開始就存在…」 | #418 |
 | separate-before-serializing-shared-state | 先消除共享，真正必要時才結構性地序列化 | 已採用 | worktree 隔離；`parallel-dev.md`「migration 類任務一次只做一個」；`check-agent-delivery.py` 的 `owned_paths` | — |
-| sequence-verifiable-units | 拆成每步都可驗證的小單位，PR 的順序本身能證明自己 | 已採用 | `dev.md` 第 5 步（每個 phase 先驗證再 commit）；`parallel-dev.md` 的依賴鏈 PR base | — |
+| sequence-verifiable-units | 拆成每步都可驗證的小單位，PR 的順序本身能證明自己 | 已採用 | `dev.md` 第 6 步（每個 phase 先驗證再 commit）；`parallel-dev.md` 的依賴鏈 PR base | — |
 | subtract-before-you-add | 先刪掉死碼與多餘的驗證，再往上加 | 部分採用 | 同 laziness，只在 `refactor` 出現 | #411 |
 | test-behavior-not-implementation | 測試斷言使用者看得到的行為 | 已採用 | `AGENTS.md` 測試規範（兩種假想修改）；`REVIEW.md` 第 26–27 行；`.github/workflows/test-integrity.yml` | #411、#415 |
 | type-system-discipline | 讓非法狀態無法表示、用 branded type、在邊界 parse、窮舉 variant | 部分採用 | `ADR-0001` 阻擋 `no-any`；`dev.md` 第 4 步把新增 `as`／`!` 當成偏離訊號。缺：branded type、窮舉檢查；子 repo 規範未做 | #418 |

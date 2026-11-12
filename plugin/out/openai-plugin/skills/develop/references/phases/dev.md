@@ -8,6 +8,7 @@
    - `perf`：第一個 phase 固定是量測，不讀程式碼猜瓶頸。先在 task.md 寫下要宣稱的那句話（例如「活動列表 LCP p50 在 4G throttle 下從 X 降到 Y」），在 `origin/dev` 量基準存成 `$TASK/evidence/perf-before.json`；沒有基準就不動程式。修完後兩邊各跑至少 5 次、A／B 交錯，報中位數與範圍；差距小於每次之間的變動就算沒有可量測差異。確認工作真的有跑（沒有錯誤回應、request 真的送到 server、快取是冷是熱）。結論只能是四種之一：變快、變慢、沒有可量測差異、無法判定
    - `feature`：照下面的動作序列
 4. **對照設計草圖**（task.md 有「## 設計草圖」時）：實作需要草圖沒預期的參數、欄位或狀態，先在草圖的「偏離紀錄」寫一行原因，判斷是草圖錯、漏了需求，還是實作做太多，不要默默吸收。同一種 workaround 出現第二次，或為了過 typecheck 要新增 `as`、`!`、實際上一定有值的 optional 欄位時，停下這個 phase，先改草圖再繼續；這不算失敗重試
+5. **移除或改掉使用者看得到的東西時，全 repo 搜呼叫端**（文案、按鈕、開關、i18n key、路由、彈窗或流程步驟）：commit 前用 `git grep` 搜舊文案、舊 key 與舊控制項名稱，範圍是整個 repo，**包含 `e2e/`、測試、fixture、文件與 skill**，不只 `src/`。命中的地方在同一個 PR 一起改，或在 task.md 記下不改的原因。#521 移除「建立後立即發佈」開關時只搜了 `src`／`packages`，`e2e/journeys/lighthouse-cohort.spec.ts` 仍去勾那個開關，PR 開出後 journey CI 才失敗
 ### 行動版 UI 與互動狀態
 
 實作 UI 需求時，把對話與設計中的已確認行為整理成一份清單，標出後續修正取代的舊提案；依清單處理，不把早期被否決的控制項或互動加回來，也不把探索時看到的 UX 機會擴成新 AC。
@@ -16,7 +17,7 @@
 - 密集資料在窄螢幕仍須看得出每列是誰、目前篩選了什麼、數值涵蓋哪個日期或期間。若採用橫向捲動，保留辨識資料所需的列標識，檢查固定儲存格的底色與疊層；若表格難以完成任務，再依需求評估摘要或明細呈現。
 - 表單與編輯流程要清楚呈現未修改、已修改、儲存中、儲存完成及草稿等狀態。儲存操作依實際資料變更啟用，並以成功的保存結果更新狀態；切換內部分頁時保留尚未儲存的內容，離開並丟棄前才提醒。未發布的草稿要明確說明哪些連結或操作尚不可用及原因。
 
-5. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
+6. **每完成一個 phase 的預設動作序列（自動執行，不要問使用者「要 commit 還是先看效果」）**：
    1. **自行輕量驗證並修訂**：UI 變更 → 起 dev server 用瀏覽器實際看過該 phase 的改動（typecheck 過 ≠ 畫面對）；**有可互動 POC 的 UI phase，這一步就要把 POC 同一畫面開在旁邊，對該 phase 的元件跑一遍 [poc-probe-checklist](../poc-probe-checklist.md) 的基本 probe**（不要等 verify 才第一次量，差異會累積到很難拆）；後端變更 → curl 打一輪；script / workflow / migration / skill 文件 → 依 `check-commit` skill 步驟 3 的「變更類型 × 驗證」對照表。**任何類型的變更都有對應驗證，沒有「這種改動不用驗」這回事**。**這個 phase 碰到 form／mutation／controller／DTO 的，快篩就要真的送出一次：一筆真實輸入（中文、大寫、空白）成功、一筆 server 會拒絕的輸入失敗且訊息顯示出來**，先把 [核心旅程矩陣](../journey-matrix.md) 的列開出來，verify 階段再補齊。這是 phase 級的快篩，完整驗收留給 verify 階段
    2. **契約及測試完整性檢查**：依 [benchmark gates](../benchmark-gates.md) 執行適用 repo 的 schema／API signal 與測試完整性檢查，保留實際結果及限制。
    3. **高風險變更掃描**：跑 `bash plugin/hooks/stop-quality-gate.sh` 看逐檔就緒清單和高風險分類（migration / API / auth / env / CI）。有高風險標記的 phase 在 task.md 備註區補記「⚠ 高風險：<分類>」
@@ -24,16 +25,16 @@
    5. 更新 task.md 的 checkbox 與 Status
    6. 直接進下一個 phase
    7. 只有驗證**失敗且修不掉**、或發現 scope 之外的問題時才停下來問使用者
-6. **連續執行原則**：phase 邊界是繼續點，不是回報暫停點。**禁止**在 phase 完成後用「下一步：…要繼續嗎？」「要推的話說一聲」等句式收尾等指示——commit 完就開始下一個 phase。合法的停下來只有四種：
+7. **連續執行原則**：phase 邊界是繼續點，不是回報暫停點。**禁止**在 phase 完成後用「下一步：…要繼續嗎？」「要推的話說一聲」等句式收尾等指示——commit 完就開始下一個 phase。合法的停下來只有四種：
    - 全部 phase 完成 → 進 verify
    - 碰到 task.md 記載的待決事項**且該 phase 無法繞過它先行**（能先做別的就先做）
    - 驗證失敗 2 次修不掉，而且已經做完下面的前提檢查
    **同一項驗證失敗 2 次**：先在 task.md 備註寫一行「兩次修正共同假設：<一句話>」，再做一個「這個前提如果是錯的，結果就會不同」的觀察（加 log、改輸入、看實際資料），結果寫在下面。前提被推翻就換方向繼續查，這次不算第 3 次重試；前提成立而且仍修不好才停，交給人時附上前提、觀察與結果
    - 使用者主動喊停
    進度回報用一行 status 夾在過程中說，不要當成回合終點。要換 session 或 context 快滿時，先把進行中的修改做成 `wip:` commit（不 push），更新 task.md「## 接手點」再停
-7. 在 push 已授權並完成專案 review 流程時定期 push：`git push -u origin feat/<slug>`——task.md 是本機檔案（gitignored），push 過的 branch 才是災難時唯一留得住的；跨多天的大任務每完成一個 phase 在已授權的 issue comment 記一行進度，讓狀態不只活在這台機器
-8. 跨 repo 依賴順序：`storage (migration) → server (API) → ai-backend → f2e`
-9. 需要跑 dev server 時，檢查 task.md 的 Port offset，避免與其他任務相撞
+8. 在 push 已授權並完成專案 review 流程時定期 push：`git push -u origin feat/<slug>`——task.md 是本機檔案（gitignored），push 過的 branch 才是災難時唯一留得住的；跨多天的大任務每完成一個 phase 在已授權的 issue comment 記一行進度，讓狀態不只活在這台機器
+9. 跨 repo 依賴順序：`storage (migration) → server (API) → ai-backend → f2e`
+10. 需要跑 dev server 時，檢查 task.md 的 Port offset，避免與其他任務相撞
 
 ---
 
