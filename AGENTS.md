@@ -56,6 +56,10 @@ commit 時必須依序執行：
 
 使用者說要 push 時，先詢問「要 review 嗎？」：Yes → 執行 `plugin/skills/review-change/SKILL.md`，review 完再 push；No → 直接 push。
 
+## CI 修復發布
+
+接手 CI 失敗時，先依 [CI 修復證據契約](plugin/skills/collect-pr-feedback/references/ci-repair.md) 啟動該 worktree 的回條與原生 Git pre-push 檢查，再修改程式。修復前必須重現原失敗，修復後用相同指令與環境跑完整路徑；局部探針、環境啟動失敗與未完成的遠端檢查不算修復證據。同一問題連續兩次失敗，先執行可區分共同假設的觀察並記錄復盤，再嘗試修正。已授權發布時用契約中的發布指令；只有對上當前 HEAD 的遠端檢查完成後才能說「修復已驗證」。這些檢查不擴大 commit／push／merge 權限。
+
 ## 流程入口
 
 完整規則只在各 skill 裡；遇到下列情況，先讀對應的 skill 再動手。
