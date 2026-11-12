@@ -74,7 +74,8 @@ const markExisting = (sel) => {
     if (r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.opacity !== "0") el.setAttribute("data-probe-preexisting", "");
   }
 };
-const measureFloating = (sel) => {
+const measureFloating = ({ sel, insetSrc }) => {
+  const sampleInset = new Function("return " + insetSrc)();
   const layoutWidth = document.documentElement.clientWidth;
   const layoutHeight = document.documentElement.clientHeight;
   const desc = (el) => `${el.tagName.toLowerCase()}.${(el.className?.toString() || "").trim().split(/\s+/).slice(0, 4).join(".")}`;
@@ -108,7 +109,12 @@ const measureFloating = (sel) => {
     if (r.left < -1 || r.top < -1 || r.right > layoutWidth + 1 || r.bottom > layoutHeight + 1) {
       issues.push(`${name} 超出 viewport [${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.right)},${Math.round(r.bottom)}]`);
     }
-    const inset = 6;
+    const cs = getComputedStyle(el);
+    const inset = sampleInset(
+      [cs.borderTopLeftRadius, cs.borderTopRightRadius, cs.borderBottomLeftRadius, cs.borderBottomRightRadius].map((v) => parseFloat(v)),
+      r.width,
+      r.height
+    );
     const pts = [
       [(r.left + r.right) / 2, (r.top + r.bottom) / 2],
       [r.left + inset, r.top + inset], [r.right - inset, r.top + inset],
@@ -124,7 +130,7 @@ const measureFloating = (sel) => {
   return { count: layers.length, issues };
 };
 
-const { horizontalOverflow, isHorizontallyOutside, isLoginWall, isClippedByAncestor } = await import(new URL("./layout-probe.lib.mjs", import.meta.url).href);
+const { horizontalOverflow, isHorizontallyOutside, isLoginWall, isClippedByAncestor, cornerSampleInset } = await import(new URL("./layout-probe.lib.mjs", import.meta.url).href);
 
 const waitForFontsAndPaint = (page) => page.evaluate(async () => {
   const before = document.fonts?.status ?? "unavailable";
@@ -245,9 +251,16 @@ for (const width of widths) {
           row.problems.push(`--open ${sel} 點擊失敗：${e.message.split("\n")[0]}`);
           continue;
         }
-        await page.waitForTimeout(400); // 等進場動畫（zoom-in-95）結束再量
+        // 等進場動畫真的結束再量：固定 400ms 不夠側邊抽屜（Sheet）滑入，會量到滑入途中多出的 2–3px（daodao#524）
+        await page.waitForTimeout(50);
+        await page.evaluate(() => Promise.race([
+          Promise.all(document.getAnimations()
+            .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
+            .map((a) => a.finished.catch(() => {}))),
+          new Promise((resolve) => setTimeout(resolve, 3000)),
+        ]));
         await applyMeasurementEnvironment(page);
-        const f = await page.evaluate(measureFloating, FLOATING);
+        const f = await page.evaluate(measureFloating, { sel: FLOATING, insetSrc: cornerSampleInset.toString() });
         if (!f) row.problems.push(`--open ${sel} 點了沒有出現可量的浮層（role=menu|listbox|dialog／radix popper）`);
         else for (const issue of f.issues) row.problems.push(`浮層：${issue}`);
         const openShot = `${out}-${width}-${route.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "")}-open${i + 1}.png`;

@@ -50,3 +50,20 @@ export const isClippedByAncestor = (el, getOverflowX, stopAt) => {
   }
   return false;
 };
+
+/**
+ * 浮層遮擋取樣點的內縮量（px）。
+ * 取樣點 (i, i) 要落在半徑 R 的圓角內，需 i ≥ R × (1 − 1/√2)；固定內縮 6px 遇到 24px 圓角的抽屜時，
+ * 角落取樣點會落在圓角外、量到背後的遮罩，誤判為「被遮住」（daodao#524）。
+ * 半徑以邊長一半為上限（pill 樣式常寫 9999px）。
+ *
+ * @param radii 四個角的 border-radius（px）
+ * @param width 浮層寬
+ * @param height 浮層高
+ * @param min 最小內縮
+ */
+export const cornerSampleInset = (radii, width, height, min = 6) => {
+  const cap = Math.max(0, Math.min(width, height) / 2);
+  const radius = Math.max(0, ...radii.map((v) => Math.min(Number.isFinite(v) ? v : 0, cap)));
+  return Math.max(min, Math.ceil(radius * (1 - Math.SQRT1_2)) + 1);
+};
