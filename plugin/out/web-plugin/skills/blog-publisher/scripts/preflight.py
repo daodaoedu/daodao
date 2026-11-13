@@ -2,6 +2,7 @@
 """Read-only bridge to the shared content validator; no schema or approval generation."""
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -23,6 +24,10 @@ def main():
             raise ValueError("Frontend checkout lacks @daodao/blog-content; obtain the verified #533 package first")
         if not args.content.is_dir():
             raise ValueError("Content checkout does not exist")
+        if not os.environ.get("BLOG_CONTENT_DIR"):
+            raise ValueError("Trusted caller BLOG_CONTENT_DIR is required; preserve configured scope rather than copying --content")
+        if (args.mode == "publish" or args.approvals is not None or args.baseline is not None) and not os.environ.get("BLOG_EVIDENCE_ROOT"):
+            raise ValueError("Trusted caller BLOG_EVIDENCE_ROOT is required for private JSON; do not derive it from file arguments")
         executable = shutil.which("pnpm")
         if not executable:
             raise ValueError("pnpm unavailable; preflight not performed")

@@ -15,12 +15,14 @@ description: 預檢島島 Blog 核准雙語版本，或依明確授權呼叫既�
 python3 <skill-dir>/scripts/preflight.py --frontend /path/daodao-f2e --content /path/daodao-blog --approvals /private/approvals.json --baseline /private/published-baseline.json
 ```
 
+先由可信任工作區設定 `BLOG_CONTENT_DIR` 並與預檢的內容 checkout 一致，不從文章／不可信參數自動擴大範圍。私有 JSON 讀取前由可信任呼叫端設定 `BLOG_EVIDENCE_ROOT`，其範圍必須與公開內容分離；不得從不可信檔案參數自動猜根目錄。缺設定時轉接器停止；實際路徑一致性與私有檔案範圍由唯一 shared validator 檢查並回報，不在轉接器重寫規則。config 產物不存在時先由已授權的環境準備步驟執行 `pnpm --filter @daodao/config generate:env`；唯讀預檢不自行生成或安裝。
+
 新文章沒有已發布 baseline 時可以省略 baseline；既有文章必須提供可信任的前次發布 manifest。核准證據在公開內容 repo 外，由人／可信任流程建立；不得為了通過自行寫 matching hash。只驗草稿時顯式加 `--mode draft`，結果不能稱已核准。
 
 預檢唯讀，不 commit/push/build/deploy。任一錯誤保留原稿並附 validator 的具體檔案／錯誤；缺 pnpm、package 或權限就明列缺能力，不能自動安裝／擴權或跳過檢查。
 
 ## Publish
 
-讀 [發布與失敗處理](references/publish.md)，確認 #536 已交付的 runner 和實際 CLI。只呼叫已驗證的受控流程，固定 frontend SHA/content SHA。沒有 runner 或部署權限就完成預檢、保留發布未完成；不自行拼接 git push／force-deploy 代替它。
+讀 [發布與失敗處理](references/publish.md)，使用 #536 的 `daodao-f2e/scripts/blog-release.py`，先讀同一 checkout 的 `docs/blog/releases.md`／CLI help。prepare 只產 immutable artifact；activate／rollback 才改受控部署指標及回讀。固定 frontend SHA/content SHA，核准 frontend pin 必須來自受保護設定，不從同一不可信請求複製。缺 runner、部署 adapter、工具或有效授權時保留未完成；不自行拼接 git push／force-deploy 代替。
 
 交付分列：預檢、content commit、build、deploy、smoke、回復，附雙 SHA 與實際工作 URL。正式回讀兩語正文、圖片、metadata 及版本一致才稱發布完成。此入口不改寫文章、不修網站功能來掩蓋發布失敗。

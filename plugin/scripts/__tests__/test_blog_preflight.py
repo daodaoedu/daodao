@@ -21,7 +21,7 @@ class PreflightBridgeTests(unittest.TestCase):
         self.bin = self.root / 'bin'
         self.bin.mkdir()
         self.arguments = self.root / 'arguments.json'
-        self.env = {**os.environ, 'PATH': str(self.bin), 'ARGUMENT_FILE': str(self.arguments)}
+        self.env = {**os.environ, 'PATH': str(self.bin), 'ARGUMENT_FILE': str(self.arguments), 'BLOG_EVIDENCE_ROOT': str(self.root), 'BLOG_CONTENT_DIR':str(self.content)}
         self.python = os.sys.executable
 
     def tearDown(self):
@@ -29,7 +29,7 @@ class PreflightBridgeTests(unittest.TestCase):
 
     def fake_pnpm(self, code):
         executable = self.bin / 'pnpm'
-        executable.write_text(f'#!{self.python}\nimport json,os,sys\nopen(os.environ["ARGUMENT_FILE"],"w").write(json.dumps(sys.argv[1:]))\nprint(json.dumps({{"ok":{code == 0!r},"validator":"actual delegated process"}}))\nsys.exit({code})\n')
+        executable.write_text(f'#!{self.python}\nimport json,os,sys\nopen(os.environ["ARGUMENT_FILE"],"w").write(json.dumps(sys.argv[1:]))\nprint(json.dumps({{"ok":{code == 0!r},"validator":"delegated process fixture","content_scope":os.environ.get("BLOG_CONTENT_DIR"),"evidence_scope":os.environ.get("BLOG_EVIDENCE_ROOT")}}))\nsys.exit({code})\n')
         executable.chmod(0o755)
 
     def run_bridge(self, *extra):
@@ -41,6 +41,21 @@ class PreflightBridgeTests(unittest.TestCase):
         self.assertIn('pnpm unavailable', json.loads(result.stdout)['errors'][0]['message'])
         self.assertFalse(self.arguments.exists())
         self.assertEqual(list(self.content.iterdir()), [])
+
+    def test_missing_independently_configured_content_scope_stops_even_draft(self):
+        self.fake_pnpm(0);self.env.pop('BLOG_CONTENT_DIR',None)
+        result=self.run_bridge('--mode','draft')
+        self.assertEqual(result.returncode,2)
+        self.assertIn('BLOG_CONTENT_DIR',json.loads(result.stdout)['errors'][0]['message'])
+        self.assertFalse(self.arguments.exists())
+
+    def test_publish_without_trusted_evidence_root_stops_before_validator(self):
+        self.fake_pnpm(0)
+        self.env.pop('BLOG_EVIDENCE_ROOT', None)
+        result=self.run_bridge('--approvals',str(self.root/'untrusted-input.json'))
+        self.assertEqual(result.returncode,2)
+        self.assertIn('BLOG_EVIDENCE_ROOT',json.loads(result.stdout)['errors'][0]['message'])
+        self.assertFalse(self.arguments.exists())
 
     def test_wrong_checkout_stops_before_execution(self):
         self.fake_pnpm(0)
@@ -58,6 +73,8 @@ class PreflightBridgeTests(unittest.TestCase):
         arguments = json.loads(self.arguments.read_text())
         self.assertEqual(arguments, ['--dir', str(self.frontend), '--filter', '@daodao/blog-content', 'validate', '--root', str(self.content), '--mode', 'publish', '--approvals', str(approvals), '--baseline', str(baseline)])
         self.assertTrue(json.loads(result.stdout)['ok'])
+        self.assertEqual(json.loads(result.stdout)['content_scope'],str(self.content))
+        self.assertEqual(json.loads(result.stdout)['evidence_scope'],str(self.root))
         self.assertEqual(list(self.content.iterdir()), [])
 
     def test_validator_rejection_exit_and_output_are_preserved(self):
@@ -66,6 +83,11 @@ class PreflightBridgeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertFalse(json.loads(result.stdout)['ok'])
         self.assertEqual(json.loads(self.arguments.read_text())[-2:], ['--mode', 'draft'])
+
+    def test_draft_private_option_still_requires_caller_evidence_scope(self):
+        self.fake_pnpm(0);self.env.pop('BLOG_EVIDENCE_ROOT',None)
+        result=self.run_bridge('--mode','draft','--approvals',str(self.root/'private.json'))
+        self.assertEqual(result.returncode,2);self.assertFalse(self.arguments.exists())
 
     def test_unknown_mode_does_not_execute_validator(self):
         self.fake_pnpm(0)
