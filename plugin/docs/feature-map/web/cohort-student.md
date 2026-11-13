@@ -8,8 +8,8 @@
 - 依據版本：daodao-f2e 70155dce（2026-10-29）
 
 ## 子功能
-- 探索活動課程 `/activities`：搜尋、狀態篩選（全部／開放報名／進行中／已結束）、費用篩選（免費…）、活動卡（已加入的卡直接連 `/cohorts/<id>`，否則連 `/activities/<id>`）、底部 CTA。
-- 活動詳情 `/activities/<cohortId>`：主辦、形式、地點、場次時間、費用、人數、模板數、主辦介紹、邀請訊息；CTA 依狀態決定（apps/product/src/constants/activity-detail-cta.ts:38-58）：「查看活動」（已加入）／「前往外部報名」（可加入且為外部報名）／「加入活動」（可加入，連 `/cohorts/join/<joinToken>`）／停用按鈕顯示原因「已額滿」「暫停加入」「報名截止」「已結束」。已結束另顯示提示「此活動已結束」（apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:127-132）。
+- 探索活動課程 `/activities`：搜尋、狀態篩選（全部／開放報名／進行中／已結束）、費用篩選（免費…）、活動卡（已加入與未加入都連 `/activities/<id>`）、底部 CTA。
+- 活動詳情 `/activities/<cohortId>`：主辦、形式、地點、場次時間、費用、人數、模板數、主辦介紹、邀請訊息；CTA 依狀態決定（apps/product/src/constants/activity-detail-cta.ts:38-58）：「已加入」（已加入，連 `/cohorts/<id>`）／「前往外部報名」（可加入且為外部報名）／「報名加入」（可加入，連 `/cohorts/join/<joinToken>`，無底線）／停用按鈕顯示原因「已額滿」「暫停加入」「報名截止」「已結束」。已結束另顯示提示「此活動已結束」（apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:127-132）。
 - 加入團 `/cohorts/join/<joinToken>`：顯示主辦與邀請訊息、可見性同意勾選框（文案依活動隱私為私密或公開兩種）、「同意並加入」；連結失效顯示「邀請連結不存在或已失效」，不可加入時依原因顯示標題（未開放／已過截止日／人數已滿／暫停連結加入）與說明。
 - 本期頁 `/cohorts/<cohortId>`（團內學員視角）：三個分頁「本期實踐」「本期動態」「設定」。本期實踐可對草稿按「啟用實踐」；設定頁可勾選「我同意將自己的成果納入教練匯出」並儲存、「退出本期，保留為個人實踐」。
 - 探索共同挑戰 `/challenges`：依「即將開始／進行中／已結束」分區（沒有項目的分區不顯示）；未加入且即將開始的卡片才有「現在加入」→ 加入對話框「加入這個挑戰」→ 成功畫面「打開我的挑戰實踐」（導到 `/practices/<id>`）；已加入的卡顯示「打卡」（即將開始時為停用樣式）或「觀看總結」，進行中／已結束時整張卡連到該實踐頁（總結為 `/practices/<id>/summary`），並有「抽靈感卡」入口（抽靈感對話框「抽一張」）（apps/product/src/utils/challenge-card.ts:33-60）。
@@ -17,7 +17,7 @@
 ## 怎麼到這頁（使用者視角）
 1. 活動：主頁（`/`）的探索列點「探索活動課程」連結（apps/product/src/components/dashboard/explore-row.tsx:14，`dashboard.explore_activity`，packages/i18n/src/locales/zh-TW/dashboard.json:51），或直接開 `/activities`（側欄「空間」在 `/spaces`、`/activities`、`/challenges` 路徑都會呈現選中，apps/product/src/components/layout/sidebar/constant.tsx:36-40）。點活動卡進詳情，按「加入活動」。
 2. 邀請連結：講師在燈塔「名單」或「系列與場次」複製的邀請連結即 `/cohorts/join/<joinToken>`；學員開啟 → 勾同意 → 「同意並加入」。
-3. 加入後：`/mine` 的「我的活動」點團名，或活動詳情按「查看活動」，進 `/cohorts/<cohortId>`。
+3. 加入後：`/mine` 的「我的活動」點團名，或活動詳情按「已加入」，進 `/cohorts/<cohortId>`。
 4. 共同挑戰：主頁探索列點「探索共同挑戰」（apps/product/src/components/dashboard/explore-row.tsx:12，`dashboard.explore_challenge`，packages/i18n/src/locales/zh-TW/dashboard.json:50），或直接開 `/challenges`。
 
 ## 測試帳號與前置條件
@@ -37,8 +37,8 @@
 | 狀態篩選 | `getByRole('button', { name: '開放報名' })`／`'進行中'`／`'已結束'`／`'全部'`（`explore_activities.filter_*`）；無 aria-pressed，選中狀態無穩定屬性，建議補 aria-pressed | apps/product/src/components/activity/explore-filters.tsx:35-44；packages/i18n/src/locales/zh-TW/explore-activities.json:9-12 |
 | 費用篩選「免費」 | `getByRole('button', { name: '免費' })`（`explore_activities.filter_free`） | apps/product/src/components/activity/explore-filters.tsx:48-57；packages/i18n/src/locales/zh-TW/explore-activities.json:13 |
 | 活動卡 | `getByRole('link', { name: /<活動名稱>/ })`，href `/activities/<id>` 或 `/cohorts/<id>` | apps/product/src/components/activity/activity-card.tsx:41、49 |
-| 詳情：加入活動 | `getByRole('link', { name: '加入活動' })`（`explore_activities.detail_join`），href `/cohorts/join/<token>` | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:305-310；packages/i18n/src/locales/zh-TW/explore-activities.json:77 |
-| 詳情：查看活動 | `getByRole('link', { name: '查看活動' })`（`detail_view_cohort`） | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:288-293；packages/i18n/src/locales/zh-TW/explore-activities.json:78 |
+| 詳情：報名加入 | `getByRole('link', { name: '報名加入' })`（`explore_activities.detail_join`），href `/cohorts/join/<token>` | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:305-310；packages/i18n/src/locales/zh-TW/explore-activities.json:77 |
+| 詳情：已加入 | `getByRole('link', { name: '已加入' })`（`cta_joined`），href `/cohorts/<id>` | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:288-293；packages/i18n/src/locales/zh-TW/explore-activities.json:78 |
 | 詳情：前往外部報名 | `getByRole('link', { name: '前往外部報名' })`（`detail_external_signup`，另開分頁） | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:294-304；packages/i18n/src/locales/zh-TW/explore-activities.json:76 |
 | 詳情：不可加入 | 停用按鈕 `getByRole('button', { name: '已額滿' })`／`'暫停加入'`／`'報名截止'`／`'已結束'`（`detail_cta_*`） | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:311-316；apps/product/src/constants/activity-detail-cta.ts:4-9；packages/i18n/src/locales/zh-TW/explore-activities.json:80-83 |
 | 詳情：已加入徽章 | `getByText('已加入')`（`explore_activities.cta_joined`） | apps/product/src/app/[locale]/activities/[cohortId]/page.tsx:114-118；packages/i18n/src/locales/zh-TW/explore-activities.json:79 |
@@ -64,7 +64,7 @@
 | 已加入挑戰：動作膠囊 | `getByTestId('challenge-card-action')`（文字「打卡」／「觀看總結」，`challenge.cta_checkin`／`cta_view_summary`；不可點時帶 `aria-disabled="true"`）；可點時整張卡為 `getByRole('link', { name: '打卡：<挑戰名稱>' })`／`'觀看總結：<挑戰名稱>'`（`challenge.card_link_label`） | apps/product/src/components/challenge/challenge-card.tsx:71-77、177-193；packages/i18n/src/locales/zh-TW/challenge.json:25-27 |
 
 ## 怎樣算成功（可觀察的結果與證據）
-- 加入團：按「同意並加入」後 URL 變成 `/cohorts/<cohortId>`（apps/product/src/components/cohort/cohort-join-page.tsx:33），頁首顯示團名；`/mine`「我的活動」出現該團；活動詳情 CTA 變成「查看活動」，詳情頁出現「已加入」徽章。失敗時 toast「無法加入本期，請稍後再試」，並重新取加入資訊、改顯示不可加入原因（apps/product/src/components/cohort/cohort-join-page.tsx:27-31）。
+- 加入團：按「同意並加入」後 URL 變成 `/cohorts/<cohortId>`（apps/product/src/components/cohort/cohort-join-page.tsx:33），頁首顯示團名；`/mine`「我的活動」出現該團；活動詳情 CTA 變成「已加入」。失敗時 toast「無法加入本期，請稍後再試」，並重新取加入資訊、改顯示不可加入原因（apps/product/src/components/cohort/cohort-join-page.tsx:27-31）。
 - 啟用實踐：toast「實踐已啟用」（`cohort.practice_activated`），卡片不再是草稿。
 - 匯出同意：儲存後重新整理，勾選狀態維持。
 - 退出：toast「已退出本期，實踐已保留在個人空間」，URL 回 `/mine`，該團從「我的活動」消失，實踐仍在個人列表。
@@ -75,7 +75,7 @@
 - `/cohorts/...` 不在 publicPattern：未登入開邀請連結會先被導到登入頁，登入後靠 `redirect` 參數回來；驗證時要確認 redirect 回到原 joinToken。
 - 非成員開 `/cohorts/<id>` 不會顯示錯誤頁，而是靜默 `replace('/mine')`；看到被導回 `/mine` 代表帳號不在該團。其他載入錯誤才顯示錯誤狀態與重試（apps/product/src/components/cohort/cohort-member-page.tsx:117-124）。
 - 本期頁與活動頁的分頁／篩選都沒有 aria-selected／aria-pressed，無法用屬性判斷選中，只能看內容變化。
-- 已加入的活動卡直接連 `/cohorts/<id>`，不會經過詳情頁。
+- 活動卡一律先進詳情頁（daodao#542）；詳情頁地點未設定顯示 N/A，已設定且未加入顯示「加入後即可查看」（僅前端遮蔽，公開 API 仍回傳地點）。
 - 挑戰卡的「現在加入」只出現在未加入且即將開始的挑戰；進行中／已結束且未加入的卡沒有任何動作按鈕。已加入但前端拿不到實踐 id 時，膠囊顯示為不可點（`aria-disabled`），整張卡也沒有連結（apps/product/src/utils/challenge-card.ts:66-68）。
 - 品牌用詞：介面用「本期參與者」「團」，不用舊稱「同梯」；比對文案時以 `packages/i18n/src/locales/zh-TW/<namespace>.json` 為準。
 - 加入／退出／加入挑戰都會寫入 dev 資料庫，且加入挑戰會建立一個實踐。
