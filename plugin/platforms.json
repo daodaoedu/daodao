@@ -243,6 +243,30 @@
         "subagent",
         "hooks"
       ]
+    },
+    "article-writer": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "bash"
+      ]
+    },
+    "social-content": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "bash"
+      ]
+    },
+    "blog-publisher": {
+      "requires": [],
+      "optional": [
+        "filesystem",
+        "bash",
+        "git",
+        "gh",
+        "runtests"
+      ]
     }
   }
 }
