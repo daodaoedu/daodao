@@ -23,6 +23,6 @@ python3 <skill-dir>/scripts/preflight.py --frontend /path/daodao-f2e --content /
 
 ## Publish
 
-讀 [發布與失敗處理](references/publish.md)，使用 #536 的 `daodao-f2e/scripts/blog-release.py`，先讀同一 checkout 的 `docs/blog/releases.md`／CLI help。prepare 只產 immutable artifact；activate／rollback 才改受控部署指標及回讀。固定 frontend SHA/content SHA，核准 frontend pin 必須來自受保護設定，不從同一不可信請求複製。缺 runner、部署 adapter、工具或有效授權時保留未完成；不自行拼接 git push／force-deploy 代替。
+讀 [發布與失敗處理](references/publish.md)，使用 #536 的 `daodao-f2e/scripts/blog-release.py`，先讀同一 checkout 的 `docs/blog/releases.md`／CLI help。prepare 只產 immutable artifact；activate／rollback 才改受控部署指標及回讀。分別固定並核准 runner SHA、frontend SHA 與 content SHA；runner pin 與 frontend pin 獨立，兩者及目標 origin、來源 scopes、public build env 必須取自受保護設定。不從同一不可信請求複製這些信任設定。缺 runner、部署 adapter、工具或有效授權時保留未完成；不自行拼接 git push／force-deploy 代替。
 
-交付分列：預檢、content commit、build、deploy、smoke、回復，附雙 SHA 與實際工作 URL。正式回讀兩語正文、圖片、metadata 及版本一致才稱發布完成。此入口不改寫文章、不修網站功能來掩蓋發布失敗。
+交付分列：預檢、content commit、build、deploy、smoke、回復，附 runner／frontend／content SHAs 與實際工作 URL。正式回讀兩語正文、圖片、metadata 及版本一致才稱發布完成。此入口不改寫文章、不修網站功能來掩蓋發布失敗。
