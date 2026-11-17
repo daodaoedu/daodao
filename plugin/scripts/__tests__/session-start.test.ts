@@ -88,3 +88,34 @@ describe('session-start：狀態詞後面的備註', () => {
     expect(out).toContain('295-challenge-space-fixes → verified\n')
   })
 })
+
+/** 建真的 git repo：plugin/skills 有兩個 commit，origin/main 指向較新那個；HEAD 停在 headAtOld 指定的位置。 */
+function gitRoot(headAtOld: boolean) {
+  const root = mkdtempSync(join(tmpdir(), 'daodao-session-start-git-'))
+  scratch.push(root)
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@localhost', ...args], { cwd: root, encoding: 'utf8' })
+  git('init', '-q', '-b', 'main')
+  mkdirSync(join(root, 'plugin', 'skills', 'review-change'), { recursive: true })
+  writeFileSync(join(root, 'plugin', 'skills', 'review-change', 'SKILL.md'), 'old models\n')
+  git('add', '.')
+  git('commit', '-q', '-m', 'old')
+  const oldSha = git('rev-parse', 'HEAD').trim()
+  writeFileSync(join(root, 'plugin', 'skills', 'review-change', 'SKILL.md'), 'new models\n')
+  git('commit', '-q', '-am', 'new')
+  git('update-ref', 'refs/remotes/origin/main', 'HEAD')
+  if (headAtOld) git('checkout', '-q', '-b', 'docs/stale-branch', oldSha)
+  return root
+}
+
+describe('session-start：工作樹 skill 正本落後 main', () => {
+  it('分支落後 origin/main 的 plugin/skills 時提示改用已安裝 plugin', () => {
+    const out = runHook(gitRoot(true))
+    expect(out).toContain('工作樹的 plugin/skills 落後 origin/main 1 個 commit（branch=docs/stale-branch）')
+    expect(out).toContain('Skill tool daodao:<name>')
+  })
+
+  it('與 origin/main 同步時不提示', () => {
+    expect(runHook(gitRoot(false))).not.toContain('落後 origin/main')
+  })
+})
