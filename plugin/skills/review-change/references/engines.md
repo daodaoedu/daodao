@@ -19,16 +19,18 @@ for _m in $_CODEX_REVIEW_MODELS; do
     -c "model=\"$_m\"" \
     -c 'model_reasoning_effort="high"' \
     --enable web_search_cached > "$_CODEX_OUT.try" 2>&1
-  if ! grep -qiE 'model is not supported|unknown model|model_not_found|status.{0,4}40[04]' "$_CODEX_OUT.try"; then
+  # 只認 Codex CLI 自己印的 `ERROR:` 行：輸出會夾帶它讀到的 diff 與 repo 檔案，裡面的 `status: 404` 等字樣不是模型錯誤
+  if ! grep -qiE '^ERROR[: ].*(model is not supported|unknown model|model_not_found|status.{0,4}40[04])' "$_CODEX_OUT.try"; then
     mv "$_CODEX_OUT.try" "$_CODEX_OUT"; _CODEX_USED="$_m"; break
   fi
-  echo "Codex fallback：$_m 不可用（$(grep -m1 -iE 'not supported|unknown model|model_not_found|40[04]' "$_CODEX_OUT.try")），換下一個模型" >&2
+  echo "Codex fallback：$_m 不可用（$(grep -m1 -iE '^ERROR' "$_CODEX_OUT.try")），換下一個模型" >&2
 done
 [ -n "$_CODEX_USED" ] || echo "Codex 全部候選模型皆失敗，本引擎記為未執行。" >&2
 ```
 
 - Codex 與 OMP、OpenCode、Claude 必須共用步驟 0 的 `_REVIEW_INPUT`；Codex 可額外讀 repo
   驗證證據，但不得跳過共同 Context Pack。
+- 失敗判斷只看 `ERROR:` 開頭的行：2026-11-22 daodao-mcp#121 的 diff 含 `status: 404`，舊版對整份輸出 grep，把兩個模型的成功輸出都判成不可用，整個引擎被記為未執行。同日以不存在的模型實測，CLI 印出 `ERROR: The '<model>' model is not supported when using Codex with a ChatGPT account.`，新規則可攔到；成功輸出沒有 `ERROR:` 行。
 - 模型鏈（2026-10-29 改，CLI 0.165.0 ChatGPT 登入實測可用）：
   1. `gpt-6.1-terra`（主力）
   2. `gpt-6-luna`（備援：`gpt-6.1-terra` 不可用時）
@@ -127,7 +129,7 @@ OpenCode 沒有獨立的 `review` 子命令；使用官方支援 scripting／aut
 _REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$_REPO_ROOT"
 # 主力 + fallback（空白分隔，依序嘗試；整條鏈可用 OPENCODE_REVIEW_MODELS 覆寫）
-_OPENCODE_REVIEW_MODELS=${OPENCODE_REVIEW_MODELS:-"opencode/glm-5.3-flash-free opencode/nemotron-3.5-super-vl-free opencode/deepseek-v4.1-flash-free"}
+_OPENCODE_REVIEW_MODELS=${OPENCODE_REVIEW_MODELS:-"opencode/nemotron-3.5-super-vl-free opencode/deepseek-v4.1-flash-free"}
 for _m in $_OPENCODE_REVIEW_MODELS; do
   case "$_m" in
     openrouter/*:free|opencode/*-free) ;;
@@ -169,10 +171,9 @@ done
 - timeout: 300000（5 分鐘）
 - 若 `opencode` 不存在：告知用戶 `npm install -g opencode-ai`
 - 若 auth 失敗：執行 `opencode auth login -p opencode`
-- fallback 鏈（2026-10-29 改；三個都實測可回應，尚未跑漏報 fixture）：
-  1. `opencode/glm-5.3-flash-free`（主力）
-  2. `opencode/nemotron-3.5-super-vl-free`
-  3. `opencode/deepseek-v4.1-flash-free`
+- fallback 鏈（2026-11-22 改：`opencode/glm-5.3-flash-free` 回「Model unavailable」且已不在 `opencode models` 目錄，移出鏈；其餘兩個沿用 2026-10-29 的實測可回應，尚未跑漏報 fixture）：
+  1. `opencode/nemotron-3.5-super-vl-free`（主力；2026-11-22 daodao-mcp#121 實測可回應）
+  2. `opencode/deepseek-v4.1-flash-free`
 - 2026-10-29 前的鏈：`opencode/muse-spark-1.3-contributor-free` → `opencode/nemotron-3-ultra-free` → `opencode/mimo-v2.5-free`
 - 全鏈走 opencode zen provider（不經 OpenRouter），與 OMP 鏈的 provider 完全分離
 - `OPENCODE_REVIEW_MODELS` 只接受 `openrouter/*:free` 或 `opencode/*-free`；不接受 `opencode/big-pickle` 或任何無 free 標記的 model ID
