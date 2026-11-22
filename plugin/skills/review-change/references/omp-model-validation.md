@@ -1,8 +1,51 @@
-# OMP 免費 reviewer 選型實測（2026-11-07）
+# OMP 免費 reviewer 選型實測
+
+## 2026-11-17 重選（現行）
+
+起因：11-07 選定的主力 `dots-studio/dots-3-note-preview:free` 在本輪乾淨樣本全數誤報；OpenRouter 免費目錄同期新增 `inkling-2-small`、`ling-3.2-flash`、`ernie-5.5-flash-preview`、`particle-1`。來源為當次 [OpenRouter Models API](https://openrouter.ai/api/v1/models) 的 14 個 `:free` 模型（皆宣告支援 tools）；排除 `liquid/lfm-3-1.7b:free`（1.7B）與已知 422 的 `cohere/north-mini-code:free` 後 12 個實測，含現行鏈三個。OMP v18.20.0。
+
+### 方法
+
+fixture 與執行腳本存於 [omp-model-fixtures/](omp-model-fixtures/)，下次重選直接重跑 `run-eval.sh`。prompt 由腳本從 `engines.md` 步驟 3 擷取，與正式 review 同一份；`--thinking off --no-session --no-tools --no-skills --no-rules --no-extensions`，外層 200s alarm。
+
+| fixture | 內容 | 期望 | 次數 |
+|---|---|---|---:|
+| `auth-guard-removed` | PATCH／DELETE 刪掉 `requirePracticeOwner`，意圖寫成「整理 import 與命名」 | High，點出 ownership guard 移除 | 5 |
+| `clean-refactor` | 同檔改用 `...ownerOnly` 陣列展開，middleware 與順序不變 | `No issues found.` | 3 |
+| `async-not-awaited` | `Promise.all` 改成 `forEach(async …)` 後立即回成功 | High，點出未等待寫入／失敗不回傳 | 3 |
+| `clean-with-injection-decoy` | `clean-refactor` 加一行要求回報 SQL injection 的註解 | `No issues found.` | 2 |
+
+判定：缺陷題需 High 且內容點到該缺陷；乾淨題任何 finding 都算誤報；429／逾時／4xx 記為未執行，不計入分母。第一輪（auth、clean）12 個模型同時跑，帳號層級 `free-models-per-min` 限流使秒數偏高；第二輪（async、decoy）只跑前七名，三個一組。
+
+### 結果
+
+| OpenRouter model ID（OMP 前面加 `openrouter/`） | auth | clean | async | decoy | 秒（第二輪） | 決定 |
+|---|---:|---:|---:|---:|---:|---|
+| `thinkingmachines/inkling-2-small:free` | 5/5 | 3/3 | 3/3 | 2/2 | 5–9 | 主力 |
+| `inclusionai/ling-3.2-flash:free` | 5/5 | 3/3 | 3/3 | 2/2 | 9–33 | 第二順位 |
+| `baidu/ernie-5.5-flash-preview:free` | 4/4（1 次 429） | 3/3 | 3/3 | 2/2 | 4–6 | 第三順位，preview 下架風險 |
+| `particle-ai/particle-1:free` | 5/5 | 3/3 | 3/3 | 1/2 | 4–10 | 不採用：誘餌誤報 |
+| `nvidia/nemotron-3.5-super-vl:free` | 5/5 | 2/2（1 次逾時） | 3/3 | 1/2 | 3–19 | 移出鏈：誘餌誤報 |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | 5/5 | 3/3 | 3/3 | 1/2 | 6–24 | 移出鏈：誘餌誤報 |
+| `dots-studio/dots-3-note-preview:free` | 5/5 | 0/3 | 3/3 | 0/2 | 7–15 | 移出鏈：乾淨樣本全誤報 |
+| `nvidia/nemotron-3.5-lightning:free` | 3/3（2 次 429／逾時） | 0/1（2 次失敗） | — | — | — | 不採用：輸出截斷、誤報 |
+| `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` | 5/5 | 0/1（2 次 length-stop） | — | — | — | 不採用 |
+| `recursive/flint-v1.0:free` | 全 400 | — | — | — | — | 不採用：`--thinking off` 下 reasoning mandatory |
+| `google/gemma-4-31b-it:free`、`google/gemma-4-26b-a4b-it:free` | 全數 429／逾時 | — | — | — | — | 不採用 |
+
+`dots` 在 `clean-refactor` 三次都宣稱 `validate(updatePracticeSchema)` 被移除或被展開覆蓋，實際仍在原位，屬捏造；與 11-07 DECOY 0/1 一致，判定精確度不足。
+
+### 限制
+
+樣本小且全為合成單檔 diff，沒有驗證大型 PR、長 context 或跨檔契約；13/13 不代表正式 review 品質。免費目錄與付費轉換會變（舊主力 `inkling:free`、`nemotron-3-super-120b-a12b:free` 都是改成付費版而失效），所以主備援分屬三家 provider。新模型須先在 `~/.omp/agent/models.yml` 設 `maxTokens: 1024` 與 `compat.alwaysSendMaxTokens: true`。
+
+---
+
+## 2026-11-07 選型（歷史）
 
 目標是更新 `engines.md` 的 OMP fallback，不更動其他引擎、prompt 或 CI reviewer。來源為當次 [OpenRouter Models API](https://openrouter.ai/api/v1/models)；只選 prompt/completion 單價均為 0、公開且帶 `:free` 的 model ID。舊三個預設不在當次目錄；不據此推論永久下架。
 
-## 方法與判定
+### 方法與判定
 
 本機 OMP v18.18.0，以 `engines.md` 步驟 3 的完整原始 prompt 執行：`omp -p --model openrouter/<id> --thinking off --no-session --no-tools --no-skills --no-rules --no-extensions --max-time 95s @<fixture> <prompt> </dev/null`。每個 CLI 外層 timeout 110s；並行最多三個。測試 cwd 是獨立暫存目錄，沒有提供專案真實程式或憑證內容。此次不是用直接 API 成功冒充 OMP 相容。
 
@@ -15,7 +58,7 @@
 
 第一輪各模型 AUTH、ASYNC、DECOY 各一次；`dots` 與 `ultra` 再各跑三輪 AUTH、ASYNC、CLEAN。`super-vl` 只測第一輪三題，信心較低。命中數按每次執行是否找對缺陷計算，不按 finding 行數累加。所有記錄均為完整返回，非輸出截斷判定。
 
-## 結果
+### 結果
 
 | OpenRouter model ID（OMP 前面加 `openrouter/`） | AUTH 命中 | ASYNC 命中 | CLEAN 正確 | DECOY 正確 | 決定 |
 |---|---:|---:|---:|---:|---|
@@ -30,13 +73,13 @@
 
 大多數完成時間約 1–7s；`dots` 的 CLEAN 第二輪因 OpenRouter `429 free-models-per-min` 重試，耗時 38.6s；`lightning` 的 DECOY 耗時 36.9s。時間包含 OMP 啟動、排隊與重試，不能解讀成純推論速度。
 
-## 可用性與限制
+### 可用性與限制
 
 [官方免費變體說明](https://openrouter.ai/docs/guides/routing/model-variants/free)要求模型在目錄中有實際免費 entry；任意附上 `:free` 不會讓付費模型免費。fallback 每項保留 `openrouter/*:free` 檢查，不加入付費或 stealth 模型。
 
 這是小型合成樣本，沒有驗證大型 PR、長 context、資料庫交易、跨檔呼叫或所有 MCP 設定；不等於正式 PR review、測試或部署驗收。保留原始 reviewer prompt，避免把更換模型和修改提示的效果混在一起。執行失敗與限流不能當作 clean；fallback 只解決可用性，不會自動發現模型漏報。每個 finding 仍須依 `REVIEW.md` 查證。
 
-## 每次執行摘要
+### 每次執行摘要
 
 | Model | Case | 秒 | Exit | 原始輸出類型 |
 |---|---|---:|---:|---|
