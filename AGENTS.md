@@ -62,7 +62,7 @@ commit 時必須依序執行：
 
 ## 流程入口
 
-完整規則只在各 skill 裡；遇到下列情況，先讀對應的 skill 再動手。
+完整規則只在各 skill 裡；遇到下列情況，先讀對應的 skill 再動手。本檔列出的 `plugin/skills/...` 路徑是正本位置，不是執行來源：執行時用已安裝的 plugin 版本（Claude Code 用 Skill tool `daodao:<name>`），沒有安裝版時讀 `git show origin/main:plugin/skills/<name>/SKILL.md`。工作樹停在落後 main 的分支時，裡面的 `plugin/skills/` 是過期副本，不要直接照著做（SessionStart 會提示落後幾個 commit）。
 
 | 情況 | 讀這個 |
 |------|--------|
