@@ -57,6 +57,22 @@ else
   echo "📍 工作區：monorepo root"
 fi
 
+# === 1b. 工作樹裡的 skill 正本是否落後 main ===
+# AGENTS.md 的流程入口寫的是 repo 內路徑（plugin/skills/...）。checkout 停在舊分支時，
+# 照路徑讀到的是過期副本：2026-11-17 review-change 讀到落後 38 個 commit 的版本，
+# 跑了已下架的 OMP 模型；已安裝 plugin 其實早已更新。只比對本機 origin/main，不連網。
+if [ -n "$GIT_ROOT" ] && [ -d "$GIT_ROOT/plugin/skills" ] \
+  && git -C "$GIT_ROOT" rev-parse --verify -q refs/remotes/origin/main >/dev/null; then
+  skills_behind=$(git -C "$GIT_ROOT" rev-list --count HEAD..refs/remotes/origin/main -- plugin/skills plugin/docs 2>/dev/null || echo 0)
+  if [ "${skills_behind:-0}" -gt 0 ]; then
+    root_branch=$(git -C "$GIT_ROOT" branch --show-current 2>/dev/null)
+    echo ""
+    echo "⚠️  工作樹的 plugin/skills 落後 origin/main ${skills_behind} 個 commit（branch=${root_branch:-detached}）："
+    echo "   執行流程 skill 用已安裝的 plugin 版本（Claude Code：Skill tool daodao:<name>），"
+    echo "   或讀 git show origin/main:plugin/skills/<name>/SKILL.md；不要直接讀這個工作樹的 plugin/skills/。"
+  fi
+fi
+
 # === 2. 列出進行中的 worktrees ===
 WORKTREES_DIR="$PROJECT_ROOT/worktrees"
 if [ ! -d "$WORKTREES_DIR" ]; then
