@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { PreflightResult } from "./acceptance-preflight.js";
 
 const id = z.number().int().positive().safe();
-const globalRole = z.enum(["User", "Admin", "SuperAdmin"]);
+const globalRole = z.enum(["User", "Admin", "SuperAdmin", "software_engineer"]);
 const organizationExpectation = z.object({ organizationId: id, status: z.enum(["active", "suspended"]) }).strict();
 const cohortExpectation = z.object({ cohortId: id, status: z.string().trim().min(1).max(64) }).strict();
 const ownerExpectation = z.object({ organizationId: id }).strict();
