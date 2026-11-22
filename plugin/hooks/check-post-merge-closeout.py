@@ -18,13 +18,18 @@ import json
 import os
 from pathlib import Path
 import re
+import struct
+import zlib
 import sys
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs, unquote
 
 LIMITATION = 'Evidence bindings/completeness checked; browser actions and remote truth still require audit.'
 BLOCKERS = {'maintenance', 'tool', 'auth', 'permission', 'product-decision'}
 # PM steps run on the deployed dev product: the user-facing app and the internal admin back office.
 DEV_PRODUCT_HOSTS = {'app-dev.daodao.so', 'admin-dev.daodao.so'}
+PNG_MAX_FILE_BYTES = 32 * 1024 * 1024
+PNG_MAX_PIXELS = 16_000_000
+PNG_MAX_RASTER_BYTES = 64 * 1024 * 1024
 
 
 def timestamp(value):
@@ -112,6 +117,98 @@ def draft_mentions(text, value):
     # Treat paired emphasis around the whole identity as Markdown. Keep the
     # same outside boundaries, so a star inside a longer local part is unsafe.
     return re.search(left + r'(\*\*|__|\*|_)' + literal + r'\1' + right, text) is not None
+
+
+def gmail_read_url(value, account):
+    """Allow a mailbox read surface, never an authentication or compose surface."""
+    try:
+        if not isinstance(value, str) or any(ord(c) < 32 for c in value) or '\\' in value:
+            return False
+        parsed = urlparse(value)
+        if (parsed.scheme != 'https' or parsed.hostname != 'mail.google.com'
+                or parsed.username is not None or parsed.password is not None
+                or parsed.port not in (None, 443)
+                or not re.fullmatch(r'/mail/u/(?:[0-9]+/)?', parsed.path)):
+            return False
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        if set(query) - {'authuser'} or ('authuser' in query and query['authuser'] != [account]):
+            return False
+        fragment = unquote(parsed.fragment)
+        if any(word in fragment.lower() for word in ('compose', 'settings', 'signin', 'login')):
+            return False
+        return not fragment or bool(re.fullmatch(r'(?:inbox|all)(?:/[A-Za-z0-9_-]+)?|search/[^?&]+', fragment))
+    except (TypeError, ValueError):
+        return False
+
+
+def screenshot_file(path):
+    """Validate the supported RGB/RGBA PNG subset, not screenshot truth."""
+    try:
+        # W3C PNG3: IHDR/IDAT/IEND and filtering/compression sections.
+        # https://www.w3.org/TR/png-3/ ; supported subset only, not a general decoder.
+        if path.stat().st_size > PNG_MAX_FILE_BYTES:
+            return False
+        blob = path.read_bytes()
+        if not blob.startswith(b'\x89PNG\r\n\x1a\n'):
+            return False
+        offset, header, ended, idat_ended, idat_seen = 8, None, False, False, False
+        compressed, palette = bytearray(), None
+        while offset < len(blob):
+            if offset + 12 > len(blob):
+                return False
+            length = int.from_bytes(blob[offset:offset + 4], 'big')
+            kind = blob[offset + 4:offset + 8]
+            end = offset + length + 12
+            if end > len(blob) or not re.fullmatch(b'[A-Za-z]{4}', kind):
+                return False
+            data = blob[offset + 8:end - 4]
+            if zlib.crc32(kind + data) != int.from_bytes(blob[end - 4:end], 'big'):
+                return False
+            if header is None and kind != b'IHDR':
+                return False
+            if kind == b'IHDR':
+                if header is not None or length != 13:
+                    return False
+                header = struct.unpack('>IIBBBBB', data)
+                width, height, depth, color, compression, filtering, interlace = header
+                if (not width or not height or width * height > PNG_MAX_PIXELS
+                        or depth != 8 or color not in (2, 6)
+                        or compression or filtering or interlace):
+                    return False
+                channels = 3 if color == 2 else 4
+                stride = (width * channels * depth + 7) // 8
+                size = (stride + 1) * height
+                if size > PNG_MAX_RASTER_BYTES:
+                    return False
+            elif kind == b'PLTE':
+                if palette is not None or idat_seen or not length or length % 3 or length > 768:
+                    return False
+                palette = data
+            elif kind == b'IDAT':
+                if idat_ended:
+                    return False
+                idat_seen = True
+                compressed.extend(data)
+            elif kind == b'IEND':
+                if length or not compressed or end != len(blob):
+                    return False
+                ended = True
+            elif kind in (b'acTL', b'fcTL', b'fdAT'):
+                return False  # Animated evidence is not a static UI screenshot.
+            elif kind[0] & 32 == 0:  # Unknown critical chunks cannot be decoded safely.
+                return False
+            if idat_seen and kind not in (b'IDAT', b'IEND'):
+                idat_ended = True
+            offset = end
+        if not ended or header is None:
+            return False
+        decoder = zlib.decompressobj()
+        pixels = decoder.decompress(compressed, size + 1)
+        return (len(pixels) == size and decoder.eof and not decoder.unused_data
+                and not decoder.unconsumed_tail
+                and all(pixels[row * (stride + 1)] <= 4 for row in range(height)))
+    except (OSError, ValueError, struct.error, zlib.error):
+        return False
 
 
 def validate(receipt, now=None, preflight=False, publication_draft=None, publication_issue=None):
@@ -222,18 +319,52 @@ def validate(receipt, now=None, preflight=False, publication_draft=None, publica
         for url in fixtures:
             parsed = urlparse(url)
             require(parsed.scheme == 'https' and parsed.hostname in DEV_PRODUCT_HOSTS, 'PM fixture URL must use the deployed dev product')
+    external = plan.get('external_observations', [])
+    has_external = 'external_observations' in plan
+    valid_external = (isinstance(external, list) and (not has_external or bool(external))
+                      and all(isinstance(o, dict) for o in external))
+    require(valid_external, 'external observations must be a nonempty structured opt-in list')
+    observations = {}
+    for o in external if valid_external else []:
+        oid, mids = o.get('id'), o.get('message_ids')
+        ok = (set(o) == {'id', 'kind', 'url', 'account', 'related_fixture', 'message_ids'}
+              and isinstance(oid, str) and bool(oid.strip()) and oid not in observations
+              and o.get('kind') == 'mail-ui' and valid_lists and o.get('account') in accounts
+              and o.get('related_fixture') in fixtures and gmail_read_url(o.get('url'), o.get('account'))
+              and isinstance(mids, list) and bool(mids)
+              and all(isinstance(mid, str) and bool(mid.strip()) for mid in mids)
+              and len(set(mids)) == len(mids))
+        require(ok, 'external observation needs a unique ID, exact account, Gmail read URL, dev fixture and message IDs')
+        if ok:
+            observations[oid] = o
+    require(not has_external or version == 2, 'external UI observations require version 2')
+
+    def observation_manifest(item, label):
+        require(item.get('external_observations') == external if has_external
+                else 'external_observations' not in item,
+                label + ' must bind the exact planned external observations')
+
     contexts = plan.get('step_contexts')
     valid_contexts = (valid_lists and isinstance(contexts, dict) and set(contexts) == set(steps))
     if valid_contexts:
-        valid_contexts = all(isinstance(context, dict) and context.get('account') in accounts
-                             and context.get('fixture') in fixtures for context in contexts.values())
-    require(valid_contexts, 'plan needs an exact PM account and fixture context for every step')
+        valid_contexts = all(isinstance(c, dict) and c.get('account') in accounts and (
+            (c.get('fixture') in fixtures and 'observation' not in c)
+            or (set(c) == {'account', 'observation'} and isinstance(c.get('observation'), str) and c.get('observation') in observations
+                and c.get('account') == observations[c['observation']]['account'])) for c in contexts.values())
+    require(valid_contexts, 'plan needs an exact PM account and product fixture or external observation context for every step')
+    if has_external:
+        require(valid_contexts and {c.get('observation') for c in contexts.values()
+                                   if 'observation' in c} == set(observations),
+                'every external observation must be referenced by a planned step')
     draft_hash = proof(plan.get('draft'), 'plan draft')
     if draft_hash:
         try:
             draft_text = (task / plan['draft']['path']).read_text()
             visible_draft = re.sub(r'<!--.*?-->', '', draft_text, flags=re.S)
             require(valid_lists and all(draft_mentions(visible_draft, value) for value in accounts + fixtures), 'planned PM accounts and fixture URLs must appear literally in the frozen draft')
+            require(all(draft_mentions(visible_draft, o['url']) and draft_mentions(visible_draft, o['account'])
+                        and draft_mentions(visible_draft, o['related_fixture']) for o in observations.values()),
+                    'external observation URLs, accounts and related fixtures must appear in the frozen draft')
             ids = draft_steps(draft_text)
             require(valid_lists and steps == ids, 'plan steps differ from the actual PM draft numbered steps')
         except (OSError, ValueError):
@@ -249,10 +380,35 @@ def validate(receipt, now=None, preflight=False, publication_draft=None, publica
                 and issue == f'https://github.com/daodaoedu/daodao/issues/{publication_issue}',
                 'publication issue must match the receipt central issue')
     baseline_hash = proof(plan.get('baseline'), 'plan baseline')
+    baseline_values = proof(plan.get('baseline'), 'external observation baseline', True) if has_external else {}
+    if not require(isinstance(baseline_values, dict), 'external baseline must be a JSON object'):
+        baseline_values = {}
+    baseline_external = baseline_values.get('external_observations', [])
+    expected_external = {}
+    valid_baseline_external = isinstance(baseline_external, list) and all(isinstance(v, dict) for v in baseline_external)
+    require(not has_external or valid_baseline_external, 'external baseline needs structured observation values')
+    for value in baseline_external if valid_baseline_external else []:
+        oid = value.get('id'); o = observations.get(oid, {}) if isinstance(oid, str) else {}
+        values = value.get('required_values'); messages = values.get('messages') if isinstance(values, dict) else None
+        valid_messages = isinstance(messages, list) and bool(messages) and all(isinstance(m, dict) for m in messages)
+        require(bool(o) and all(value.get(k) == v for k, v in o.items())
+                and set(value) == set(o) | {'required_values'} and oid not in expected_external
+                and valid_messages and [m.get('id') for m in messages] == o.get('message_ids')
+                and all(isinstance(m.get('labels'), list) and 'INBOX' in m['labels']
+                        and isinstance(m.get('to'), str) and bool(re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', m['to']))
+                        and m.get('summary_present') is True and type(m.get('reply_present')) is bool
+                        for m in messages),
+                'external baseline must bind exact planned messages, INBOX, To and summary/reply observations')
+        if o and valid_messages:
+            expected_external[oid] = values
+    require(not has_external or set(expected_external) == set(observations),
+            'external baseline must cover every observation exactly once')
+    external_step_proofs = []
     replay = proof(data.get('replay'), 'PM replay', True)
     restore = proof(data.get('restore'), 'restored preflight', True)
     for label, item in [('replay', replay), ('restore', restore)]:
         require(valid_lists and item.get('accounts') == accounts and item.get('fixtures') == fixtures, label + ' must use the exact planned PM accounts and fixtures')
+        observation_manifest(item, label)
     require(replay.get('kind') == 'pm-ui-replay', 'engineering/API smoke cannot substitute for PM UI replay')
     require(bool(draft_hash) and replay.get('draft_sha256') == draft_hash, 'replay must bind the current handoff draft')
     actual_steps = replay.get('steps')
@@ -262,12 +418,16 @@ def validate(receipt, now=None, preflight=False, publication_draft=None, publica
         for step in actual_steps:
             if not isinstance(step, dict):
                 errors.append('invalid replay step'); continue
-            require(valid_lists and step.get('account') in accounts and step.get('fixture') in fixtures and step.get('result') == 'pass', 'replay step needs the planned PM identity, fixture, and PASS result')
             expected = contexts.get(step.get('id'), {}) if valid_contexts and isinstance(step.get('id'), str) else {}
+            external_step = has_external and 'observation' in expected
+            key = 'observation' if external_step else 'fixture'
             require(valid_contexts and step.get('account') == expected.get('account')
-                    and step.get('fixture') == expected.get('fixture'),
-                    'replay step identity/fixture differs from its planned context')
-            proof(step.get('evidence'), 'replay step ' + str(step.get('id')))
+                    and step.get(key) == expected.get(key) and step.get('result') == 'pass'
+                    and ('fixture' not in step if external_step else 'observation' not in step),
+                    'replay step needs the planned PM identity, fixture/observation, and PASS result')
+            evidence = proof(step.get('evidence'), 'replay step ' + str(step.get('id')), external_step)
+            if external_step:
+                external_step_proofs.append((expected.get('observation'), evidence))
     started = None
     try:
         started, finished = timestamp(replay.get('started_at')), timestamp(replay.get('finished_at'))
@@ -276,17 +436,56 @@ def validate(receipt, now=None, preflight=False, publication_draft=None, publica
     except (ValueError, TypeError):
         errors.append('replay/restore need actual timezone-aware timestamps')
         restored = None
+    def image_evidence(ref, label):
+        digest = proof(ref, label)
+        require(bool(digest) and screenshot_file(task / ref['path']), label + ' must be a complete bound non-interlaced PNG UI screenshot')
+
+    for oid, ui in external_step_proofs:
+        if not require(isinstance(ui, dict), 'external UI step evidence must be structured JSON'):
+            continue
+        o = observations.get(oid, {}) if isinstance(oid, str) else {}
+        require(ui.get('kind') == 'external-ui-observation' and ui.get('method') == 'native-ui'
+                and ui.get('observation') == oid and ui.get('account') == o.get('account')
+                and ui.get('url') == o.get('url') and ui.get('related_fixture') == o.get('related_fixture')
+                and gmail_read_url(ui.get('observed_url'), o.get('account'))
+                and ui.get('draft_sha256') == draft_hash and ui.get('baseline_sha256') == baseline_hash
+                and bool(expected_external.get(oid)) and ui.get('required_values') == expected_external.get(oid),
+                'external step must be actual native UI bound to its account, URLs, dev fixture, messages, draft and baseline')
+        identity = ui.get('identity') or {}
+        require(isinstance(identity, dict) and identity.get('method') == 'visible-ui-account'
+                and identity.get('visible_account') == o.get('account')
+                and gmail_read_url(identity.get('observed_url'), o.get('account')),
+                'external step needs visible UI mailbox identity, not an API profile')
+        image_evidence(identity.get('screenshot') if isinstance(identity, dict) else None, 'external account identity')
+        messages = ui.get('messages')
+        valid_messages = isinstance(messages, list) and all(isinstance(m, dict) for m in messages)
+        require(valid_messages and [m.get('message_id') for m in messages] == o.get('message_ids'),
+                'external UI screenshots must cover every planned message exactly once')
+        for message in messages if valid_messages else []:
+            require(message.get('page_state') in ('inbox', 'message')
+                    and gmail_read_url(message.get('observed_url'), o.get('account')),
+                    'external message evidence must show a Gmail read page, not a login/API/compose surface')
+            image_evidence(message.get('screenshot'), 'external message screenshot')
+        try:
+            require(started is not None and started <= timestamp(ui.get('observed_at')) <= finished,
+                    'external UI observation must occur during the same frozen replay')
+        except (TypeError, ValueError, UnboundLocalError):
+            errors.append('external UI observation needs a replay-bound timestamp')
     require(restore.get('kind') == 'pm-restored-preflight' and restore.get('result') == 'pass', 'restored PM fixture preflight must pass')
     require(bool(baseline_hash) and restore.get('baseline_sha256') == baseline_hash, 'restored preflight must match the planned baseline')
     # A digest reference alone does not prove equality; compare the saved domain values too.
     expected_values = proof(plan.get('baseline'), 'expected fixture values', True)
     actual_values = proof(restore.get('evidence'), 'restored fixture values', True)
+    require(has_external or 'external_observations' not in expected_values, 'external baseline cannot be declared without an external plan')
     require(bool(baseline_hash) and bool(expected_values) and bool(actual_values)
             and expected_values == actual_values,
             'restored fixture values differ from expected baseline')
     retention = data.get('retention') or {}
     if not isinstance(retention, dict):
         retention = {}
+    require(retention.get('external_observations') == [{'id': oid, 'retained': True} for oid in observations]
+            if has_external else 'external_observations' not in retention,
+            'external observations must be retained exactly as planned')
     retained = retention.get('fixtures')
     require(valid_lists and isinstance(retained, list) and retained == [{'url': url, 'retained': True} for url in fixtures], 'PM fixtures must be retained, not disposed by smoke cleanup')
     try:
@@ -319,7 +518,19 @@ def validate(receipt, now=None, preflight=False, publication_draft=None, publica
             expires = timestamp(retention.get('expires_at'))
         except (ValueError, TypeError):
             expires = None
-        for entry in entries if valid_entries else []:
+        external_entries = lifecycle.get('external_observations', [])
+        valid_external_entries = isinstance(external_entries, list) and all(isinstance(e, dict) for e in external_entries)
+        require((valid_external_entries and [e.get('id') for e in external_entries] == list(observations))
+                if has_external else 'external_observations' not in lifecycle,
+                'lifecycle must cover every planned external observation exactly once')
+        for entry in external_entries if valid_external_entries else []:
+            o = observations.get(entry.get('id'), {}) if isinstance(entry.get('id'), str) else {}
+            require(bool(o) and all(entry.get(k) == v for k, v in o.items())
+                    and bool(expected_external.get(entry.get('id')))
+                    and entry.get('required_values') == expected_external.get(entry.get('id')),
+                    'external lifecycle must bind its full plan and baseline required values')
+        # Apply the exact existing time/source/expiry rules to both surfaces.
+        for entry in (entries if valid_entries else []) + (external_entries if valid_external_entries else []):
             require(isinstance(entry.get('required_values'), dict) and bool(entry['required_values']),
                     'lifecycle fixture needs reviewed required_values')
             require(isinstance(entry.get('reason'), str) and bool(entry['reason'].strip()),

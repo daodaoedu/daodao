@@ -114,6 +114,233 @@ class CloseoutTests(unittest.TestCase):
     def save_lifecycle(self, d, assessment):
         d['retention']['lifecycle'] = self.evidence('evidence/lifecycle.json', assessment)
 
+    def external_mail(self):
+        import struct, zlib
+        d, a = self.lifecycle(timed=False)
+        account = 'contact@example.org'
+        url = 'https://mail.google.com/mail/u/?authuser=contact%40example.org#inbox'
+        o = {'id': 'mail', 'kind': 'mail-ui', 'url': url, 'account': account,
+             'related_fixture': d['plan']['fixtures'][0], 'message_ids': ['team', 'reply']}
+        d['plan']['accounts'].append(account); d['plan']['external_observations'] = [o]
+        d['plan']['step_contexts']['2'] = {'account': account, 'observation': 'mail'}
+        draft = (self.task / d['plan']['draft']['path']).read_text().replace('## 驗收步驟', f'{account} {url}\n## 驗收步驟')
+        d['plan']['draft'] = self.evidence('notes/handoff.md', draft)
+        values = {'messages': [{'id': mid, 'labels': ['INBOX'], 'to': account,
+                               'summary_present': True, 'reply_present': mid == 'reply'} for mid in ['team', 'reply']]}
+        baseline = {'resources': ['A', 'B'], 'external_observations': [{**o, 'required_values': values}]}
+        d['plan']['baseline'] = self.evidence('evidence/baseline.json', baseline)
+        # Synthetic PNG is only a checker schema fixture, never PM evidence.
+        png = self.task / 'evidence/mail.png'
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        png.write_bytes(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+                        + chunk(b'IDAT', zlib.compress(b'\0\x00\x80\xff')) + chunk(b'IEND', b''))
+        image = {'path': 'evidence/mail.png', 'sha256': hashlib.sha256(png.read_bytes()).hexdigest()}
+        actual = 'https://mail.google.com/mail/u/0/#inbox'
+        ui = {'kind': 'external-ui-observation', 'method': 'native-ui', 'observation': 'mail',
+              'account': account, 'url': url, 'observed_url': actual, 'related_fixture': o['related_fixture'],
+              'draft_sha256': d['plan']['draft']['sha256'], 'baseline_sha256': d['plan']['baseline']['sha256'],
+              'observed_at': '2026-11-06T01:05:00Z', 'required_values': values,
+              'identity': {'method': 'visible-ui-account', 'visible_account': account,
+                           'observed_url': actual, 'screenshot': image},
+              'messages': [{'message_id': mid, 'observed_url': actual, 'page_state': 'message',
+                            'screenshot': image} for mid in o['message_ids']]}
+        replay = json.loads((self.task / d['replay']['path']).read_text())
+        replay.update(accounts=d['plan']['accounts'], external_observations=[o], draft_sha256=d['plan']['draft']['sha256'])
+        replay['steps'][1] = {'id': '2', 'account': account, 'observation': 'mail', 'result': 'pass',
+                              'evidence': self.evidence('evidence/mail-ui.json', ui)}
+        d['replay'] = self.evidence('evidence/replay.json', replay)
+        restore = json.loads((self.task / d['restore']['path']).read_text())
+        restore.update(accounts=d['plan']['accounts'], external_observations=[o],
+                       baseline_sha256=d['plan']['baseline']['sha256'], evidence=self.evidence('evidence/restored.json', baseline))
+        d['restore'] = self.evidence('evidence/restore.json', restore)
+        d['retention']['external_observations'] = [{'id': 'mail', 'retained': True}]
+        a.update(draft_sha256=d['plan']['draft']['sha256'], baseline_sha256=d['plan']['baseline']['sha256'])
+        a['external_observations'] = [{**a['fixtures'][0], **o, 'required_values': values}]
+        self.save_lifecycle(d, a)
+        for key in ['lint', 'handoff']:
+            item = json.loads((self.task / d[key]['path']).read_text()); item['draft_sha256'] = d['plan']['draft']['sha256']
+            d[key] = self.evidence(d[key]['path'], item)
+        return d, ui
+
+    def save_external_ui(self, d, ui):
+        r = json.loads((self.task / d['replay']['path']).read_text())
+        r['steps'][1]['evidence'] = self.evidence('evidence/mail-ui.json', ui)
+        d['replay'] = self.evidence('evidence/replay.json', r)
+
+    def test_external_compound_mail_ui_supports_exact_account_and_gmail_redirect(self):
+        d, _ = self.external_mail(); self.assertEqual(self.validate(d), ('handed-off', []))
+        d['state'] = 'pending'; self.write(d)
+        self.assertEqual(self.checker().validate(self.receipt, now=NOW, preflight=True), ('ready-to-handoff', []))
+
+    def test_external_ui_rejects_api_only_login_wrong_account_and_missing_images(self):
+        for key, value in [('method', 'gmail-api'), ('observed_url', 'https://accounts.google.com/signin'),
+                           ('account', 'other@example.org'), ('draft_sha256', '0' * 64), ('baseline_sha256', '0' * 64),
+                           ('observed_at', '2026-11-06T00:59:59Z'), ('messages', []), ('identity', {})]:
+            with self.subTest(key=key):
+                d, ui = self.external_mail(); ui[key] = value; self.save_external_ui(d, ui)
+                self.assertTrue(self.validate(d)[1])
+        for mutation in ['signin', 'wrong-ui-account', 'api-profile', 'missing-image', 'bad-hash', 'fake-image', 'missing-message']:
+            with self.subTest(mutation=mutation):
+                d, ui = self.external_mail()
+                if mutation == 'signin': ui['messages'][0]['page_state'] = 'signin'
+                elif mutation == 'wrong-ui-account': ui['identity']['visible_account'] = 'other@example.org'
+                elif mutation == 'api-profile': ui['identity']['method'] = 'gmail-api-profile'
+                elif mutation == 'missing-image': del ui['messages'][0]['screenshot']
+                elif mutation == 'bad-hash': ui['messages'][0]['screenshot'] = {'path': 'evidence/mail.png', 'sha256': '0' * 64}
+                elif mutation == 'fake-image': ui['messages'][0]['screenshot'] = self.evidence('evidence/fake.png', 'not an image')
+                else: ui['messages'].pop()
+                self.save_external_ui(d, ui); self.assertTrue(self.validate(d)[1])
+
+    def test_external_mail_url_and_dev_fixture_gate_stay_strict(self):
+        urls = ['http://mail.google.com/mail/u/0/#inbox', 'https://evil.test/mail/u/0/',
+                'https://mail.google.com.evil.test/mail/u/0/', 'https://pm@mail.google.com/mail/u/0/',
+                'https://mail.google.com:444/mail/u/0/', 'https://mail.google.com/mail/u/0/#settings',
+                'https://mail.google.com/mail/u/0/?compose=new', 'https://mail.google.com/mail/u/0/#inbox?compose=new',
+                'https://mail.google.com/mail/u/0/signin', 'https://mail.google.com/mail/u/0/#compose',
+                'https://mail.google.com/mail/u/?authuser=wrong%40example.org#inbox']
+        for url in urls:
+            with self.subTest(url=url):
+                d, _ = self.external_mail(); d['plan']['external_observations'][0]['url'] = url
+                self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['plan']['fixtures'].append('https://mail.google.com/mail/u/0/#inbox')
+        self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['plan']['external_observations'][0]['related_fixture'] = 'https://app.daodao.so/practices/401'
+        self.assertTrue(self.validate(d)[1])
+
+    def test_external_observation_all_bindings_are_required(self):
+        for location in ['plan', 'replay', 'restore', 'retention', 'lifecycle', 'baseline']:
+            with self.subTest(location=location):
+                d, _ = self.external_mail()
+                if location in ['plan', 'retention']: del d[location]['external_observations']
+                else:
+                    ref = d['retention']['lifecycle'] if location == 'lifecycle' else d['plan']['baseline'] if location == 'baseline' else d[location]
+                    item = json.loads((self.task / ref['path']).read_text()); del item['external_observations']
+                    new_ref = self.evidence(ref['path'], item)
+                    if location == 'lifecycle': d['retention']['lifecycle'] = new_ref
+                    elif location == 'baseline': d['plan']['baseline'] = new_ref
+                    else: d[location] = new_ref
+                self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['version'] = 1; self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['plan']['external_observations'] *= 2; self.assertTrue(self.validate(d)[1])
+        d, ui = self.external_mail(); ui['required_values']['messages'][1]['to'] = 'other@example.org'
+        self.save_external_ui(d, ui); self.assertTrue(self.validate(d)[1])
+
+    def test_external_mail_observed_url_is_strict_even_with_valid_other_bindings(self):
+        checker = self.checker()
+        good = 'https://mail.google.com/mail/u/0/#all/message123'
+        self.assertTrue(checker.gmail_read_url(good, 'contact@example.org'))
+        self.assertTrue(checker.gmail_read_url('https://mail.google.com:443/mail/u/#inbox', 'contact@example.org'))
+        for url in ['http://mail.google.com/mail/u/0/#inbox', 'https://accounts.google.com/signin',
+                    'https://mail.google.com:444/mail/u/0/', 'https://x@mail.google.com/mail/u/0/',
+                    'https://mail.google.com/mail/u/0/#settings/general',
+                    'https://mail.google.com/mail/u/0/#inbox?compose=new',
+                    'https://mail.google.com/mail/u/0/?compose=new',
+                    'https://mail.google.com/mail/u/0/settings',
+                    'https://mail.google.com/mail/u/?authuser=wrong%40example.org#inbox',
+                    'https://mail.google.com/mail/u/?authuser=contact%40example.org&authuser=contact%40example.org#inbox',
+                    'https://mail.google.com.evil.test/mail/u/0/#inbox',
+                    'https://mail.google.com/mail/u/0/#%73ettings']:
+            with self.subTest(url=url):
+                self.assertFalse(checker.gmail_read_url(url, 'contact@example.org'))
+
+    def test_external_malformed_shapes_unknown_context_and_unused_observation_fail_closed(self):
+        for mutation in ['context-list', 'baseline-id-list', 'ui-list', 'lifecycle-id-list', 'unknown', 'unused']:
+            with self.subTest(mutation=mutation):
+                d, ui = self.external_mail()
+                if mutation == 'context-list': d['plan']['step_contexts']['2']['observation'] = []
+                elif mutation == 'unknown': d['plan']['step_contexts']['2']['observation'] = 'missing'
+                elif mutation == 'unused': d['plan']['step_contexts']['2'] = {'account': d['plan']['accounts'][0], 'fixture': d['plan']['fixtures'][0]}
+                elif mutation == 'ui-list': self.save_external_ui(d, [])
+                else:
+                    ref = d['plan']['baseline'] if mutation == 'baseline-id-list' else d['retention']['lifecycle']
+                    data = json.loads((self.task / ref['path']).read_text()); data['external_observations'][0]['id'] = []
+                    new_ref = self.evidence(ref['path'], data)
+                    if mutation == 'baseline-id-list': d['plan']['baseline'] = new_ref
+                    else: d['retention']['lifecycle'] = new_ref
+                self.assertTrue(self.validate(d)[1])
+
+    def test_external_lifecycle_uses_existing_expiry_source_and_transition_guards(self):
+        for field, value in [('valid_until', '2026-11-06T01:00:00Z'), ('evidence', None),
+                             ('reason', ''), ('time_dependent', 'false'), ('required_values', {}),
+                             ('known_transitions', [{'at': '2026-11-06T01:30:00Z', 'effect': 'auto-delete'}])]:
+            with self.subTest(field=field):
+                d, _ = self.external_mail(); a = json.loads((self.task / d['retention']['lifecycle']['path']).read_text())
+                a['external_observations'][0][field] = value; self.save_lifecycle(d, a)
+                self.assertTrue(self.validate(d)[1])
+
+    def test_legacy_product_context_metadata_keeps_original_compatibility(self):
+        d = self.complete()
+        d['plan']['step_contexts']['1'].update(viewport={'width': 390, 'height': 844}, locale='en')
+        self.assertEqual(self.validate(d), ('handed-off', []))
+        d, _ = self.lifecycle(timed=False)
+        d['plan']['step_contexts']['1'].update(viewport={'width': 1280, 'height': 844}, locale='zh-TW')
+        self.assertEqual(self.validate(d), ('handed-off', []))
+        d['plan']['step_contexts']['1']['observation'] = 'mail'
+        self.assertTrue(self.validate(d)[1])
+
+    def test_marker_only_jpeg_and_header_only_png_are_not_ui_images(self):
+        for blob in [b'\xff\xd8\xff\xd9', b'\xff\xd8\xfffake\xff\xd9',
+                     b'\x89PNG\r\n\x1a\n' + b'\x00\x00\x00\x0dIHDR' + b'\x00\x00\x00\x01' * 2 + b'x' * 30 + b'IENDxxxx']:
+            with self.subTest(blob=blob):
+                d, ui = self.external_mail()
+                image = self.task / 'evidence/invalid-image.png'; image.write_bytes(blob)
+                ui['messages'][0]['screenshot'] = {'path': 'evidence/invalid-image.png', 'sha256': hashlib.sha256(blob).hexdigest()}
+                self.save_external_ui(d, ui); self.assertTrue(self.validate(d)[1])
+
+    def test_png_screenshot_subset_crc_order_raster_and_resource_bounds(self):
+        import struct, zlib
+        from unittest.mock import patch
+        checker = self.checker()
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        signature = b'\x89PNG\r\n\x1a\n'
+        def header(width=1, height=1, depth=8, color=2, interlace=0):
+            return chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, depth, color, 0, 0, interlace))
+        payload = zlib.compress(b'\0\x00\x80\xff')
+        end = chunk(b'IEND', b'')
+        good = signature + header() + chunk(b'IDAT', payload) + end
+        image = self.task / 'screen.png'
+        for blob in [good, signature + header(color=6) + chunk(b'IDAT', zlib.compress(b'\0\0\0\0\xff')) + end,
+                     signature + header() + chunk(b'IDAT', b'') + chunk(b'IDAT', payload[:3]) + chunk(b'IDAT', payload[3:]) + end]:
+            image.write_bytes(blob); self.assertTrue(checker.screenshot_file(image))
+        for label, blob in [
+            ('crc', good[:29] + bytes([good[29] ^ 1]) + good[30:]),
+            ('duplicate-header', signature + header() + header() + chunk(b'IDAT', payload) + end),
+            ('bad-order', signature + chunk(b'IDAT', payload) + header() + end),
+            ('missing-iend', good[:-12]), ('truncated', good[:-1]), ('trailing', good + b'x'),
+            ('unknown-critical', signature + header() + chunk(b'ABCD', b'') + chunk(b'IDAT', payload) + end),
+            ('nonconsecutive-idat', signature + header() + chunk(b'IDAT', payload[:3]) + chunk(b'tEXt', b'x') + chunk(b'IDAT', payload[3:]) + end),
+            ('zlib-eof', signature + header() + chunk(b'IDAT', payload[:-1]) + end),
+            ('zlib-trailing', signature + header() + chunk(b'IDAT', payload + b'x') + end),
+            ('scanline-short', signature + header() + chunk(b'IDAT', zlib.compress(b'\0\0')) + end),
+            ('filter-invalid', signature + header() + chunk(b'IDAT', zlib.compress(b'\x05\0\0\0')) + end),
+            ('expanded-bomb', signature + header() + chunk(b'IDAT', zlib.compress(b'\0' * 1_000_000)) + end),
+            ('pixel-bound', signature + header(width=16_000_001) + chunk(b'IDAT', payload) + end),
+            ('zero-dimension', signature + header(width=0) + chunk(b'IDAT', payload) + end),
+            ('unsupported-depth', signature + header(depth=16) + chunk(b'IDAT', payload) + end),
+            ('unsupported-color', signature + header(color=3) + chunk(b'IDAT', payload) + end),
+            ('unsupported-interlace', signature + header(interlace=1) + chunk(b'IDAT', payload) + end)]:
+            with self.subTest(label=label):
+                image.write_bytes(blob); self.assertFalse(checker.screenshot_file(image))
+        for constant, limit in [('PNG_MAX_FILE_BYTES', len(good) - 1), ('PNG_MAX_PIXELS', 0), ('PNG_MAX_RASTER_BYTES', 3)]:
+            with self.subTest(limit=constant), patch.object(checker, constant, limit):
+                image.write_bytes(good); self.assertFalse(checker.screenshot_file(image))
+
+    def test_static_ui_evidence_rejects_two_frame_apng(self):
+        import struct, zlib
+        checker = self.checker()
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        def frame(sequence):
+            return chunk(b'fcTL', struct.pack('>IIIIIHHBB', sequence, 1, 1, 0, 0, 1, 10, 0, 0))
+        blob = (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 6, 0, 0, 0))
+                + chunk(b'acTL', struct.pack('>II', 2, 0)) + frame(0)
+                + chunk(b'IDAT', zlib.compress(b'\0\xff\0\0\xff')) + frame(1)
+                + chunk(b'fdAT', struct.pack('>I', 2) + zlib.compress(b'\0\0\xff\0\xff')) + chunk(b'IEND', b''))
+        image = self.task / 'animated.png'; image.write_bytes(blob)
+        self.assertFalse(checker.screenshot_file(image))
+
     def test_lifecycle_historical_active_expired_fixture_cannot_outlive_hourly_completion(self):
         d, assessment = self.lifecycle()
         d['version'] = 1  # Legacy receipts declaring lifecycle must enforce it too.

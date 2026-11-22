@@ -57,3 +57,48 @@ handoff 結構化證據的 `pm_login` 必須從當前 `bin/pipeline/types.ts` �
 ## Codex 啟用確認
 
 [官方 hooks 定義](https://developers.openai.com/codex/hooks#stop) 要求 Stop 成功輸出為 JSON；exit 2 的 stderr 可要求繼續工作。舊 advisory 保留在 stderr，不能污染成功 JSON。非受管 hook 或其腳本變更後須由客戶端重新 Review hooks／信任；產物生成與 shell 測試不等於信任已完成，勿自動改寫使用者信任紀錄。未信任時仍執行必要的 CLI check，並明列自動 Stop 尚未驗證。
+
+## 可選的外部 Gmail UI 觀察（v2）
+
+原 `plan.fixtures` 仍**只准 dev app/admin**；不能把 Gmail URL 放進產品 fixture，也不能把郵件步驟假綁到 admin/app URL。只讀郵件的 PM 步驟可另用 `plan.external_observations`。這不是 API 或 AC bypass，舊無 external 宣告的 v1/v2 收據保持原行為。
+
+```json
+{
+  "external_observations": [{
+    "id": "reply-inbox",
+    "kind": "mail-ui",
+    "url": "https://mail.google.com/mail/u/?authuser=contact%40daodao.so#inbox",
+    "account": "contact@daodao.so",
+    "related_fixture": "https://admin-dev.daodao.so/admin/feedback?id=16",
+    "message_ids": ["team-message-id", "reply-message-id"]
+  }],
+  "step_contexts": {
+    "1": {"account": "contact@daodao.so", "observation": "reply-inbox"}
+  }
+}
+```
+
+這是 plan 片段，不能直接拿範例 ID 當真資料。每個 external context 的 `account` 必須是 plan.accounts 中的精確既有信箱；context 使用 `observation`，不再含 `fixture`。related_fixture 必須是已列出的 dev 產品連結。每個觀察必須有步驟引用，ID 與 message_ids 不可空或重複。觀察 URL、帳號及 dev 關聯必須在同一凍結草稿的可見本文。
+
+URL 只允 HTTPS `mail.google.com` 的 `/mail/u/` 或 `/mail/u/<數字>/` 讀取頁；無 userinfo、只允預設或443 port、query只允單一且精確符合account的authuser。拒絕 compose/settings/登入頁或其他外站。實際Gmail導頁可省去authuser，但URL**不證明登入身分**。
+
+### 同版證據與真正 UI 身分
+
+replay及restore各加 `external_observations`，內容／順序必須完全等於plan manifest。外部 replay step 使用 `id/account/observation/result:pass/evidence`；evidence 為 task-relative path／SHA256 JSON，包含：
+
+- `kind: external-ui-observation`、`method: native-ui`（實際產品網頁UI，CUA或獨立瀏覽器均可；不是原生Gmail API）。
+- `observation/account/url/related_fixture` 與plan一致；`observed_url`記實際頁面，可與計畫入口URL不同，但仍須通過同一Gmail讀取URL限制。
+- 同版 `draft_sha256/baseline_sha256`；observed_at位於同一次replay起訖之間。
+- `identity: {method: visible-ui-account, visible_account: <精確mailbox email>, observed_url: <真頁>, screenshot: <image proof ref>}`。必須實際打開UI中的帳號識別並記錄可見email；可用同張或獨立真PNG。API profile不替代UI身分。
+- `messages`依message_ids逐一列 `{message_id, observed_url, page_state: inbox|message, screenshot: <image proof ref>}`。同一觀察可放團隊通知與回覆兩張真圖；或明確拆為兩個觀察。不得漏掉compound step的其中一封。
+- `required_values`等於該觀察baseline必要值。每封必要值至少記錄id、包含INBOX的labels、精確To、summary_present=true與reply_present布林；回覆信必須據實記錄回覆是否存在，其他必要連結／文字可另外納入。原AC要求的內容仍須逐條操作核對，不由此schema推定AC通過。
+
+baseline JSON加 `external_observations`，每項含完整plan observation及required_values。restore的實際domain values必須與整份baseline相等，不能只有相同manifest。retention加精確 `external_observations: [{id, retained:true}]`；lifecycle也加完整external manifest與同baseline的required_values，並沿用原fixture的reason、source proof、time_dependent、known_transitions與valid_until/expiry檢查。外部觀察與產品資料綁同一draft、baseline、replay、restore、retention deadline與restore後lifecycle評估，不能漏綁一段。
+
+截圖必須是安全task-relative的真PNG檔案，缺檔／文字偽裝／hash不符均拒絕。checker只驗證宣告、圖片格式與digest綁定，**不能識破偽造畫面、做OCR辨識身分，或證明真的點開過郵件**；人工仍須核對原圖、可見帳號、完整內容與實際工具紀錄。
+
+只有 native Gmail INBOX API、Google登入頁、未取得UI帳號或圖片時，工程可記「實投PASS」，但該UI步驟與整體PM-UI replay不能標PASS。依既有blocked契約記工具／認證阻擋，保留原合法局部交接；不修改AC、角色或產品fixture限制。新契約上線也不會自動使既有#451的blocked證據變成通過；取得真UI後須重新凍結、lint、逐步重播、還原回讀與lifecycle審查。
+
+### 外部截圖的支援格式與界限
+
+這個新opt-in路徑只接受原UI工具直接截取的靜態、8-bit RGB／RGBA、non-interlaced PNG；JPEG、APNG動畫、索引色、灰階、16bit及Adam7不支援，需用原UI工具重新截PNG，不能改副檔名或自行render郵件HTML。舊dev步驟的證據型別保持不變。檢查器依[W3C PNG3](https://www.w3.org/TR/png-3/#11IHDR)的IHDR/IDAT/IEND、CRC、連續IDAT、zlib完整結尾、scanline長度與filter0–4驗證這個明示子集，不是通用PNG標準decoder，也不辨識圖中身分／內容真假。界限：檔案32MiB、像素總量16,000,000、解壓raster64MiB；超限需由原UI工具分頁截圖，不放寬記憶體界限。
