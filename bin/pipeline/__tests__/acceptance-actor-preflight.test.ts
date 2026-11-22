@@ -36,6 +36,23 @@ describe("actor contract and exact identity", () => {
       expect(pass(checkActorAccess(parsed(), { user: { ...actor.user, roles } }))).toBe(false);
     }
   });
+  it("represents the known Admin plus software_engineer identity as an exact role set", async () => {
+    const expected = { ...contract, expectedRoles: ["Admin", "software_engineer"] };
+    const actual = { user: { ...actor.user, roles: ["software_engineer", "Admin"] } };
+    expect(actorPreflightContractSchema.safeParse(expected).success).toBe(true);
+    const fetch = fetcher([actual]);
+    expect((await runActorPreflight(expected, "private-token", { fetch })).status).toBe("PASS");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it("still blocks an undeclared software_engineer role and rejects unknown role strings", async () => {
+    const expected = { ...contract, expectedRoles: ["Admin"] };
+    const fetch = fetcher([{ user: { ...actor.user, roles: ["Admin", "software_engineer"] } }]);
+    const report = await runActorPreflight(expected, "private-token", { fetch });
+    expect(report.status).toBe("BLOCKED");
+    expect(report.results).toContainEqual({ check: "global-roles", status: "BLOCKED" });
+    expect(actorPreflightContractSchema.safeParse({ ...contract, expectedRoles: ["unknown_engineer"] }).success).toBe(false);
+    expect(actorPreflightContractSchema.safeParse({ ...contract, expectedRoles: ["Admin", "software_engineer", "unknown_engineer"] }).success).toBe(false);
+  });
   it("requires both stable external UUID and exact account email", () => {
     for (const user of [
       { ...actor.user, id: "4707bee9-6918-4705-beb0-daa1d56d5a99" },
