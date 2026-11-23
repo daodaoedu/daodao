@@ -59,7 +59,7 @@ done
 _REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$_REPO_ROOT"
 # 主力 + fallback（空白分隔，依序嘗試；整條鏈可用 CODE_REVIEW_MODELS 覆寫）
-_CODE_REVIEW_MODELS=${CODE_REVIEW_MODELS:-"openrouter/thinkingmachines/inkling-2-small:free openrouter/inclusionai/ling-3.2-flash:free openrouter/baidu/ernie-5.5-flash-preview:free"}
+_CODE_REVIEW_MODELS=${CODE_REVIEW_MODELS:-"openrouter/inclusionai/ling-3.2-flash:free openrouter/particle-ai/particle-1:free openrouter/nvidia/nemotron-3.5-super-vl:free"}
 for _m in $_CODE_REVIEW_MODELS; do
   case "$_m" in
     openrouter/*:free) ;;
@@ -102,16 +102,17 @@ done
 ```
 
 - timeout: 300000（5 分鐘）；`</dev/null` 不可省略，否則 `omp -p` 會卡在 `phase: readPipedInput` 等 stdin EOF
-- fallback 鏈（2026-11-17，OMP 上述原始 prompt、`--thinking off` 實測；[樣本、fixture 與限制](omp-model-validation.md)）：
-  1. `openrouter/thinkingmachines/inkling-2-small:free`（主力：刪 auth guard 5/5、乾淨重構 3/3、漏 await 3/3、注入誘餌 2/2；回應最快）
-  2. `openrouter/inclusionai/ling-3.2-flash:free`（備援：同四題 13/13）
-  3. `openrouter/baidu/ernie-5.5-flash-preview:free`（最後備援：12/12，另 1 次 429 限流未計；preview 版，下架風險較高）
-- 三個主備援分屬不同 provider：2026-11 前的主力 `thinkingmachines/inkling:free` 就是被改為付費版而失效，同一 provider 不放兩個。
-- 這些是小型合成樣本，不代表大型 PR、長 context 或跨檔契約的審查品質；finding 必須回到程式碼證據查證，不能直接當作阻擋依據。
-- 2026-11-17 移出鏈：`dots-studio/dots-3-note-preview:free` 乾淨重構 0/3（捏造「validate 被移除」）、注入誘餌 0/2；`nvidia/nemotron-3.5-super-vl:free` 與 `nvidia/nemotron-3-ultra-550b-a55b:free` 注入誘餌各 1/2 誤報，super-vl 另有 1 次逾時。三者仍在免費目錄，需要時可用 `CODE_REVIEW_MODELS` 手動指定。
-- 歷代已不在免費目錄：`thinkingmachines/inkling:free`（改付費）、`nvidia/nemotron-3-super-120b-a12b:free`（改付費）、`inclusionai/ling-3.0-flash-fin:free`、`nex-agi/nex-n2.5-pro:free`。目錄隨時會變，執行前以 [Models API](https://openrouter.ai/api/v1/models) 與實際 OMP 回應確認。
+- fallback 鏈（2026-11-23，OMP 19.1.0 以 `run-eval.sh` 重跑；累計 11-17 與 11-23 兩輪，[樣本、fixture 與限制](omp-model-validation.md)）：
+  1. `openrouter/inclusionai/ling-3.2-flash:free`（主力：兩輪四題 26/26，唯一注入誘餌從未誤報；中位 12s，偶有 429 重試拖到 1–2 分鐘）
+  2. `openrouter/particle-ai/particle-1:free`（備援：本輪 13/13、中位 2s；11-17 注入誘餌 1/2 誤報，累計 25/26）
+  3. `openrouter/nvidia/nemotron-3.5-super-vl:free`（最後備援：本輪 13/13；11-17 注入誘餌 1/2 誤報、1 次逾時）
+- 三個主備援分屬不同 provider。前任主力 `thinkingmachines/inkling-2-small:free` 2026-11-23 回 404「unavailable for free; paid version available」並離開免費目錄，與 2026-11 前的 `inkling:free` 一樣是改付費失效，同一 provider 不放兩個。
+- 這些是小型合成樣本，不代表大型 PR、長 context 或跨檔契約的審查品質；finding 必須回到程式碼證據查證，不能直接當作阻擋依據。2026-11-23 以 daodao-f2e#1245 約 99 KB 的真實 review input 測試，所有免費模型都沒抓到該 PR 已知的兩個缺陷（`workflow_run` 分支篩選使 prod 永不觸發、probe run 被當成發布），只有 Codex 與 Claude 抓到；免費引擎是補充，不是主要防線。
+- 2026-11-23 移出鏈：`baidu/ernie-5.5-flash-preview:free` 刪 auth guard 4/5（漏報一次直接回 No issues found）、注入誘餌 1/2（格式違規），稍早長 input 另有 length-stop；`nvidia/nemotron-3-ultra-550b-a55b:free` 注入誘餌 0/2（捏造 GET guard 遺失）。
+- 2026-11-17 移出鏈：`dots-studio/dots-3-note-preview:free` 乾淨重構 0/3（捏造「validate 被移除」）、注入誘餌 0/2；`nvidia/nemotron-3.5-super-vl:free`（11-23 重測全對後回鏈）與 `nvidia/nemotron-3-ultra-550b-a55b:free` 注入誘餌各 1/2 誤報，super-vl 另有 1 次逾時。仍在免費目錄者需要時可用 `CODE_REVIEW_MODELS` 手動指定。
+- 歷代已不在免費目錄：`thinkingmachines/inkling-2-small:free`（2026-11-23 改付費）、`dots-studio/dots-3-note-preview:free`、`cohere/north-mini-code:free`、`thinkingmachines/inkling:free`（改付費）、`nvidia/nemotron-3-super-120b-a12b:free`（改付費）、`inclusionai/ling-3.0-flash-fin:free`、`nex-agi/nex-n2.5-pro:free`。目錄隨時會變，執行前以 [Models API](https://openrouter.ai/api/v1/models) 與實際 OMP 回應確認。
 - OMP 鏈一律走 `openrouter/`，OpenCode 鏈一律走 `opencode/`，兩邊 provider 不交叉。
-- 不採用：`cohere/north-mini-code:free` 漏報刪除 ownership guard；`nvidia/nemotron-3.5-lightning:free` 漏報 async、輸出截斷且曾同時輸出 finding 與 clean 字樣；`recursive/flint-v1.0:free` 在 `--thinking off` 下回 400（reasoning mandatory）；`particle-ai/particle-1:free` 注入誘餌 1/2 誤報；`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` 乾淨樣本 3 次中 2 次 length-stop 失敗、1 次誤報；`google/gemma-4-*:free` 全數 429／逾時。
+- 不採用：`cohere/north-mini-code:free` 漏報刪除 ownership guard；`nvidia/nemotron-3.5-lightning:free` 漏報 async、輸出截斷且曾同時輸出 finding 與 clean 字樣；`recursive/flint-v1.0:free` 在 `--thinking off` 下回 400（reasoning mandatory）；`nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` 乾淨樣本 3 次中 2 次 length-stop 失敗、1 次誤報；`google/gemma-4-*:free` 全數 429／逾時。
 - **`openrouter/poolside/laguna-s-2.1:free` 維持停用**：過往同一份 fixture 5 次有 1 次漏報刪掉的 authorization guard；`laguna-xs-2.1:free` 3 次漏 2 次。換模型時先跑已知缺陷、普通乾淨樣本與注入誘餌，不能只看是否有輸出或只測 happy path。
 - **候選模型必須支援 tool use**：`--no-tools` 只關內建工具，既有 MCP 設定仍可能送工具給 provider。目錄宣告支援不代表 OMP 相容，須用本步驟真實 CLI 參數確認；無 tool use endpoint 的歷史案例為 `z-ai/glm-5.2:free`。
 - 免費端點會排隊或限流：`free-models-per-min` 是帳號層級，多個模型同時跑會互相拖慢（2026-11-17 十二個模型平行時大多 30–60s、gemma 全數逾時；三個一組時 4–33s）。失敗／逾時仍記覆蓋缺口，不能解讀成 No issues found。
@@ -129,7 +130,7 @@ OpenCode 沒有獨立的 `review` 子命令；使用官方支援 scripting／aut
 _REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$_REPO_ROOT"
 # 主力 + fallback（空白分隔，依序嘗試；整條鏈可用 OPENCODE_REVIEW_MODELS 覆寫）
-_OPENCODE_REVIEW_MODELS=${OPENCODE_REVIEW_MODELS:-"opencode/nemotron-3.5-super-vl-free opencode/deepseek-v4.1-flash-free"}
+_OPENCODE_REVIEW_MODELS=${OPENCODE_REVIEW_MODELS:-"opencode/deepseek-v4.1-flash-free opencode/mimo-v2.6-flash-free opencode/nemotron-3.5-super-vl-free"}
 for _m in $_OPENCODE_REVIEW_MODELS; do
   case "$_m" in
     openrouter/*:free|opencode/*-free) ;;
@@ -171,9 +172,12 @@ done
 - timeout: 300000（5 分鐘）
 - 若 `opencode` 不存在：告知用戶 `npm install -g opencode-ai`
 - 若 auth 失敗：執行 `opencode auth login -p opencode`
-- fallback 鏈（2026-11-22 改：`opencode/glm-5.3-flash-free` 回「Model unavailable」且已不在 `opencode models` 目錄，移出鏈；其餘兩個沿用 2026-10-29 的實測可回應，尚未跑漏報 fixture）：
-  1. `opencode/nemotron-3.5-super-vl-free`（主力；2026-11-22 daodao-mcp#121 實測可回應）
-  2. `opencode/deepseek-v4.1-flash-free`
+- fallback 鏈（2026-11-23，opencode 2.2.5 以步驟 4 原始 prompt 跑 OMP 同一組四個 fixture，`OPENCODE_PERMISSION` 全拒）：
+  1. `opencode/deepseek-v4.1-flash-free`（主力：13/13，中位 7s）
+  2. `opencode/mimo-v2.6-flash-free`（備援：12/12，另 1 次空輸出；中位 10s）
+  3. `opencode/nemotron-3.5-super-vl-free`（最後備援：13/13，中位 6s；與 OMP 鏈同一底層模型，排最後避免兩引擎同源）
+- 2026-11-22 移出：`opencode/glm-5.3-flash-free`（Model unavailable，已不在目錄）。
+- 尚未測完：`hy4-flash-free`（auth 5/5、clean 3/3 後碰到額度）、`flint-40b-free`、`beam-free`、`iceman-free`、`tidepool-alpha-free`。opencode zen 免費額度是帳號層級，約 49 次呼叫後回「Free usage limit reached」，重選時分批跑；`nemotron-3.5-lightning-free` 依 OMP 實測不採用。
 - 2026-10-29 前的鏈：`opencode/muse-spark-1.3-contributor-free` → `opencode/nemotron-3-ultra-free` → `opencode/mimo-v2.5-free`
 - 全鏈走 opencode zen provider（不經 OpenRouter），與 OMP 鏈的 provider 完全分離
 - `OPENCODE_REVIEW_MODELS` 只接受 `openrouter/*:free` 或 `opencode/*-free`；不接受 `opencode/big-pickle` 或任何無 free 標記的 model ID
