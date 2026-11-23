@@ -1,6 +1,26 @@
 # OMP 免費 reviewer 選型實測
 
-## 2026-11-17 重選（現行）
+## 2026-11-23 重選（現行）
+
+起因：主力 `thinkingmachines/inkling-2-small:free` 回 404「unavailable for free; paid version available」，已不在 [OpenRouter Models API](https://openrouter.ai/api/v1/models) 免費目錄。當次目錄 11 個 `:free`（皆宣告支援 tools），11-17 後沒有新模型；`dots-3-note-preview`、`north-mini-code` 也已離開。OMP 19.1.0，以 [omp-model-fixtures/run-eval.sh](omp-model-fixtures/run-eval.sh) 重跑同四個 fixture，三個一組並行。
+
+| OpenRouter model ID | auth | clean | async | decoy | 中位秒（範圍） | 決定 |
+|---|---:|---:|---:|---:|---:|---|
+| `inclusionai/ling-3.2-flash:free` | 5/5 | 3/3 | 3/3 | 2/2 | 12（5–125，含 429 重試） | 主力：兩輪累計 26/26 |
+| `particle-ai/particle-1:free` | 5/5 | 3/3 | 3/3 | 2/2 | 2（1–7） | 備援：11-17 decoy 1/2，累計 25/26 |
+| `nvidia/nemotron-3.5-super-vl:free` | 5/5 | 3/3 | 3/3 | 2/2 | 2（1–54） | 最後備援：11-17 decoy 1/2、1 次逾時 |
+| `baidu/ernie-5.5-flash-preview:free` | 4/5 | 3/3 | 3/3 | 1/2 | 3（2–56） | 移出：漏報 auth 一次並回 No issues found |
+| `nvidia/nemotron-3-ultra-550b-a55b:free` | 5/5 | 3/3 | 3/3 | 0/2 | 3（1–81） | 不採用：捏造 GET guard 遺失 |
+
+排序以累計精確度優先、速度其次：三個都沒有漏報，ling 是唯一兩輪誘餌都沒誤報的模型，所以由第二順位升為主力。
+
+**長 input 測試**：以 daodao-f2e#1245 約 99 KB 的真實 review input（含兩個後來由 Codex／Claude 抓到並修正的缺陷：`workflow_run` 的 `branches: [dev, prod]` 遇上永遠是 `dev` 的 `head_branch` 使 prod 永不觸發；probe run 被當成發布）各跑一次。particle 2 秒回 clean；super-vl 輸出表格後又接 clean 字樣並夾帶自言自語，finding 皆為臆測；ling 82 秒，宣稱 input 被截斷（實際完整），只把分支篩選列為「未驗證」而非 finding。沒有任何免費模型把兩個缺陷列為 finding。合成四題全對不代表能審真實 PR。
+
+OpenCode zen 同日以步驟 4 prompt 跑同一組 fixture：`deepseek-v4.1-flash-free` 13/13、`nemotron-3.5-super-vl-free` 13/13、`mimo-v2.6-flash-free` 12/12（另 1 次空輸出）；約 49 次呼叫後帳號層級免費額度用完，`hy4-flash-free`、`flint-40b-free`、`beam-free`、`iceman-free`、`tidepool-alpha-free` 未測完。
+
+---
+
+## 2026-11-17 重選（歷史）
 
 起因：11-07 選定的主力 `dots-studio/dots-3-note-preview:free` 在本輪乾淨樣本全數誤報；OpenRouter 免費目錄同期新增 `inkling-2-small`、`ling-3.2-flash`、`ernie-5.5-flash-preview`、`particle-1`。來源為當次 [OpenRouter Models API](https://openrouter.ai/api/v1/models) 的 14 個 `:free` 模型（皆宣告支援 tools）；排除 `liquid/lfm-3-1.7b:free`（1.7B）與已知 422 的 `cohere/north-mini-code:free` 後 12 個實測，含現行鏈三個。OMP v18.20.0。
 
