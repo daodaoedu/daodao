@@ -12,7 +12,7 @@
 
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, normalize, relative, resolve, sep } from 'node:path'
+import { dirname, join, normalize, posix, relative, resolve, sep } from 'node:path'
 
 const PLUGIN_ROOT = resolve(import.meta.dirname, '..')
 const REPO_ROOT = resolve(PLUGIN_ROOT, '..')
@@ -282,7 +282,7 @@ function bundleSupportFiles(dir: string): OutFile[] {
 function resolveBundleLinks(files: OutFile[], base: string): OutFile[] {
   // f.path 一定以 base 開頭，直接去頭得到包內路徑；用 path.relative 會把相對的 base
   // 先解析到 cwd，算出一串 ../../.. 的假路徑。
-  const inBundle = (p: string) => normalize(p.slice(base.length).replace(/^\/+/, ''))
+  const inBundle = (p: string) => posix.normalize(p.slice(base.length).replaceAll('\\', '/').replace(/^\/+/, ''))
   const emitted = new Set(files.map((f) => inBundle(f.path)))
 
   return files.map((f) => {
@@ -291,7 +291,7 @@ function resolveBundleLinks(files: OutFile[], base: string): OutFile[] {
     const content = f.content.replace(
       /\[([^\]]+)\]\((\.\.?\/[^)#:]+\.(?:md|mjs|py|json|sh))(#[^)]*)?\)/g,
       (whole, label: string, link: string, fragment: string = '') => {
-        const target = normalize(join(fromDir, link))
+        const target = posix.normalize(posix.join(fromDir.replaceAll('\\', '/'), link))
         return emitted.has(target) ? whole : `**${label}**（\`${target}${fragment}\`，未隨本包出貨）`
       },
     )

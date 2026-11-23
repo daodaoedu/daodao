@@ -40,9 +40,9 @@ Todo → Ready for Dev → In Progress → Review → Acceptance → Done
 
 **Definition of Done**：AC 全部符合＋已部署到 dev＋驗收通過。預設由 PM 驗收；掛 `acceptance:engineering` 的卡由 dev 冒煙通過＋證據留言即算驗收（見下方「誰驗收」）。merge 不等於 Done；沒掛這個 label 的卡，AI 冒煙通過也不等於 Done。
 
-每張 Review／Acceptance／Need Fix 的卡要有一則最新的狀態 comment（PR 連結、等誰做什麼、驗收方式），PM 只看 board 也能追。Acceptance 的交接留言用 [issue-status-comment.md](../../templates/issue-status-comment.md) 的「交給 PM 驗收」段：PM 步驟只放畫面上做得到、看得到的操作；API 送出內容／回讀、regression test、log 放「工程證據（已驗，PM 不需重做）」；發布前跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔>`。
+每張 Review／Acceptance／Need Fix 的卡要有一則最新的狀態 comment（PR 連結、等誰做什麼、驗收方式），PM 只看 board 也能追。Acceptance 的交接留言用 [issue-status-comment.md](../../templates/issue-status-comment.md) 的「交給 PM 驗收」段：PM 步驟只放畫面上做得到、看得到的操作；API 送出內容／回讀、regression test、log 放「工程證據（已驗，PM 不需重做）」；發布前先依 [最新交接檢查](../../docs/repeatable-acceptance.md) 準備最新 origin/main 的乾淨隔離 checker，再在該 checkout 跑 `pnpm -s tsx bin/pipeline/acceptance-lint.ts <留言檔> --issue <n> --coverage <coverage.json>`。
 
-同一張 PM 驗收卡裡，個別 AC 只能用 API 或測試驗時，在交接留言標「工程驗收項」、附工程證據，不列入 PM 步驟；PM 依畫面判定其餘 AC 即可關卡。
+同一張 PM 驗收卡裡，個別 AC 只能用 API 或測試驗時，依原始契約分類並附工程證據，不列入 PM 步驟；完整 Required AC 覆蓋與正式結果都通過才可關卡。coverage 建立與關卡前檢查見 [原始 AC 覆蓋檢查](../test-acceptance/references/ac-coverage.md)，不以局部 PASS 取代整卡驗收。
 
 ### 誰驗收：PM 或工程（開卡時決定）
 

@@ -7,6 +7,8 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 
 | Skill | 收錄 | 備註 |
 |---|---|---|
+| article-writer | ✅ | 完整 |
+| blog-publisher | ✅ | 完整 |
 | break-down-plan | ✅ | 完整 |
 | check-commit | ✅ | 完整 |
 | check-product-status | ✅ | 完整 |
@@ -20,6 +22,7 @@ canonical 在 `plugin/skills/`。這裡是完整複本，不是薄入口——`.
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |
 | review-change | ✅ | 完整 |
+| social-content | ✅ | 完整 |
 | test-acceptance | ✅ | 完整 |
 | verify-deploy | ✅ | 完整 |
 | verify-product | ✅ | 完整 |

@@ -15,9 +15,11 @@ HTML 裡的截圖寫成 <img src="evidence/<檔名>">，上傳後自動換成 Dr
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -37,6 +39,23 @@ def rewrite_html(html, ids):
     if missing:
         raise SystemExit(f'HTML 引用了 evidence/ 裡沒有上傳的檔案：{", ".join(missing)}')
     return IMG_SRC.sub(lambda m: f'src={m.group(1)}{embed_url(ids[m.group(2)])}{m.group(1)}', html)
+
+
+def referenced_files(html, evidence_dir):
+    """報告 HTML 引用的 evidence 檔名，只有這些會上傳。
+
+    task 的 evidence/ 常混著未遮罩截圖、server log、API 回應（含使用者信箱），
+    整個資料夾同步到「知道連結就能看」的 Drive 資料夾會一起外流（daodao#451）。
+    檔名帶路徑或本機不存在就整批失敗。
+    """
+    names = sorted({m.group(2) for m in IMG_SRC.finditer(html)})
+    bad = [n for n in names if '/' in n or '\\' in n or n.startswith('.')]
+    if bad:
+        raise SystemExit(f'截圖檔名不可含路徑：{", ".join(bad)}')
+    missing = [n for n in names if not os.path.isfile(os.path.join(evidence_dir, n))]
+    if missing:
+        raise SystemExit(f'HTML 引用了 evidence/ 裡沒有的檔案：{", ".join(missing)}')
+    return names
 
 
 def ids_from_lsjson(entries):
@@ -106,11 +125,18 @@ def folder_id(remote, parent, name):
 def upload(args):
     task_dir = f'{ROOT_DIR}/{args.slug}'
     evidence_dir = f'{args.remote}:{task_dir}/evidence'
-    rclone('mkdir', evidence_dir)
-    rclone('copy', args.evidence, evidence_dir)
-    ids = ids_from_lsjson(json.loads(rclone('lsjson', evidence_dir)))
     with open(args.html, encoding='utf-8') as f:
-        html = rewrite_html(f.read(), ids)
+        source_html = f.read()
+    names = referenced_files(source_html, args.evidence)
+    rclone('mkdir', evidence_dir)
+    with tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.txt') as files_from:
+        files_from.write(''.join(f'{n}\n' for n in names))
+        files_from.flush()
+        # 只傳報告用到的檔，不同步整個 evidence 資料夾
+        rclone('copy', '--files-from', files_from.name, args.evidence, evidence_dir)
+    uploaded = ids_from_lsjson(json.loads(rclone('lsjson', evidence_dir)))
+    ids = {n: uploaded[n] for n in names if n in uploaded}
+    html = rewrite_html(source_html, ids)
 
     token = access_token(args.remote)
     task_folder = folder_id(args.remote, ROOT_DIR, args.slug)
@@ -124,6 +150,15 @@ def upload(args):
 
 
 def main(argv):
+    if argv[:1] == ['files']:
+        p = argparse.ArgumentParser(prog='upload-report.py files')
+        p.add_argument('--html', required=True)
+        p.add_argument('--evidence', required=True)
+        a = p.parse_args(argv[1:])
+        with open(a.html, encoding='utf-8') as f:
+            sys.stdout.write(''.join(f'{n}\n' for n in referenced_files(f.read(), a.evidence)))
+        return
+
     if argv[:1] == ['rewrite']:
         p = argparse.ArgumentParser(prog='upload-report.py rewrite')
         p.add_argument('--html', required=True)

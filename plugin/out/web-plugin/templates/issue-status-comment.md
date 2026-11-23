@@ -49,7 +49,7 @@ templateVersion: 1
 - 第一行的隱藏標記 `<!-- daodao:acceptance-request -->`、標題 `## 🙋 請驗收：…` 與 `@peggy1213-create` 必須在同一則留言、不可改寫：PM 驗收工具（**test-acceptance**（`skills/test-acceptance/SKILL.md`，未隨本包出貨））靠標記找出這則留言，缺任一個就判 BLOCKED（#245、#346）。標記在 GitHub 上看不到，不影響 PM 閱讀。
 - 取消與確認等分支拆成獨立編號步驟，提供不同專用資料；獨立的閱讀／取消／尺寸檢查先做，刪除排最後。無法提供兩筆時，交付已實跑的重設方式與相依順序。手機步驟明寫寬×高 CSS px；來源未給尺寸時，工程先用 390×844 CSS px 實跑後寫入各手機步驟，不把尺寸選擇留給 PM；參考稿比對附可用來源及逐項重點。完整資料／重設契約見 [可重複驗收](../docs/repeatable-acceptance.md)。
 - 交驗前先用指定 PM 帳號，從本留言連結照全部步驟實跑；資料前提逐項查核，測完還原並保留給 PM。格式 lint 不證明前提成立。實踐資源可用 **唯讀前置檢查**（`skills/verify-deploy/references/acceptance-preflight.md`，未隨本包出貨），報告放工程證據，不要求 PM 自己跑。
-- 發出前依 [最新交接檢查](../docs/repeatable-acceptance.md) fetch `origin/main`，從乾淨隔離 worktree 執行該 revision 的 `acceptance-lint.ts` 並保存 revision／結果；不要只跑可能過期的共享 root，有 error 或 fetch 失敗不發。`warn [quoted-copy-not-in-locale]` 代表步驟用「」引用的文字在 f2e 的 zh-TW locale 找不到：是畫面文案就對照畫面改正（#346 全形「！」對半形「!」、#333 舊文案「帶領人」已改「教練」）；是使用者輸入的內容或步驟描述就忽略。
+- 發出前依 [最新交接檢查](../docs/repeatable-acceptance.md) fetch `origin/main`，從乾淨隔離 worktree 執行該 revision 的 `acceptance-lint.ts`，帶原始中央卡 `--issue` 與同版逐 AC `--coverage`，並保存 revision／結果；不要只跑可能過期的共享 root，有 error 或 fetch 失敗不發。`warn [quoted-copy-not-in-locale]` 代表步驟用「」引用的文字在 f2e 的 zh-TW locale 找不到：是畫面文案就對照畫面改正（#346 全形「！」對半形「!」、#333 舊文案「帶領人」已改「教練」）；是使用者輸入的內容或步驟描述就忽略。
 
 ```markdown
 <!-- daodao:acceptance-request -->
@@ -76,7 +76,8 @@ templateVersion: 1
 - 已知限制／這次沒做的：<none 或清單，附子 issue 連結>
 - 驗完收尾：<驗收會建立的資料（實踐、場次、邀請…）要怎麼處理：刪除或封存的畫面步驟，或「保留，工程會清」；不會建立資料就寫 none>
 
-✅ 通過 → 直接關掉這張 issue，卡片會自動移到 Done
+✅ 原始 Required AC 全部驗收通過，且最新 checker 回讀正式報告得到 closure-ready → 才關閉這張 issue，卡片會自動移到 Done
+⏳ 只驗局部修復／仍有未完成 AC → 保留未完成，不發布整卡 PASS、不關 issue；依原 AC 補驗，不以本輪步驟全過替代整卡驗收
 ❌ 有 AC 沒過 → 留言寫「哪一條 AC 沒過、看到什麼」，再把卡片移到 Need Fix
 ⏸ 測不了（網址打不開、截圖傳不上去、帳號登不進去）→ 卡片留在 Acceptance、加 `acceptance:blocked` 標籤、留言 @vincentxuu 說卡在哪一步；不要移 Need Fix
 ➕ 想加新要求或改文案（原本的 AC 沒寫到）→ 另開一張卡，內文寫「相關：#<本卡號>」；這張依原本的 AC 判定通過或退回

@@ -55,20 +55,25 @@
 
 共享 root 可能停在舊文件分支。#471 曾從舊 root 執行沒有手機尺寸規則的 linter，即使 `origin/main` 已合併 #469，仍回報 OK。每次發交接前先 fetch main，再從該 revision 的乾淨隔離 worktree 執行 linter；不要切換、pull 或 reset 共享 root。保存 gate revision、命令與結果，不能用舊 checkout 的 OK 代替。
 
-在 daodao root 執行（`comment_file` 使用留言檔絕對路徑）：
+先依 [原始 AC 覆蓋檢查](../skills/test-acceptance/references/ac-coverage.md) 建立並審閱與同版交接稿綁定的 coverage JSON；不把局部步驟 PASS 當成整張 issue 通過。
+
+在 daodao root 執行（兩個檔案都使用絕對路徑，中央卡編號需與來源一致）：
 
 ```bash
 (
 set -e   # 任一步失敗即停止，不會繼續放行
 comment_file=/absolute/path/acceptance-comment.md
+coverage_file=/absolute/path/acceptance-coverage.json
+issue_number=463  # 改成本次中央 issue 編號
 git fetch origin main
 gate_dir=$(mktemp -d /tmp/daodao-acceptance-gate.XXXXXX)
 git worktree add --detach "$gate_dir" origin/main
 git -C "$gate_dir" rev-parse HEAD
-pnpm -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" "$comment_file"
+pnpm -C "$gate_dir" install --ignore-workspace --frozen-lockfile
+pnpm -C "$gate_dir" -s exec tsx "$gate_dir/bin/pipeline/acceptance-lint.ts" "$comment_file" --issue "$issue_number" --coverage "$coverage_file"
 # 有 error 先改留言再以同一 gate 重跑；通過並保存結果後才發布及清理
 git worktree remove "$gate_dir"
 )
 ```
 
-fetch／建立隔離 worktree／linter 任一失敗，就保留未交驗並排除工程前提，不改用舊 gate 放行。此檢查只驗文字；仍須同帳號、同資料、同尺寸實跑並還原。
+fetch／建立隔離 worktree／linter 任一失敗，就保留未交驗並排除工程前提，不改用舊 gate 放行。此檢查核對文字、來源與逐 AC 覆蓋結構，不證明實測證據真實；仍須同帳號、同資料、同尺寸實跑並還原。

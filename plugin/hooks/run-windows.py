@@ -10,7 +10,7 @@ import sys
 HOOKS_DIR = Path(__file__).resolve().parent
 ALLOWED = {
     'session-start.sh', 'pre-write-guard.sh', 'test-integrity-guard.py',
-    'pre-pr-gate.sh', 'post-write-format.sh', 'stop-quality-gate.sh', 'quiet-stop.py',
+    'pre-pr-gate.sh', 'visibility-change-guard.sh', 'post-write-format.sh', 'stop-quality-gate.sh', 'quiet-stop.py',
 }
 
 

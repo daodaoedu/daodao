@@ -22,6 +22,8 @@ OpenAI 有 Claude plugin 轉投的官方路徑（platform.openai.com/plugins）�
 
 | Skill | 收錄 | 備註 |
 |---|---|---|
+| article-writer | ✅ | 完整 |
+| blog-publisher | ✅ | 完整 |
 | break-down-plan | ✅ | 完整 |
 | check-commit | ✅ | 完整 |
 | check-product-status | ✅ | 完整 |
@@ -35,6 +37,7 @@ OpenAI 有 Claude plugin 轉投的官方路徑（platform.openai.com/plugins）�
 | report-bug | ✅ | 完整 |
 | request-feature | ✅ | 完整 |
 | review-change | ✅ | 完整 |
+| social-content | ✅ | 完整 |
 | test-acceptance | ✅ | 降級：browser |
 | verify-deploy | ✅ | 完整 |
 | verify-product | ✅ | 降級：browser |

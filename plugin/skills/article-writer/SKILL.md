@@ -1,0 +1,22 @@
+---
+name: article-writer
+description: 為島島 Blog 研究、撰寫、修訂或審查單篇雙語文章；含必要搜尋、查證、翻譯與潤稿，交付草稿及證據，不自行發布。
+---
+
+# 單篇文章工作流
+
+先讀 [共用編輯契約](../../docs/blog-editorial-contract.md)。沿用已提供的品牌、受眾與文章資料，不重新問整份問卷；最多釐清一個會改變文章方向的問題，其餘先從 repo／來源查明。
+
+確認本次模式，僅讀相關 reference：
+
+| 請求 | 模式與 reference | 交付 |
+|---|---|---|
+| 寫一篇、需要找來源 | research／write：[研究與寫作](references/research-write.md) | 簡報、來源表、大綱、雙語草稿 |
+| 更新舊文、翻英文 | update／translate：[修訂與翻譯](references/update-translate.md) | 修訂稿、兩語差異與待重審範圍 |
+| 查證、審稿、潤稿 | verify／review／polish：[查核與可讀性](references/review-polish.md) | 分項發現與依授權修訂；僅審稿不改來源 |
+
+模板位於 [寫作簡報](../../templates/blog/article-brief.md)、[指南](../../templates/blog/how-to.md)、[案例](../../templates/blog/case-study.md)、[比較](../../templates/blog/comparison.md)。依讀者問題選用及調整，不強制相同章節或中英字數。
+
+有本機內容與前端 checkout 時，用 [blog-publisher 預檢](../blog-publisher/SKILL.md) 的 draft 模式跑同一 validator；結果只代表草稿格式。沒有 repo／搜尋／命令能力時，繼續可完成的草稿工作並明列未查證，不能宣稱來源已讀或測試通過。
+
+交付附事實、主題覆蓋、可讀性、摘要／正文、雙語一致性五項結果及待人決策。未受支持主張先修掉或明確標示，不用總分抵銷單項失敗。此入口不 commit、不發布、不產生假核准紀錄；使用者另外授權提交時沿專案流程。

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -91,6 +92,507 @@ class CloseoutTests(unittest.TestCase):
         self.write(data)
         return self.checker().validate(self.receipt, now=NOW)
 
+    def lifecycle(self, *, timed=True):
+        d = self.complete()
+        d['version'] = 2
+        d['retention']['expires_at'] = '2026-11-13T02:00:00Z'
+        source = self.evidence('evidence/lifecycle-review.txt',
+            'Reviewed required values against baseline and scheduler source; completion occurs only after expiry.')
+        assessment = {'kind': 'pm-retention-lifecycle', 'version': 1,
+            'draft_sha256': d['plan']['draft']['sha256'],
+            'baseline_sha256': d['plan']['baseline']['sha256'],
+            'observed_at': '2026-11-06T01:12:00Z',
+            'fixtures': [{'url': d['plan']['fixtures'][0],
+                'required_values': {'resources': ['A', 'B']}, 'time_dependent': timed,
+                'reason': 'PM must read and edit the restored resources', 'evidence': source,
+                'valid_until': '2026-11-13T02:00:00Z',
+                'known_transitions': ([{'at': '2026-11-13T02:00:00Z',
+                    'effect': 'Scheduled completion changes editable status', 'evidence': source}] if timed else [])}]}
+        self.save_lifecycle(d, assessment)
+        return d, assessment
+
+    def save_lifecycle(self, d, assessment):
+        d['retention']['lifecycle'] = self.evidence('evidence/lifecycle.json', assessment)
+
+    def external_mail(self):
+        import struct, zlib
+        d, a = self.lifecycle(timed=False)
+        account = 'contact@example.org'
+        url = 'https://mail.google.com/mail/u/?authuser=contact%40example.org#inbox'
+        o = {'id': 'mail', 'kind': 'mail-ui', 'url': url, 'account': account,
+             'related_fixture': d['plan']['fixtures'][0], 'message_ids': ['team', 'reply']}
+        d['plan']['accounts'].append(account); d['plan']['external_observations'] = [o]
+        d['plan']['step_contexts']['2'] = {'account': account, 'observation': 'mail'}
+        draft = (self.task / d['plan']['draft']['path']).read_text().replace('## 驗收步驟', f'{account} {url}\n## 驗收步驟')
+        d['plan']['draft'] = self.evidence('notes/handoff.md', draft)
+        values = {'messages': [{'id': mid, 'labels': ['INBOX'], 'to': account,
+                               'summary_present': True, 'reply_present': mid == 'reply'} for mid in ['team', 'reply']]}
+        baseline = {'resources': ['A', 'B'], 'external_observations': [{**o, 'required_values': values}]}
+        d['plan']['baseline'] = self.evidence('evidence/baseline.json', baseline)
+        # Synthetic PNG is only a checker schema fixture, never PM evidence.
+        png = self.task / 'evidence/mail.png'
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        png.write_bytes(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+                        + chunk(b'IDAT', zlib.compress(b'\0\x00\x80\xff')) + chunk(b'IEND', b''))
+        image = {'path': 'evidence/mail.png', 'sha256': hashlib.sha256(png.read_bytes()).hexdigest()}
+        actual = 'https://mail.google.com/mail/u/0/#inbox'
+        ui = {'kind': 'external-ui-observation', 'method': 'native-ui', 'observation': 'mail',
+              'account': account, 'url': url, 'observed_url': actual, 'related_fixture': o['related_fixture'],
+              'draft_sha256': d['plan']['draft']['sha256'], 'baseline_sha256': d['plan']['baseline']['sha256'],
+              'observed_at': '2026-11-06T01:05:00Z', 'required_values': values,
+              'identity': {'method': 'visible-ui-account', 'visible_account': account,
+                           'observed_url': actual, 'screenshot': image},
+              'messages': [{'message_id': mid, 'observed_url': actual, 'page_state': 'message',
+                            'screenshot': image} for mid in o['message_ids']]}
+        replay = json.loads((self.task / d['replay']['path']).read_text())
+        replay.update(accounts=d['plan']['accounts'], external_observations=[o], draft_sha256=d['plan']['draft']['sha256'])
+        replay['steps'][1] = {'id': '2', 'account': account, 'observation': 'mail', 'result': 'pass',
+                              'evidence': self.evidence('evidence/mail-ui.json', ui)}
+        d['replay'] = self.evidence('evidence/replay.json', replay)
+        restore = json.loads((self.task / d['restore']['path']).read_text())
+        restore.update(accounts=d['plan']['accounts'], external_observations=[o],
+                       baseline_sha256=d['plan']['baseline']['sha256'], evidence=self.evidence('evidence/restored.json', baseline))
+        d['restore'] = self.evidence('evidence/restore.json', restore)
+        d['retention']['external_observations'] = [{'id': 'mail', 'retained': True}]
+        a.update(draft_sha256=d['plan']['draft']['sha256'], baseline_sha256=d['plan']['baseline']['sha256'])
+        a['external_observations'] = [{**a['fixtures'][0], **o, 'required_values': values}]
+        self.save_lifecycle(d, a)
+        for key in ['lint', 'handoff']:
+            item = json.loads((self.task / d[key]['path']).read_text()); item['draft_sha256'] = d['plan']['draft']['sha256']
+            d[key] = self.evidence(d[key]['path'], item)
+        return d, ui
+
+    def save_external_ui(self, d, ui):
+        r = json.loads((self.task / d['replay']['path']).read_text())
+        r['steps'][1]['evidence'] = self.evidence('evidence/mail-ui.json', ui)
+        d['replay'] = self.evidence('evidence/replay.json', r)
+
+    def test_external_compound_mail_ui_supports_exact_account_and_gmail_redirect(self):
+        d, _ = self.external_mail(); self.assertEqual(self.validate(d), ('handed-off', []))
+        d['state'] = 'pending'; self.write(d)
+        self.assertEqual(self.checker().validate(self.receipt, now=NOW, preflight=True), ('ready-to-handoff', []))
+
+    def test_external_ui_rejects_api_only_login_wrong_account_and_missing_images(self):
+        for key, value in [('method', 'gmail-api'), ('observed_url', 'https://accounts.google.com/signin'),
+                           ('account', 'other@example.org'), ('draft_sha256', '0' * 64), ('baseline_sha256', '0' * 64),
+                           ('observed_at', '2026-11-06T00:59:59Z'), ('messages', []), ('identity', {})]:
+            with self.subTest(key=key):
+                d, ui = self.external_mail(); ui[key] = value; self.save_external_ui(d, ui)
+                self.assertTrue(self.validate(d)[1])
+        for mutation in ['signin', 'wrong-ui-account', 'api-profile', 'missing-image', 'bad-hash', 'fake-image', 'missing-message']:
+            with self.subTest(mutation=mutation):
+                d, ui = self.external_mail()
+                if mutation == 'signin': ui['messages'][0]['page_state'] = 'signin'
+                elif mutation == 'wrong-ui-account': ui['identity']['visible_account'] = 'other@example.org'
+                elif mutation == 'api-profile': ui['identity']['method'] = 'gmail-api-profile'
+                elif mutation == 'missing-image': del ui['messages'][0]['screenshot']
+                elif mutation == 'bad-hash': ui['messages'][0]['screenshot'] = {'path': 'evidence/mail.png', 'sha256': '0' * 64}
+                elif mutation == 'fake-image': ui['messages'][0]['screenshot'] = self.evidence('evidence/fake.png', 'not an image')
+                else: ui['messages'].pop()
+                self.save_external_ui(d, ui); self.assertTrue(self.validate(d)[1])
+
+    def test_external_mail_url_and_dev_fixture_gate_stay_strict(self):
+        urls = ['http://mail.google.com/mail/u/0/#inbox', 'https://evil.test/mail/u/0/',
+                'https://mail.google.com.evil.test/mail/u/0/', 'https://pm@mail.google.com/mail/u/0/',
+                'https://mail.google.com:444/mail/u/0/', 'https://mail.google.com/mail/u/0/#settings',
+                'https://mail.google.com/mail/u/0/?compose=new', 'https://mail.google.com/mail/u/0/#inbox?compose=new',
+                'https://mail.google.com/mail/u/0/signin', 'https://mail.google.com/mail/u/0/#compose',
+                'https://mail.google.com/mail/u/?authuser=wrong%40example.org#inbox']
+        for url in urls:
+            with self.subTest(url=url):
+                d, _ = self.external_mail(); d['plan']['external_observations'][0]['url'] = url
+                self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['plan']['fixtures'].append('https://mail.google.com/mail/u/0/#inbox')
+        self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['plan']['external_observations'][0]['related_fixture'] = 'https://app.daodao.so/practices/401'
+        self.assertTrue(self.validate(d)[1])
+
+    def test_external_observation_all_bindings_are_required(self):
+        for location in ['plan', 'replay', 'restore', 'retention', 'lifecycle', 'baseline']:
+            with self.subTest(location=location):
+                d, _ = self.external_mail()
+                if location in ['plan', 'retention']: del d[location]['external_observations']
+                else:
+                    ref = d['retention']['lifecycle'] if location == 'lifecycle' else d['plan']['baseline'] if location == 'baseline' else d[location]
+                    item = json.loads((self.task / ref['path']).read_text()); del item['external_observations']
+                    new_ref = self.evidence(ref['path'], item)
+                    if location == 'lifecycle': d['retention']['lifecycle'] = new_ref
+                    elif location == 'baseline': d['plan']['baseline'] = new_ref
+                    else: d[location] = new_ref
+                self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['version'] = 1; self.assertTrue(self.validate(d)[1])
+        d, _ = self.external_mail(); d['plan']['external_observations'] *= 2; self.assertTrue(self.validate(d)[1])
+        d, ui = self.external_mail(); ui['required_values']['messages'][1]['to'] = 'other@example.org'
+        self.save_external_ui(d, ui); self.assertTrue(self.validate(d)[1])
+
+    def test_external_mail_observed_url_is_strict_even_with_valid_other_bindings(self):
+        checker = self.checker()
+        good = 'https://mail.google.com/mail/u/0/#all/message123'
+        self.assertTrue(checker.gmail_read_url(good, 'contact@example.org'))
+        self.assertTrue(checker.gmail_read_url('https://mail.google.com:443/mail/u/#inbox', 'contact@example.org'))
+        for url in ['http://mail.google.com/mail/u/0/#inbox', 'https://accounts.google.com/signin',
+                    'https://mail.google.com:444/mail/u/0/', 'https://x@mail.google.com/mail/u/0/',
+                    'https://mail.google.com/mail/u/0/#settings/general',
+                    'https://mail.google.com/mail/u/0/#inbox?compose=new',
+                    'https://mail.google.com/mail/u/0/?compose=new',
+                    'https://mail.google.com/mail/u/0/settings',
+                    'https://mail.google.com/mail/u/?authuser=wrong%40example.org#inbox',
+                    'https://mail.google.com/mail/u/?authuser=contact%40example.org&authuser=contact%40example.org#inbox',
+                    'https://mail.google.com.evil.test/mail/u/0/#inbox',
+                    'https://mail.google.com/mail/u/0/#%73ettings']:
+            with self.subTest(url=url):
+                self.assertFalse(checker.gmail_read_url(url, 'contact@example.org'))
+
+    def test_external_malformed_shapes_unknown_context_and_unused_observation_fail_closed(self):
+        for mutation in ['context-list', 'baseline-id-list', 'ui-list', 'lifecycle-id-list', 'unknown', 'unused']:
+            with self.subTest(mutation=mutation):
+                d, ui = self.external_mail()
+                if mutation == 'context-list': d['plan']['step_contexts']['2']['observation'] = []
+                elif mutation == 'unknown': d['plan']['step_contexts']['2']['observation'] = 'missing'
+                elif mutation == 'unused': d['plan']['step_contexts']['2'] = {'account': d['plan']['accounts'][0], 'fixture': d['plan']['fixtures'][0]}
+                elif mutation == 'ui-list': self.save_external_ui(d, [])
+                else:
+                    ref = d['plan']['baseline'] if mutation == 'baseline-id-list' else d['retention']['lifecycle']
+                    data = json.loads((self.task / ref['path']).read_text()); data['external_observations'][0]['id'] = []
+                    new_ref = self.evidence(ref['path'], data)
+                    if mutation == 'baseline-id-list': d['plan']['baseline'] = new_ref
+                    else: d['retention']['lifecycle'] = new_ref
+                self.assertTrue(self.validate(d)[1])
+
+    def test_external_lifecycle_uses_existing_expiry_source_and_transition_guards(self):
+        for field, value in [('valid_until', '2026-11-06T01:00:00Z'), ('evidence', None),
+                             ('reason', ''), ('time_dependent', 'false'), ('required_values', {}),
+                             ('known_transitions', [{'at': '2026-11-06T01:30:00Z', 'effect': 'auto-delete'}])]:
+            with self.subTest(field=field):
+                d, _ = self.external_mail(); a = json.loads((self.task / d['retention']['lifecycle']['path']).read_text())
+                a['external_observations'][0][field] = value; self.save_lifecycle(d, a)
+                self.assertTrue(self.validate(d)[1])
+
+    def test_legacy_product_context_metadata_keeps_original_compatibility(self):
+        d = self.complete()
+        d['plan']['step_contexts']['1'].update(viewport={'width': 390, 'height': 844}, locale='en')
+        self.assertEqual(self.validate(d), ('handed-off', []))
+        d, _ = self.lifecycle(timed=False)
+        d['plan']['step_contexts']['1'].update(viewport={'width': 1280, 'height': 844}, locale='zh-TW')
+        self.assertEqual(self.validate(d), ('handed-off', []))
+        d['plan']['step_contexts']['1']['observation'] = 'mail'
+        self.assertTrue(self.validate(d)[1])
+
+    def test_marker_only_jpeg_and_header_only_png_are_not_ui_images(self):
+        for blob in [b'\xff\xd8\xff\xd9', b'\xff\xd8\xfffake\xff\xd9',
+                     b'\x89PNG\r\n\x1a\n' + b'\x00\x00\x00\x0dIHDR' + b'\x00\x00\x00\x01' * 2 + b'x' * 30 + b'IENDxxxx']:
+            with self.subTest(blob=blob):
+                d, ui = self.external_mail()
+                image = self.task / 'evidence/invalid-image.png'; image.write_bytes(blob)
+                ui['messages'][0]['screenshot'] = {'path': 'evidence/invalid-image.png', 'sha256': hashlib.sha256(blob).hexdigest()}
+                self.save_external_ui(d, ui); self.assertTrue(self.validate(d)[1])
+
+    def test_png_screenshot_subset_crc_order_raster_and_resource_bounds(self):
+        import struct, zlib
+        from unittest.mock import patch
+        checker = self.checker()
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        signature = b'\x89PNG\r\n\x1a\n'
+        def header(width=1, height=1, depth=8, color=2, interlace=0):
+            return chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, depth, color, 0, 0, interlace))
+        payload = zlib.compress(b'\0\x00\x80\xff')
+        end = chunk(b'IEND', b'')
+        good = signature + header() + chunk(b'IDAT', payload) + end
+        image = self.task / 'screen.png'
+        for blob in [good, signature + header(color=6) + chunk(b'IDAT', zlib.compress(b'\0\0\0\0\xff')) + end,
+                     signature + header() + chunk(b'IDAT', b'') + chunk(b'IDAT', payload[:3]) + chunk(b'IDAT', payload[3:]) + end]:
+            image.write_bytes(blob); self.assertTrue(checker.screenshot_file(image))
+        for label, blob in [
+            ('crc', good[:29] + bytes([good[29] ^ 1]) + good[30:]),
+            ('duplicate-header', signature + header() + header() + chunk(b'IDAT', payload) + end),
+            ('bad-order', signature + chunk(b'IDAT', payload) + header() + end),
+            ('missing-iend', good[:-12]), ('truncated', good[:-1]), ('trailing', good + b'x'),
+            ('unknown-critical', signature + header() + chunk(b'ABCD', b'') + chunk(b'IDAT', payload) + end),
+            ('nonconsecutive-idat', signature + header() + chunk(b'IDAT', payload[:3]) + chunk(b'tEXt', b'x') + chunk(b'IDAT', payload[3:]) + end),
+            ('zlib-eof', signature + header() + chunk(b'IDAT', payload[:-1]) + end),
+            ('zlib-trailing', signature + header() + chunk(b'IDAT', payload + b'x') + end),
+            ('scanline-short', signature + header() + chunk(b'IDAT', zlib.compress(b'\0\0')) + end),
+            ('filter-invalid', signature + header() + chunk(b'IDAT', zlib.compress(b'\x05\0\0\0')) + end),
+            ('expanded-bomb', signature + header() + chunk(b'IDAT', zlib.compress(b'\0' * 1_000_000)) + end),
+            ('pixel-bound', signature + header(width=16_000_001) + chunk(b'IDAT', payload) + end),
+            ('zero-dimension', signature + header(width=0) + chunk(b'IDAT', payload) + end),
+            ('unsupported-depth', signature + header(depth=16) + chunk(b'IDAT', payload) + end),
+            ('unsupported-color', signature + header(color=3) + chunk(b'IDAT', payload) + end),
+            ('unsupported-interlace', signature + header(interlace=1) + chunk(b'IDAT', payload) + end)]:
+            with self.subTest(label=label):
+                image.write_bytes(blob); self.assertFalse(checker.screenshot_file(image))
+        for constant, limit in [('PNG_MAX_FILE_BYTES', len(good) - 1), ('PNG_MAX_PIXELS', 0), ('PNG_MAX_RASTER_BYTES', 3)]:
+            with self.subTest(limit=constant), patch.object(checker, constant, limit):
+                image.write_bytes(good); self.assertFalse(checker.screenshot_file(image))
+
+    def test_static_ui_evidence_rejects_two_frame_apng(self):
+        import struct, zlib
+        checker = self.checker()
+        def chunk(kind, data):
+            return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data))
+        def frame(sequence):
+            return chunk(b'fcTL', struct.pack('>IIIIIHHBB', sequence, 1, 1, 0, 0, 1, 10, 0, 0))
+        blob = (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 6, 0, 0, 0))
+                + chunk(b'acTL', struct.pack('>II', 2, 0)) + frame(0)
+                + chunk(b'IDAT', zlib.compress(b'\0\xff\0\0\xff')) + frame(1)
+                + chunk(b'fdAT', struct.pack('>I', 2) + zlib.compress(b'\0\0\xff\0\xff')) + chunk(b'IEND', b''))
+        image = self.task / 'animated.png'; image.write_bytes(blob)
+        self.assertFalse(checker.screenshot_file(image))
+
+    def test_lifecycle_historical_active_expired_fixture_cannot_outlive_hourly_completion(self):
+        d, assessment = self.lifecycle()
+        d['version'] = 1  # Legacy receipts declaring lifecycle must enforce it too.
+        assessment['fixtures'][0]['required_values'] = {'status': 'active', 'end_date': '2026-11-05'}
+        assessment['fixtures'][0]['known_transitions'][0]['at'] = '2026-11-06T03:00:00Z'
+        self.save_lifecycle(d, assessment)
+        self.assertTrue(self.validate(d)[1], 'hourly completion before advertised retention must fail')
+
+    def test_lifecycle_current_future_and_timeless_fixtures_pass(self):
+        for timed in [True, False]:
+            with self.subTest(timed=timed):
+                d, _ = self.lifecycle(timed=timed)
+                self.assertEqual(self.validate(d), ('handed-off', []))
+
+    def test_lifecycle_exact_expiry_and_timezone_boundaries(self):
+        d, a = self.lifecycle()
+        f = a['fixtures'][0]
+        f['valid_until'] = '2026-11-13T10:00:00+08:00'
+        f['known_transitions'][0]['at'] = '2026-11-13T10:00:00+08:00'
+        self.save_lifecycle(d, a)
+        self.assertEqual(self.validate(d), ('handed-off', []))
+        self.write(d)
+        self.assertTrue(self.checker().validate(self.receipt, now='2026-11-13T02:00:00Z')[1])
+        f['known_transitions'][0]['at'] = '2026-11-13T01:59:59Z'
+        self.save_lifecycle(d, a)
+        self.assertTrue(self.validate(d)[1])
+
+    def test_lifecycle_missing_invalid_and_unbound_assessments_fail(self):
+        cases = [('kind', 'other'), ('version', 2), ('draft_sha256', '0' * 64),
+                 ('baseline_sha256', '0' * 64), ('observed_at', '2026-11-06T01:10:59Z'),
+                 ('observed_at', '2026-11-06T02:00:01Z'), ('observed_at', '2026-11-06T01:12:00'),
+                 ('fixtures', []), ('fixtures', None)]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                d, a = self.lifecycle(); a[key] = value; self.save_lifecycle(d, a)
+                self.assertTrue(self.validate(d)[1])
+        d, _ = self.lifecycle(); del d['retention']['lifecycle']
+        self.assertTrue(self.validate(d)[1])
+
+    def test_lifecycle_fixture_exactcoverage_fields_and_source_evidence(self):
+        cases = [('url', 'https://app-dev.daodao.so/practices/999'),
+            ('required_values', {}), ('required_values', []), ('reason', ''),
+            ('time_dependent', 'false'), ('time_dependent', 1), ('valid_until', '2026-11-13T01:59:59Z'),
+            ('valid_until', '2026-11-13T02:00:00'), ('known_transitions', None),
+            ('evidence', {'path': '../outside', 'sha256': '0' * 64}),
+            ('evidence', {'path': 'evidence/missing.txt', 'sha256': '0' * 64})]
+        for key, value in cases:
+            with self.subTest(key=key, value=value):
+                d, a = self.lifecycle(); a['fixtures'][0][key] = value; self.save_lifecycle(d, a)
+                self.assertTrue(self.validate(d)[1])
+        for change in ['duplicate', 'missing-evidence', 'tampered-source', 'timeless-transition']:
+            with self.subTest(change=change):
+                d, a = self.lifecycle()
+                if change == 'duplicate': a['fixtures'].append(dict(a['fixtures'][0]))
+                elif change == 'missing-evidence': del a['fixtures'][0]['evidence']
+                elif change == 'tampered-source': (self.task / a['fixtures'][0]['evidence']['path']).write_text('changed')
+                else: a['fixtures'][0]['time_dependent'] = False
+                self.save_lifecycle(d, a)
+                self.assertTrue(self.validate(d)[1])
+
+    def test_lifecycle_required_fields_and_hash_binding_cannot_be_omitted(self):
+        for key in ['url', 'required_values', 'time_dependent', 'reason', 'evidence',
+                    'valid_until', 'known_transitions']:
+            with self.subTest(missing=key):
+                d, a = self.lifecycle(); del a['fixtures'][0][key]
+                self.save_lifecycle(d, a); self.assertTrue(self.validate(d)[1])
+        d, _ = self.lifecycle()
+        (self.task / d['retention']['lifecycle']['path']).write_text('{}')
+        self.assertTrue(self.validate(d)[1])
+        d, a = self.lifecycle(timed=False)
+        del a['fixtures'][0]['valid_until']
+        self.save_lifecycle(d, a)
+        self.assertEqual(self.validate(d), ('handed-off', []))
+
+    def test_lifecycle_transition_requires_timestamp_effect_and_bound_source(self):
+        for key, value in [('at', 'bad'), ('at', '2026-11-13T02:00:00'),
+                           ('effect', ''), ('evidence', None),
+                           ('evidence', {'path': '../source', 'sha256': '0' * 64})]:
+            with self.subTest(key=key, value=value):
+                d, a = self.lifecycle(); a['fixtures'][0]['known_transitions'][0][key] = value
+                self.save_lifecycle(d, a); self.assertTrue(self.validate(d)[1])
+
+    def test_lifecycle_does_not_override_consumed_baseline_guard(self):
+        d, _ = self.lifecycle()
+        restore = json.loads((self.task / d['restore']['path']).read_text())
+        restore['evidence'] = self.evidence('evidence/restored.json', {'resources': ['consumed']})
+        d['restore'] = self.evidence('evidence/restore.json', restore)
+        self.assertTrue(self.validate(d)[1])
+
+    def test_preflight_allows_pending_without_remote_handoff_but_check_does_not(self):
+        d, _ = self.lifecycle(); d['state'] = 'pending'; del d['handoff']
+        self.write(d)
+        self.assertEqual(self.checker().validate(self.receipt, now=NOW, preflight=True), ('ready-to-handoff', []))
+        self.assertTrue(self.validate(d)[1])
+
+    def test_preflight_enforces_local_requirements_and_preserves_blocked_result(self):
+        for missing in ['merged', 'deployed', 'smoke', 'replay', 'restore', 'lint']:
+            with self.subTest(missing=missing):
+                d, _ = self.lifecycle(); d['state'] = 'pending'; del d[missing]
+                self.write(d)
+                state, errors = self.checker().validate(self.receipt, now=NOW, preflight=True)
+                self.assertEqual(state, 'incomplete'); self.assertTrue(errors)
+        d = self.blocked(); d['version'] = 2; self.write(d)
+        self.assertEqual(self.run_cli('preflight', '--receipt', str(self.receipt),
+                              '--draft', str(self.task / 'notes/handoff.md'), '--issue', '401').returncode, 3)
+
+    def test_preflight_cli_and_version_upgrade_contract(self):
+        d, _ = self.lifecycle()
+        # CLI uses wall time, so preserve a safely future validity interval.
+        future = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        a = json.loads((self.task / d['retention']['lifecycle']['path']).read_text())
+        d['retention']['expires_at'] = future
+        a['fixtures'][0]['valid_until'] = future
+        a['fixtures'][0]['known_transitions'][0]['at'] = future
+        self.save_lifecycle(d, a)
+        d['state'] = 'pending'; del d['handoff']; self.write(d)
+        result = self.run_cli('preflight', '--receipt', str(self.receipt),
+                              '--draft', str(self.task / 'notes/handoff.md'), '--issue', '401')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('ready-to-handoff', result.stdout)
+        self.assertEqual(json.loads(result.stdout)['lifecycle_validation'], 'assessed')
+        d = self.complete(); self.write(d)
+        legacy = self.run_cli('check', '--receipt', str(self.receipt))
+        self.assertEqual(legacy.returncode, 0)
+        self.assertEqual(json.loads(legacy.stdout)['lifecycle_validation'], 'legacy-not-verified')
+        self.assertEqual(self.run_cli('preflight', '--receipt', str(self.receipt),
+                              '--draft', str(self.task / 'notes/handoff.md'), '--issue', '401').returncode, 1)
+        self.receipt.unlink()
+        result = self.run_cli('begin', '--task-dir', str(self.task), '--issue', d['issue'])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(self.receipt.read_text())['version'], 2)
+
+    def test_actual_skill_publication_shell_fails_closed_and_publishes_once(self):
+        skill = SCRIPT.parents[1] / 'skills/verify-deploy/SKILL.md'
+        blocks = re.findall(r'```bash\n(.*?)\n\s*```', skill.read_text(), re.S)
+        blocks = [block for block in blocks if 'git fetch origin main' in block]
+        self.assertEqual(len(blocks), 1)
+        recipe = blocks[0].replace('<留言檔絕對路徑>.md', 'draft.md').replace(
+            '<coverage絕對路徑>.json', 'coverage.json').replace('<n>', '401')
+        fake_bin = self.task / 'fake-bin'; fake_bin.mkdir()
+        log = self.task / 'calls.log'
+        gate = self.task / 'gate'
+        # All external commands are intercepted; the recipe itself is extracted unchanged.
+        stub = '''#!/usr/bin/env python3
+import json, os, pathlib, sys
+name = pathlib.Path(sys.argv[0]).name
+args = sys.argv[1:]
+with open(os.environ['CALL_LOG'], 'a') as stream:
+    stream.write(json.dumps([name, *args]) + "\\n")
+if name == 'git' and args == ['fetch', 'origin', 'main']:
+    sys.exit(int(os.environ.get('FETCH_EXIT', '0')))
+if name == 'git' and args[:1] == ['rev-parse']:
+    print('abc123exactsha')
+if name == 'mktemp':
+    pathlib.Path(os.environ['FAKE_GATE']).mkdir(exist_ok=True)
+    print(os.environ['FAKE_GATE'])
+if name == 'python3' and 'preflight' in args:
+    sys.exit(int(os.environ.get('PREFLIGHT_EXIT', '0')))
+'''
+        for name in ['git', 'pnpm', 'gh', 'python3', 'mktemp']:
+            executable = fake_bin / name
+            # Avoid env's python3 resolving to this stub recursively.
+            executable.write_text(stub.replace('#!/usr/bin/env python3', '#!' + os.sys.executable))
+            executable.chmod(0o755)
+        for scenario, fetch_exit, preflight_exit in [('preflight-fail', '0', '1'),
+                                                    ('fetch-fail', '1', '0'), ('valid', '0', '0')]:
+            with self.subTest(scenario=scenario):
+                log.write_text('')
+                env = {**self.env, 'PATH': str(fake_bin) + ':' + os.environ['PATH'],
+                    'TASK': str(self.task), 'CALL_LOG': str(log), 'FAKE_GATE': str(gate),
+                    'FETCH_EXIT': fetch_exit, 'PREFLIGHT_EXIT': preflight_exit}
+                result = subprocess.run(['bash', '-c', recipe], cwd=self.task, env=env,
+                    input='\n', capture_output=True, text=True)
+                calls = [json.loads(line) for line in log.read_text().splitlines()]
+                publishes = [c for c in calls if c[:3] == ['gh', 'issue', 'comment']]
+                boards = [c for c in calls if c[0] == 'pnpm' and any(x.endswith('/board.ts') for x in c)]
+                if scenario == 'valid':
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(len(publishes), 1); self.assertEqual(len(boards), 1)
+                    resolves = [c for c in calls if c == ['git', 'rev-parse', 'origin/main']]
+                    self.assertEqual(len(resolves), 1)
+                    self.assertIn(['git', 'worktree', 'add', '--detach', str(gate), 'abc123exactsha'], calls)
+                    preflight = next(i for i, c in enumerate(calls) if c[0] == 'python3' and 'preflight' in c)
+                    self.assertLess(preflight, calls.index(publishes[0]))
+                    self.assertLess(preflight, calls.index(boards[0]))
+                else:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertEqual(publishes, []); self.assertEqual(boards, [])
+                    if scenario == 'fetch-fail': self.assertEqual(calls, [['git', 'fetch', 'origin', 'main']])
+
+    def test_publication_recipe_runs_real_checker_before_external_stubs(self):
+        import re
+        import sys
+        skill = SCRIPT.parents[1] / 'skills/verify-deploy/SKILL.md'
+        recipe = next(block for block in re.findall(r'```bash\n(.*?)\n\s*```', skill.read_text(), re.S)
+                      if 'git fetch origin main' in block)
+        recipe = recipe.replace('<留言檔絕對路徑>.md', 'draft.md').replace(
+            '<coverage絕對路徑>.json', 'coverage.json').replace('<n>', '401')
+        fake_bin = self.task / 'transport-bin'; fake_bin.mkdir()
+        calls = self.task / 'transport-calls.jsonl'
+        gate = self.task / 'pinned-checkout'
+        stub = '''#!PYTHON
+import json, os, pathlib, shutil, sys
+name, args = pathlib.Path(sys.argv[0]).name, sys.argv[1:]
+with open(os.environ['CALL_LOG'], 'a') as stream:
+    stream.write(json.dumps([name, *args]) + "\\n")
+if name == 'git' and args == ['rev-parse', 'origin/main']:
+    print('fixed-candidate-sha')
+elif name == 'git' and args[:3] == ['worktree', 'add', '--detach']:
+    target = pathlib.Path(args[3]) / 'plugin/hooks/check-post-merge-closeout.py'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(os.environ['CHECKER_SOURCE'], target)
+elif name == 'mktemp':
+    print(os.environ['FAKE_GATE'])
+'''
+        for name in ['git', 'pnpm', 'gh', 'mktemp']:
+            path = fake_bin / name
+            path.write_text(stub.replace('#!PYTHON', '#!' + sys.executable))
+            path.chmod(0o755)
+        for scenario in ['transition', 'valid', 'draft-mismatch', 'issue-mismatch']:
+            with self.subTest(scenario=scenario):
+                invalid = scenario == 'transition'
+                d, assessment = self.lifecycle()
+                future = datetime.now(timezone.utc) + timedelta(days=7)
+                d['retention']['expires_at'] = future.isoformat()
+                assessment['fixtures'][0]['valid_until'] = future.isoformat()
+                assessment['fixtures'][0]['known_transitions'][0]['at'] = (
+                    future - timedelta(seconds=1) if invalid else future).isoformat()
+                self.save_lifecycle(d, assessment)
+                d['state'] = 'pending'; del d['handoff']; self.write(d)
+                calls.write_text('')
+                publication = (self.task / d['plan']['draft']['path']).read_text()
+                if scenario == 'draft-mismatch': publication += '\nUnreviewed PM step\n'
+                (self.task / 'draft.md').write_text(publication)
+                invocation = recipe.replace('--issue 401', '--issue 402').replace('comment 401', 'comment 402').replace('set 401 accept', 'set 402 accept') if scenario == 'issue-mismatch' else recipe
+                env = {**self.env, 'PATH': str(fake_bin) + ':' + os.environ['PATH'],
+                       'TASK': str(self.task), 'CALL_LOG': str(calls),
+                       'FAKE_GATE': str(gate), 'CHECKER_SOURCE': str(SCRIPT)}
+                result = subprocess.run(['bash', '-c', invocation], cwd=self.task, env=env,
+                                        capture_output=True, text=True)
+                commands = [json.loads(line) for line in calls.read_text().splitlines()]
+                publishes = [c for c in commands if c[:3] == ['gh', 'issue', 'comment']]
+                boards = [c for c in commands if c[0] == 'pnpm' and any(x.endswith('/board.ts') for x in c)]
+                if scenario != 'valid':
+                    self.assertNotEqual(result.returncode, 0)
+                    if invalid: self.assertIn('known fixture transition', result.stdout)
+                    self.assertEqual(publishes, []); self.assertEqual(boards, [])
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn('ready-to-handoff', result.stdout)
+                    self.assertEqual(len(publishes), 1); self.assertEqual(len(boards), 1)
+
     def test_401_clean_git_smoke_pass_without_handoff_cannot_stop(self):
         # This reproduces the original silent bypass, without mocking git or the Stop hook.
         self.write({'version': 1, 'task_dir': str(self.task), 'goal': 'pm-handoff', 'state': 'pending',
@@ -112,6 +614,7 @@ class CloseoutTests(unittest.TestCase):
         message = json.loads(result.stdout)
         self.assertEqual(set(message), {'systemMessage'})
         self.assertIn('handed-off', message['systemMessage'])
+        self.assertIn('legacy-not-verified', message['systemMessage'])
         self.assertIn('變更統計', json.loads(result.stdout)['systemMessage'])
         self.assertIn('檔案就緒清單', json.loads(result.stdout)['systemMessage'])
 
@@ -306,6 +809,39 @@ class CloseoutTests(unittest.TestCase):
             replay['steps'][0][field], replay['steps'][1][field] = replay['steps'][1][field], replay['steps'][0][field]
             d['replay'] = self.evidence('evidence/replay.json', replay)
             self.assertTrue(self.validate(d)[1], field)
+
+    def with_fixture(self, url):
+        """Rebind the single planned fixture everywhere (draft, plan, replay, restore, retention)."""
+        old = 'https://app-dev.daodao.so/practices/401'
+        d = self.complete()
+        draft = self.evidence('notes/handoff.md', (self.task / d['plan']['draft']['path']).read_text().replace(old, url))
+        d['plan'].update(draft=draft, fixtures=[url],
+                         step_contexts={k: {**v, 'fixture': url} for k, v in d['plan']['step_contexts'].items()})
+        replay = json.loads((self.task / d['replay']['path']).read_text())
+        replay.update(fixtures=[url], draft_sha256=draft['sha256'])
+        for step in replay['steps']:
+            step['fixture'] = url
+        d['replay'] = self.evidence('evidence/replay.json', replay)
+        restore = json.loads((self.task / d['restore']['path']).read_text())
+        restore['fixtures'] = [url]
+        d['restore'] = self.evidence('evidence/restore.json', restore)
+        d['retention']['fixtures'] = [{'url': url, 'retained': True}]
+        for key in ['lint', 'handoff']:
+            item = json.loads((self.task / d[key]['path']).read_text())
+            item['draft_sha256'] = draft['sha256']
+            d[key] = self.evidence(d[key]['path'], item)
+        return d
+
+    def test_admin_dev_backoffice_fixture_is_a_deployed_dev_surface(self):
+        # #451/#463: PM steps that happen in the dev admin back office must not force an incomplete receipt.
+        self.assertEqual(self.validate(self.with_fixture('https://admin-dev.daodao.so/admin/feedback?id=13')), ('handed-off', []))
+
+    def test_production_or_lookalike_fixture_hosts_are_rejected(self):
+        for url in ['https://app.daodao.so/practices/401', 'https://admin.daodao.so/admin/feedback',
+                    'http://admin-dev.daodao.so/admin/feedback', 'https://admin-dev.daodao.so.evil.example/admin',
+                    'https://server-dev.daodao.so/api/v1/feedback/mine', 'https://evil-admin-dev.daodao.so/admin']:
+            with self.subTest(url=url):
+                self.assertIn('PM fixture URL must use the deployed dev product', self.validate(self.with_fixture(url))[1])
 
     def test_missing_or_extra_planned_step_context_is_rejected(self):
         for change in ['missing', 'extra']:

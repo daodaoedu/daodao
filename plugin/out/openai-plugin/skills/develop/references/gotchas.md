@@ -19,6 +19,24 @@ POC 比對的陷阱在 [poc-compare.md](poc-compare.md)「`.dc.html` POC 的已�
 - **practices 的 `/summary`、`/edit` 量到的是詳情頁**：非 owner 會被 `isOwner && isExpired` 導回詳情頁。測試資料用**登入者本人擁有、且 `end_date` 已過**的 practice。dev-login JWT 的 `id` 是 `users.id`（內部整數），`_id` 才是 external UUID，判斷 owner 要用 `users.id` 對 `practices.user_id`。（#240）
 - **不同 route 需要不同身分**：`/auth/onboarding` 要 dev-login `mode=temp` 的新用戶、`/auth/verify-email/pending` 要未登入、`/practices/copy-success` 要帶 `?practiceId=`。rect-probe 的 `routes.json` 每條可指定 `user`／`temp`／`none`。（#239）
 
+### 同帳號重播與 PM 環境不一致（#473）
+
+- **工程同帳號 PASS，PM 英文畫面卻顯示通用錯誤**：先對照同一部署 revision、身份與 fixture，再沿 PM 實際語系的直接網址重播錯誤分支。記錄 browser locale、頁面 HTML 語系與畫面訊息；API 的409或未新增版本，只證明拒絕結果，具體原因仍須在畫面確認。英文與中文的 fallback 可能不同，兩種語系要各留自己的證據。
+- **390px 窄視窗仍漏掉3px溢出**：同時記錄 `innerWidth`、`document.documentElement.clientWidth` 與 `scrollWidth`。經典捲軸可使390px viewport只有375px可用寬；document要以同元素clientWidth判斷。表格與導覽的內部水平捲動另看overflow祖先，保持合法scroll容器。用 `--scrollbars classic` 重播桌機縮窄視窗，`--height 844` 固定原驗收高度；這只作用測試browser context，不改OS設定。
+- **CSS 都寫Noto Sans TC，實際字寬卻不同**：測量先等 `document.fonts.ready` 與兩個paint frames。報告中的declared font-family是宣告，FontFaceSet是註冊/載入狀態，platformFonts則只是代表文字節點的實際字型採樣；讀不到時保留unavailable與原因。依PM實際字型條件補查，不把宣告或 `fonts.check()` 當作已使用該字型的證據。
+
+在含Playwright依賴的子專案目錄執行，例如英文窄視窗；把route換成本任務已確認的直接頁面與有效fixture：
+
+```bash
+node <daodao-root>/plugin/skills/develop/references/layout-probe.mjs \
+  --base https://app-dev.daodao.so \
+  --routes /en/settings \
+  --locale en-US --widths 390 --height 844 --scrollbars classic \
+  --out ./evidence/layout-en-classic
+```
+
+需登入的頁面沿用既有dev-login與cookie準備方式。其他語系給其對應route與locale，桌機尺寸另行執行並保留原報告。探針只驗實際量到的語系/畫面與幾何；業務操作、錯誤文案與PM正式驗收仍各自留證據。
+
 ### admin-ui
 
 - **驗完 product 再驗 admin-ui，admin 被踢回登入頁**：localhost 的 cookie 不分 port，product 留下的一般用戶 `auth_token` 會一起送到 admin-ui 代理的 server，而 server 讀 cookie 優先於 Bearer，`/auth/me` 回非 admin。驗 admin 前先把 `document.cookie` 的 `auth_token` 換成 admin token。（#218）
@@ -59,3 +77,7 @@ POC 比對的陷阱在 [poc-compare.md](poc-compare.md)「`.dc.html` POC 的已�
 - **讀 API 錯誤訊息**：server 回的錯誤長這樣：`{ success: false, error: { message } }`。前端用 `packages/api/src/errors.ts` 的 `apiErrorFromBody` 解析，不要直接讀 `response.error.message`。表單送出失敗時保留使用者輸入，不要清空。（task 154、353、188、377、383）
 - **權限查詢失敗不等於沒權限**：燈塔權限 API 失敗時 middleware 會導到 `/lighthouse/access-required?reason=unavailable`。這時要顯示「暫時無法確認」的錯誤文案和重試，不能顯示「沒開通」。其他需要權限判斷的頁面也一樣，要把「查詢失敗」和「沒權限」分成兩種狀態。（#384、#354）
 - **後台建立共同挑戰回「此組織目前已停權」**：共用的測試組織被停權了，不是功能壞掉。建立前先在後台確認組織狀態；停權時改用「lighthouse test」組織，或請 admin 恢復。（#179、#180、#295）
+
+## GitHub 組織設定與帳務
+
+- **public repo 切成 private 後，整個組織的 Actions 都跑不起來，錯誤是 `account is locked due to a billing issue`**：secret scanning、push protection、code scanning 在 public repo 免費，切成 private 後設定會留著，變成按 active committer 計費的 Advanced Security。組織沒有付款方式時，GitHub 收不到錢就鎖帳務，連 public repo 的 job 也不會啟動（2026-11-07 daodao-server 被切回 private，產生 $3.80，11/8 起全組織 CI／CD 停擺）。agent 不可自行切可見性：`visibility-change-guard.sh` 會擋 `gh repo edit --visibility` 與 `gh api repos/… -f visibility=/private=`。真的要切時，先請使用者關掉 repo 的 Advanced Security 功能（或改套「Legacy - private/internal repositories」安全設定），再由使用者自己用 `! gh repo edit …` 執行。Advanced Security 是 license 計費，Budgets 無法設成到上限就停用，只能收通知。被鎖後的解法是在 org 的 Payment information 綁付款方式，預扣驗證通過後就會解鎖。

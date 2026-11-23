@@ -169,3 +169,52 @@ describe('pre-pr-gate：兩種 harness 下都要真的擋', () => {
     expect(r.code).toBe(0)
   })
 })
+
+describe('visibility-change-guard：agent 不可自行切換 repo 可見性', () => {
+  const claude = (command: string, extra: Record<string, string> = {}) =>
+    runHook('visibility-change-guard.sh', {
+      env: {
+        CLAUDE_TOOL_NAME: 'Bash',
+        CLAUDE_TOOL_INPUT: JSON.stringify({ command }),
+        DAODAO_ALLOW_VISIBILITY_CHANGE: '',
+        ...extra,
+      },
+    })
+  const codex = (command: string) =>
+    runHook('visibility-change-guard.sh', {
+      env: { CLAUDE_TOOL_INPUT: '', DAODAO_ALLOW_VISIBILITY_CHANGE: '' },
+      stdin: JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: tmpdir() }),
+    })
+
+  it.each([
+    'gh repo edit daodaoedu/daodao-server --visibility private --accept-visibility-change-consequences',
+    'cd /tmp && gh repo edit --visibility=public',
+    'gh api -X PATCH repos/daodaoedu/daodao-server -f visibility=private',
+    'gh api --method PATCH repos/daodaoedu/daodao-server -F private=true',
+  ])('Claude Code 輸入擋下：%s', (command) => {
+    const r = claude(command)
+    expect(r.code).toBe(2)
+    expect(r.out).toContain('不可自行切換')
+  })
+
+  it('Codex 輸入同一個指令也擋', () => {
+    const r = codex('gh repo edit daodaoedu/daodao-server --visibility private')
+    expect(r.code).toBe(2)
+  })
+
+  it.each([
+    'gh repo view daodaoedu/daodao-server --json visibility',
+    "gh api repos/daodaoedu/daodao-server --jq '.visibility'",
+    'gh repo edit daodaoedu/daodao-server --description x',
+    'gh repo view x; echo --visibility',
+    'ls -la',
+  ])('唯讀查詢與無關指令放行：%s', (command) => {
+    expect(claude(command).code).toBe(0)
+  })
+
+  it('DAODAO_ALLOW_VISIBILITY_CHANGE 有原因時放行並寫進 ledger', () => {
+    const r = claude('gh repo edit daodaoedu/x --visibility private', { DAODAO_ALLOW_VISIBILITY_CHANGE: 'owner-approved-test' })
+    expect(r.code).toBe(0)
+    expect(readFileSync(SANDBOX_LEDGER, 'utf8')).toMatch(/"rule":"repo-visibility-change".*"result":"skip"/)
+  })
+})
