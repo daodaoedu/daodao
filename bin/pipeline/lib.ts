@@ -94,10 +94,17 @@ export type ReturnCommentKind = "ac-fail" | "blocked" | "other";
 // `(?<![:\w])` keeps the label name `acceptance:blocked` from reading as a blocked report
 const BLOCKED_WORDS = /受阻|測不了|無法測試|截圖(?:無法|傳不)上傳|截圖傳不上去|(?<![:\w])BLOCKED\b|ERR_BLOCKED/i;
 const AC_ID = /\bAC-?\d+/i;
-const FAIL_WORDS = /\bFAIL(?:ED)?\b|未通過|不通過|沒過|失敗|❌/i;
+// 「失敗」 followed by 時／分支／情境… names the scenario under test (「寄信失敗時」「查詢失敗／重試分支」), not a verdict (#451, #547)
+const FAIL_WORDS = /\bFAIL(?:ED)?\b|未通過|不通過|沒過|失敗(?![時／/]|分支|情境|案例|路徑|的情況)|❌/i;
 const HANDOFF = /請驗收：/;
+// The test-acceptance report states its verdict in a marker; trust it over row wording
+const REPORT_RESULT = /<!--\s*daodao:acceptance-report\b[^>]*\bresult=(FAIL|BLOCKED|PASS)\b[^>]*-->/i;
 
 export function classifyReturnComment(body: string): ReturnCommentKind {
+  const marked = body.match(REPORT_RESULT)?.[1]?.toUpperCase();
+  if (marked === "FAIL") return "ac-fail";
+  if (marked === "BLOCKED") return "blocked";
+  if (marked === "PASS") return "other";
   if (HANDOFF.test(body)) return "other";
   const failLine = body
     .split("\n")

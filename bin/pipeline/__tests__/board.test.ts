@@ -326,6 +326,26 @@ describe("Need Fix triage (#338)", () => {
     expect(classifyReturnComment("已排除，拔掉 acceptance:blocked")).toBe("other");
   });
 
+  it("#451/#547: the report's result marker wins, and 失敗 naming the tested scenario is not a verdict", () => {
+    // #451 BLOCKED report: a PASS row describes the 「寄信失敗時」 scenario it verified
+    const blocked451 = [
+      "<!-- daodao:acceptance-report spec=7088257987 result=BLOCKED -->",
+      "# 驗收說明",
+      "| AC-02 | PASS | 工程驗收項，沿用工程證據：回覆寄信失敗時回覆保留、後台顯示失敗及 regression tests PASS |",
+      "| AC-08 | BLOCKED | 空狀態未由 PM 驗證 |",
+    ].join("\n");
+    expect(classifyReturnComment(blocked451)).toBe("blocked");
+    // the marker is authoritative both ways
+    expect(classifyReturnComment("<!-- daodao:acceptance-report spec=1 result=FAIL -->\n整體結果：見下表")).toBe("ac-fail");
+    expect(classifyReturnComment("<!-- daodao:acceptance-report spec=1 result=PASS -->\n| AC-01 | 寄信失敗時保留 | PASS |")).toBe("other");
+    // #547 unmarked PM follow-up: 「查詢失敗／重試分支」 is the branch under test, not a failed AC
+    const followUp547 =
+      "@vincentxuu AC-03 載入分支已由 PM 在手機 390×844 實測 PASS；查詢失敗／重試分支目前無法在 Codex 內建瀏覽器手動觸發，故尚不能判整條 AC-03 PASS。補齊前我會維持 Acceptance 與 acceptance:blocked。";
+    expect(classifyReturnComment(followUp547)).not.toBe("ac-fail");
+    // a real verdict using 失敗 still counts
+    expect(classifyReturnComment("AC-05 失敗：第一次產生摘要回報錯誤")).toBe("ac-fail");
+  });
+
   it("#250: a blocked acceptance moved to Need Fix goes back to Acceptance with acceptance:blocked", () => {
     const f = audit(card({ number: 250, status: "Need Fix", statusUpdatedAt: "2026-10-12T15:00:00Z",
       comments: [{ createdAt: "2026-10-12T14:49:14Z", body: PM_BLOCKED_250 }] }));
