@@ -73,9 +73,11 @@ if (cmd === "start") {
     console.error("需要 --token-file <檔案>");
     process.exit(2);
   }
+  const cookieName = args["cookie-name"] && args["cookie-name"] !== "true" ? args["cookie-name"] : "auth_token_dev";
   const { browser, ctx, page } = await connect();
   await ctx.addCookies([
-    { name: "auth_token", value: fs.readFileSync(file, "utf8").trim(), domain: ".daodao.so", path: "/", secure: true, sameSite: "Lax" },
+    // dev／feat 的登入 Cookie 叫 auth_token_dev（server AUTH_COOKIE_NAME，daodaoedu/daodao#526）；正式站的 auth_token 在 dev 不被接受
+    { name: cookieName, value: fs.readFileSync(file, "utf8").trim(), domain: ".daodao.so", path: "/", secure: true, sameSite: "Lax" },
     { name: "NEXT_LOCALE", value: "zh-TW", domain: "app-dev.daodao.so", path: "/" },
   ]);
   await page.setViewportSize({ width: Number(args.width || 1280), height: Number(args.height || 900) });
