@@ -20,6 +20,7 @@
 | [dual-subscription-agents-prd.md](dual-subscription-agents-prd.md) | Claude Code + Codex 訂閱雙 agent 自動化 PRD（提案；所依賴的 Routine A／B 已退役，導入前需重新設計 dispatch） |
 | [dual-subscription-development-workflow.md](dual-subscription-development-workflow.md) | 雙訂閱 agent 的 v2 開發流程、Harness、Runner、Artifact 與分階段落地規劃（提案；Routine A／B 已退役） |
 | [troubleshooting.md](troubleshooting.md) | board.ts 除錯、人工介入定義 |
+| [manual-actions-fallback.md](manual-actions-fallback.md) | 私有 repo（storage／worker／infra）的 Actions 因付款或用量上限不啟動時，手動補跑 CI／CD 的步驟 |
 | [evals.md](evals.md) | Weekly 評估指標（歷史快照；`review-evals` 週報已停） |
 | [../archive/automation/](../archive/automation/README.md) | 已退役：Routine A／B 運維手冊與 prompt、manual-issue-to-routine、spec-drafter spike、move-board-card agentic flows／templates |
 | [review-false-positive-research.md](review-false-positive-research.md) | AI code review 誤判：知識庫解不了的三個問題的文獻對照與落地順序（#168／#169） |
