@@ -39,7 +39,7 @@
 ## 測試帳號與前置條件
 - 角色：講師或團主＝已登入，且 `GET /api/v1/lighthouse/organizations` 回傳至少一個組織（middleware 判斷，apps/product/src/middleware.ts:21-46）。不是看使用者 roles。
 - middleware 規則（只比對 `/lighthouse` 與 `/en/lighthouse`，apps/product/src/middleware.ts:18）：
-  - 沒有 `auth_token` cookie 或 API 401 → 307 到 `/auth/login?redirect=<原路徑>`（apps/product/src/middleware.ts:65-67）。
+  - 沒有登入 cookie（`AUTH_COOKIE_NAME`）或 API 401 → 307 到 `/auth/login?redirect=<原路徑>`（apps/product/src/middleware.ts:65-67）。
   - API 403 或組織清單為空 → 307 到 `/lighthouse/access-required`（apps/product/src/middleware.ts:68-71）。
   - API 失敗或回應格式不符 → 307 到 `/lighthouse/access-required?reason=unavailable`（apps/product/src/middleware.ts:57-62）。
   - 轉址都是 `NextResponse.redirect(url)` 沒指定狀態碼，Next 預設 307（apps/product/src/middleware.ts:62、72），不是 302。
@@ -111,7 +111,7 @@
 - 封存：「恢復」後項目從封存列表消失、回到系列與場次。
 
 ## 陷阱
-- 權限是 middleware（Edge）在伺服器端打 API 判斷，cookie 名稱必須是 `auth_token`；只在 localStorage 有登入資訊、沒有 cookie 會被當成未登入。
+- 權限是 middleware（Edge）在伺服器端打 API 判斷，cookie 名稱必須跟 server 的 `AUTH_COOKIE_NAME` 一致（正式站 `auth_token`、dev／feat `auth_token_dev`，daodaoedu/daodao#526）；只在 localStorage 有登入資訊、沒有 cookie 會被當成未登入。
 - dev 環境 API 掛掉時會導到 `?reason=unavailable`，頁面顯示「暫時無法確認你的燈塔權限」與「重試」，與「沒開通」的「燈塔尚未為你開通」不同（apps/product/src/app/[locale]/lighthouse/access-required/page.tsx:11-13）；驗證無權限路徑時要確認看到的是哪一種。
 - middleware 的 regex 只認 `/lighthouse` 與 `/en/lighthouse`；成果報告用 `window.open('/${locale}/lighthouse/...')`（apps/product/src/components/lighthouse/cohort-outcome.tsx:52-56），zh-TW 會開 `/zh-TW/lighthouse/...`，靠 next-intl 再轉址回無前綴路徑後才過閘門（推測，未實測）。
 - 燈塔 shell 桌機用左側 `aside`（`hidden md:flex`），手機用頂部 header（`md:hidden`），兩邊各有一份同名 navigation／「回主頁」連結，Playwright 需加 `.filter({ visible: true })` 或固定 viewport。

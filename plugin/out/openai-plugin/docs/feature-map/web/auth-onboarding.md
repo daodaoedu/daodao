@@ -24,8 +24,8 @@
 
 ## 測試帳號與前置條件
 - 角色：`/auth/login`、`/auth/error`、`/auth/verify-email*` 未登入可開（publicPattern `^/auth/`，`apps/product/src/app/global-provider.tsx:64`）。`/auth/onboarding` 需要「已登入的 temp 用戶」，否則立刻 `router.replace("/")`（`apps/product/src/app/[locale]/auth/onboarding/page.tsx` 初始化 effect）。
-- 冒煙不走 Google OAuth：用 dev-login 取 token（後端在 daodao-server `src/controllers/dev-login.controller.ts`，只在 dev 環境掛載）：`POST https://server-dev.daodao.so/api/v1/auth/dev-login`，header `x-dev-login-secret`，body `{"email","mode":"temp"|"user","name"}`；回應 `data.token` 即 `auth_token` cookie 值。`mode=temp` 產生未註冊新用戶（測 onboarding），`mode=user` 取既有使用者。
-- token 怎麼被吃：web 端 API client 對 server 用 `credentials: "include"` 帶 cookie（`packages/api/src/client.ts:241、293`），AuthProvider 打 `/api/v1/auth/me` 判定登入與 `isTemporary`、`email_verified`（`packages/auth/src/lib/auth-provider.tsx:250-263`）。因此 cookie 要種在 server-dev 網域：先開 `https://server-dev.daodao.so/api/v1/health`，`document.cookie='auth_token=<token>; path=/; secure; samesite=none'`，再開 app-dev。
+- 冒煙不走 Google OAuth：用 dev-login 取 token（後端在 daodao-server `src/controllers/dev-login.controller.ts`，只在 dev 環境掛載）：`POST https://server-dev.daodao.so/api/v1/auth/dev-login`，header `x-dev-login-secret`，body `{"email","mode":"temp"|"user","name"}`；回應 `data.token` 即 dev 登入 cookie `auth_token_dev` 的值（dev／feat 的 `AUTH_COOKIE_NAME`；正式站是 `auth_token`，見 daodaoedu/daodao#526）。`mode=temp` 產生未註冊新用戶（測 onboarding），`mode=user` 取既有使用者。
+- token 怎麼被吃：web 端 API client 對 server 用 `credentials: "include"` 帶 cookie（`packages/api/src/client.ts:241、293`），AuthProvider 打 `/api/v1/auth/me` 判定登入與 `isTemporary`、`email_verified`（`packages/auth/src/lib/auth-provider.tsx:250-263`）。因此 cookie 要種在 server-dev 網域：先開 `https://server-dev.daodao.so/api/v1/health`，`document.cookie='auth_token_dev=<token>; path=/; secure; samesite=none'`，再開 app-dev。
 - 不可用不存在的信箱註冊（server-dev 會真的寄信）；改用既有帳號。
 
 ## 穩定的選擇器
@@ -64,4 +64,4 @@
 - onboarding 中間的動態步驟來自後端 `getActiveOnboardingFlow`（`apps/product/src/components/onboarding/use-active-flow.ts:3`），步驟數不固定，不要寫死按幾次「下一步」，以「完成註冊」按鈕出現為準。
 - locale：預設 zh-TW 無前綴，英文為 `/en/...`（`packages/i18n/src/routing.ts`）；redirect 參數保留原路徑含 locale。
 - `/auth/login` 成功後用 `window.location.href` 整頁導向（`apps/product/src/app/[locale]/auth/login/page.tsx:27-34`），Playwright 要等 navigation，不是等 client route 變化。
-- `/lighthouse/*` 另有 middleware 在 Next server 端讀「app 網域」的 `auth_token` cookie 再轉發給 API（`apps/product/src/middleware.ts:24、32`）；只把 cookie 種在 server-dev 網域時，一般頁可登入但 `/lighthouse` 可能仍被導回登入頁（推測，需實測 cookie domain）。
+- `/lighthouse/*` 另有 middleware 在 Next server 端讀「app 網域」的登入 cookie（名稱 `AUTH_COOKIE_NAME`：正式站 `auth_token`、dev／feat `auth_token_dev`）再轉發給 API（`apps/product/src/middleware.ts:24、32`）；只把 cookie 種在 server-dev 網域時，一般頁可登入但 `/lighthouse` 可能仍被導回登入頁（推測，需實測 cookie domain）。

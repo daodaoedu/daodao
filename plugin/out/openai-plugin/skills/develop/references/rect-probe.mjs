@@ -53,6 +53,8 @@ const cookieFor = { user: tok, temp: tokTemp, none: null };
 const ROUTES = JSON.parse(fs.readFileSync(args["routes-file"], "utf8"));
 const WIDTHS = (args.widths || "1440,1024,390").split(",").map((w) => parseInt(w, 10));
 const cookieDomain = args["cookie-domain"] || new URL(base).hostname;
+// dev／feat 站的登入 Cookie 叫 auth_token_dev（daodaoedu/daodao#526）；本機與正式站是 auth_token。可用 --cookie-name 覆寫
+const cookieName = args["cookie-name"] || (/-dev\.daodao\.so$|^feat[-.]/.test(new URL(base).hostname) ? "auth_token_dev" : "auth_token");
 
 const b = await chromium.launch();
 const result = { label: args.label || "", at: new Date().toISOString(), head: args.head || null, base, rows: [] };
@@ -61,7 +63,7 @@ for (const width of WIDTHS) {
   for (const { path: route, auth } of ROUTES) {
     const ctx = await b.newContext({ viewport: { width, height: 900 }, isMobile: width < 768, deviceScaleFactor: 1 });
     const cookieVal = cookieFor[auth];
-    if (cookieVal) await ctx.addCookies([{ name: "auth_token", value: cookieVal, domain: cookieDomain, path: "/" }]);
+    if (cookieVal) await ctx.addCookies([{ name: cookieName, value: cookieVal, domain: cookieDomain, path: "/" }]);
     const p = await ctx.newPage();
     p.on("console", (m) => { if (m.type() === "error") errors.push(`${width} ${route} ${m.text().slice(0, 160)}`); });
     await p.goto(base + route, { waitUntil: "networkidle", timeout: 60000 });

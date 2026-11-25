@@ -106,7 +106,7 @@ curl -s -X POST https://server-dev.daodao.so/api/v1/auth/dev-login \
 curl -s ... -d '{"email":"<既有 email>","mode":"user"}'
 ```
 
-回應 `data.token` 就是 `auth_token` cookie 的值，後續注入方式同下方步驟 3；`mode=user` 找不到 email 回 404，secret 錯回 401，prod 沒有這條路由（404）。
+回應 `data.token` 就是登入 cookie 的值（server-dev 的 cookie 名稱是 `auth_token_dev`，本機 server 預設 `auth_token`，由 `AUTH_COOKIE_NAME` 決定，見 daodaoedu/daodao#526），後續注入方式同下方步驟 3；`mode=user` 找不到 email 回 404，secret 錯回 401，prod 沒有這條路由（404）。
 
 **⚠️ 測試帳號的 email 只能用使用者指定的 QA 信箱**（`~/.claude/projects/-Users-xiaoxu-Projects-daodao/qa-email.txt`，一個任務一個 plus 別名 `<base>+qa<issue#>@<domain>`）。server-dev 走真 SMTP，**不存在的地址會產生退信灌進維運信箱**——2026-09-20 #218 冒煙用了 `qa+…@daodao.so`（該網域沒有 `qa@` 本體），寄出的 7 封驗證信／歡迎信／實踐信全部退信到使用者 Gmail。本機 server 沒設 SMTP 不會寄，所以「本機驗過」不代表 dev 安全。qa-email.txt 不存在就問使用者要，不要自己編地址、也不要用 `@example.com`（一樣會退信）。
 
@@ -132,7 +132,7 @@ curl -s -X DELETE "$B/api/v1/practices/${PID}" -H "Authorization: Bearer $T"
 2. **確保 API 可達**：
    - 本地 server 在跑（`curl -s localhost:4000/api/v1/challenges`）→ 直接用
    - 沒跑 → 起 CORS 反向代理（見 memory `feedback-dev-login-jwt`），確認 `.env.local` 的 `NEXT_PUBLIC_API_URL=http://localhost:4000`
-3. **注入 auth 狀態**（用 `playwright_evaluate`，cookie 名稱是 `auth_token`）：
+3. **注入 auth 狀態**（用 `playwright_evaluate`；本機 server 的 cookie 名稱是 `auth_token`，直接打 app-dev／server-dev 時要用 `auth_token_dev`）：
    ```js
    document.cookie = 'auth_token=<JWT>;path=/;max-age=86400';
    localStorage.setItem('_userinfo', JSON.stringify({
