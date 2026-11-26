@@ -8,22 +8,67 @@ hook_normalize_input
 
 PROJECT_ROOT="$HOOK_CWD"
 
-# task.md 的狀態：task-template 是「## Status」標題下一行；舊任務用單行「Status: xxx」
-task_status() {
+# 任務清單只逐列「最近有動、還沒結案」的任務，其餘各收成一行數量。
+# 2026-11-26：worktrees/ 累積到 212 個有 checkout 的任務，每個 session 注入 12.8KB 還被截斷，
+# 真正在做的任務反而看不到。只看本機 task.md（狀態字與修改時間），不連網、不查 issue 狀態。
+TASK_RECENT_DAYS=14
+TASK_LIST_MAX=30
+# 帶 --all-tasks 手動執行：不篩選、不設上限，列完任務清單就結束
+LIST_ALL_TASKS=0
+[ "${1:-}" = "--all-tasks" ] && LIST_ALL_TASKS=1
+
+# task.md 的狀態原文：task-template 是「## Status」標題下一行；
+# 舊任務用單行「Status: xxx」或清單項「- Status: xxx」（多筆時第一筆是最新的）
+task_status_raw() {
   local st
-  st=$(awk '/^## Status[[:space:]]*$/{getline; print; exit}' "$1" 2>/dev/null)
-  if [ -z "$st" ]; then
-    st=$(grep -m1 -E '^[[:space:]]*Status:' "$1" 2>/dev/null | sed -E 's/^[[:space:]]*Status:[[:space:]]*//')
-  fi
-  st=$(printf '%s' "$st" | sed -E 's/^[[:space:]]+//')
-  # task-template 的五個狀態詞後面常接備註（「verified（停在 commit 前…）」），只顯示狀態詞；其他自由文字截短
-  if printf '%s' "$st" | grep -qE '^(planning|implementing|verified|in-review|merged)([^a-z-]|$)'; then
-    st=$(printf '%s' "$st" | grep -oE '^(planning|implementing|verified|in-review|merged)' | head -1)
-  else
-    st=$(printf '%s' "$st" | cut -c1-40)
-  fi
-  echo "${st:-?}"
+  st=$(awk '
+    /^## Status[[:space:]]*$/ {
+      if ((getline nxt) > 0 && nxt !~ /^[[:space:]]*$/) { print nxt; found = 1; exit }
+    }
+    fb == "" && /^[[:space:]]*(-[[:space:]]+)?Status:/ {
+      fb = $0
+      sub(/^[[:space:]]*(-[[:space:]]+)?Status:[[:space:]]*/, "", fb)
+    }
+    END { if (!found) print fb }
+  ' "$1" 2>/dev/null)
+  st="${st#"${st%%[![:space:]]*}"}"
+  printf '%s' "$st"
 }
+
+# 顯示用：task-template 的五個狀態詞後面常接備註（「verified（停在 commit 前…）」），
+# 只顯示狀態詞；其他自由文字截短
+TEMPLATE_STATUS_RE='^(planning|implementing|verified|in-review|merged)([^a-z-]|$)'
+task_status_label() {
+  local st="$1"
+  if [[ "$st" =~ $TEMPLATE_STATUS_RE ]]; then
+    st="${BASH_REMATCH[1]}"
+  else
+    st="${st:0:40}"
+  fi
+  printf '%s' "${st:-?}"
+}
+
+task_status() {
+  task_status_label "$(task_status_raw "$1")"
+}
+
+# 終態＝開頭是 complete／completed／done／closed，或 merged-…-closed。
+# 單純的 merged 不算：merge 不等於 Done，還要 dev 部署與驗收。
+TERMINAL_STATUS_RE='^((completed?|done|closed)([^a-z]|$)|merged(-[a-z0-9]+)*-closed([^a-z0-9-]|$))'
+is_terminal_status() {
+  local rc=1
+  shopt -s nocasematch
+  if [[ "$1" =~ $TERMINAL_STATUS_RE ]]; then rc=0; fi
+  shopt -u nocasematch
+  return $rc
+}
+
+# 修改時間（epoch 秒）。GNU stat 用 -c、BSD／macOS 用 -f，只探測一次
+if stat -c %Y "$HOOKS_DIR" >/dev/null 2>&1; then
+  file_mtime() { stat -c %Y "$1" 2>/dev/null || echo 0; }
+else
+  file_mtime() { stat -f %m "$1" 2>/dev/null || echo 0; }
+fi
 
 # 任務資料夾底下還有程式碼 checkout（worktree 或 clone）才算進行中
 has_checkout() {
@@ -84,27 +129,64 @@ if [ ! -d "$WORKTREES_DIR" ]; then
 fi
 
 if [ -d "$WORKTREES_DIR" ]; then
-  active=()
+  total=0
   records=0
+  finished=0
+  stale=0
+  recent=0
+  rows=""
+  recent_cutoff=$(( $(date +%s) - TASK_RECENT_DAYS * 86400 ))
   for d in "$WORKTREES_DIR"/*/; do
     [ -d "$d" ] || continue
-    if has_checkout "${d%/}"; then active+=("${d%/}"); else records=$((records + 1)); fi
+    d="${d%/}"
+    total=$((total + 1))
+    if ! has_checkout "$d"; then records=$((records + 1)); continue; fi
+    # 沒有 task.md 的資料夾沒有狀態可讀，用資料夾自己的修改時間判斷新舊
+    if [ -f "$d/task.md" ]; then
+      raw=$(task_status_raw "$d/task.md")
+      label=$(task_status_label "$raw")
+      stamp="$d/task.md"
+    else
+      raw=""
+      label="(no task.md)"
+      stamp="$d"
+    fi
+    if [ "$LIST_ALL_TASKS" -eq 0 ] && is_terminal_status "$raw"; then finished=$((finished + 1)); continue; fi
+    mtime=$(file_mtime "$stamp")
+    if [ "$LIST_ALL_TASKS" -eq 0 ] && [ "$mtime" -lt "$recent_cutoff" ]; then stale=$((stale + 1)); continue; fi
+    recent=$((recent + 1))
+    rows="${rows}${mtime}"$'\t'"   ${d##*/} → ${label}"$'\n'
   done
-  if [ "${#active[@]}" -gt 0 ]; then
+
+  if [ "$total" -gt 0 ]; then
     echo ""
-    echo "📂 進行中的任務 (${#active[@]})："
-    for d in "${active[@]}"; do
-      name=$(basename "$d")
-      if [ -f "$d/task.md" ]; then
-        echo "   $name → $(task_status "$d/task.md")"
-      else
-        echo "   $name → (no task.md)"
+    if [ "$LIST_ALL_TASKS" -eq 1 ]; then
+      echo "📂 有程式碼 checkout 的任務，全部 (${recent})，最近動過的在前："
+      printf '%s' "$rows" | sort -t $'\t' -k1,1nr | cut -f2-
+    else
+      echo "📂 進行中的任務 (${recent})：${TASK_RECENT_DAYS} 天內有動、尚未結案，最近動過的在前"
+      printf '%s' "$rows" | sort -t $'\t' -k1,1nr | head -n "$TASK_LIST_MAX" | cut -f2-
+      if [ "$recent" -gt "$TASK_LIST_MAX" ]; then
+        echo "   ⋯ 另有 $((recent - TASK_LIST_MAX)) 個也在 ${TASK_RECENT_DAYS} 天內有動，只列最近動過的 ${TASK_LIST_MAX} 個"
       fi
-    done
+      if [ "$stale" -gt 0 ]; then
+        echo "   💤 另有 $stale 個任務超過 ${TASK_RECENT_DAYS} 天沒動"
+      fi
+      if [ "$finished" -gt 0 ]; then
+        echo "   ✅ 另有 $finished 個任務已結案（狀態是 complete／done／closed／merged-…-closed）"
+      fi
+    fi
+    if [ "$records" -gt 0 ]; then
+      echo "   📁 另有 $records 個任務只剩紀錄（程式碼已移除，等冒煙／PM 驗收後刪資料夾）"
+    fi
+    if [ "$LIST_ALL_TASKS" -eq 0 ]; then
+      echo "   📊 worktrees/ 共 $total 個任務資料夾；完整清單：bash \"$HOOKS_DIR/session-start.sh\" --all-tasks"
+    fi
   fi
-  if [ "$records" -gt 0 ]; then
-    echo "   📁 另有 $records 個任務只剩紀錄（程式碼已移除，等冒煙／PM 驗收後刪資料夾）"
-  fi
+fi
+
+if [ "$LIST_ALL_TASKS" -eq 1 ]; then
+  exit 0
 fi
 
 # === 3. projects/ 子模組狀態 ===

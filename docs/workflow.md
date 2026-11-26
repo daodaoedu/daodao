@@ -465,7 +465,7 @@ daodao/
 
 | 時機 | Hook | 做了什麼 |
 |------|------|---------|
-| Session 開始 | `session-start.sh` | 印出工作區位置、`worktrees/` 進行中任務與 Status、只剩紀錄的任務資料夾、`projects/` 是否偏離各 repo 預設分支或有未提交變更、當日 gate 統計、卡住超過 24 小時的共用設定同步 PR |
+| Session 開始 | `session-start.sh` | 印出工作區位置、`worktrees/` 進行中任務與 Status（只逐列 task.md 14 天內有動、尚未結案的最近 30 個；超過 14 天沒動、已結案、只剩紀錄的各收成一行數量，完整清單用 `session-start.sh --all-tasks`）、`projects/` 是否偏離各 repo 預設分支或有未提交變更、當日 gate 統計、卡住超過 24 小時的共用設定同步 PR |
 | AI 寫入檔案**前** | `pre-write-guard.sh` | 攔截敏感檔案（.env、.pem、.key）與憑證洩漏、保護已存在的 migration 檔、依 frontend／backend profile 套用 block／warn 規則 |
 | AI 寫入檔案**前** | `test-integrity-guard.py` | 攔截測試檔新加的 `.skip`／`.only`／`.todo`／`xit`／`fit`／`pytest.mark.skip`／`xfail` 等標記，避免用關測試換綠燈；刪除測試或斷言由 CI `test-integrity.yml` 檢查 |
 | 執行 `gh pr create` **前** | `pre-pr-gate.sh` | 發 PR 閘門（見 Phase 3 finish） |
