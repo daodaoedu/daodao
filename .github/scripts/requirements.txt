@@ -1,0 +1,4 @@
+# Shared-config regression 用到的 Python 依賴（test-sync-claude-config-contract.sh、
+# scripts/__tests__/test_required_workflow_triggers.py 都 import yaml）。
+# sync-claude-config.yml 與 shared-config-regression.yml 都從這份安裝，不要在 workflow 裡各寫一份。
+PyYAML==6.0.2

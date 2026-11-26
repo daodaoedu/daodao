@@ -125,6 +125,28 @@ test('拿掉手動觸發就不給過（急用時要能立刻同步）', () => {
   assert.notEqual(result.status, 0);
 });
 
+// 2026-11-07 起 regression job 沒裝 PyYAML，契約腳本 import yaml 失敗，同步連續 19 天被跳過
+const INSTALL_DEPS = 'python3 -m pip install -r .github/scripts/requirements.txt';
+
+test('regression job 沒安裝 Python 依賴就不給過（契約腳本 import yaml，runner 沒有內建）', () => {
+  assert.ok(workflow.includes(INSTALL_DEPS), 'sync workflow 應安裝 .github/scripts/requirements.txt');
+  for (const replacement of ['true', '# ' + INSTALL_DEPS]) {
+    const result = runContract({ workflowText: workflow.replace(INSTALL_DEPS, replacement) });
+    assert.notEqual(result.status, 0, replacement);
+    assert.match(result.stdout + result.stderr, /requirements\.txt/);
+  }
+});
+
+test('Python 依賴裝在契約測試之後就不給過（測試跑的時候還沒有 PyYAML）', () => {
+  const installStep = `      - name: Install regression Python dependencies\n        run: ${INSTALL_DEPS}\n`;
+  assert.ok(workflow.includes(installStep));
+  const moved = workflow
+    .replace(installStep, '')
+    .replace('\n  # sync 的 matrix 不含 daodao 本身', `${installStep}\n  # sync 的 matrix 不含 daodao 本身`);
+  const result = runContract({ workflowText: moved });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout + result.stderr, /先安裝/);
+});
 
 test('讀取權限驗證器只准從 canonical 複製到 CI scripts', () => {
   const source = 'cp plugin/hooks/check-read-access-evidence.py target/.github/scripts/check-read-access-evidence.py';

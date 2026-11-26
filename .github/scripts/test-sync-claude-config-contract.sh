@@ -10,6 +10,28 @@ fail() {
   exit 1
 }
 
+# 下面的觸發條件檢查 import yaml，runner 的 Python 沒有內建 PyYAML。
+# 2026-11-07 起 sync 的 regression job 因為沒裝而連續失敗 19 天，後面的同步全被跳過；
+# 兩個跑這支腳本的 workflow 都必須先從同一份 requirements.txt 安裝（註解掉的不算）。
+INSTALL_DEPS='^[^#]*python3 -m pip install -r \.github/scripts/requirements\.txt'
+_install_line=$(grep -nE "$INSTALL_DEPS" "$WORKFLOW" | head -1 | cut -d: -f1 || true)
+_test_line=$(grep -nF 'node --test .github/scripts/__tests__/*.test.cjs' "$WORKFLOW" | head -1 | cut -d: -f1 || true)
+[ -n "$_install_line" ] \
+  || fail "sync regression 未安裝 .github/scripts/requirements.txt（契約腳本需要 PyYAML）"
+if [ -n "$_test_line" ] && [ "$_install_line" -gt "$_test_line" ]; then
+  fail "sync regression 必須先安裝 .github/scripts/requirements.txt 再跑契約測試（契約腳本需要 PyYAML）"
+fi
+# node fixture 只複製 sync workflow，下面兩個檔不在時略過（真實 repo／CI 一定有）
+REGRESSION_WORKFLOW="$SCRIPT_DIR/../workflows/shared-config-regression.yml"
+if [ -f "$REGRESSION_WORKFLOW" ]; then
+  grep -Eq "$INSTALL_DEPS" "$REGRESSION_WORKFLOW" \
+    || fail "shared-config-regression.yml 未安裝 .github/scripts/requirements.txt（兩個 workflow 的依賴來源不得分岔）"
+fi
+REQUIREMENTS="$SCRIPT_DIR/requirements.txt"
+if [ -f "$REQUIREMENTS" ]; then
+  grep -Eq '^PyYAML==[0-9]' "$REQUIREMENTS" || fail ".github/scripts/requirements.txt 未固定 PyYAML 版本"
+fi
+
 # 批次同步：每次 push 都同步會讓 7 個私有 repo 各跑一輪 PR 檢查與 CD，吃掉大量 Actions 額度
 python3 - "$WORKFLOW" <<'PY' || fail "sync workflow 觸發條件不符：須只有每日 schedule 與 workflow_dispatch，不可有 push"
 import sys, yaml
