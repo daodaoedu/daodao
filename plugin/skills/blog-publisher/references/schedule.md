@@ -9,8 +9,18 @@
 3. 查明 default `dev` 已安裝 `blog-scheduled-publish.yml`／sync helper，且 `prod` 的 `blog-prod-publish.yml` 支援 `expected_content_sha`。缺 workflow、Actions／變數寫入能力或發布設定時，交付具體缺項；不能稱已排程。保留既有 production environment 審核規則；若執行時需人工核准，先明確告知此限制，不自行停用保護。
 4. 依上述 frontend 文件的 schema，將完整目標／baseline SHAs 與含明確 UTC offset 的 `publish_at` 寫入 frontend 的 **repository variable** `BLOG_PROD_PUBLICATION_SCHEDULE`，再回讀核對。這是發布授權與設定的保存步驟，不是新一輪審稿。目前一次支援一個待發布 release（可含多篇核准文章）；已有不同排程時先說明衝突，不默默覆蓋。
 5. 用 workflow 的 `dry_run=true` 檢查設定，回讀同一次工作的 decision。只驗草稿、JSON 存檔或 dispatch 成功，都不能代替 repository variable 寫入成功或預檢。若工具不能操作 Actions／variables，提供已填妥的操作交接並標示未排程；不另建本機 automation 代替。
+6. 確認 production publisher 的成功驗證後續步驟已有雲端 Email 通知，收件人為 `contact@daodao.so`，且寄信憑證與寄件身分已設定。通知必須隨 GitHub 發布流程在本機關機、對話結束後仍可執行；不能只留下未來呼叫聊天 Email 工具的指示。若尚未接上，明確回報「發布已排程，Email 通知尚未設定」，列出缺少的寄信接點／設定；不宣稱會自動寄信，也不擅自更動 workflow 或憑證。
 
-設定完成時簡短回報文章、指定時間、首次每日檢查時間、Actions 連結與「已排程，尚未發布」。未來由 production publisher 以預期 content SHA 再驗設定、核准與 CI，發布 Website 並回讀正文／圖片／marker；只有實際驗證成功才回報「發布完成」。不為排程自行製造核准或重新批准未改的版本。
+設定完成時簡短回報文章、指定時間、首次每日檢查時間、Actions 連結、「已排程，尚未發布」及 Email 通知是否已設定。未來由 production publisher 以預期 content SHA 再驗設定、核准與 CI，發布 Website 並回讀正文／圖片／marker；只有實際驗證成功才回報「發布完成」，再執行下列 Email 通知。不為排程自行製造核准或重新批准未改的版本。
+
+## 發布成功後寄送 Email
+
+這是排程發布的固定後續通知，收件人為 `contact@daodao.so`。沿用有效的排程發布與通知授權，不在文章已發布後重複要求確認；本節不授權另寄其他信件或收件人。
+
+- 以該次 production publication 驗證成功為寄信條件：兩語正文、圖片及 `/blog-release.json` 均對上排程的 content SHA。預檢、dry run、尚未到期、dispatch 成功、失敗／回復或取消排程都不寄發布成功通知；只看 scheduler job 成功不足以寄信。
+- 主旨使用「[島島 Blog] 排程文章已發布：<文章標題>」。內文列出文章標題、中英文正式網址、實際驗證成功時間（`Asia/Taipei`）、content SHA 與 production Actions 連結。同批多篇文章可合併一封並逐篇列出；不附私人核准資料或憑證。
+- 沿用發布流程的持久通知紀錄，以 content SHA、文章 ID 與收件人識別已通知項目。成功保存寄信服務接受的 message ID／時間；這只代表服務接受寄送，不宣稱收件匣已收到。workflow 重跑或後續每日檢查先查紀錄，不重複寄已成功項目；timeout 結果不明先查寄信服務狀態，不盲目重送。
+- 寄信失敗或缺設定時，保留「文章已發布，Email 通知未完成」及可追查原因與待寄資料；即使完成排程清理也須保留獨立通知紀錄。只補通知，不重新發布或 rollback 已上線文章，也不套用文章發布的自動重試次數。只有取得寄信成功證據才回報「已寄送通知至 contact@daodao.so」。
 
 ## 改期、取消與失敗
 
