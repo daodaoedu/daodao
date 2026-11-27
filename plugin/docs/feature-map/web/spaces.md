@@ -5,12 +5,12 @@
 - 介面：Web（apps/product）
 - dev 網址：https://app-dev.daodao.so/spaces（主機見 daodao-infra/README.md:39；API 為 https://server-dev.daodao.so）
 - 主要程式位置：apps/product/src/app/[locale]/(with-layout)/spaces/、apps/product/src/app/[locale]/spaces/public/[token]/page.tsx、apps/product/src/components/spaces/、apps/product/src/lib/spaces/space-href.ts
-- 依據版本：daodao-f2e 70155dce（2026-10-29）
+- 依據版本：daodao-f2e 70155dce（2026-10-29）；空間頁外觀依 daodao#572（feat/spaces-ui-unify）更新
 
 ## 子功能
-- 空間列表 `/spaces`：顯示「你的空間 · N 個」與空間卡片，右下 FAB 建立選單（apps/product/src/app/[locale]/(with-layout)/spaces/page.tsx）
-- 個人實踐子頁 `/spaces/personal`：列出自己的實踐（apps/product/src/app/[locale]/(with-layout)/spaces/personal/page.tsx）
-- 共同挑戰子頁 `/spaces/challenge`：我參加的挑戰，預設篩選「進行中」，可改全部／即將開始／已結束；有「探索共同挑戰」入口連到 `/challenges`（apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx:57-136）
+- 空間列表 `/spaces`：頁首「你的空間」＋副標「個人實踐、共同挑戰和你參加的活動課程 · N 個」與空間卡片，右下 FAB 建立選單；外框與探索頁共用 `ListPageShell`（apps/product/src/app/[locale]/(with-layout)/spaces/page.tsx、apps/product/src/components/layout/list-page-shell.tsx）。活動課程卡片連到 `/cohorts/<id>`（可管理者連燈塔後台），不會進 `/spaces/[id]`（apps/product/src/lib/spaces/space-href.ts）
+- 個人實踐子頁 `/spaces/personal`：下拉篩選（預設「進行中」）＋「我的實踐 · N」分區列出自己的實踐（apps/product/src/app/[locale]/(with-layout)/spaces/personal/page.tsx、apps/product/src/components/spaces/space-practice-section.tsx）
+- 共同挑戰子頁 `/spaces/challenge`：我參加的挑戰，預設篩選「進行中」，可改全部／即將開始／已結束；篩選下方有「探索共同挑戰」入口連到 `/challenges`（apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx）
 - 活動課程空間 `/spaces/[id]`：標頭（成員數、成員名單 dialog）、「空間首頁／實踐」分頁、發起人可建立／編輯／發佈空間首頁區塊、複製公開連結、切換訪客視角（apps/product/src/app/[locale]/(with-layout)/spaces/[id]/page.tsx）
 - 公開訪客頁 `/spaces/public/[token]`：免登入，只顯示已發佈內容（apps/product/src/app/[locale]/spaces/public/[token]/page.tsx）
 - FAB 建立：個人實踐 → 導到 `/practices/create`；活動課程／共同挑戰 → 開 sheet，但送出只跳 toast「建立流程即將推出」，不會真的建立（apps/product/src/components/spaces/space-create-sheet.tsx:80-87）
@@ -44,10 +44,10 @@
 | 選單項「共同挑戰」（admin） | `page.getByRole('menuitem', { name: /共同挑戰/ })` | apps/product/src/components/spaces/space-fab.tsx:101-110；packages/i18n/src/locales/zh-TW/space.json:16 |
 | 建立 sheet 名稱欄 | `page.getByLabel('名稱')`（Label htmlFor="space-create-name"） | apps/product/src/components/spaces/space-create-sheet.tsx:57-61；packages/i18n/src/locales/zh-TW/space.json:23 |
 | 建立 sheet 送出／取消 | `getByRole('button', { name: '建立' })`／`getByRole('button', { name: '再想想' })`（名稱空白時「建立」disabled） | apps/product/src/components/spaces/space-create-sheet.tsx:76、80、87；packages/i18n/src/locales/zh-TW/space.json:24-25 |
-| 子頁返回空間列表 | `page.getByRole('link', { name: '回到空間列表' })` | apps/product/src/components/spaces/space-subpage-header.tsx:30-31、46-47；packages/i18n/src/locales/zh-TW/space.json:35 |
-| 挑戰子頁「探索共同挑戰」 | `page.getByRole('link', { name: /探索共同挑戰/ })` | apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx:58-67；packages/i18n/src/locales/zh-TW/space.json:29 |
-| 挑戰子頁篩選下拉 | `page.getByRole('button', { name: '進行中' })`（預設值）→ `getByRole('menuitem', { name: '全部' })` 等 | apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx:79-95（Radix DropdownMenu）；packages/i18n/src/locales/zh-TW/space.json:109 `space.challenge_filter_ongoing` |
-| 挑戰卡「打開我的挑戰實踐」 | `page.getByRole('link', { name: '打開我的挑戰實踐' })`（指向 `/practices/<practiceId>`） | apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx:136、173；packages/i18n/src/locales/zh-TW/space.json:106 |
+| 子頁返回空間列表 | `page.getByRole('link', { name: '回到空間列表' })`（在 h1 內） | apps/product/src/components/spaces/space-page-shell.tsx、apps/product/src/components/layout/list-page-shell.tsx；packages/i18n/src/locales/zh-TW/space.json:35 |
+| 挑戰子頁「探索共同挑戰」 | `page.getByRole('link', { name: /探索共同挑戰/ })` | apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx；packages/i18n/src/locales/zh-TW/space.json:29 |
+| 子頁篩選下拉（個人實踐、共同挑戰） | `page.getByRole('button', { name: '篩選：進行中' })`（預設值）→ `page.getByRole('dialog').getByText('全部')` 等（選項是勾選列） | packages/ui/src/components/filter-menu.tsx（Popover）；apps/product/src/components/spaces/space-practice-section.tsx；apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx；packages/i18n/src/locales/zh-TW/space.json `space.filter_trigger_aria_label`、challenge.json `filter_*` |
+| 挑戰卡「打開我的挑戰實踐」 | `page.getByRole('link', { name: '打開我的挑戰實踐' })`（指向 `/practices/<practiceId>`；只在已加入、未開始的挑戰出現，進行中／已結束改點整張卡） | apps/product/src/app/[locale]/(with-layout)/spaces/challenge/page.tsx；apps/product/src/utils/challenge-card.ts `needsSeparatePracticeLink`；packages/i18n/src/locales/zh-TW/space.json:106 |
 | 活動空間成員按鈕 | `page.getByRole('button', { name: /\d+ 位成員/ })` | apps/product/src/app/[locale]/(with-layout)/spaces/[id]/page.tsx:113-115 |
 | 成員 dialog | `page.getByRole('dialog', { name: '成員' })` | apps/product/src/components/spaces/space-members-dialog.tsx:33；packages/i18n/src/locales/zh-TW/space.json:36 |
 | 複製公開連結 | `page.getByRole('button', { name: '複製公開連結' })` | apps/product/src/app/[locale]/(with-layout)/spaces/[id]/page.tsx:154-167；packages/i18n/src/locales/zh-TW/space.json:39 |
