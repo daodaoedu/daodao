@@ -11,11 +11,22 @@
  * Exit 1 = findings (do not post/close), 2 = usage error.
  * Quoted copy missing from the f2e zh-TW locale is printed as a warning and does not change the
  * exit code; locale strings are read from projects/daodao-f2e at origin/dev (skip with --no-locale).
+ * A hand-off that uses the acceptance fixture (島島驗收組織, ids 900000–900999) is refused unless the
+ * daodao-storage fixture health check is known green (no open health bug, green run within 36h).
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { lintAcceptanceComment, lintQuotedCopy } from "./acceptance.js";
+import {
+  FIXTURE_HEALTH_ISSUE_TITLE,
+  type FixtureHealth,
+  type FixtureHealthRun,
+  deriveFixtureHealth,
+  lintAcceptanceComment,
+  lintFixtureHealth,
+  lintQuotedCopy,
+  referencesAcceptanceFixture,
+} from "./acceptance.js";
 import { acceptanceCoverageSchema, type EngineeringEvidence, lintAcceptanceCoverage, lintAcceptanceClosure } from "./acceptance-coverage.js";
 
 const argv = process.argv.slice(2);
@@ -109,7 +120,32 @@ function loadLocaleValues(): string[] | null {
   }
 }
 
+/**
+ * Current fixture health from daodao-storage's daily workflow and the bug issue it opens (#323).
+ * Anything unreadable is `unknown`, which blocks a fixture hand-off just like `unhealthy`.
+ */
+function loadFixtureHealth(): FixtureHealth {
+  const gh = (args: string[]) => JSON.parse(execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 8 << 20 }));
+  try {
+    const issues = gh(["issue", "list", "--repo", "daodaoedu/daodao", "--state", "open", "--search", `"${FIXTURE_HEALTH_ISSUE_TITLE}" in:title`, "--json", "number,title", "--limit", "50"]);
+    const [run] = gh(["run", "list", "--repo", "daodaoedu/daodao-storage", "--workflow", "acceptance-fixture-health.yml", "--status", "completed", "--limit", "1", "--json", "databaseId,createdAt,conclusion,url"]);
+    let latest: FixtureHealthRun | null = null;
+    if (run) {
+      const { jobs } = gh(["run", "view", String(run.databaseId), "--repo", "daodaoedu/daodao-storage", "--json", "jobs"]);
+      const unhealthyStepFailed = (jobs as { steps: { name: string; conclusion: string }[] }[]).some((j) =>
+        j.steps.some((s) => s.name === "Fail the run when unhealthy" && s.conclusion === "failure"),
+      );
+      latest = { createdAt: run.createdAt, conclusion: run.conclusion, unhealthyStepFailed, url: run.url };
+    }
+    return deriveFixtureHealth(issues, latest, new Date());
+  } catch {
+    return { state: "unknown", reason: "gh 讀不到健康檢查 issue 或 daodao-storage workflow run" };
+  }
+}
+
 const findings = lintAcceptanceComment(body);
+// Posting gate only (#326 AC-02); closure checks with --report-comment judge a report already made.
+if (!reportComment && referencesAcceptanceFixture(body)) findings.push(...lintFixtureHealth(body, loadFixtureHealth()));
 const localeValues = noLocale ? null : loadLocaleValues();
 const warnings = localeValues ? lintQuotedCopy(body, localeValues) : [];
 

@@ -41,7 +41,9 @@ templateVersion: 1
 
 - 「驗收步驟」只放 PM 在畫面上做得到、看得到的操作與預期：點哪裡、填什麼、重新打開後畫面顯示什麼。不寫 API、HTTP 方法（PUT／GET…）、送出內容（body／request／response）、回讀、regression test、log、curl、console，也不給 server-dev 或 `/api/` 網址。
 - API 送出內容與回讀、regression test、CI、log 一律放「工程證據（已驗，PM 不需重做）」，每項附冒煙留言、PR 或 CI 連結。
-- 預期值要寫出處：數量、顏色、文案這類預期結果，寫上從哪裡來（locale key、commit、哪天取的值）。預期值會隨共用資料變動時，改成相對寫法，例如「比原本多 1 筆」，不要寫死數字（#216、#152；寫法可參考 #386）。
+- 預期值要寫出處：數量、顏色、文案這類預期結果，寫上從哪裡來（locale key、commit、哪天取的值）。預期值會隨共用資料變動時，改成相對寫法，例如「比原本多 1 筆」，不要寫死數字（#216、#152；寫法可參考 #386）。只為這次交接準備的專用資料（名稱帶 `QA<n>` 或步驟寫明「專用」）才可寫固定數量。`acceptance-lint` 的 `pm-step-fixed-count` 會擋。
+- 要隔天或隔一段時間才看得到的結果（排程信、隔日提醒、「之後不會再收到」）：在該編號步驟開頭寫「隔日觀察（YYYY-MM-DD 上午）：…」，讓 PM 先排好第二次查看；缺標示或日期 `acceptance-lint` 會以 `deferred-observation-unmarked` 擋下（#218）。
+- 步驟用到驗收 fixture（島島驗收組織、驗收燈塔場次、保留 id 900000–900999）時，`acceptance-lint` 會讀 daodao-storage 每日健康檢查：有 open 的「[驗收 fixture] 每日健康檢查失敗」bug，或 36 小時內沒有通過的 run，就以 `fixture-unhealthy`／`fixture-health-unknown` 拒絕。先 reset fixture、重跑健康檢查通過再發（#179、#180）。
 - 要多個角色同時操作的步驟：寫明需要開幾個瀏覽器、各登入哪個帳號。PM 一次只有一個登入狀態時，把那一步改成工程證據，不列進 PM 步驟（#154、#344）。
 - App 暫不驗收（2026-10-29 起，沒有可安裝測試版）：PM 步驟只寫網頁，App 步驟放「已知限制／這次沒做的」並註明「App 暫不驗收」；只改 App 的卡不交 PM，改走 `acceptance:engineering`（見 move-board-card「誰驗收」）。
 - AC 只能用 API 或測試驗（畫面看不出差別）→ 標成工程驗收項，只列在工程證據，不寫進 PM 步驟；整張卡都看不出差別的應掛 `acceptance:engineering`，不進 Acceptance。

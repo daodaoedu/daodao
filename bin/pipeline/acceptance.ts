@@ -132,6 +132,44 @@ function hasMobileWithoutViewport(step: string): boolean {
   return requiresMobile;
 }
 
+/** Text the PM reads as an instruction: drop on-screen copy in 「」, `code`, Markdown bold and URLs. */
+function instructionText(line: string): string {
+  return line
+    .replace(/「[^」]*」/g, "「」")
+    .replace(/`[^`]*`/g, "")
+    .replace(/\*\*/g, "")
+    .replace(/\]\([^)]*\)/g, "]")
+    .replace(/https?:\/\/\S+/g, "");
+}
+
+/**
+ * #216: 「應該看到 24 個模板」 on the shared dev list; someone added one the next day and the PM failed
+ * a working page. An expectation verb followed by an absolute count of listed items. Template rule:
+ * shared data takes relative wording (「比原本多 1 筆」), so a step with relative wording is fine.
+ */
+// 條／項 are left out: they mostly count fixed UI copy (「提示框裡有 6 條建議」, #163), not listed data.
+const FIXED_COUNT =
+  /(?:看到|看得到|顯示|列出|出現|只剩|剩下|剩|總共|一共|共|剛好|合計|有)\s*(\d+)\s*(?:個|筆|則|篇|張|位|人|封|列|份|場|組|堂|門|團|間|家|本|支|題|期)/;
+/**
+ * Relative wording, or data prepared only for this hand-off (「QA401 PM 主場次」「專用實踐」): other tests do
+ * not touch it, so its count is stable. Shared lists (後台模板列表) must not use either escape.
+ */
+const RELATIVE_COUNT = /比(?:原本|剛才|之前|操作前|先前|一開始)|多出?\s*\d|少了?\s*\d|增加|減少|[+＋]\s*\d/;
+/** Checked on the raw step: the dedicated name is usually quoted (「QA401 PM 主場次」). */
+const DEDICATED_DATA = /\bQA\d+|專用/;
+
+/**
+ * #218: 「之後不會再收到新手任務系列信」 can only be judged on a later day; the hand-off gave no date,
+ * so the PM had to schedule a second visit on their own. Same-session 「登入之後」 is not deferred.
+ */
+// A time word only counts when the same clause goes on to look again: 「3 天後再打開」, not a date to
+// pick (「開始日選 3 天後的實踐」) or data described (「跨日結束日期」「當次日期時間」).
+const DEFERRED_OBSERVATION =
+  /(?:隔天|隔日|(?<![當每前])次日|翌日|明天|明早|隔週|下週|過夜|過幾天|幾(?:天|小時)後|\d+\s*(?:天|日|小時|週|周|個月)(?:之|以)?後)[^，,。；;：:\n]*?(?:再|才|回來|打開|開啟|查看|看|收到|登入|檢查|確認)|(?:之後|以後|往後|接下來)(?:也|都)?(?:不會再|不再|才會)/;
+/** The marker and the date the template asks for: 「隔日觀察（2026-11-28 上午）：…」. */
+const DEFERRED_MARKER = /隔日觀察|跨日觀察/;
+const OBSERVATION_DATE = /\d{4}-\d{1,2}-\d{1,2}|(?<![\d/])\d{1,2}\/\d{1,2}(?![\d/])|\d{1,2}月\d{1,2}日/;
+
 /**
  * Lint one comment body. Only the part from the 「請驗收」 heading onwards is checked when
  * present (smoke tables posted in the same comment may legitimately mention PUT/GET).
@@ -188,6 +226,30 @@ export function lintAcceptanceComment(body: string): AcceptanceLintFinding[] {
           rule: "mobile-viewport-missing",
           message: "手機／響應式驗收缺明確視窗尺寸：在同一編號步驟寫出手機寬×高（例如390×866 CSS px，或寬度390、高度866）；不能沿用桌面尺寸或工程證據（#395）",
         });
+      }
+      const stepLines = Array.from({ length: end - i }, (_, k) => i + k);
+      const stepText = stepLines.map((j) => instructionText(lines[j])).join("\n");
+      if (!RELATIVE_COUNT.test(stepText) && !DEDICATED_DATA.test(stepLines.map((j) => lines[j]).join("\n"))) {
+        for (const j of stepLines) {
+          const m = instructionText(lines[j]).match(FIXED_COUNT);
+          if (m) {
+            findings.push({
+              line: at(j),
+              rule: "pm-step-fixed-count",
+              message: `PM 步驟寫死數量「${m[0]}」：dev 是共用環境，數量會被其他測試改動（#216 寫 24 個、PM 看到 25 個判 FAIL）。改成相對寫法（「比原本多 1 筆」「列表和你剛建立的一致」），數字只放工程證據並註明哪天取的值`,
+            });
+          }
+        }
+      }
+      if (!(DEFERRED_MARKER.test(stepText) && OBSERVATION_DATE.test(stepText))) {
+        const j = stepLines.find((k) => DEFERRED_OBSERVATION.test(instructionText(lines[k])));
+        if (j !== undefined) {
+          findings.push({
+            line: at(j),
+            rule: "deferred-observation-unmarked",
+            message: `PM 步驟要隔一段時間才看得到結果（「${instructionText(lines[j]).match(DEFERRED_OBSERVATION)![0]}」），但沒標「隔日觀察」與日期：在同一編號步驟寫「隔日觀察（YYYY-MM-DD 上午）：…」，讓 PM 先排好第二次查看（#218）`,
+          });
+        }
       }
     }
     // The header line itself counts too (`- 驗收步驟：用 PUT 送出…`).
@@ -308,4 +370,63 @@ export function lintQuotedCopy(body: string, localeValues: string[]): Acceptance
     }
   }
   return findings;
+}
+
+/**
+ * Fixture health (#323): daodao-storage `.github/workflows/acceptance-fixture-health.yml` runs
+ * `health.py check` daily and, when unhealthy, opens or comments on a daodaoedu/daodao issue with this
+ * exact title (health.ISSUE_TITLE). The issue stays open until someone resets the fixture and closes it.
+ */
+export const FIXTURE_HEALTH_ISSUE_TITLE = "[驗收 fixture] 每日健康檢查失敗";
+/** Daily schedule plus slack: a green run older than this no longer says anything about today. */
+export const FIXTURE_HEALTH_MAX_AGE_MS = 36 * 3600 * 1000;
+
+export type FixtureHealth = { state: "healthy" } | { state: "unhealthy" | "unknown"; reason: string };
+/** Latest completed health run; `unhealthyStepFailed` = its 「Fail the run when unhealthy」 step ran and failed. */
+export type FixtureHealthRun = { createdAt: string; conclusion: string; unhealthyStepFailed: boolean; url?: string };
+
+/**
+ * Names and URLs of the fixture rows in daodao-storage scripts/acceptance_fixtures/manifest.json
+ * (org 「島島驗收組織（fixture）」, reserved ids 900000–900999). #179／#180 sent the PM into an org that
+ * had been suspended; a hand-off built on the fixture is only as good as the fixture's current state.
+ */
+const FIXTURE_REFERENCE = /島島驗收組織|驗收燈塔(?:系列|場次)|驗收共同挑戰|驗收・(?:組織管理員|教練|學員)|\/900\d{3}(?!\d)/;
+
+export function referencesAcceptanceFixture(body: string): boolean {
+  return FIXTURE_REFERENCE.test(body);
+}
+
+export function deriveFixtureHealth(
+  openIssues: ReadonlyArray<{ number: number; title: string }>,
+  latestRun: FixtureHealthRun | null,
+  now: Date,
+): FixtureHealth {
+  const open = openIssues.find((i) => i.title === FIXTURE_HEALTH_ISSUE_TITLE);
+  if (open) return { state: "unhealthy", reason: `健康檢查 bug #${open.number} 仍 open（reset 修好後要手動關）` };
+  if (!latestRun) return { state: "unknown", reason: "找不到 acceptance-fixture-health 的已完成 run" };
+  if (latestRun.unhealthyStepFailed) return { state: "unhealthy", reason: `最新健康檢查 run 判定不健康${latestRun.url ? `：${latestRun.url}` : ""}` };
+  const age = now.getTime() - Date.parse(latestRun.createdAt);
+  if (latestRun.conclusion !== "success")
+    return { state: "unknown", reason: `最新健康檢查 run 沒跑到檢查結果（conclusion=${latestRun.conclusion}，例如 Actions 未啟動）${latestRun.url ? `：${latestRun.url}` : ""}` };
+  if (!(age >= 0 && age <= FIXTURE_HEALTH_MAX_AGE_MS)) return { state: "unknown", reason: `最近一次通過的健康檢查是 ${latestRun.createdAt}，超過 36 小時` };
+  return { state: "healthy" };
+}
+
+/** AC-02 of #326: a hand-off that relies on the fixture is not posted unless the fixture is known healthy. */
+export function lintFixtureHealth(body: string, health: FixtureHealth): AcceptanceLintFinding[] {
+  if (!referencesAcceptanceFixture(body) || health.state === "healthy") return [];
+  const line = body.replace(/\r\n/g, "\n").split("\n").findIndex((l) => FIXTURE_REFERENCE.test(l)) + 1;
+  return [
+    health.state === "unhealthy"
+      ? {
+          line,
+          rule: "fixture-unhealthy",
+          message: `留言用到驗收 fixture，但 fixture 目前不健康（${health.reason}）：先依 daodao-storage scripts/acceptance_fixtures/README.md 跑 reset、確認健康檢查通過再發（#179、#180）`,
+        }
+      : {
+          line,
+          rule: "fixture-health-unknown",
+          message: `留言用到驗收 fixture，但無法確認 fixture 健康（${health.reason}）：重跑 daodao-storage 的 acceptance-fixture-health workflow 並確認通過再發`,
+        },
+  ];
 }
