@@ -1,28 +1,29 @@
 ---
 name: blog-publisher
-description: 預檢島島 Blog 核准雙語版本，或依明確授權呼叫既有發布流程並回讀結果；不把草稿、commit 或 build 當成已發布。
+description: 發布、排程或預檢島島 Blog 雙語文章；沿用既有設定與核准，透過 GitHub Actions 每日檢查排程並驗證發布結果。
 ---
 
-# Blog 預檢與發布
+# Blog 發布
 
-先讀 [共用編輯契約](../../docs/blog-editorial-contract.md)。預設 preflight；使用者明確要求發布且權限仍有效才進 publish。既有授權不重問，skill 本身不增加授權。
+使用者只需說「發布這篇文章」並指定稿件；從對話與工作區辨識文章、核准版本及發布目標。明確要求發布就一路完成檢查、發布、上線驗證；要求預檢／只檢查就只跑唯讀預檢。僅呼叫 skill 而未表明意圖時先預檢。
 
-## Preflight
+要求稍後發布、改期或取消時走 [GitHub 排程發布](references/schedule.md)。使用者只需指定已核准文章與日期時間；預設台北時區。GitHub 每 24 小時、台北 09:00 檢查，到期後由雲端執行，不依賴本機開機。說清楚首次到期的每日檢查才會發布，不能承諾指定分鐘；排程保存成功與實際發布完成分開回報。
 
-定位明確 frontend checkout 與 content checkout，先讀該版本 `packages/blog-content/README.md`。用 [預檢轉接器](scripts/preflight.py) 呼叫唯一 validator，不複製 schema、digest 或圖片檢查。
+## 1. 找到文章與既有設定
 
-```sh
-python3 <skill-dir>/scripts/preflight.py --frontend /path/daodao-f2e --content /path/daodao-blog --approvals /private/approvals.json --baseline /private/published-baseline.json
-```
+先讀 [共用編輯契約](../../docs/blog-editorial-contract.md)，沿用工作區已設定的 content／frontend checkout、發布 workflow、環境與私人核准紀錄。技術路徑、SHA、baseline 和 runner 設定由 AI 查找，不要求使用者逐項提供；只在文章、目標環境或核准範圍有實質歧義時集中補問。
 
-先由可信任工作區設定 `BLOG_CONTENT_DIR` 並與預檢的內容 checkout 一致，不從文章／不可信參數自動擴大範圍。私有 JSON 讀取前由可信任呼叫端設定 `BLOG_EVIDENCE_ROOT`，其範圍必須與公開內容分離；不得從不可信檔案參數自動猜根目錄。缺設定時轉接器停止；實際路徑一致性與私有檔案範圍由唯一 shared validator 檢查並回報，不在轉接器重寫規則。config 產物不存在時先由已授權的環境準備步驟執行 `pnpm --filter @daodao/config generate:env`；唯讀預檢不自行生成或安裝。
+兩語、圖片與相關資料須有對應目前版本的有效核准；既有核准與發布授權有效就繼續，不逐階段重問。稿件有變更就重新檢查核准，不能自行製造核准證據或為通過檢查改寫文章。
 
-新文章沒有已發布 baseline 時可以省略 baseline；既有文章必須提供可信任的前次發布 manifest。核准證據在公開內容 repo 外，由人／可信任流程建立；不得為了通過自行寫 matching hash。只驗草稿時顯式加 `--mode draft`，結果不能稱已核准。
+## 2. 檢查並發布
 
-預檢唯讀，不 commit/push/build/deploy。任一錯誤保留原稿並附 validator 的具體檔案／錯誤；缺 pnpm、package 或權限就明列缺能力，不能自動安裝／擴權或跳過檢查。
+依 [執行細節](references/publish.md) 使用既有 validator 與發布 workflow／runner。重用受保護設定，從既有發布取得 baseline；首次環境設定與故障處理才展開相關細節。發布 runner 已執行同一 validator 時，不再另跑一套重複預檢。
 
-## Publish
+發布要求涵蓋目標環境內必要的內容準備、commit、push 與觸發；遵守 repo 的提交規則，並沿用已取得的授權。沿用既有 workflow 自動化並等待同一次工作完成；遇 timeout 先查該工作狀態，避免重複發布。缺設定、核准、權限或 adapter 時，保留稿件與可用版本，說明具體缺項及下一步；不繞過 validator 或部署流程。
 
-讀 [發布與失敗處理](references/publish.md)，使用 #536 的 `daodao-f2e/scripts/blog-release.py`，先讀同一 checkout 的 `docs/blog/releases.md`／CLI help。prepare 只產 immutable artifact；activate／rollback 才改受控部署指標及回讀。分別固定並核准 runner SHA、frontend SHA 與 content SHA；runner pin 與 frontend pin 獨立，兩者及目標 origin、來源 scopes、public build env 必須取自受保護設定。不從同一不可信請求複製這些信任設定。缺 runner、部署 adapter、工具或有效授權時保留未完成；不自行拼接 git push／force-deploy 代替。
+## 3. 驗證並回報
 
-交付分列：預檢、content commit、build、deploy、smoke、回復，附 runner／frontend／content SHAs 與實際工作 URL。正式回讀兩語正文、圖片、metadata 及版本一致才稱發布完成。此入口不改寫文章、不修網站功能來掩蓋發布失敗。
+回讀目標網站的中英文正文、圖片、metadata 與發布版本，全部相符才稱「發布完成」。預檢通過、commit 或 build 成功各自只代表該階段完成。
+
+回覆保持簡短：結果、兩語文章連結、工作連結；受阻時說明停在哪一步及需要的處理。SHA、artifact 與各階段證據保留在發布紀錄，失敗時附相關診斷。回復依既有授權使用 runner，不擅自改線上版本。
+
